@@ -37,7 +37,7 @@ const clientOrgsItems = [
 
 const Sidebar = ({ className }: SidebarProps) => {
   const [userManagementOpen, setUserManagementOpen] = useState(false);
-  const [trainingOrgsOpen, setTrainingOrgsOpen] = useState(false);
+  const [clientOrgsOpen, setClientOrgsOpen] = useState(false);
 
   return (
     <aside className={cn("bg-card border-r border-border w-64 h-screen flex flex-col", className)}>
@@ -105,22 +105,22 @@ const Sidebar = ({ className }: SidebarProps) => {
                 </NavLink>
               ))}
 
-              {/* Training Organisations Sub-dropdown */}
+              {/* Client Organisations Sub-dropdown */}
               <div className="space-y-1">
                 <button
-                  onClick={() => setTrainingOrgsOpen(!trainingOrgsOpen)}
+                  onClick={() => setClientOrgsOpen(!clientOrgsOpen)}
                   className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
                 >
                   <Building2 className="mr-3 h-4 w-4" />
-                  Training Organisations
-                  {trainingOrgsOpen ? (
+                  Client Organisations
+                  {clientOrgsOpen ? (
                     <ChevronDown className="ml-auto h-3 w-3" />
                   ) : (
                     <ChevronRight className="ml-auto h-3 w-3" />
                   )}
                 </button>
 
-                {trainingOrgsOpen && (
+                {clientOrgsOpen && (
                   <div className="ml-6 space-y-1">
                     {clientOrgsItems.map((item) => (
                       <NavLink
