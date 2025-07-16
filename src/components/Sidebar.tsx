@@ -29,7 +29,8 @@ const userManagementItems = [
   { name: 'Trainers & Partners', href: '/trainers', icon: GraduationCap },
 ];
 
-const trainingOrgsItems = [
+const clientOrgsItems = [
+  { name: 'Client Organizations', href: '/client-organizations', icon: Building2 },
   { name: 'Training Coordinators', href: '/training-coordinators', icon: UserCheck },
   { name: 'Learners', href: '/learners', icon: Users },
 ];
@@ -121,7 +122,7 @@ const Sidebar = ({ className }: SidebarProps) => {
 
                 {trainingOrgsOpen && (
                   <div className="ml-6 space-y-1">
-                    {trainingOrgsItems.map((item) => (
+                    {clientOrgsItems.map((item) => (
                       <NavLink
                         key={item.name}
                         to={item.href}
