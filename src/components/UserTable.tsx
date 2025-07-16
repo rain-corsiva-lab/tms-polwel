@@ -13,11 +13,23 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'POLWEL' | 'Client' | 'Trainer';
-  status: 'Active' | 'Inactive';
+  role: 'POLWEL' | 'TrainingCoordinator' | 'Trainer' | 'Learner';
+  status: 'Active' | 'Inactive' | 'Pending' | 'Locked';
   lastLogin?: string;
   mfaEnabled: boolean;
+  passwordExpiry?: string;
+  failedLoginAttempts?: number;
+  
+  // Organization info (for TCs and Learners)
   organization?: string;
+  division?: string;
+  buCostCentre?: string;
+  
+  // Additional fields for display
+  permissionLevel?: string;
+  availabilityStatus?: string;
+  courses?: string[];
+  additionalEmails?: string[];
 }
 
 interface UserTableProps {
@@ -29,19 +41,39 @@ const getRoleColor = (role: string) => {
   switch (role) {
     case 'POLWEL':
       return 'bg-primary text-primary-foreground';
-    case 'Client':
+    case 'TrainingCoordinator':
       return 'bg-warning text-warning-foreground';
     case 'Trainer':
       return 'bg-success text-success-foreground';
+    case 'Learner':
+      return 'bg-blue-500 text-white';
     default:
       return 'bg-muted text-muted-foreground';
   }
 };
 
+const getRoleDisplay = (role: string) => {
+  switch (role) {
+    case 'TrainingCoordinator':
+      return 'Training Coordinator';
+    default:
+      return role;
+  }
+};
+
 const getStatusColor = (status: string) => {
-  return status === 'Active' 
-    ? 'bg-success text-success-foreground' 
-    : 'bg-destructive text-destructive-foreground';
+  switch (status) {
+    case 'Active':
+      return 'bg-success text-success-foreground';
+    case 'Inactive':
+      return 'bg-muted text-muted-foreground';
+    case 'Pending':
+      return 'bg-warning text-warning-foreground';
+    case 'Locked':
+      return 'bg-destructive text-destructive-foreground';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
 };
 
 const UserTable = ({ users, title }: UserTableProps) => {
@@ -60,6 +92,7 @@ const UserTable = ({ users, title }: UserTableProps) => {
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">MFA</th>
+                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Password Expiry</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Last Login</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -71,21 +104,49 @@ const UserTable = ({ users, title }: UserTableProps) => {
                     <div>
                       <div className="font-medium text-foreground">{user.name}</div>
                       {user.organization && (
-                        <div className="text-sm text-muted-foreground">{user.organization}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {user.organization}{user.division && ` - ${user.division}`}
+                        </div>
+                      )}
+                      {user.buCostCentre && (
+                        <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-foreground">{user.email}</td>
                   <td className="py-3 px-4">
-                    <Badge className={getRoleColor(user.role)}>{user.role}</Badge>
+                    <div className="text-foreground">{user.email}</div>
+                    {user.additionalEmails && user.additionalEmails.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        +{user.additionalEmails.length} more
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <Badge className={getRoleColor(user.role)}>{getRoleDisplay(user.role)}</Badge>
+                    {user.permissionLevel && (
+                      <div className="text-xs text-muted-foreground mt-1">{user.permissionLevel}</div>
+                    )}
+                    {user.availabilityStatus && (
+                      <div className="text-xs text-muted-foreground mt-1">{user.availabilityStatus}</div>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                    {user.failedLoginAttempts && user.failedLoginAttempts > 0 && (
+                      <div className="text-xs text-destructive mt-1">
+                        {user.failedLoginAttempts} failed attempts
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <Badge variant={user.mfaEnabled ? "default" : "destructive"}>
                       {user.mfaEnabled ? 'Enabled' : 'Disabled'}
                     </Badge>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="text-muted-foreground text-sm">
+                      {user.passwordExpiry || 'Not set'}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">
                     {user.lastLogin || 'Never'}

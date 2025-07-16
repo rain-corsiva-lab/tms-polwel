@@ -29,20 +29,30 @@ export function AddUserDialog() {
     name: "",
     email: "",
     password: "",
+    additionalEmails: "",
+    mfaRequired: true,
     
     // POLWEL specific
-    permissionAccess: "",
+    permissionLevel: "",
+    department: "",
     
-    // Client (TC) specific
+    // Training Coordinator specific
     organizationName: "",
     division: "",
     divisionAddress: "",
     buCostCentre: "",
+    buNumberRequired: false,
     paymentMode: "",
     contactNumber: "",
     
     // Trainer specific
     courses: "",
+    availabilityStatus: "Available",
+    partnerOrganization: "",
+    
+    // Learner specific
+    enrolledCourses: "",
+    
     status: "Active",
   });
 
@@ -51,7 +61,7 @@ export function AddUserDialog() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
+    // Enhanced validation based on requirements
     if (!userType || !formData.name || !formData.email || !formData.password) {
       toast({
         title: "Validation Error",
@@ -61,10 +71,43 @@ export function AddUserDialog() {
       return;
     }
 
+    // Training Coordinator specific validation
+    if (userType === "TrainingCoordinator") {
+      if (!formData.organizationName || !formData.division) {
+        toast({
+          title: "Validation Error",
+          description: "Organization and Division are mandatory for Training Coordinators.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // BU Cost Centre mandatory for SPF/POLWEL organizations
+      if ((formData.organizationName.includes("SPF") || formData.organizationName.includes("POLWEL")) && !formData.buCostCentre) {
+        toast({
+          title: "Validation Error",
+          description: "BU Cost Centre is mandatory for SPF/POLWEL organizations.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Password complexity validation (minimum 12 characters, mixed case, numbers, symbols)
+    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
+    if (!passwordPattern.test(formData.password)) {
+      toast({
+        title: "Password Validation Error",
+        description: "Password must be at least 12 characters with uppercase, lowercase, numbers, and symbols.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Here you would typically send the data to your backend
     toast({
       title: "User Created",
-      description: `${userType} user "${formData.name}" has been created successfully.`,
+      description: `${userType === "TrainingCoordinator" ? "Training Coordinator" : userType} "${formData.name}" has been created successfully. Onboarding email sent with secure link.`,
     });
 
     // Reset form and close dialog
@@ -72,14 +115,21 @@ export function AddUserDialog() {
       name: "",
       email: "",
       password: "",
-      permissionAccess: "",
+      additionalEmails: "",
+      mfaRequired: true,
+      permissionLevel: "",
+      department: "",
       organizationName: "",
       division: "",
       divisionAddress: "",
       buCostCentre: "",
+      buNumberRequired: false,
       paymentMode: "",
       contactNumber: "",
       courses: "",
+      availabilityStatus: "Available",
+      partnerOrganization: "",
+      enrolledCourses: "",
       status: "Active",
     });
     setUserType("");
@@ -92,33 +142,46 @@ export function AddUserDialog() {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="permissionAccess">Permission Access *</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, permissionAccess: value }))}>
+              <Label htmlFor="permissionLevel">Permission Level *</Label>
+              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, permissionLevel: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select permission level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administrator</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="coordinator">Coordinator</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="Administrator">Administrator</SelectItem>
+                  <SelectItem value="Manager">Manager</SelectItem>
+                  <SelectItem value="Coordinator">Coordinator</SelectItem>
+                  <SelectItem value="Viewer">Viewer</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="department">Department</Label>
+              <Input
+                id="department"
+                value={formData.department}
+                onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                placeholder="e.g. System Administration, Course Management"
+              />
             </div>
           </div>
         );
 
-      case "Client":
+      case "TrainingCoordinator":
         return (
           <div className="space-y-4">
             <div>
               <Label htmlFor="organizationName">Organization Name *</Label>
-              <Input
-                id="organizationName"
-                value={formData.organizationName}
-                onChange={(e) => setFormData(prev => ({ ...prev, organizationName: e.target.value }))}
-                placeholder="e.g. Singapore Police Force"
-              />
+              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, organizationName: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Singapore Police Force">Singapore Police Force</SelectItem>
+                  <SelectItem value="POLWEL">POLWEL</SelectItem>
+                  <SelectItem value="Other Government Agency">Other Government Agency</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="division">Division / Department *</Label>
@@ -126,7 +189,7 @@ export function AddUserDialog() {
                 id="division"
                 value={formData.division}
                 onChange={(e) => setFormData(prev => ({ ...prev, division: e.target.value }))}
-                placeholder="e.g. Ang Mo Kio / AAO"
+                placeholder="e.g. Ang Mo Kio Division, Airport Police Division"
               />
             </div>
             <div>
@@ -139,13 +202,24 @@ export function AddUserDialog() {
               />
             </div>
             <div>
-              <Label htmlFor="buCostCentre">BU Cost Centre</Label>
+              <Label htmlFor="buCostCentre">
+                BU Cost Centre {(formData.organizationName.includes("SPF") || formData.organizationName.includes("POLWEL")) ? "*" : ""}
+              </Label>
               <Input
                 id="buCostCentre"
                 value={formData.buCostCentre}
                 onChange={(e) => setFormData(prev => ({ ...prev, buCostCentre: e.target.value }))}
-                placeholder="For billing purpose (mandatory for SPF/POLWEL)"
+                placeholder="Mandatory for SPF/POLWEL organizations"
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="buNumberRequired"
+                checked={formData.buNumberRequired}
+                onChange={(e) => setFormData(prev => ({ ...prev, buNumberRequired: e.target.checked }))}
+              />
+              <Label htmlFor="buNumberRequired">Require BU Number for learner enrollment</Label>
             </div>
             <div>
               <Label htmlFor="paymentMode">Payment Mode</Label>
@@ -162,12 +236,21 @@ export function AddUserDialog() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="contactNumber">TC Contact Number</Label>
+              <Label htmlFor="contactNumber">Contact Number *</Label>
               <Input
                 id="contactNumber"
                 value={formData.contactNumber}
                 onChange={(e) => setFormData(prev => ({ ...prev, contactNumber: e.target.value }))}
                 placeholder="Training coordinator contact number"
+              />
+            </div>
+            <div>
+              <Label htmlFor="additionalEmails">Additional Email Contacts</Label>
+              <Input
+                id="additionalEmails"
+                value={formData.additionalEmails}
+                onChange={(e) => setFormData(prev => ({ ...prev, additionalEmails: e.target.value }))}
+                placeholder="Comma-separated emails for multiple contacts"
               />
             </div>
           </div>
@@ -176,6 +259,15 @@ export function AddUserDialog() {
       case "Trainer":
         return (
           <div className="space-y-4">
+            <div>
+              <Label htmlFor="partnerOrganization">Partner Organization</Label>
+              <Input
+                id="partnerOrganization"
+                value={formData.partnerOrganization}
+                onChange={(e) => setFormData(prev => ({ ...prev, partnerOrganization: e.target.value }))}
+                placeholder="Training partner organization"
+              />
+            </div>
             <div>
               <Label htmlFor="contactNumber">Contact Number</Label>
               <Input
@@ -186,25 +278,63 @@ export function AddUserDialog() {
               />
             </div>
             <div>
-              <Label htmlFor="courses">Courses Conducted</Label>
+              <Label htmlFor="courses">Courses Assigned</Label>
               <Input
                 id="courses"
                 value={formData.courses}
                 onChange={(e) => setFormData(prev => ({ ...prev, courses: e.target.value }))}
-                placeholder="List of courses (comma separated)"
+                placeholder="Assigned courses (comma separated)"
               />
             </div>
             <div>
-              <Label htmlFor="status">Status</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+              <Label htmlFor="availabilityStatus">Availability Status</Label>
+              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, availabilityStatus: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder="Select availability" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
+                  <SelectItem value="Available">Available</SelectItem>
+                  <SelectItem value="Unavailable">Unavailable</SelectItem>
+                  <SelectItem value="Limited">Limited Availability</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        );
+
+      case "Learner":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="organizationName">Organization Name *</Label>
+              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, organizationName: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Singapore Police Force">Singapore Police Force</SelectItem>
+                  <SelectItem value="POLWEL">POLWEL</SelectItem>
+                  <SelectItem value="Other Government Agency">Other Government Agency</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="division">Division / Department</Label>
+              <Input
+                id="division"
+                value={formData.division}
+                onChange={(e) => setFormData(prev => ({ ...prev, division: e.target.value }))}
+                placeholder="e.g. Ang Mo Kio Division"
+              />
+            </div>
+            <div>
+              <Label htmlFor="enrolledCourses">Enrolled Courses</Label>
+              <Input
+                id="enrolledCourses"
+                value={formData.enrolledCourses}
+                onChange={(e) => setFormData(prev => ({ ...prev, enrolledCourses: e.target.value }))}
+                placeholder="Initial course enrollment (comma separated)"
+              />
             </div>
           </div>
         );
@@ -238,11 +368,12 @@ export function AddUserDialog() {
               <SelectTrigger>
                 <SelectValue placeholder="Select user type" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="POLWEL">POLWEL User</SelectItem>
-                <SelectItem value="Client">Client (Training Coordinator)</SelectItem>
-                <SelectItem value="Trainer">Trainer & Partner</SelectItem>
-              </SelectContent>
+                <SelectContent>
+                  <SelectItem value="POLWEL">POLWEL User</SelectItem>
+                  <SelectItem value="TrainingCoordinator">Training Coordinator</SelectItem>
+                  <SelectItem value="Trainer">Trainer & Partner</SelectItem>
+                  <SelectItem value="Learner">Learner</SelectItem>
+                </SelectContent>
             </Select>
           </div>
 
@@ -251,7 +382,7 @@ export function AddUserDialog() {
             <>
               <div>
                 <Label htmlFor="name">
-                  {userType === "Client" ? "Training Coordinator Name" : "Name"} *
+                  {userType === "TrainingCoordinator" ? "Training Coordinator Name" : "Name"} *
                 </Label>
                 <Input
                   id="name"
@@ -262,25 +393,28 @@ export function AddUserDialog() {
               </div>
               
               <div>
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email">Email Address * (Must be unique)</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Enter email address"
+                  placeholder="Enter unique email address"
                 />
               </div>
               
               <div>
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="password">Temporary Password *</Label>
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Enter temporary password"
+                  placeholder="Min 12 chars, mixed case, numbers, symbols"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Password expires in 365 days. User will be required to change on first login.
+                </p>
               </div>
 
               {/* User Type Specific Fields */}

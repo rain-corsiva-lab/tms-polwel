@@ -2,26 +2,31 @@ import { Users, UserCheck, GraduationCap, Building2, Shield, Calendar } from "lu
 import StatsCard from "@/components/StatsCard";
 import UserTable from "@/components/UserTable";
 
-// Mock data
+// Mock data for dashboard
 const mockUsers = [
   {
     id: '1',
     name: 'John Tan',
-    email: 'john.tan@spf.gov.sg',
+    email: 'john.tan@polwel.org',
     role: 'POLWEL' as const,
     status: 'Active' as const,
     lastLogin: '2024-01-15 09:30',
     mfaEnabled: true,
+    passwordExpiry: '2024-04-15',
+    permissionLevel: 'Administrator'
   },
   {
     id: '2',
     name: 'Mary Lim',
     email: 'mary.lim@spf.gov.sg',
-    role: 'Client' as const,
+    role: 'TrainingCoordinator' as const,
     status: 'Active' as const,
     lastLogin: '2024-01-14 16:45',
     mfaEnabled: true,
-    organization: 'Singapore Police Force - Ang Mo Kio',
+    organization: 'Singapore Police Force',
+    division: 'Ang Mo Kio Division',
+    buCostCentre: 'AMK001',
+    passwordExpiry: '2024-04-14'
   },
   {
     id: '3',
@@ -31,15 +36,20 @@ const mockUsers = [
     status: 'Active' as const,
     lastLogin: '2024-01-13 14:20',
     mfaEnabled: false,
+    availabilityStatus: 'Available',
+    passwordExpiry: '2024-04-13'
   },
   {
     id: '4',
-    name: 'Sarah Wong',
-    email: 'sarah.wong@polwel.org',
-    role: 'POLWEL' as const,
-    status: 'Inactive' as const,
-    lastLogin: '2024-01-10 11:15',
-    mfaEnabled: true,
+    name: 'Raj Kumar',
+    email: 'raj.kumar@spf.gov.sg',
+    role: 'Learner' as const,
+    status: 'Active' as const,
+    lastLogin: '2024-01-12 08:30',
+    mfaEnabled: false,
+    organization: 'Singapore Police Force',
+    division: 'Ang Mo Kio Division',
+    passwordExpiry: '2024-04-12'
   },
 ];
 
