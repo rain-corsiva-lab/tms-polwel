@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Download, Filter } from "lucide-react";
+import { Download, Filter } from "lucide-react";
 import UserTable from "@/components/UserTable";
+import { AddUserDialog } from "@/components/AddUserDialog";
 
 // Extended mock data for user management
 const allUsers = [
@@ -80,10 +81,7 @@ const UserManagement = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          <AddUserDialog />
         </div>
       </div>
 
