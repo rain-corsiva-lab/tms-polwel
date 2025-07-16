@@ -30,7 +30,6 @@ const userManagementItems = [
 ];
 
 const clientOrgsItems = [
-  { name: 'Client Organizations', href: '/client-organizations', icon: Building2 },
   { name: 'Training Coordinators', href: '/training-coordinators', icon: UserCheck },
   { name: 'Learners', href: '/learners', icon: Users },
 ];
