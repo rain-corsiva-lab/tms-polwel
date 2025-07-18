@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock, MapPin, Users, Plus, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TrainingCalendar from "@/components/TrainingCalendar";
 
 interface TrainingScheduleForm {
   title: string;
@@ -25,6 +27,7 @@ interface TrainingScheduleForm {
 }
 
 const TrainingScheduleManagement = () => {
+  const [activeTab, setActiveTab] = useState("calendar");
   const [formData, setFormData] = useState<TrainingScheduleForm>({
     title: "",
     description: "",
@@ -51,6 +54,36 @@ const TrainingScheduleManagement = () => {
     }));
   };
 
+  // Mock schedules data for calendar view
+  const mockSchedules = [
+    {
+      id: "1",
+      title: "Leadership Workshop",
+      coordinator: "Sarah Johnson",
+      startDate: "2024-01-15",
+      endDate: "2024-01-15",
+      startTime: "09:00",
+      endTime: "17:00",
+      location: "Conference Room A",
+      participants: 15,
+      status: "upcoming" as const,
+      description: "Leadership development workshop"
+    },
+    {
+      id: "2",
+      title: "Technical Training",
+      coordinator: "Mike Chen",
+      startDate: "2024-01-20",
+      endDate: "2024-01-22",
+      startTime: "10:00",
+      endTime: "16:00",
+      location: "Training Lab",
+      participants: 12,
+      status: "upcoming" as const,
+      description: "Technical skills training"
+    }
+  ];
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -58,7 +91,25 @@ const TrainingScheduleManagement = () => {
         <p className="text-muted-foreground">Create and manage training schedules for your organization</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+          <TabsTrigger value="create">Create Schedule</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="calendar" className="space-y-6">
+          <TrainingCalendar 
+            schedules={mockSchedules}
+            onDateSelect={(date) => console.log("Selected date:", date)}
+            onScheduleClick={(schedule) => {
+              console.log("Clicked schedule:", schedule);
+              setActiveTab("create");
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="create" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
@@ -312,7 +363,9 @@ const TrainingScheduleManagement = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
+        </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus } from "lucide-react";
+import TrainingCalendar from "@/components/TrainingCalendar";
 
 interface TrainingCoordinator {
   id: string;
@@ -32,9 +33,12 @@ interface TrainingSchedule {
   coordinator: string;
   startDate: string;
   endDate: string;
+  startTime?: string;
+  endTime?: string;
   location: string;
   participants: number;
   status: "upcoming" | "ongoing" | "completed";
+  description?: string;
 }
 
 const mockCoordinators: TrainingCoordinator[] = [
@@ -84,9 +88,12 @@ const mockSchedules: TrainingSchedule[] = [
     coordinator: "Sarah Johnson",
     startDate: "2024-01-15",
     endDate: "2024-01-19",
+    startTime: "09:00",
+    endTime: "17:00",
     location: "Conference Room A",
     participants: 15,
-    status: "upcoming"
+    status: "upcoming",
+    description: "Comprehensive leadership training program"
   },
   {
     id: "2",
@@ -94,9 +101,25 @@ const mockSchedules: TrainingSchedule[] = [
     coordinator: "Mike Chen",
     startDate: "2024-01-08",
     endDate: "2024-01-12",
+    startTime: "10:00",
+    endTime: "16:00",
     location: "Training Lab 1",
     participants: 20,
-    status: "ongoing"
+    status: "ongoing",
+    description: "Hands-on technical skills development"
+  },
+  {
+    id: "3",
+    title: "Safety Training",
+    coordinator: "Sarah Johnson",
+    startDate: "2024-01-22",
+    endDate: "2024-01-22",
+    startTime: "14:00",
+    endTime: "17:00",
+    location: "Main Auditorium",
+    participants: 50,
+    status: "upcoming",
+    description: "Workplace safety and compliance training"
   }
 ];
 
@@ -332,44 +355,11 @@ const ClientOrganisationDetail = () => {
             </Button>
           </div>
 
-          <div className="grid gap-4">
-            {mockSchedules.map((schedule) => (
-              <Card key={schedule.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center space-x-2">
-                        <span>{schedule.title}</span>
-                        {getStatusBadge(schedule.status)}
-                      </CardTitle>
-                      <CardDescription>Coordinated by {schedule.coordinator}</CardDescription>
-                    </div>
-                    <Button variant="ghost" size="sm">Edit</Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{new Date(schedule.startDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{new Date(schedule.endDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>{schedule.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>{schedule.participants} participants</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <TrainingCalendar 
+            schedules={mockSchedules}
+            onDateSelect={(date) => console.log("Selected date:", date)}
+            onScheduleClick={(schedule) => console.log("Clicked schedule:", schedule)}
+          />
         </TabsContent>
       </Tabs>
     </div>
