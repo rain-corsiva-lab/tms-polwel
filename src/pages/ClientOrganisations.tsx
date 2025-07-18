@@ -1,0 +1,138 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Users, UserCheck, Calendar, Search, Plus } from "lucide-react";
+
+interface ClientOrg {
+  id: string;
+  name: string;
+  industry: string;
+  coordinatorsCount: number;
+  learnersCount: number;
+  activeSchedules: number;
+  status: "active" | "inactive";
+}
+
+const mockClientOrgs: ClientOrg[] = [
+  {
+    id: "1",
+    name: "TechCorp Solutions",
+    industry: "Technology",
+    coordinatorsCount: 3,
+    learnersCount: 45,
+    activeSchedules: 8,
+    status: "active"
+  },
+  {
+    id: "2", 
+    name: "Healthcare Plus",
+    industry: "Healthcare",
+    coordinatorsCount: 2,
+    learnersCount: 28,
+    activeSchedules: 5,
+    status: "active"
+  },
+  {
+    id: "3",
+    name: "Manufacturing Corp",
+    industry: "Manufacturing", 
+    coordinatorsCount: 4,
+    learnersCount: 67,
+    activeSchedules: 12,
+    status: "active"
+  }
+];
+
+const ClientOrganisations = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredOrgs, setFilteredOrgs] = useState(mockClientOrgs);
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    const filtered = mockClientOrgs.filter(org =>
+      org.name.toLowerCase().includes(value.toLowerCase()) ||
+      org.industry.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredOrgs(filtered);
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Client Organisations</h1>
+          <p className="text-muted-foreground">Manage client organizations and their training programs</p>
+        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Organisation
+        </Button>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search organisations..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredOrgs.map((org) => (
+          <Link key={org.id} to={`/client-organisations/${org.id}`}>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">{org.name}</CardTitle>
+                  </div>
+                  <Badge variant={org.status === "active" ? "default" : "secondary"}>
+                    {org.status}
+                  </Badge>
+                </div>
+                <CardDescription>{org.industry}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <UserCheck className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Coordinators</span>
+                    </div>
+                    <span className="font-semibold">{org.coordinatorsCount}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Learners</span>
+                    </div>
+                    <span className="font-semibold">{org.learnersCount}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Active Schedules</span>
+                    </div>
+                    <span className="font-semibold">{org.activeSchedules}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default ClientOrganisations;

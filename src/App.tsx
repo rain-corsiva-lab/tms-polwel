@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./pages/Layout";
 import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
+import ClientOrganisations from "./pages/ClientOrganisations";
+import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
+import TrainingScheduleManagement from "./pages/TrainingScheduleManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,7 +27,9 @@ const App = () => (
             <Route path="clients" element={<UserManagement />} />
             <Route path="trainers" element={<UserManagement />} />
             <Route path="learners" element={<UserManagement />} />
-            <Route path="schedule" element={<UserManagement />} />
+            <Route path="client-organisations" element={<ClientOrganisations />} />
+            <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
+            <Route path="schedule" element={<TrainingScheduleManagement />} />
             <Route path="settings" element={<UserManagement />} />
           </Route>
           <Route path="*" element={<NotFound />} />

@@ -104,43 +104,21 @@ const Sidebar = ({ className }: SidebarProps) => {
                 </NavLink>
               ))}
 
-              {/* Client Organisations Sub-dropdown */}
-              <div className="space-y-1">
-                <button
-                  onClick={() => setClientOrgsOpen(!clientOrgsOpen)}
-                  className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                >
-                  <Building2 className="mr-3 h-4 w-4" />
-                  Client Organisations
-                  {clientOrgsOpen ? (
-                    <ChevronDown className="ml-auto h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="ml-auto h-3 w-3" />
-                  )}
-                </button>
-
-                {clientOrgsOpen && (
-                  <div className="ml-6 space-y-1">
-                    {clientOrgsItems.map((item) => (
-                      <NavLink
-                        key={item.name}
-                        to={item.href}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive
-                              ? "bg-accent text-accent-foreground"
-                              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                          )
-                        }
-                      >
-                        <item.icon className="mr-3 h-3 w-3" />
-                        {item.name}
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Client Organisations as direct link */}
+              <NavLink
+                to="/client-organisations"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                  )
+                }
+              >
+                <Building2 className="mr-3 h-4 w-4" />
+                Client Organisations
+              </NavLink>
             </div>
           )}
         </div>
