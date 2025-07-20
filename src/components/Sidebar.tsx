@@ -8,7 +8,6 @@ import {
   BarChart3, 
   Settings,
   Shield,
-  Calendar,
   ChevronDown,
   ChevronRight
 } from "lucide-react";
@@ -20,7 +19,6 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
-  { name: 'Training Schedule', href: '/schedule', icon: Calendar },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
