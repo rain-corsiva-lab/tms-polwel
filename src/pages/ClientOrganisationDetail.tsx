@@ -28,17 +28,20 @@ interface Learner {
   status: "active" | "inactive";
 }
 
-interface TrainingSchedule {
+interface Trainer {
   id: string;
-  title: string;
-  coordinator: string;
-  startDate: string;
-  endDate: string;
-  startTime?: string;
-  endTime?: string;
-  location: string;
-  participants: number;
-  status: "upcoming" | "ongoing" | "completed";
+  name: string;
+  email: string;
+  specializations: string[];
+}
+
+interface TrainerBlockout {
+  id: string;
+  trainerId: string;
+  trainerName: string;
+  date: string;
+  reason: string;
+  type: "maintenance" | "holiday" | "unavailable" | "personal" | "other";
   description?: string;
 }
 
@@ -82,63 +85,55 @@ const mockLearners: Learner[] = [
   }
 ];
 
-const mockSchedules: TrainingSchedule[] = [
+const mockTrainers: Trainer[] = [
   {
     id: "1",
-    title: "Leadership Development Program",
-    coordinator: "Sarah Johnson",
-    startDate: "2024-01-15",
-    endDate: "2024-01-19",
-    startTime: "09:00",
-    endTime: "17:00",
-    location: "Conference Room A",
-    participants: 15,
-    status: "upcoming",
-    description: "Comprehensive leadership training program"
+    name: "Dr. Sarah Johnson",
+    email: "sarah.johnson@techcorp.com",
+    specializations: ["Leadership", "Communication", "Project Management"]
   },
   {
     id: "2",
-    title: "Technical Skills Workshop",
-    coordinator: "Mike Chen",
-    startDate: "2024-01-08",
-    endDate: "2024-01-12",
-    startTime: "10:00",
-    endTime: "16:00",
-    location: "Training Lab 1",
-    participants: 20,
-    status: "ongoing",
-    description: "Hands-on technical skills development"
+    name: "Mike Chen",
+    email: "mike.chen@techcorp.com",
+    specializations: ["Technical Skills", "Software Development", "Data Analysis"]
   },
   {
     id: "3",
-    title: "Safety Training",
-    coordinator: "Sarah Johnson",
-    startDate: "2024-01-22",
-    endDate: "2024-01-22",
-    startTime: "14:00",
-    endTime: "17:00",
-    location: "Main Auditorium",
-    participants: 50,
-    status: "upcoming",
-    description: "Workplace safety and compliance training"
+    name: "Emily Rodriguez",
+    email: "emily.rodriguez@techcorp.com",
+    specializations: ["Safety Training", "Compliance", "HR Policies"]
   }
 ];
 
-// Mock blockout dates data
-const mockBlockoutDates = [
+// Mock trainer blockout dates data
+const mockTrainerBlockouts: TrainerBlockout[] = [
   {
     id: "1",
+    trainerId: "1",
+    trainerName: "Dr. Sarah Johnson",
     date: "2024-01-15",
-    reason: "Facility Maintenance",
-    type: "maintenance" as const,
-    description: "Annual HVAC system maintenance"
+    reason: "Personal Leave",
+    type: "personal",
+    description: "Family commitment"
   },
   {
-    id: "2", 
+    id: "2",
+    trainerId: "2", 
+    trainerName: "Mike Chen",
     date: "2024-01-25",
-    reason: "National Holiday",
-    type: "holiday" as const,
-    description: "Australia Day holiday"
+    reason: "Conference Attendance",
+    type: "unavailable",
+    description: "Speaking at Tech Conference 2024"
+  },
+  {
+    id: "3",
+    trainerId: "3",
+    trainerName: "Emily Rodriguez",
+    date: "2024-01-30",
+    reason: "Training Course",
+    type: "personal",
+    description: "Attending advanced safety certification"
   }
 ];
 
@@ -146,7 +141,7 @@ const ClientOrganisationDetail = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
-  const [blockoutDates, setBlockoutDates] = useState(mockBlockoutDates);
+  const [trainerBlockouts, setTrainerBlockouts] = useState(mockTrainerBlockouts);
 
   // Mock organization data
   const organization = {
@@ -170,23 +165,23 @@ const ClientOrganisationDetail = () => {
     return <Badge variant={variants[status as keyof typeof variants] || "secondary"}>{status}</Badge>;
   };
 
-  const handleBlockoutAdd = (blockout: Omit<typeof mockBlockoutDates[0], 'id'>) => {
+  const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, 'id'>) => {
     const newBlockout = {
       ...blockout,
       id: Date.now().toString()
     };
-    setBlockoutDates(prev => [...prev, newBlockout]);
+    setTrainerBlockouts(prev => [...prev, newBlockout]);
     toast({
-      title: "Date Blocked",
-      description: `${blockout.reason} has been blocked for ${blockout.date}`,
+      title: "Trainer Blocked Out",
+      description: `${blockout.trainerName} has been blocked out for ${blockout.date}`,
     });
   };
 
-  const handleBlockoutRemove = (blockoutId: string) => {
-    setBlockoutDates(prev => prev.filter(b => b.id !== blockoutId));
+  const handleTrainerBlockoutRemove = (blockoutId: string) => {
+    setTrainerBlockouts(prev => prev.filter(b => b.id !== blockoutId));
     toast({
-      title: "Blockout Removed",
-      description: "The date blockout has been removed",
+      title: "Trainer Blockout Removed",
+      description: "The trainer blockout has been removed",
     });
   };
 
@@ -218,12 +213,12 @@ const ClientOrganisationDetail = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>
-          <TabsTrigger value="learners">Learners</TabsTrigger>
-          <TabsTrigger value="schedules">Training Schedules</TabsTrigger>
-        </TabsList>
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>
+            <TabsTrigger value="learners">Learners</TabsTrigger>
+            <TabsTrigger value="schedules">Trainer Availability</TabsTrigger>
+          </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -249,49 +244,45 @@ const ClientOrganisationDetail = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Schedules</CardTitle>
+                <CardTitle className="text-sm font-medium">Available Trainers</CardTitle>
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{mockSchedules.filter(s => s.status === "ongoing").length}</div>
+                <div className="text-2xl font-bold">{mockTrainers.length}</div>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Training Schedules</CardTitle>
-              <CardDescription>Overview of all training schedules in this organization</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Coordinator</TableHead>
-                    <TableHead>Date Range</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Participants</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockSchedules.map((schedule) => (
-                    <TableRow key={schedule.id}>
-                      <TableCell className="font-medium">{schedule.title}</TableCell>
-                      <TableCell>{schedule.coordinator}</TableCell>
-                      <TableCell>
-                        {new Date(schedule.startDate).toLocaleDateString()} - {new Date(schedule.endDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{schedule.location}</TableCell>
-                      <TableCell>{schedule.participants}</TableCell>
-                      <TableCell>{getStatusBadge(schedule.status)}</TableCell>
+            <Card>
+              <CardHeader>
+                <CardTitle>Available Trainers</CardTitle>
+                <CardDescription>Overview of trainers available for this organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Specializations</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {mockTrainers.map((trainer) => (
+                      <TableRow key={trainer.id}>
+                        <TableCell className="font-medium">{trainer.name}</TableCell>
+                        <TableCell>{trainer.email}</TableCell>
+                        <TableCell>{trainer.specializations.join(", ")}</TableCell>
+                        <TableCell>
+                          <Badge variant="default">Available</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
         </TabsContent>
 
         <TabsContent value="coordinators" className="space-y-6">
@@ -387,23 +378,18 @@ const ClientOrganisationDetail = () => {
         <TabsContent value="schedules" className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold">Training Schedules</h2>
-              <p className="text-muted-foreground">All training schedules for this organization</p>
+              <h2 className="text-2xl font-bold">Trainer Availability</h2>
+              <p className="text-muted-foreground">Block out dates when trainers are unavailable</p>
             </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Schedule
-            </Button>
           </div>
 
           <TrainingCalendar 
-            schedules={mockSchedules}
-            blockoutDates={blockoutDates}
+            trainers={mockTrainers}
+            trainerBlockouts={trainerBlockouts}
             canManageBlockouts={true}
-            onBlockoutAdd={handleBlockoutAdd}
-            onBlockoutRemove={handleBlockoutRemove}
+            onTrainerBlockoutAdd={handleTrainerBlockoutAdd}
+            onTrainerBlockoutRemove={handleTrainerBlockoutRemove}
             onDateSelect={(date) => console.log("Selected date:", date)}
-            onScheduleClick={(schedule) => console.log("Clicked schedule:", schedule)}
           />
         </TabsContent>
       </Tabs>
