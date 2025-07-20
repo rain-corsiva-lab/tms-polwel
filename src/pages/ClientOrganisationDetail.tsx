@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus } from "lucide-react";
+import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
+import { useToast } from "@/hooks/use-toast";
 
 interface TrainingCoordinator {
   id: string;
@@ -123,9 +124,29 @@ const mockSchedules: TrainingSchedule[] = [
   }
 ];
 
+// Mock blockout dates data
+const mockBlockoutDates = [
+  {
+    id: "1",
+    date: "2024-01-15",
+    reason: "Facility Maintenance",
+    type: "maintenance" as const,
+    description: "Annual HVAC system maintenance"
+  },
+  {
+    id: "2", 
+    date: "2024-01-25",
+    reason: "National Holiday",
+    type: "holiday" as const,
+    description: "Australia Day holiday"
+  }
+];
+
 const ClientOrganisationDetail = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
+  const { toast } = useToast();
+  const [blockoutDates, setBlockoutDates] = useState(mockBlockoutDates);
 
   // Mock organization data
   const organization = {
@@ -147,6 +168,26 @@ const ClientOrganisationDetail = () => {
     } as const;
     
     return <Badge variant={variants[status as keyof typeof variants] || "secondary"}>{status}</Badge>;
+  };
+
+  const handleBlockoutAdd = (blockout: Omit<typeof mockBlockoutDates[0], 'id'>) => {
+    const newBlockout = {
+      ...blockout,
+      id: Date.now().toString()
+    };
+    setBlockoutDates(prev => [...prev, newBlockout]);
+    toast({
+      title: "Date Blocked",
+      description: `${blockout.reason} has been blocked for ${blockout.date}`,
+    });
+  };
+
+  const handleBlockoutRemove = (blockoutId: string) => {
+    setBlockoutDates(prev => prev.filter(b => b.id !== blockoutId));
+    toast({
+      title: "Blockout Removed",
+      description: "The date blockout has been removed",
+    });
   };
 
   return (
@@ -357,6 +398,10 @@ const ClientOrganisationDetail = () => {
 
           <TrainingCalendar 
             schedules={mockSchedules}
+            blockoutDates={blockoutDates}
+            canManageBlockouts={true}
+            onBlockoutAdd={handleBlockoutAdd}
+            onBlockoutRemove={handleBlockoutRemove}
             onDateSelect={(date) => console.log("Selected date:", date)}
             onScheduleClick={(schedule) => console.log("Clicked schedule:", schedule)}
           />
