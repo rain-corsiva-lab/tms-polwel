@@ -89,7 +89,6 @@ const UserTable = ({ users, title }: UserTableProps) => {
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Name</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Email</th>
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">MFA</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Password Expiry</th>
@@ -121,23 +120,14 @@ const UserTable = ({ users, title }: UserTableProps) => {
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-4">
-                    <Badge className={getRoleColor(user.role)}>{getRoleDisplay(user.role)}</Badge>
-                    {user.permissionLevel && (
-                      <div className="text-xs text-muted-foreground mt-1">{user.permissionLevel}</div>
-                    )}
-                    {user.availabilityStatus && (
-                      <div className="text-xs text-muted-foreground mt-1">{user.availabilityStatus}</div>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
-                    {user.failedLoginAttempts && user.failedLoginAttempts > 0 && (
-                      <div className="text-xs text-destructive mt-1">
-                        {user.failedLoginAttempts} failed attempts
-                      </div>
-                    )}
-                  </td>
+                   <td className="py-3 px-4">
+                     <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                     {user.failedLoginAttempts && user.failedLoginAttempts > 0 && (
+                       <div className="text-xs text-destructive mt-1">
+                         {user.failedLoginAttempts} failed attempts
+                       </div>
+                     )}
+                   </td>
                   <td className="py-3 px-4">
                     <Badge variant={user.mfaEnabled ? "default" : "destructive"}>
                       {user.mfaEnabled ? 'Enabled' : 'Disabled'}
