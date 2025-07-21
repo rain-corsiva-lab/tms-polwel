@@ -112,30 +112,6 @@ export function AddCoordinatorDialog() {
             />
           </div>
           
-          <div>
-            <Label htmlFor="buCostCentre">BU Cost Centre (for billing purpose)</Label>
-            <Input
-              id="buCostCentre"
-              value={formData.buCostCentre}
-              onChange={(e) => setFormData(prev => ({ ...prev, buCostCentre: e.target.value }))}
-              placeholder="Enter BU Cost Centre"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="paymentMode">Payment Mode Applicable</Label>
-            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select payment mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ULTF">ULTF</SelectItem>
-                <SelectItem value="Transition Dollars">Transition Dollars</SelectItem>
-                <SelectItem value="Self Sponsored">Self Sponsored</SelectItem>
-                <SelectItem value="Not Applicable">Not Applicable (for non-SPF/MHA organisations and POLWEL staff)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </form>
 
         <DialogFooter>
