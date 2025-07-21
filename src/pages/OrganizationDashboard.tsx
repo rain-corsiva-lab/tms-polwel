@@ -27,12 +27,28 @@ const trainingRecords = [
   { id: 3, title: "Technical Skills", learners: 30, status: "scheduled", startDate: "2024-01-25", endDate: "2024-01-30" },
 ];
 
+const learners = [
+  { id: 1, name: "John Smith", email: "john.smith@techcorp.com", department: "Engineering", status: "active", trainings: 5 },
+  { id: 2, name: "Sarah Wilson", email: "sarah.wilson@techcorp.com", department: "Marketing", status: "active", trainings: 3 },
+  { id: 3, name: "Michael Brown", email: "michael.brown@techcorp.com", department: "HR", status: "inactive", trainings: 2 },
+  { id: 4, name: "Lisa Davis", email: "lisa.davis@techcorp.com", department: "Finance", status: "active", trainings: 4 },
+  { id: 5, name: "David Jones", email: "david.jones@techcorp.com", department: "Engineering", status: "active", trainings: 6 },
+  { id: 6, name: "Emma Thompson", email: "emma.thompson@techcorp.com", department: "Operations", status: "active", trainings: 3 },
+];
+
 const OrganizationDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [learnerSearchTerm, setLearnerSearchTerm] = useState("");
 
   const filteredCoordinators = organizationData.coordinators.filter(coordinator =>
     coordinator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     coordinator.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredLearners = learners.filter(learner =>
+    learner.name.toLowerCase().includes(learnerSearchTerm.toLowerCase()) ||
+    learner.email.toLowerCase().includes(learnerSearchTerm.toLowerCase()) ||
+    learner.department.toLowerCase().includes(learnerSearchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {
@@ -113,6 +129,43 @@ const OrganizationDashboard = () => {
                 </div>
                 <Badge className={getStatusColor(coordinator.status)}>
                   {coordinator.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Learners Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Organization Learners</CardTitle>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search learners..."
+              value={learnerSearchTerm}
+              onChange={(e) => setLearnerSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredLearners.map((learner) => (
+              <div key={learner.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{learner.name}</h3>
+                    <p className="text-sm text-muted-foreground">{learner.email}</p>
+                    <p className="text-sm text-muted-foreground">{learner.department} • {learner.trainings} trainings completed</p>
+                  </div>
+                </div>
+                <Badge className={getStatusColor(learner.status)}>
+                  {learner.status}
                 </Badge>
               </div>
             ))}
