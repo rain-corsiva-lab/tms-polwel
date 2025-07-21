@@ -13,7 +13,6 @@ interface ClientOrg {
   industry: string;
   coordinatorsCount: number;
   learnersCount: number;
-  activeSchedules: number;
   status: "active" | "inactive";
 }
 
@@ -24,7 +23,6 @@ const mockClientOrgs: ClientOrg[] = [
     industry: "Technology",
     coordinatorsCount: 3,
     learnersCount: 45,
-    activeSchedules: 8,
     status: "active"
   },
   {
@@ -33,7 +31,6 @@ const mockClientOrgs: ClientOrg[] = [
     industry: "Healthcare",
     coordinatorsCount: 2,
     learnersCount: 28,
-    activeSchedules: 5,
     status: "active"
   },
   {
@@ -42,7 +39,6 @@ const mockClientOrgs: ClientOrg[] = [
     industry: "Manufacturing", 
     coordinatorsCount: 4,
     learnersCount: 67,
-    activeSchedules: 12,
     status: "active"
   }
 ];
@@ -116,13 +112,6 @@ const ClientOrganisations = () => {
                     <span className="font-semibold">{org.learnersCount}</span>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Active Schedules</span>
-                    </div>
-                    <span className="font-semibold">{org.activeSchedules}</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
