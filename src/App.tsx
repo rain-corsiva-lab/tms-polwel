@@ -9,6 +9,7 @@ import UserManagement from "./pages/UserManagement";
 import PolwelUsers from "./pages/PolwelUsers";
 import TrainersAndPartners from "./pages/TrainersAndPartners";
 import TrainerDetail from "./pages/TrainerDetail";
+import TrainerPartner from "./pages/TrainerPartner";
 import ClientOrganisations from "./pages/ClientOrganisations";
 import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
 import Login from "./pages/Login";
@@ -25,6 +26,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/trainerpartner" element={<TrainerPartner />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="users" element={<UserManagement />} />
