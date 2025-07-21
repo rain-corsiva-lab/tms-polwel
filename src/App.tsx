@@ -11,6 +11,7 @@ import TrainersAndPartners from "./pages/TrainersAndPartners";
 import TrainerDetail from "./pages/TrainerDetail";
 import ClientOrganisations from "./pages/ClientOrganisations";
 import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
+import Login from "./pages/Login";
 
 import NotFound from "./pages/NotFound";
 
@@ -23,6 +24,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="users" element={<UserManagement />} />

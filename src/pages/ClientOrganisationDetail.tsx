@@ -354,12 +354,6 @@ const ClientOrganisationDetail = () => {
               <h2 className="text-2xl font-bold">Learners</h2>
               <p className="text-muted-foreground">Manage learners for this organization</p>
             </div>
-            <div className="flex space-x-3">
-              <Button variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Import Excel
-              </Button>
-            </div>
           </div>
 
           <Card>
