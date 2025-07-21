@@ -110,7 +110,7 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
 ];
 
 const TrainersAndPartners = () => {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("trainers");
   const [trainerBlockouts, setTrainerBlockouts] = useState(mockTrainerBlockouts);
   const { toast } = useToast();
 
@@ -158,68 +158,9 @@ const TrainersAndPartners = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="trainers">Trainers</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Trainer Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-foreground">53</div>
-                <p className="text-sm text-muted-foreground">Total Trainers</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-success">42</div>
-                <p className="text-sm text-muted-foreground">Available</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-warning">8</div>
-                <p className="text-sm text-muted-foreground">Limited Availability</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-destructive">3</div>
-                <p className="text-sm text-muted-foreground">Unavailable</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Trainer Specific Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Course Specializations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Leadership Development</span>
-                    <span className="font-medium">25</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Communication Skills</span>
-                    <span className="font-medium">18</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Team Building</span>
-                    <span className="font-medium">22</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Customer Service</span>
-                    <span className="font-medium">15</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
         <TabsContent value="trainers" className="space-y-6">
           <Card>
