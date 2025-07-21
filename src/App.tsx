@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./pages/Layout";
 import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
+import PolwelUsers from "./pages/PolwelUsers";
+import TrainersAndPartners from "./pages/TrainersAndPartners";
 import ClientOrganisations from "./pages/ClientOrganisations";
 import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
 
@@ -23,9 +25,9 @@ const App = () => (
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="users" element={<UserManagement />} />
-            <Route path="polwel-users" element={<UserManagement />} />
+            <Route path="polwel-users" element={<PolwelUsers />} />
             <Route path="clients" element={<UserManagement />} />
-            <Route path="trainers" element={<UserManagement />} />
+            <Route path="trainers" element={<TrainersAndPartners />} />
             <Route path="learners" element={<UserManagement />} />
             <Route path="client-organisations" element={<ClientOrganisations />} />
             <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
