@@ -116,7 +116,7 @@ const PolwelUsers = () => {
       <UserTable users={polwelUsers} title="POLWEL Staff Members" />
 
       {/* POLWEL Specific Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Permission Levels</CardTitle>
@@ -138,32 +138,6 @@ const PolwelUsers = () => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Viewers</span>
                 <span className="font-medium">2</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Departments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">System Administration</span>
-                <span className="font-medium">8</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Course Management</span>
-                <span className="font-medium">6</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Operations</span>
-                <span className="font-medium">5</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Quality Assurance</span>
-                <span className="font-medium">4</span>
               </div>
             </div>
           </CardContent>
