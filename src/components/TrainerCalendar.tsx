@@ -33,16 +33,16 @@ interface TrainerAssignment {
   title: string;
   type: "assignment" | "unavailable";
   description?: string;
-  course?: string;
   organization?: string;
 }
 
 interface TrainerCalendarProps {
   trainerId: string;
   trainerName: string;
+  trainerCourses: string[];
 }
 
-export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps) {
+export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: TrainerCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedRange, setSelectedRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
   const [isDragging, setIsDragging] = useState(false);
@@ -53,9 +53,8 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
       date: "2024-01-15",
       title: "Leadership Training",
       type: "assignment",
-      course: "Advanced Leadership Skills",
-      organization: "TechCorp Solutions",
-      description: "Full day leadership workshop"
+      description: "Full day leadership workshop",
+      organization: "TechCorp Solutions"
     },
     {
       id: "2", 
@@ -73,7 +72,6 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
     title: "",
     type: "assignment" as "assignment" | "unavailable",
     description: "",
-    course: "",
     organization: ""
   });
 
@@ -140,7 +138,6 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
       title: newAssignment.title,
       type: newAssignment.type,
       description: newAssignment.description,
-      course: newAssignment.course,
       organization: newAssignment.organization
     }));
 
@@ -161,7 +158,6 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
       title: "",
       type: "assignment",
       description: "",
-      course: "",
       organization: ""
     });
     setSelectedRange({ start: null, end: null });
@@ -269,15 +265,12 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
                     <Card key={assignment.id} className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="space-y-1">
                             <h4 className="font-medium">{assignment.title}</h4>
                             <Badge variant={assignment.type === "assignment" ? "default" : "secondary"}>
                               {assignment.type}
                             </Badge>
                           </div>
-                          {assignment.course && (
-                            <p className="text-sm text-muted-foreground">Course: {assignment.course}</p>
-                          )}
                           {assignment.organization && (
                             <p className="text-sm text-muted-foreground">Organization: {assignment.organization}</p>
                           )}
@@ -359,37 +352,45 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
             </div>
 
             <div>
-              <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
+              <Label htmlFor="title">Course/Title *</Label>
+              <Select 
                 value={newAssignment.title}
-                onChange={(e) => setNewAssignment(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Assignment or unavailability reason"
-              />
+                onValueChange={(value) => setNewAssignment(prev => ({ ...prev, title: value }))}
+              >
+                <SelectTrigger className="bg-background z-50">
+                  <SelectValue placeholder="Select course or enter custom title" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  {trainerCourses.map((course) => (
+                    <SelectItem key={course} value={course} className="hover:bg-muted">
+                      {course}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="Other" className="hover:bg-muted">
+                    Other (Custom)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {newAssignment.title === "Other" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Enter custom title"
+                  value={newAssignment.title === "Other" ? "" : newAssignment.title}
+                  onChange={(e) => setNewAssignment(prev => ({ ...prev, title: e.target.value }))}
+                />
+              )}
             </div>
 
             {newAssignment.type === "assignment" && (
-              <>
-                <div>
-                  <Label htmlFor="course">Course</Label>
-                  <Input
-                    id="course"
-                    value={newAssignment.course}
-                    onChange={(e) => setNewAssignment(prev => ({ ...prev, course: e.target.value }))}
-                    placeholder="Course name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="organization">Organization</Label>
-                  <Input
-                    id="organization"
-                    value={newAssignment.organization}
-                    onChange={(e) => setNewAssignment(prev => ({ ...prev, organization: e.target.value }))}
-                    placeholder="Client organization"
-                  />
-                </div>
-              </>
+              <div>
+                <Label htmlFor="organization">Organization</Label>
+                <Input
+                  id="organization"
+                  value={newAssignment.organization}
+                  onChange={(e) => setNewAssignment(prev => ({ ...prev, organization: e.target.value }))}
+                  placeholder="Client organization"
+                />
+              </div>
             )}
 
             <div>

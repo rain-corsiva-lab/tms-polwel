@@ -104,7 +104,7 @@ const TrainerDetail = () => {
         </Card>
       </div>
 
-      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} />
+      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} trainerCourses={trainer.specializations} />
     </div>
   );
 };
