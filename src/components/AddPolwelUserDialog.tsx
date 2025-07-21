@@ -28,7 +28,6 @@ export function AddPolwelUserDialog() {
     email: "",
     password: "",
     permissionLevel: "",
-    department: "",
     status: "Active",
   });
 
@@ -68,7 +67,6 @@ export function AddPolwelUserDialog() {
       email: "",
       password: "",
       permissionLevel: "",
-      department: "",
       status: "Active",
     });
     setOpen(false);
@@ -144,22 +142,6 @@ export function AddPolwelUserDialog() {
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="department">Department</Label>
-            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="System Administration">System Administration</SelectItem>
-                <SelectItem value="Course Management">Course Management</SelectItem>
-                <SelectItem value="Operations">Operations</SelectItem>
-                <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
-                <SelectItem value="Finance">Finance</SelectItem>
-                <SelectItem value="Human Resources">Human Resources</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </form>
 
         <DialogFooter>
