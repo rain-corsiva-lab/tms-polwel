@@ -18,18 +18,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, GraduationCap } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { Plus, GraduationCap, Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+
+// Available courses for selection
+const availableCourses = [
+  "Leadership Development",
+  "Team Building",
+  "Communication Skills",
+  "Customer Service",
+  "Project Management",
+  "Time Management",
+  "Conflict Resolution",
+  "Public Speaking",
+  "Digital Literacy",
+  "Safety Training",
+  "Compliance Training",
+  "HR Policies",
+  "Data Analysis",
+  "Software Development",
+  "Technical Skills",
+  "Sales Training",
+  "Marketing Fundamentals",
+  "Financial Management",
+  "Strategic Planning",
+  "Change Management"
+];
 
 export function AddTrainerDialog() {
   const [open, setOpen] = useState(false);
+  const [courseSearchOpen, setCourseSearchOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     partnerOrganization: "",
     contactNumber: "",
-    courses: "",
+    courses: [] as string[],
     status: "Active",
   });
 
@@ -70,10 +110,27 @@ export function AddTrainerDialog() {
       password: "",
       partnerOrganization: "",
       contactNumber: "",
-      courses: "",
+      courses: [],
       status: "Active",
     });
     setOpen(false);
+  };
+
+  const addCourse = (course: string) => {
+    if (!formData.courses.includes(course)) {
+      setFormData(prev => ({
+        ...prev,
+        courses: [...prev.courses, course]
+      }));
+    }
+    setCourseSearchOpen(false);
+  };
+
+  const removeCourse = (courseToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      courses: prev.courses.filter(course => course !== courseToRemove)
+    }));
   };
 
   return (
@@ -159,14 +216,64 @@ export function AddTrainerDialog() {
 
           <div>
             <Label htmlFor="courses">Courses Assigned</Label>
-            <Input
-              id="courses"
-              value={formData.courses}
-              onChange={(e) => setFormData(prev => ({ ...prev, courses: e.target.value }))}
-              placeholder="Assigned courses (comma separated)"
-            />
+            <div className="space-y-2">
+              <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={courseSearchOpen}
+                    className="w-full justify-between"
+                  >
+                    Search and select courses...
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search courses..." />
+                    <CommandList>
+                      <CommandEmpty>No courses found.</CommandEmpty>
+                      <CommandGroup>
+                        {availableCourses
+                          .filter(course => !formData.courses.includes(course))
+                          .map((course) => (
+                            <CommandItem
+                              key={course}
+                              value={course}
+                              onSelect={() => addCourse(course)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.courses.includes(course) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {course}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              
+              {/* Selected courses display */}
+              {formData.courses.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.courses.map((course) => (
+                    <Badge key={course} variant="secondary" className="flex items-center gap-1">
+                      {course}
+                      <X
+                        className="h-3 w-3 cursor-pointer hover:text-destructive"
+                        onClick={() => removeCourse(course)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-
         </form>
 
         <DialogFooter>
