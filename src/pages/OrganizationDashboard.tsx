@@ -74,21 +74,11 @@ const OrganizationDashboard = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <StatsCard
           title="Total Learners"
           value={organizationData.totalLearners}
           icon={Users}
-        />
-        <StatsCard
-          title="Active Trainings"
-          value={organizationData.activeTrainings}
-          icon={BookOpen}
-        />
-        <StatsCard
-          title="Completed Trainings"
-          value={organizationData.completedTrainings}
-          icon={Calendar}
         />
         <StatsCard
           title="Training Coordinators"
