@@ -170,7 +170,6 @@ const OrganizationDashboard = () => {
                       <div>
                         <h3 className="font-medium">{learner.name}</h3>
                         <p className="text-sm text-muted-foreground">{learner.email}</p>
-                        <p className="text-sm text-muted-foreground">{learner.department} • {learner.trainings} trainings completed</p>
                       </div>
                     </div>
                     <Badge className={getStatusColor(learner.status)}>
