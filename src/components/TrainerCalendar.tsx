@@ -351,35 +351,37 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="title">Course/Title *</Label>
-              <Select 
-                value={newAssignment.title}
-                onValueChange={(value) => setNewAssignment(prev => ({ ...prev, title: value }))}
-              >
-                <SelectTrigger className="bg-background z-50">
-                  <SelectValue placeholder="Select course or enter custom title" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border shadow-lg z-50">
-                  {trainerCourses.map((course) => (
-                    <SelectItem key={course} value={course} className="hover:bg-muted">
-                      {course}
+            {newAssignment.type === "assignment" && (
+              <div>
+                <Label htmlFor="title">Course/Title *</Label>
+                <Select 
+                  value={newAssignment.title}
+                  onValueChange={(value) => setNewAssignment(prev => ({ ...prev, title: value }))}
+                >
+                  <SelectTrigger className="bg-background z-50">
+                    <SelectValue placeholder="Select course or enter custom title" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-lg z-50">
+                    {trainerCourses.map((course) => (
+                      <SelectItem key={course} value={course} className="hover:bg-muted">
+                        {course}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="Other" className="hover:bg-muted">
+                      Other (Custom)
                     </SelectItem>
-                  ))}
-                  <SelectItem value="Other" className="hover:bg-muted">
-                    Other (Custom)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              {newAssignment.title === "Other" && (
-                <Input
-                  className="mt-2"
-                  placeholder="Enter custom title"
-                  value={newAssignment.title === "Other" ? "" : newAssignment.title}
-                  onChange={(e) => setNewAssignment(prev => ({ ...prev, title: e.target.value }))}
-                />
-              )}
-            </div>
+                  </SelectContent>
+                </Select>
+                {newAssignment.title === "Other" && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Enter custom title"
+                    value={newAssignment.title === "Other" ? "" : newAssignment.title}
+                    onChange={(e) => setNewAssignment(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                )}
+              </div>
+            )}
 
             {newAssignment.type === "assignment" && (
               <div>
