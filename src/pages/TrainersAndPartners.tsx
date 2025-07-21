@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -159,7 +160,6 @@ const TrainersAndPartners = () => {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="trainers">Trainers</TabsTrigger>
-          <TabsTrigger value="availability">Availability Calendar</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -241,7 +241,11 @@ const TrainersAndPartners = () => {
                 <TableBody>
                   {trainersData.map((trainer) => (
                     <TableRow key={trainer.id}>
-                      <TableCell className="font-medium">{trainer.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link to={`/trainers/${trainer.id}`} className="hover:underline text-primary">
+                          {trainer.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>{trainer.email}</TableCell>
                       <TableCell>
                         <Badge 
@@ -272,23 +276,6 @@ const TrainersAndPartners = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="availability" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold">Trainer Availability Calendar</h2>
-              <p className="text-muted-foreground">Overview of all trainer blockout dates</p>
-            </div>
-          </div>
-
-          <TrainingCalendar 
-            trainers={trainersForCalendar}
-            trainerBlockouts={trainerBlockouts}
-            canManageBlockouts={true}
-            onTrainerBlockoutAdd={handleTrainerBlockoutAdd}
-            onTrainerBlockoutRemove={handleTrainerBlockoutRemove}
-            onDateSelect={(date) => console.log("Selected date:", date)}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   );
