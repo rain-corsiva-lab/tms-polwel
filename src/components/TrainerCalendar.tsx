@@ -117,7 +117,9 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
   };
 
   const handleAddAssignment = () => {
-    if (!newAssignment.startDate || !newAssignment.title) {
+    const title = newAssignment.type === "unavailable" ? "Unavailable" : newAssignment.title;
+    
+    if (!newAssignment.startDate || (newAssignment.type === "assignment" && !newAssignment.title)) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -135,7 +137,7 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     const newAssignments = dateRange.map(date => ({
       id: `${Date.now()}-${format(date, "yyyy-MM-dd")}`,
       date: format(date, "yyyy-MM-dd"),
-      title: newAssignment.title,
+      title: title,
       type: newAssignment.type,
       description: newAssignment.description,
       organization: newAssignment.organization
