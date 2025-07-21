@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
@@ -140,19 +142,23 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
 
 const ClientOrganisationDetail = () => {
   const { id } = useParams();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("information");
   const { toast } = useToast();
   const [trainerBlockouts, setTrainerBlockouts] = useState(mockTrainerBlockouts);
 
   // Mock organization data
-  const organization = {
+  const [organization, setOrganization] = useState({
     id: id || "1",
     name: "TechCorp Solutions",
     industry: "Technology",
     address: "123 Tech Street, Innovation City",
     contact: "contact@techcorp.com",
-    status: "active"
-  };
+    status: "active",
+    buNumber: "BU-2024-001",
+    divisionAddress: "123 Tech Street, Innovation City"
+  });
+
+  const [isEditing, setIsEditing] = useState(false);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -210,76 +216,95 @@ const ClientOrganisationDetail = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsList>
+            <TabsTrigger value="information">Organization Information</TabsTrigger>
             <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>
             <TabsTrigger value="learners">Learners</TabsTrigger>
-            <TabsTrigger value="schedules">Trainer Availability</TabsTrigger>
           </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Training Coordinators</CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockCoordinators.length}</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Learners</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockLearners.length}</div>
-              </CardContent>
-            </Card>
+        <TabsContent value="information" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Organization Information</CardTitle>
+                <CardDescription>Manage organization details and settings</CardDescription>
+              </div>
+              <Button
+                variant={isEditing ? "default" : "outline"}
+                onClick={() => setIsEditing(!isEditing)}
+              >
+                {isEditing ? "Save Changes" : "Edit Information"}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="orgName">Organization Name</Label>
+                  {isEditing ? (
+                    <Input
+                      id="orgName"
+                      value={organization.name}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.name}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label htmlFor="industry">Industry</Label>
+                  {isEditing ? (
+                    <Input
+                      id="industry"
+                      value={organization.industry}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, industry: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.industry}</p>
+                  )}
+                </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Available Trainers</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockTrainers.length}</div>
-              </CardContent>
-            </Card>
-          </div>
+                <div>
+                  <Label htmlFor="buNumber">BU Number</Label>
+                  {isEditing ? (
+                    <Input
+                      id="buNumber"
+                      value={organization.buNumber}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, buNumber: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.buNumber}</p>
+                  )}
+                </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Available Trainers</CardTitle>
-                <CardDescription>Overview of trainers available for this organization</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Specializations</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockTrainers.map((trainer) => (
-                      <TableRow key={trainer.id}>
-                        <TableCell className="font-medium">{trainer.name}</TableCell>
-                        <TableCell>{trainer.email}</TableCell>
-                        <TableCell>{trainer.specializations.join(", ")}</TableCell>
-                        <TableCell>
-                          <Badge variant="default">Available</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                <div>
+                  <Label htmlFor="contact">Contact Email</Label>
+                  {isEditing ? (
+                    <Input
+                      id="contact"
+                      value={organization.contact}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, contact: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.contact}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="divisionAddress">Division Address</Label>
+                {isEditing ? (
+                  <Input
+                    id="divisionAddress"
+                    value={organization.divisionAddress}
+                    onChange={(e) => setOrganization(prev => ({ ...prev, divisionAddress: e.target.value }))}
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">{organization.divisionAddress}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="coordinators" className="space-y-6">
@@ -334,10 +359,6 @@ const ClientOrganisationDetail = () => {
                 <Upload className="h-4 w-4 mr-2" />
                 Import Excel
               </Button>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add New Learner
-              </Button>
             </div>
           </div>
 
@@ -375,23 +396,6 @@ const ClientOrganisationDetail = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="schedules" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold">Trainer Availability</h2>
-              <p className="text-muted-foreground">Block out dates when trainers are unavailable</p>
-            </div>
-          </div>
-
-          <TrainingCalendar 
-            trainers={mockTrainers}
-            trainerBlockouts={trainerBlockouts}
-            canManageBlockouts={true}
-            onTrainerBlockoutAdd={handleTrainerBlockoutAdd}
-            onTrainerBlockoutRemove={handleTrainerBlockoutRemove}
-            onDateSelect={(date) => console.log("Selected date:", date)}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   );

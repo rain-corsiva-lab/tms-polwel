@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
 import PolwelUsers from "./pages/PolwelUsers";
 import TrainersAndPartners from "./pages/TrainersAndPartners";
+import TrainerDetail from "./pages/TrainerDetail";
 import ClientOrganisations from "./pages/ClientOrganisations";
 import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="polwel-users" element={<PolwelUsers />} />
             <Route path="clients" element={<UserManagement />} />
             <Route path="trainers" element={<TrainersAndPartners />} />
+            <Route path="trainers/:id" element={<TrainerDetail />} />
             <Route path="learners" element={<UserManagement />} />
             <Route path="client-organisations" element={<ClientOrganisations />} />
             <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />

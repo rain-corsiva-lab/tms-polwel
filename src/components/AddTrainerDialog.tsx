@@ -86,16 +86,6 @@ export function AddTrainerDialog() {
       return;
     }
 
-    // Password complexity validation
-    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
-    if (!passwordPattern.test(formData.password)) {
-      toast({
-        title: "Password Validation Error",
-        description: "Password must be at least 12 characters with uppercase, lowercase, numbers, and symbols.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     toast({
       title: "Trainer Created",
@@ -146,7 +136,7 @@ export function AddTrainerDialog() {
             Add New Trainer/Partner
           </DialogTitle>
           <DialogDescription>
-            Create a new standalone trainer account.
+            Create a new standalone trainer account. User will set password in onboarding flow.
           </DialogDescription>
         </DialogHeader>
         
@@ -181,9 +171,6 @@ export function AddTrainerDialog() {
               onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
               placeholder="Min 12 chars, mixed case, numbers, symbols"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Password expires in 365 days. User will be required to change on first login.
-            </p>
           </div>
 
           <div>

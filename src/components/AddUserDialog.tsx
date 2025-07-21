@@ -62,7 +62,7 @@ export function AddUserDialog() {
     e.preventDefault();
     
     // Enhanced validation based on requirements
-    if (!userType || !formData.name || !formData.email || !formData.password) {
+    if (!userType || !formData.name || !formData.email) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -93,21 +93,11 @@ export function AddUserDialog() {
       }
     }
 
-    // Password complexity validation (minimum 12 characters, mixed case, numbers, symbols)
-    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
-    if (!passwordPattern.test(formData.password)) {
-      toast({
-        title: "Password Validation Error",
-        description: "Password must be at least 12 characters with uppercase, lowercase, numbers, and symbols.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Here you would typically send the data to your backend
     toast({
       title: "User Created",
-      description: `${userType === "TrainingCoordinator" ? "Training Coordinator" : userType} "${formData.name}" has been created successfully. Onboarding email sent with secure link.`,
+      description: `${userType === "TrainingCoordinator" ? "Training Coordinator" : userType} "${formData.name}" has been created successfully. Onboarding email sent.`,
     });
 
     // Reset form and close dialog
@@ -403,19 +393,6 @@ export function AddUserDialog() {
                 />
               </div>
               
-              <div>
-                <Label htmlFor="password">Temporary Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Min 12 chars, mixed case, numbers, symbols"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Password expires in 365 days. User will be required to change on first login.
-                </p>
-              </div>
 
               {/* User Type Specific Fields */}
               {renderUserTypeFields()}

@@ -11,6 +11,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +28,10 @@ export function AddOrganisationDialog() {
     organisationName: "",
     divisionDepartment: "",
     divisionAddress: "",
+    buCostCentre: "",
+    paymentMode: "",
+    requireBuNumber: false,
+    buNumber: "",
   });
 
   const { toast } = useToast();
@@ -46,6 +58,10 @@ export function AddOrganisationDialog() {
       organisationName: "",
       divisionDepartment: "",
       divisionAddress: "",
+      buCostCentre: "",
+      paymentMode: "",
+      requireBuNumber: false,
+      buNumber: "",
     });
     setOpen(false);
   };
@@ -99,6 +115,52 @@ export function AddOrganisationDialog() {
               placeholder="Enter division address"
             />
           </div>
+
+          <div>
+            <Label htmlFor="buCostCentre">BU Cost Centre</Label>
+            <Input
+              id="buCostCentre"
+              value={formData.buCostCentre}
+              onChange={(e) => setFormData(prev => ({ ...prev, buCostCentre: e.target.value }))}
+              placeholder="Enter BU cost centre"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="paymentMode">Payment Mode</Label>
+            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select payment mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ULTF">ULTF</SelectItem>
+                <SelectItem value="Transition Dollars">Transition Dollars</SelectItem>
+                <SelectItem value="Self Sponsored">Self Sponsored</SelectItem>
+                <SelectItem value="Not Applicable">Not Applicable</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="requireBuNumber"
+              checked={formData.requireBuNumber}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requireBuNumber: !!checked }))}
+            />
+            <Label htmlFor="requireBuNumber">Require BU number?</Label>
+          </div>
+
+          {formData.requireBuNumber && (
+            <div>
+              <Label htmlFor="buNumber">BU Number *</Label>
+              <Input
+                id="buNumber"
+                value={formData.buNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, buNumber: e.target.value }))}
+                placeholder="Enter BU number"
+              />
+            </div>
+          )}
         </form>
 
         <DialogFooter>

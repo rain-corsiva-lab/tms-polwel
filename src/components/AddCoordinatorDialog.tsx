@@ -27,10 +27,8 @@ export function AddCoordinatorDialog() {
     tcName: "",
     tcEmail: "",
     tcContactNumber: "",
-    password: "",
     buCostCentre: "",
     paymentMode: "",
-    organisationType: "", // To determine if BU Cost Centre is mandatory
   });
 
   const { toast } = useToast();
@@ -38,7 +36,7 @@ export function AddCoordinatorDialog() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.tcName || !formData.tcEmail || !formData.tcContactNumber || !formData.password) {
+    if (!formData.tcName || !formData.tcEmail || !formData.tcContactNumber) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -47,31 +45,9 @@ export function AddCoordinatorDialog() {
       return;
     }
 
-    // Check if BU Cost Centre is mandatory for SPF/POLWEL
-    const isSPForPOLWEL = formData.organisationType === "SPF" || formData.organisationType === "POLWEL";
-    if (isSPForPOLWEL && !formData.buCostCentre) {
-      toast({
-        title: "Validation Error",
-        description: "BU Cost Centre is mandatory for SPF and POLWEL organisations.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Password complexity validation
-    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
-    if (!passwordPattern.test(formData.password)) {
-      toast({
-        title: "Password Validation Error",
-        description: "Password must be at least 12 characters with uppercase, lowercase, numbers, and symbols.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     toast({
       title: "Training Coordinator Created",
-      description: `Training Coordinator "${formData.tcName}" has been created successfully. Multi-FA setup email sent.`,
+      description: `Training Coordinator "${formData.tcName}" has been created successfully. Onboarding email sent.`,
     });
 
     // Reset form and close dialog
@@ -79,10 +55,8 @@ export function AddCoordinatorDialog() {
       tcName: "",
       tcEmail: "",
       tcContactNumber: "",
-      password: "",
       buCostCentre: "",
       paymentMode: "",
-      organisationType: "",
     });
     setOpen(false);
   };
@@ -102,7 +76,7 @@ export function AddCoordinatorDialog() {
             Add New Training Coordinator
           </DialogTitle>
           <DialogDescription>
-            Create a new training coordinator account with Multi-FA authentication.
+            Create a new training coordinator account. User will set password in onboarding flow.
           </DialogDescription>
         </DialogHeader>
         
@@ -139,44 +113,12 @@ export function AddCoordinatorDialog() {
           </div>
           
           <div>
-            <Label htmlFor="password">Password (with Multi-FA via email) *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder="Min 12 chars, mixed case, numbers, symbols"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Multi-FA will be enabled via email verification.
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="organisationType">Organisation Type</Label>
-            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, organisationType: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select organisation type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SPF">Singapore Police Force (SPF)</SelectItem>
-                <SelectItem value="POLWEL">POLWEL</SelectItem>
-                <SelectItem value="MHA">MHA Agencies</SelectItem>
-                <SelectItem value="Other">Other Government Agency</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="buCostCentre">
-              BU Cost Centre (for billing purpose) 
-              {(formData.organisationType === "SPF" || formData.organisationType === "POLWEL") && " *"}
-            </Label>
+            <Label htmlFor="buCostCentre">BU Cost Centre (for billing purpose)</Label>
             <Input
               id="buCostCentre"
               value={formData.buCostCentre}
               onChange={(e) => setFormData(prev => ({ ...prev, buCostCentre: e.target.value }))}
-              placeholder={`${(formData.organisationType === "SPF" || formData.organisationType === "POLWEL") ? "Mandatory for SPF/POLWEL" : "Enter BU Cost Centre"}`}
+              placeholder="Enter BU Cost Centre"
             />
           </div>
 
