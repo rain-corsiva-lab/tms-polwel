@@ -122,11 +122,11 @@ const UserTable = ({ users, title }: UserTableProps) => {
                   </td>
                    <td className="py-3 px-4">
                      <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
-                     {user.failedLoginAttempts && user.failedLoginAttempts > 0 && (
-                       <div className="text-xs text-destructive mt-1">
-                         {user.failedLoginAttempts} failed attempts
-                       </div>
-                     )}
+                      {(user.failedLoginAttempts ?? 0) > 0 && (
+                        <div className="text-xs text-destructive mt-1">
+                          {user.failedLoginAttempts} failed attempts
+                        </div>
+                      )}
                    </td>
                   <td className="py-3 px-4">
                     <Badge variant={user.mfaEnabled ? "default" : "destructive"}>
