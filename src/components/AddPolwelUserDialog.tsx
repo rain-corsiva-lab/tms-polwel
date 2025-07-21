@@ -167,11 +167,11 @@ export function AddPolwelUserDialog() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b bg-muted/50">
-                        <th className="text-left p-3 font-medium text-foreground">MODULE</th>
-                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">VIEW</th>
-                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">CREATE</th>
-                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">EDIT</th>
-                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">DELETE</th>
+                        <th className="text-left p-3 font-medium text-foreground">Module</th>
+                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">View</th>
+                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Create</th>
+                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Edit</th>
+                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Delete</th>
                       </tr>
                     </thead>
                     <tbody>
