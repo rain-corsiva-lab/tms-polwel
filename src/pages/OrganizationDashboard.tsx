@@ -183,30 +183,6 @@ const OrganizationDashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Training Records Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Training Records</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {trainingRecords.map((training) => (
-              <div key={training.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h3 className="font-medium">{training.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {training.learners} learners • {training.startDate} to {training.endDate}
-                  </p>
-                </div>
-                <Badge className={getStatusColor(training.status)}>
-                  {training.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
