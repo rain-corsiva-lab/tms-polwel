@@ -192,33 +192,7 @@ const TrainersAndPartners = () => {
           </div>
 
           {/* Trainer Specific Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Partner Organizations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Excellence Training Partners</span>
-                    <span className="font-medium">12</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Professional Development Corp</span>
-                    <span className="font-medium">8</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Leadership Institute</span>
-                    <span className="font-medium">15</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Skills Training Ltd</span>
-                    <span className="font-medium">18</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Course Specializations</CardTitle>
@@ -259,7 +233,6 @@ const TrainersAndPartners = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Partner Organization</TableHead>
                     <TableHead>Availability</TableHead>
                     <TableHead>Courses</TableHead>
                     <TableHead>Actions</TableHead>
@@ -270,7 +243,6 @@ const TrainersAndPartners = () => {
                     <TableRow key={trainer.id}>
                       <TableCell className="font-medium">{trainer.name}</TableCell>
                       <TableCell>{trainer.email}</TableCell>
-                      <TableCell>{trainer.partnerOrganization}</TableCell>
                       <TableCell>
                         <Badge 
                           variant={

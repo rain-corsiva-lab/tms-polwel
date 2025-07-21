@@ -67,7 +67,6 @@ export function AddTrainerDialog() {
     name: "",
     email: "",
     password: "",
-    partnerOrganization: "",
     contactNumber: "",
     courses: [] as string[],
     status: "Active",
@@ -108,7 +107,6 @@ export function AddTrainerDialog() {
       name: "",
       email: "",
       password: "",
-      partnerOrganization: "",
       contactNumber: "",
       courses: [],
       status: "Active",
@@ -148,7 +146,7 @@ export function AddTrainerDialog() {
             Add New Trainer/Partner
           </DialogTitle>
           <DialogDescription>
-            Create a new trainer account and assign them to partner organizations.
+            Create a new standalone trainer account.
           </DialogDescription>
         </DialogHeader>
         
@@ -186,22 +184,6 @@ export function AddTrainerDialog() {
             <p className="text-xs text-muted-foreground mt-1">
               Password expires in 365 days. User will be required to change on first login.
             </p>
-          </div>
-
-          <div>
-            <Label htmlFor="partnerOrganization">Partner Organization</Label>
-            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, partnerOrganization: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select partner organization" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Excellence Training Partners">Excellence Training Partners</SelectItem>
-                <SelectItem value="Professional Development Corp">Professional Development Corp</SelectItem>
-                <SelectItem value="Leadership Institute">Leadership Institute</SelectItem>
-                <SelectItem value="Skills Training Ltd">Skills Training Ltd</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div>
