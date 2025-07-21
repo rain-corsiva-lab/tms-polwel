@@ -85,7 +85,7 @@ const PolwelUsers = () => {
       </div>
 
       {/* POLWEL Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-foreground">23</div>
@@ -94,20 +94,8 @@ const PolwelUsers = () => {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-success">18</div>
-            <p className="text-sm text-muted-foreground">Active Users</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
             <div className="text-2xl font-bold text-warning">3</div>
-            <p className="text-sm text-muted-foreground">Pending Approval</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-primary">100%</div>
-            <p className="text-sm text-muted-foreground">MFA Compliance</p>
+            <p className="text-sm text-muted-foreground">Pending Onboarding</p>
           </CardContent>
         </Card>
       </div>
