@@ -30,7 +30,6 @@ export function AddTrainerDialog() {
     partnerOrganization: "",
     contactNumber: "",
     courses: "",
-    availabilityStatus: "Available",
     status: "Active",
   });
 
@@ -72,7 +71,6 @@ export function AddTrainerDialog() {
       partnerOrganization: "",
       contactNumber: "",
       courses: "",
-      availabilityStatus: "Available",
       status: "Active",
     });
     setOpen(false);
@@ -169,19 +167,6 @@ export function AddTrainerDialog() {
             />
           </div>
 
-          <div>
-            <Label htmlFor="availabilityStatus">Availability Status</Label>
-            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, availabilityStatus: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select availability" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Available">Available</SelectItem>
-                <SelectItem value="Unavailable">Unavailable</SelectItem>
-                <SelectItem value="Limited">Limited Availability</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </form>
 
         <DialogFooter>
