@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, UserCheck, Calendar, Search, Plus } from "lucide-react";
+import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
 
 interface ClientOrg {
   id: string;
@@ -66,10 +67,7 @@ const ClientOrganisations = () => {
           <h1 className="text-3xl font-bold text-foreground">Client Organisations</h1>
           <p className="text-muted-foreground">Manage client organizations and their training programs</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Organisation
-        </Button>
+        <AddOrganisationDialog />
       </div>
 
       <div className="flex items-center space-x-2">

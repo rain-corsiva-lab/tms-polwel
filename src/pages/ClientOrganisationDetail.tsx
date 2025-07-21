@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
+import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface TrainingCoordinator {
@@ -291,10 +292,7 @@ const ClientOrganisationDetail = () => {
               <h2 className="text-2xl font-bold">Training Coordinators</h2>
               <p className="text-muted-foreground">Manage training coordinators for this organization</p>
             </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Coordinator
-            </Button>
+            <AddCoordinatorDialog />
           </div>
 
           <Card>
