@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban } from "lucide-react";
+import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -207,10 +207,6 @@ const ClientOrganisationDetail = () => {
           <p className="text-muted-foreground">{organization.industry}</p>
           <p className="text-sm text-muted-foreground">{organization.address}</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Schedule
-        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -333,10 +329,16 @@ const ClientOrganisationDetail = () => {
               <h2 className="text-2xl font-bold">Learners</h2>
               <p className="text-muted-foreground">Manage learners for this organization</p>
             </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Learner
-            </Button>
+            <div className="flex space-x-3">
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Import Excel
+              </Button>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Learner
+              </Button>
+            </div>
           </div>
 
           <Card>
