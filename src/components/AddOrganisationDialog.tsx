@@ -126,6 +126,15 @@ export function AddOrganisationDialog() {
             />
           </div>
 
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="requireBuNumber"
+              checked={formData.requireBuNumber}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requireBuNumber: !!checked }))}
+            />
+            <Label htmlFor="requireBuNumber">Require BU number?</Label>
+          </div>
+
           <div>
             <Label htmlFor="paymentMode">Payment Mode</Label>
             <Select onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
@@ -139,15 +148,6 @@ export function AddOrganisationDialog() {
                 <SelectItem value="Not Applicable">Not Applicable</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="requireBuNumber"
-              checked={formData.requireBuNumber}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requireBuNumber: !!checked }))}
-            />
-            <Label htmlFor="requireBuNumber">Require BU number?</Label>
           </div>
 
           {formData.requireBuNumber && (
