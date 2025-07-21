@@ -135,6 +135,18 @@ export function AddOrganisationDialog() {
             <Label htmlFor="requireBuNumber">Require BU number?</Label>
           </div>
 
+          {formData.requireBuNumber && (
+            <div>
+              <Label htmlFor="buNumber">BU Number *</Label>
+              <Input
+                id="buNumber"
+                value={formData.buNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, buNumber: e.target.value }))}
+                placeholder="Enter BU number"
+              />
+            </div>
+          )}
+
           <div>
             <Label htmlFor="paymentMode">Payment Mode</Label>
             <Select onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
@@ -149,18 +161,6 @@ export function AddOrganisationDialog() {
               </SelectContent>
             </Select>
           </div>
-
-          {formData.requireBuNumber && (
-            <div>
-              <Label htmlFor="buNumber">BU Number *</Label>
-              <Input
-                id="buNumber"
-                value={formData.buNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, buNumber: e.target.value }))}
-                placeholder="Enter BU number"
-              />
-            </div>
-          )}
         </form>
 
         <DialogFooter>
