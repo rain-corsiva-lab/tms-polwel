@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar as CalendarIcon, Plus, X } from "lucide-react";
-import { format, isValid } from "date-fns";
+import { format, isValid, isAfter, isBefore, isSameDay, eachDayOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -44,6 +44,9 @@ interface TrainerCalendarProps {
 
 export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedRange, setSelectedRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+  const [isDragging, setIsDragging] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const [assignments, setAssignments] = useState<TrainerAssignment[]>([
     {
       id: "1",
@@ -65,7 +68,8 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
-    date: "",
+    startDate: "",
+    endDate: "",
     title: "",
     type: "assignment" as "assignment" | "unavailable",
     description: "",
@@ -76,15 +80,46 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
   const { toast } = useToast();
 
   const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
     setSelectedDate(date);
-    if (date) {
-      setNewAssignment(prev => ({ ...prev, date: format(date, "yyyy-MM-dd") }));
-      setShowAddDialog(true);
+    setSelectedRange({ start: date, end: date });
+    setNewAssignment(prev => ({ 
+      ...prev, 
+      startDate: format(date, "yyyy-MM-dd"),
+      endDate: format(date, "yyyy-MM-dd")
+    }));
+    setShowAddDialog(true);
+  };
+
+  const handleMouseDown = (date: Date) => {
+    setIsDragging(true);
+    setSelectedRange({ start: date, end: date });
+  };
+
+  const handleMouseEnter = (date: Date) => {
+    if (isDragging && selectedRange.start) {
+      setSelectedRange(prev => ({ ...prev, end: date }));
     }
   };
 
+  const handleMouseUp = () => {
+    if (isDragging && selectedRange.start && selectedRange.end) {
+      const startDate = isBefore(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
+      const endDate = isAfter(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
+      
+      setNewAssignment(prev => ({
+        ...prev,
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd")
+      }));
+      setShowAddDialog(true);
+    }
+    setIsDragging(false);
+  };
+
   const handleAddAssignment = () => {
-    if (!newAssignment.date || !newAssignment.title) {
+    if (!newAssignment.startDate || !newAssignment.title) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -93,26 +128,43 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
       return;
     }
 
-    const assignment: TrainerAssignment = {
-      id: Date.now().toString(),
-      ...newAssignment
-    };
+    const startDate = new Date(newAssignment.startDate);
+    const endDate = new Date(newAssignment.endDate);
+    
+    // Create assignments for each day in the range
+    const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+    
+    const newAssignments = dateRange.map(date => ({
+      id: `${Date.now()}-${format(date, "yyyy-MM-dd")}`,
+      date: format(date, "yyyy-MM-dd"),
+      title: newAssignment.title,
+      type: newAssignment.type,
+      description: newAssignment.description,
+      course: newAssignment.course,
+      organization: newAssignment.organization
+    }));
 
-    setAssignments(prev => [...prev, assignment]);
+    setAssignments(prev => [...prev, ...newAssignments]);
+    
+    const rangeText = isSameDay(startDate, endDate) 
+      ? format(startDate, "PPP")
+      : `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
     
     toast({
       title: "Assignment Added",
-      description: `${assignment.type === "assignment" ? "Training assignment" : "Unavailable period"} added for ${format(new Date(assignment.date), "PPP")}`,
+      description: `${newAssignment.type === "assignment" ? "Training assignment" : "Unavailable period"} added for ${rangeText}`,
     });
 
     setNewAssignment({
-      date: "",
+      startDate: "",
+      endDate: "",
       title: "",
       type: "assignment",
       description: "",
       course: "",
       organization: ""
     });
+    setSelectedRange({ start: null, end: null });
     setShowAddDialog(false);
   };
 
@@ -142,6 +194,13 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
     return assignments.map(a => new Date(a.date)).filter(date => isValid(date));
   };
 
+  const getSelectedRangeDates = () => {
+    if (!selectedRange.start || !selectedRange.end) return [];
+    const startDate = isBefore(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
+    const endDate = isAfter(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
+    return eachDayOfInterval({ start: startDate, end: endDate });
+  };
+
   const getSelectedDateAssignments = () => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -162,19 +221,41 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
+            <div className="space-y-4">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={handleDateSelect}
                 modifiers={{
-                  assignment: getAssignmentDates()
+                  assignment: getAssignmentDates(),
+                  selectedRange: getSelectedRangeDates()
                 }}
                 modifiersStyles={{
-                  assignment: { backgroundColor: "hsl(var(--primary))", color: "white" }
+                  assignment: { backgroundColor: "hsl(var(--primary))", color: "white" },
+                  selectedRange: { backgroundColor: "hsl(var(--primary) / 0.3)", color: "hsl(var(--primary))" }
                 }}
-                className="rounded-md border"
+                className="rounded-md border pointer-events-auto"
               />
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Click a date to add single assignment
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setNewAssignment(prev => ({
+                      ...prev,
+                      startDate: "",
+                      endDate: ""
+                    }));
+                    setShowAddDialog(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Date Range
+                </Button>
+              </div>
             </div>
             
             <div className="space-y-4">
@@ -239,11 +320,31 @@ export function TrainerCalendar({ trainerId, trainerName }: TrainerCalendarProps
           <DialogHeader>
             <DialogTitle>Add Assignment</DialogTitle>
             <DialogDescription>
-              Add a new training assignment or mark as unavailable for {selectedDate && format(selectedDate, "PPP")}
+              Add a new training assignment or mark as unavailable for selected date range
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div>
+              <Label htmlFor="startDate">Start Date *</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={newAssignment.startDate}
+                onChange={(e) => setNewAssignment(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="endDate">End Date *</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={newAssignment.endDate}
+                onChange={(e) => setNewAssignment(prev => ({ ...prev, endDate: e.target.value }))}
+              />
+            </div>
+
             <div>
               <Label htmlFor="type">Type *</Label>
               <Select onValueChange={(value: "assignment" | "unavailable") => setNewAssignment(prev => ({ ...prev, type: value }))}>
