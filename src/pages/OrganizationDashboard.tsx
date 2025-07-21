@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, BookOpen, Calendar, Plus, Search } from "lucide-react";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import StatsCard from "@/components/StatsCard";
@@ -96,82 +97,92 @@ const OrganizationDashboard = () => {
         />
       </div>
 
-      {/* Training Coordinators Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Training Coordinators</CardTitle>
-            <AddCoordinatorDialog />
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search coordinators..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredCoordinators.map((coordinator) => (
-              <div key={coordinator.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{coordinator.name}</h3>
-                    <p className="text-sm text-muted-foreground">{coordinator.email}</p>
-                    <p className="text-sm text-muted-foreground">{coordinator.phone}</p>
-                  </div>
-                </div>
-                <Badge className={getStatusColor(coordinator.status)}>
-                  {coordinator.status}
-                </Badge>
+      {/* Tabs for Coordinators and Learners */}
+      <Tabs defaultValue="coordinators" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>
+          <TabsTrigger value="learners">Organization Learners</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="coordinators">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Training Coordinators</CardTitle>
+                <AddCoordinatorDialog />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search coordinators..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {filteredCoordinators.map((coordinator) => (
+                  <div key={coordinator.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{coordinator.name}</h3>
+                        <p className="text-sm text-muted-foreground">{coordinator.email}</p>
+                        <p className="text-sm text-muted-foreground">{coordinator.phone}</p>
+                      </div>
+                    </div>
+                    <Badge className={getStatusColor(coordinator.status)}>
+                      {coordinator.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Learners Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Organization Learners</CardTitle>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search learners..."
-              value={learnerSearchTerm}
-              onChange={(e) => setLearnerSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredLearners.map((learner) => (
-              <div key={learner.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{learner.name}</h3>
-                    <p className="text-sm text-muted-foreground">{learner.email}</p>
-                    <p className="text-sm text-muted-foreground">{learner.department} • {learner.trainings} trainings completed</p>
-                  </div>
-                </div>
-                <Badge className={getStatusColor(learner.status)}>
-                  {learner.status}
-                </Badge>
+        <TabsContent value="learners">
+          <Card>
+            <CardHeader>
+              <CardTitle>Organization Learners</CardTitle>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search learners..."
+                  value={learnerSearchTerm}
+                  onChange={(e) => setLearnerSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {filteredLearners.map((learner) => (
+                  <div key={learner.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{learner.name}</h3>
+                        <p className="text-sm text-muted-foreground">{learner.email}</p>
+                        <p className="text-sm text-muted-foreground">{learner.department} • {learner.trainings} trainings completed</p>
+                      </div>
+                    </div>
+                    <Badge className={getStatusColor(learner.status)}>
+                      {learner.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Training Records Section */}
       <Card>
