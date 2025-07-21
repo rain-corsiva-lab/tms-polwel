@@ -12,6 +12,7 @@ import TrainerDetail from "./pages/TrainerDetail";
 import TrainerPartner from "./pages/TrainerPartner";
 import ClientOrganisations from "./pages/ClientOrganisations";
 import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
+import OrganizationDashboard from "./pages/OrganizationDashboard";
 import Login from "./pages/Login";
 
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/trainerpartner" element={<TrainerPartner />} />
+          <Route path="/org" element={<OrganizationDashboard />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="users" element={<UserManagement />} />
