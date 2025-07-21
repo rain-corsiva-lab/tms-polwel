@@ -25,10 +25,13 @@ interface ModulePermissions {
 }
 
 interface UserPermissions {
-  staffs: ModulePermissions;
-  members: ModulePermissions;
-  volunteers: ModulePermissions;
-  donors: ModulePermissions;
+  'user-management-polwel': ModulePermissions;
+  'user-management-trainers': ModulePermissions;
+  'user-management-client-orgs': ModulePermissions;
+  'course-venue-setup': ModulePermissions;
+  'course-runs-operations': ModulePermissions;
+  'email-reporting-library': ModulePermissions;
+  'finance-activity': ModulePermissions;
 }
 
 export function AddPolwelUserDialog() {
@@ -36,15 +39,17 @@ export function AddPolwelUserDialog() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
     status: "Active",
   });
 
   const [permissions, setPermissions] = useState<UserPermissions>({
-    staffs: { view: false, create: false, edit: false, delete: false },
-    members: { view: false, create: false, edit: false, delete: false },
-    volunteers: { view: false, create: false, edit: false, delete: false },
-    donors: { view: false, create: false, edit: false, delete: false },
+    'user-management-polwel': { view: false, create: false, edit: false, delete: false },
+    'user-management-trainers': { view: false, create: false, edit: false, delete: false },
+    'user-management-client-orgs': { view: false, create: false, edit: false, delete: false },
+    'course-venue-setup': { view: false, create: false, edit: false, delete: false },
+    'course-runs-operations': { view: false, create: false, edit: false, delete: false },
+    'email-reporting-library': { view: false, create: false, edit: false, delete: false },
+    'finance-activity': { view: false, create: false, edit: false, delete: false },
   });
 
   const { toast } = useToast();
@@ -52,7 +57,7 @@ export function AddPolwelUserDialog() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -75,17 +80,6 @@ export function AddPolwelUserDialog() {
       return;
     }
 
-    // Password complexity validation
-    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
-    if (!passwordPattern.test(formData.password)) {
-      toast({
-        title: "Password Validation Error",
-        description: "Password must be at least 12 characters with uppercase, lowercase, numbers, and symbols.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     toast({
       title: "POLWEL User Created",
       description: `POLWEL user "${formData.name}" has been created successfully. Onboarding email sent with secure link.`,
@@ -95,14 +89,16 @@ export function AddPolwelUserDialog() {
     setFormData({
       name: "",
       email: "",
-      password: "",
       status: "Active",
     });
     setPermissions({
-      staffs: { view: false, create: false, edit: false, delete: false },
-      members: { view: false, create: false, edit: false, delete: false },
-      volunteers: { view: false, create: false, edit: false, delete: false },
-      donors: { view: false, create: false, edit: false, delete: false },
+      'user-management-polwel': { view: false, create: false, edit: false, delete: false },
+      'user-management-trainers': { view: false, create: false, edit: false, delete: false },
+      'user-management-client-orgs': { view: false, create: false, edit: false, delete: false },
+      'course-venue-setup': { view: false, create: false, edit: false, delete: false },
+      'course-runs-operations': { view: false, create: false, edit: false, delete: false },
+      'email-reporting-library': { view: false, create: false, edit: false, delete: false },
+      'finance-activity': { view: false, create: false, edit: false, delete: false },
     });
     setOpen(false);
   };
@@ -158,19 +154,6 @@ export function AddPolwelUserDialog() {
             />
           </div>
           
-          <div>
-            <Label htmlFor="password">Temporary Password *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder="Min 12 chars, mixed case, numbers, symbols"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Password expires in 365 days. User will be required to change on first login.
-            </p>
-          </div>
 
           <div>
             <Label>Access Level *</Label>
@@ -192,11 +175,22 @@ export function AddPolwelUserDialog() {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(permissions).map(([module, modulePermissions]) => (
-                        <tr key={module} className="border-b hover:bg-muted/30">
-                          <td className="p-3 font-medium text-foreground capitalize">
-                            {module}
-                          </td>
+                       {Object.entries(permissions).map(([module, modulePermissions]) => {
+                         const moduleDisplayNames: Record<string, string> = {
+                           'user-management-polwel': 'User Management - POLWEL Users',
+                           'user-management-trainers': 'User Management - Trainers & Partners',
+                           'user-management-client-orgs': 'User Management - Client Organisations',
+                           'course-venue-setup': 'Course & Venue Setup',
+                           'course-runs-operations': 'Course Runs & Operations',
+                           'email-reporting-library': 'Email, Reporting and Resource Library',
+                           'finance-activity': 'Finance and Activity'
+                         };
+                         
+                          return (
+                         <tr key={module} className="border-b hover:bg-muted/30">
+                           <td className="p-3 font-medium text-foreground">
+                             {moduleDisplayNames[module] || module}
+                           </td>
                           {Object.entries(modulePermissions).map(([permission, checked]) => (
                             <td key={permission} className="p-3 text-center">
                               <Checkbox
@@ -213,7 +207,8 @@ export function AddPolwelUserDialog() {
                             </td>
                           ))}
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
