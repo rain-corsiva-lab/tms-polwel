@@ -44,7 +44,7 @@ const mockClientOrgs: ClientOrg[] = [
   {
     id: "4",
     name: "Corsiva Lab",
-    industry: "Technology",
+    industry: "",
     coordinatorsCount: 1,
     learnersCount: 15,
     status: "active"
@@ -100,7 +100,7 @@ const ClientOrganisations = () => {
                     {org.status}
                   </Badge>
                 </div>
-                <CardDescription>{org.industry}</CardDescription>
+                {org.industry && <CardDescription>{org.industry}</CardDescription>}
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
