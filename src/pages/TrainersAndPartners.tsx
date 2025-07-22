@@ -6,11 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
 import { AddTrainerBlockoutDialog } from "@/components/AddTrainerBlockoutDialog";
 import TrainingCalendar from "@/components/TrainingCalendar";
+import StatsCard from "@/components/StatsCard";
 import { useToast } from "@/hooks/use-toast";
 
 // Enhanced user data structure for Trainers
@@ -79,6 +81,38 @@ const trainersData: Trainer[] = [
     createdBy: 'john.tan@polwel.org',
     lastModified: '2024-01-12',
     modifiedBy: 'jennifer.lee@partners.com'
+  },
+  {
+    id: '7',
+    name: 'Michael Brown',
+    email: 'michael.brown@partners.com',
+    role: 'Trainer',
+    status: 'Pending',
+    lastLogin: 'Never',
+    mfaEnabled: false,
+    availabilityStatus: 'Available',
+    courses: ['Project Management', 'Leadership'],
+    partnerOrganization: 'Training Solutions Ltd',
+    createdAt: '2024-01-10',
+    createdBy: 'john.tan@polwel.org',
+    lastModified: '2024-01-10',
+    modifiedBy: 'john.tan@polwel.org'
+  },
+  {
+    id: '8',
+    name: 'Sarah Wilson',
+    email: 'sarah.wilson@excellence.com',
+    role: 'Trainer',
+    status: 'Pending',
+    lastLogin: 'Never',
+    mfaEnabled: false,
+    availabilityStatus: 'Available',
+    courses: ['Sales Training', 'Customer Relations'],
+    partnerOrganization: 'Excellence Training Partners',
+    createdAt: '2024-01-08',
+    createdBy: 'john.tan@polwel.org',
+    lastModified: '2024-01-08',
+    modifiedBy: 'john.tan@polwel.org'
   }
 ];
 
@@ -113,7 +147,12 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
 const TrainersAndPartners = () => {
   const [activeTab, setActiveTab] = useState("trainers");
   const [trainerBlockouts, setTrainerBlockouts] = useState(mockTrainerBlockouts);
+  const [isPendingOpen, setIsPendingOpen] = useState(false);
   const { toast } = useToast();
+
+  // Calculate stats
+  const totalTrainers = trainersData.length;
+  const pendingTrainers = trainersData.filter(trainer => trainer.status === 'Pending');
 
   const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, 'id'>) => {
     const newBlockout = {
@@ -154,6 +193,73 @@ const TrainersAndPartners = () => {
             Export
           </Button>
           <AddTrainerDialog />
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Total Trainers"
+          value={totalTrainers}
+          icon={Users}
+          description="Active training partners"
+        />
+        <div className="md:col-span-1 lg:col-span-3">
+          <Collapsible open={isPendingOpen} onOpenChange={setIsPendingOpen}>
+            <CollapsibleTrigger asChild>
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Pending Onboarding</p>
+                      <p className="text-2xl font-bold text-foreground">{pendingTrainers.length}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Trainers awaiting secure link activation</p>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <div className="p-2 bg-accent rounded-lg">
+                        <Clock className="h-5 w-5 text-accent-foreground" />
+                      </div>
+                      <div className="mt-2">
+                        {isPendingOpen ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Pending Trainers</CardTitle>
+                  <CardDescription>Trainers who haven't clicked their secure onboarding link</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {pendingTrainers.length > 0 ? (
+                    <div className="space-y-3">
+                      {pendingTrainers.map((trainer) => (
+                        <div key={trainer.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                          <div>
+                            <p className="font-medium text-foreground">{trainer.name}</p>
+                            <p className="text-sm text-muted-foreground">{trainer.email}</p>
+                            <p className="text-xs text-muted-foreground">Created: {new Date(trainer.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <Badge variant="outline" className="text-warning border-warning">
+                            Pending
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">No pending trainers</p>
+                  )}
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </div>
 
