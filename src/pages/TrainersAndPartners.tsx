@@ -174,7 +174,7 @@ const TrainersAndPartners = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Availability</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Courses</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -190,12 +190,9 @@ const TrainersAndPartners = () => {
                       <TableCell>{trainer.email}</TableCell>
                       <TableCell>
                         <Badge 
-                          variant={
-                            trainer.availabilityStatus === 'Available' ? 'default' : 
-                            trainer.availabilityStatus === 'Limited' ? 'secondary' : 'destructive'
-                          }
+                          variant={trainer.status === 'Active' ? 'default' : 'secondary'}
                         >
-                          {trainer.availabilityStatus}
+                          {trainer.status}
                         </Badge>
                       </TableCell>
                       <TableCell>{trainer.courses.join(", ")}</TableCell>
