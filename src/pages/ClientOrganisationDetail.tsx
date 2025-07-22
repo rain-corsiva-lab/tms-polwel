@@ -53,7 +53,7 @@ const mockCoordinators: TrainingCoordinator[] = [
   {
     id: "1",
     name: "Sarah Johnson",
-    email: "sarah.johnson@techcorp.com",
+    email: "sarah.johnson@spf.gov.sg",
     department: "HR Development",
     schedulesCount: 3,
     lastActive: "2 hours ago"
@@ -61,7 +61,7 @@ const mockCoordinators: TrainingCoordinator[] = [
   {
     id: "2",
     name: "Mike Chen",
-    email: "mike.chen@techcorp.com", 
+    email: "mike.chen@spf.gov.sg", 
     department: "Technical Training",
     schedulesCount: 5,
     lastActive: "1 day ago"
@@ -72,7 +72,7 @@ const mockLearners: Learner[] = [
   {
     id: "1",
     name: "John Smith",
-    email: "john.smith@techcorp.com",
+    email: "john.smith@spf.gov.sg",
     department: "Engineering",
     enrolledCourses: 3,
     completedCourses: 8,
@@ -81,7 +81,7 @@ const mockLearners: Learner[] = [
   {
     id: "2",
     name: "Emily Davis",
-    email: "emily.davis@techcorp.com",
+    email: "emily.davis@spf.gov.sg",
     department: "Marketing", 
     enrolledCourses: 2,
     completedCourses: 5,
@@ -93,19 +93,19 @@ const mockTrainers: Trainer[] = [
   {
     id: "1",
     name: "Dr. Sarah Johnson",
-    email: "sarah.johnson@techcorp.com",
+    email: "sarah.johnson@spf.gov.sg",
     specializations: ["Leadership", "Communication", "Project Management"]
   },
   {
     id: "2",
     name: "Mike Chen",
-    email: "mike.chen@techcorp.com",
+    email: "mike.chen@spf.gov.sg",
     specializations: ["Technical Skills", "Software Development", "Data Analysis"]
   },
   {
     id: "3",
     name: "Emily Rodriguez",
-    email: "emily.rodriguez@techcorp.com",
+    email: "emily.rodriguez@spf.gov.sg",
     specializations: ["Safety Training", "Compliance", "HR Policies"]
   }
 ];
@@ -147,17 +147,54 @@ const ClientOrganisationDetail = () => {
   const { toast } = useToast();
   const [trainerBlockouts, setTrainerBlockouts] = useState(mockTrainerBlockouts);
 
-  // Mock organization data
-  const [organization, setOrganization] = useState({
-    id: id || "1",
-    name: "TechCorp Solutions",
-    industry: "Technology",
-    address: "123 Tech Street, Innovation City",
-    contact: "contact@techcorp.com",
-    status: "active",
-    buNumber: "BU-2024-001",
-    divisionAddress: "123 Tech Street, Innovation City"
-  });
+  // Mock organization data - determine based on URL id
+  const getOrgData = () => {
+    const orgMap: Record<string, any> = {
+      "1": {
+        id: "1",
+        name: "Ang Mo Kio",
+        industry: "SPF",
+        address: "Ang Mo Kio Police Division HQ, Singapore",
+        contact: "contact@spf.gov.sg",
+        status: "active",
+        buNumber: "SPF-AMK-001",
+        divisionAddress: "Ang Mo Kio Police Division HQ, Singapore"
+      },
+      "2": {
+        id: "2", 
+        name: "Choa Chu Kang",
+        industry: "SPF",
+        address: "Choa Chu Kang Police Division HQ, Singapore",
+        contact: "contact@spf.gov.sg",
+        status: "active",
+        buNumber: "SPF-CCK-002",
+        divisionAddress: "Choa Chu Kang Police Division HQ, Singapore"
+      },
+      "3": {
+        id: "3",
+        name: "Yishun", 
+        industry: "SPF",
+        address: "Yishun Police Division HQ, Singapore",
+        contact: "contact@spf.gov.sg",
+        status: "active",
+        buNumber: "SPF-YS-003",
+        divisionAddress: "Yishun Police Division HQ, Singapore"
+      },
+      "4": {
+        id: "4",
+        name: "Corsiva Lab",
+        industry: "Technology",
+        address: "123 Tech Street, Innovation City",
+        contact: "contact@corsivalab.com",
+        status: "active",
+        buNumber: "CL-2024-001",
+        divisionAddress: "123 Tech Street, Innovation City"
+      }
+    };
+    return orgMap[id || "1"] || orgMap["1"];
+  };
+
+  const [organization, setOrganization] = useState(getOrgData());
 
   const [isEditing, setIsEditing] = useState(false);
 
