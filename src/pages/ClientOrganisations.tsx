@@ -19,24 +19,24 @@ interface ClientOrg {
 const mockClientOrgs: ClientOrg[] = [
   {
     id: "1",
-    name: "TechCorp Solutions",
-    industry: "Technology",
+    name: "Ang Mo Kio",
+    industry: "SPF",
     coordinatorsCount: 3,
     learnersCount: 45,
     status: "active"
   },
   {
     id: "2", 
-    name: "Healthcare Plus",
-    industry: "Healthcare",
+    name: "Choa Chu Kang",
+    industry: "SPF",
     coordinatorsCount: 2,
     learnersCount: 28,
     status: "active"
   },
   {
     id: "3",
-    name: "Manufacturing Corp",
-    industry: "Manufacturing", 
+    name: "Yishun",
+    industry: "SPF", 
     coordinatorsCount: 4,
     learnersCount: 67,
     status: "active"

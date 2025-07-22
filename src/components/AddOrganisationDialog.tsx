@@ -38,10 +38,10 @@ export function AddOrganisationDialog() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.organisationName || !formData.divisionDepartment) {
+    if (!formData.organisationName) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: "Organisation name is required.",
         variant: "destructive",
       });
       return;
@@ -95,7 +95,7 @@ export function AddOrganisationDialog() {
           </div>
           
           <div>
-            <Label htmlFor="divisionDepartment">Division / Department *</Label>
+            <Label htmlFor="divisionDepartment">Division / Department</Label>
             <Input
               id="divisionDepartment"
               value={formData.divisionDepartment}
