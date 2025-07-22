@@ -62,7 +62,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard
           title="Total Users"
           value="127"
@@ -83,36 +83,6 @@ const Dashboard = () => {
           icon={Building2}
           trend={{ value: 2, isPositive: true }}
           description="Training coordinators"
-        />
-        <StatsCard
-          title="Active Trainers"
-          value="42"
-          icon={GraduationCap}
-          trend={{ value: -3, isPositive: false }}
-          description="Certified trainers"
-        />
-      </div>
-
-      {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatsCard
-          title="Learners Enrolled"
-          value="1,234"
-          icon={UserCheck}
-          description="Total learner records"
-        />
-        <StatsCard
-          title="Scheduled Sessions"
-          value="18"
-          icon={Calendar}
-          description="This month"
-        />
-        <StatsCard
-          title="MFA Enabled"
-          value="89%"
-          icon={Shield}
-          trend={{ value: 4, isPositive: true }}
-          description="Security compliance"
         />
       </div>
 
