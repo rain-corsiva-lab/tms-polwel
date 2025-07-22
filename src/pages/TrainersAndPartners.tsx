@@ -223,11 +223,6 @@ const TrainersAndPartners = () => {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                          <AddTrainerBlockoutDialog 
-                            trainerId={trainer.id}
-                            trainerName={trainer.name}
-                            onBlockoutAdd={handleTrainerBlockoutAdd}
-                          />
                         </div>
                       </TableCell>
                     </TableRow>
