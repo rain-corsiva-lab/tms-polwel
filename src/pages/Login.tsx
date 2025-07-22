@@ -1,11 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserCheck, Users, Shield } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { UserCheck } from "lucide-react";
 
 const Login = () => {
-  const handleLogin = (userType: string) => {
-    // This would typically redirect to the appropriate login form
-    console.log(`Logging in as: ${userType}`);
+  const handleLogin = () => {
+    // UI only - no functionality
   };
 
   return (
@@ -13,7 +14,7 @@ const Login = () => {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-foreground">Welcome</h1>
-          <p className="text-muted-foreground">Please select your login type to continue</p>
+          <p className="text-muted-foreground">Please enter your credentials to continue</p>
         </div>
 
         <Card className="transition-all duration-200 hover:shadow-md">
@@ -24,8 +25,16 @@ const Login = () => {
               Access your training portal
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-0">
-            <Button className="w-full" variant="default" onClick={() => handleLogin('user')}>
+          <CardContent className="pt-0 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" placeholder="Enter your email" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" placeholder="Enter your password" />
+            </div>
+            <Button className="w-full" variant="default" onClick={handleLogin}>
               Login
             </Button>
           </CardContent>
