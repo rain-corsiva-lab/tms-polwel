@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Filter, Shield } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Download, Filter, Shield, Users, Clock } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
 import { AuditTrailEntry } from "@/components/AuditTrailDialog";
@@ -155,10 +157,46 @@ const polwelUsers: PolwelUser[] = [
         ipAddress: '192.168.1.100'
       }
     ]
+  },
+  {
+    id: '9',
+    name: 'Alex Kumar',
+    email: 'alex.kumar@polwel.org',
+    role: 'POLWEL',
+    status: 'Pending',
+    lastLogin: 'Never',
+    mfaEnabled: false,
+    permissionLevel: 'Staff',
+    department: 'Training Coordination',
+    createdAt: '2024-01-12',
+    createdBy: 'john.tan@polwel.org',
+    lastModified: '2024-01-12',
+    modifiedBy: 'john.tan@polwel.org',
+    auditTrail: []
+  },
+  {
+    id: '10',
+    name: 'Lisa Chen',
+    email: 'lisa.chen@polwel.org',
+    role: 'POLWEL',
+    status: 'Pending',
+    lastLogin: 'Never',
+    mfaEnabled: false,
+    permissionLevel: 'Staff',
+    department: 'Quality Assurance',
+    createdAt: '2024-01-14',
+    createdBy: 'john.tan@polwel.org',
+    lastModified: '2024-01-14',
+    modifiedBy: 'john.tan@polwel.org',
+    auditTrail: []
   }
 ];
 
 const PolwelUsers = () => {
+  // Calculate stats
+  const totalUsers = polwelUsers.length;
+  const pendingUsers = polwelUsers.filter(user => user.status === 'Pending');
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -185,17 +223,64 @@ const PolwelUsers = () => {
       {/* POLWEL Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-foreground">23</div>
-            <p className="text-sm text-muted-foreground">Total POLWEL Users</p>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total POLWEL Users</p>
+                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
+              </div>
+              <div className="p-2 bg-accent rounded-lg">
+                <Users className="h-5 w-5 text-accent-foreground" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-warning">3</div>
-            <p className="text-sm text-muted-foreground">Pending Onboarding</p>
-          </CardContent>
-        </Card>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Pending Onboarding</p>
+                    <p className="text-2xl font-bold text-foreground">{pendingUsers.length}</p>
+                  </div>
+                  <div className="p-2 bg-accent rounded-lg">
+                    <Clock className="h-5 w-5 text-accent-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Pending POLWEL Users</DialogTitle>
+              <DialogDescription>
+                POLWEL staff who haven't clicked their secure onboarding link
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              {pendingUsers.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {pendingUsers.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="font-medium text-foreground">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <p className="text-xs text-muted-foreground">Department: {user.department}</p>
+                        <p className="text-xs text-muted-foreground">Created: {new Date(user.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <Badge variant="outline" className="text-warning border-warning">
+                        Pending
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No pending users</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* POLWEL User Table */}

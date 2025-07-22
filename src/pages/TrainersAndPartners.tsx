@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
@@ -202,65 +203,52 @@ const TrainersAndPartners = () => {
           title="Total Trainers"
           value={totalTrainers}
           icon={Users}
-          description="Active training partners"
         />
-        <div className="md:col-span-1 lg:col-span-3">
-          <Collapsible open={isPendingOpen} onOpenChange={setIsPendingOpen}>
-            <CollapsibleTrigger asChild>
-              <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Pending Onboarding</p>
-                      <p className="text-2xl font-bold text-foreground">{pendingTrainers.length}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Trainers awaiting secure link activation</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <div className="p-2 bg-accent rounded-lg">
-                        <Clock className="h-5 w-5 text-accent-foreground" />
-                      </div>
-                      <div className="mt-2">
-                        {isPendingOpen ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Pending Onboarding</p>
+                    <p className="text-2xl font-bold text-foreground">{pendingTrainers.length}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Pending Trainers</CardTitle>
-                  <CardDescription>Trainers who haven't clicked their secure onboarding link</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {pendingTrainers.length > 0 ? (
-                    <div className="space-y-3">
-                      {pendingTrainers.map((trainer) => (
-                        <div key={trainer.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                          <div>
-                            <p className="font-medium text-foreground">{trainer.name}</p>
-                            <p className="text-sm text-muted-foreground">{trainer.email}</p>
-                            <p className="text-xs text-muted-foreground">Created: {new Date(trainer.createdAt).toLocaleDateString()}</p>
-                          </div>
-                          <Badge variant="outline" className="text-warning border-warning">
-                            Pending
-                          </Badge>
-                        </div>
-                      ))}
+                  <div className="p-2 bg-accent rounded-lg">
+                    <Clock className="h-5 w-5 text-accent-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Pending Trainers</DialogTitle>
+              <DialogDescription>
+                Trainers who haven't clicked their secure onboarding link
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              {pendingTrainers.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {pendingTrainers.map((trainer) => (
+                    <div key={trainer.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="font-medium text-foreground">{trainer.name}</p>
+                        <p className="text-sm text-muted-foreground">{trainer.email}</p>
+                        <p className="text-xs text-muted-foreground">Created: {new Date(trainer.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <Badge variant="outline" className="text-warning border-warning">
+                        Pending
+                      </Badge>
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4">No pending trainers</p>
-                  )}
-                </CardContent>
-              </Card>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No pending trainers</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
