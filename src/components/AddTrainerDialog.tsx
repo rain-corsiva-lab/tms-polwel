@@ -66,7 +66,6 @@ export function AddTrainerDialog() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
     contactNumber: "",
     courses: [] as string[],
     status: "Active",
@@ -77,7 +76,7 @@ export function AddTrainerDialog() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -96,7 +95,6 @@ export function AddTrainerDialog() {
     setFormData({
       name: "",
       email: "",
-      password: "",
       contactNumber: "",
       courses: [],
       status: "Active",
@@ -162,16 +160,6 @@ export function AddTrainerDialog() {
             />
           </div>
           
-          <div>
-            <Label htmlFor="password">Temporary Password *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder="Min 12 chars, mixed case, numbers, symbols"
-            />
-          </div>
 
           <div>
             <Label htmlFor="contactNumber">Contact Number</Label>
