@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, Filter, Shield } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
+import { AuditTrailEntry } from "@/components/AuditTrailDialog";
 
 // Enhanced user data structure for POLWEL users
 interface PolwelUser {
@@ -21,6 +22,7 @@ interface PolwelUser {
   createdBy: string;
   lastModified: string;
   modifiedBy: string;
+  auditTrail: AuditTrailEntry[];
 }
 
 const polwelUsers: PolwelUser[] = [
@@ -39,7 +41,55 @@ const polwelUsers: PolwelUser[] = [
     createdAt: '2023-06-01',
     createdBy: 'System',
     lastModified: '2024-01-15',
-    modifiedBy: 'john.tan@polwel.org'
+    modifiedBy: 'john.tan@polwel.org',
+    auditTrail: [
+      {
+        id: 'audit_1_1',
+        timestamp: '2024-01-15T09:30:00Z',
+        action: 'User Login',
+        actionType: 'login',
+        performedBy: 'john.tan@polwel.org',
+        details: 'Successful login from Singapore office',
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      {
+        id: 'audit_1_2',
+        timestamp: '2024-01-10T14:20:00Z',
+        action: 'Permission Updated',
+        actionType: 'permission_change',
+        performedBy: 'admin@polwel.org',
+        details: 'User granted Administrator access to Training Management module',
+        ipAddress: '192.168.1.101'
+      },
+      {
+        id: 'audit_1_3',
+        timestamp: '2024-01-05T16:45:00Z',
+        action: 'Password Changed',
+        actionType: 'password_change',
+        performedBy: 'john.tan@polwel.org',
+        details: 'User changed password successfully',
+        ipAddress: '192.168.1.100'
+      },
+      {
+        id: 'audit_1_4',
+        timestamp: '2023-12-20T11:30:00Z',
+        action: 'Profile Updated',
+        actionType: 'profile_update',
+        performedBy: 'john.tan@polwel.org',
+        details: 'Updated contact information and department details',
+        ipAddress: '192.168.1.100'
+      },
+      {
+        id: 'audit_1_5',
+        timestamp: '2023-06-01T10:00:00Z',
+        action: 'Account Created',
+        actionType: 'creation',
+        performedBy: 'System',
+        details: 'POLWEL user account created with Administrator privileges',
+        ipAddress: 'System'
+      }
+    ]
   },
   {
     id: '4',
@@ -56,7 +106,55 @@ const polwelUsers: PolwelUser[] = [
     createdAt: '2023-07-01',
     createdBy: 'john.tan@polwel.org',
     lastModified: '2024-01-10',
-    modifiedBy: 'john.tan@polwel.org'
+    modifiedBy: 'john.tan@polwel.org',
+    auditTrail: [
+      {
+        id: 'audit_4_1',
+        timestamp: '2024-01-10T11:15:00Z',
+        action: 'User Login',
+        actionType: 'login',
+        performedBy: 'sarah.wong@polwel.org',
+        details: 'Last successful login before account deactivation',
+        ipAddress: '192.168.1.105',
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      },
+      {
+        id: 'audit_4_2',
+        timestamp: '2024-01-11T09:00:00Z',
+        action: 'Status Changed',
+        actionType: 'status_change',
+        performedBy: 'john.tan@polwel.org',
+        details: 'User account status changed from Active to Inactive due to resignation',
+        ipAddress: '192.168.1.100'
+      },
+      {
+        id: 'audit_4_3',
+        timestamp: '2023-12-15T13:20:00Z',
+        action: 'Permission Updated',
+        actionType: 'permission_change',
+        performedBy: 'john.tan@polwel.org',
+        details: 'User granted Manager access to Course Management module',
+        ipAddress: '192.168.1.100'
+      },
+      {
+        id: 'audit_4_4',
+        timestamp: '2023-11-20T10:30:00Z',
+        action: 'Password Changed',
+        actionType: 'password_change',
+        performedBy: 'sarah.wong@polwel.org',
+        details: 'User changed password after security policy update',
+        ipAddress: '192.168.1.105'
+      },
+      {
+        id: 'audit_4_5',
+        timestamp: '2023-07-01T08:00:00Z',
+        action: 'Account Created',
+        actionType: 'creation',
+        performedBy: 'john.tan@polwel.org',
+        details: 'POLWEL user account created for Course Management department',
+        ipAddress: '192.168.1.100'
+      }
+    ]
   }
 ];
 

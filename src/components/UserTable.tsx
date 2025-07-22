@@ -1,13 +1,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, History } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog";
 
 interface User {
   id: string;
@@ -30,6 +31,9 @@ interface User {
   availabilityStatus?: string;
   courses?: string[];
   additionalEmails?: string[];
+  
+  // Audit trail for POLWEL users
+  auditTrail?: AuditTrailEntry[];
 }
 
 interface UserTableProps {
@@ -100,14 +104,36 @@ const UserTable = ({ users, title }: UserTableProps) => {
                 <tr key={user.id} className="border-b border-border hover:bg-muted/50">
                   <td className="py-3 px-4">
                     <div>
-                      <div className="font-medium text-foreground">{user.name}</div>
-                      {user.organization && (
-                        <div className="text-sm text-muted-foreground">
-                          {user.organization}{user.division && ` - ${user.division}`}
+                      {user.role === 'POLWEL' && user.auditTrail ? (
+                        <AuditTrailDialog 
+                          userName={user.name} 
+                          userEmail={user.email} 
+                          auditTrail={user.auditTrail}
+                        >
+                          <button className="text-left hover:text-primary transition-colors">
+                            <div className="font-medium text-foreground underline decoration-dotted">{user.name}</div>
+                            {user.organization && (
+                              <div className="text-sm text-muted-foreground">
+                                {user.organization}{user.division && ` - ${user.division}`}
+                              </div>
+                            )}
+                            {user.buCostCentre && (
+                              <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>
+                            )}
+                          </button>
+                        </AuditTrailDialog>
+                      ) : (
+                        <div>
+                          <div className="font-medium text-foreground">{user.name}</div>
+                          {user.organization && (
+                            <div className="text-sm text-muted-foreground">
+                              {user.organization}{user.division && ` - ${user.division}`}
+                            </div>
+                          )}
+                          {user.buCostCentre && (
+                            <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>
+                          )}
                         </div>
-                      )}
-                      {user.buCostCentre && (
-                        <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>
                       )}
                     </div>
                   </td>
@@ -147,6 +173,18 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
+                        {user.role === 'POLWEL' && user.auditTrail && (
+                          <AuditTrailDialog 
+                            userName={user.name} 
+                            userEmail={user.email} 
+                            auditTrail={user.auditTrail}
+                          >
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <History className="h-4 w-4 mr-2" />
+                              View Audit Trail
+                            </DropdownMenuItem>
+                          </AuditTrailDialog>
+                        )}
                         <DropdownMenuItem>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit User
