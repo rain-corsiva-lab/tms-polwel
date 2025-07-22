@@ -27,13 +27,12 @@ import { format, isValid, isAfter, isBefore, isSameDay, eachDayOfInterval } from
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-interface TrainerAssignment {
+interface TrainerBlockout {
   id: string;
   date: string;
   title: string;
-  type: "assignment" | "unavailable";
+  type: "unavailable";
   description?: string;
-  organization?: string;
 }
 
 interface TrainerCalendarProps {
@@ -47,15 +46,7 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
   const [selectedRange, setSelectedRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
   const [isDragging, setIsDragging] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
-  const [assignments, setAssignments] = useState<TrainerAssignment[]>([
-    {
-      id: "1",
-      date: "2024-01-15",
-      title: "Leadership Training",
-      type: "assignment",
-      description: "Full day leadership workshop",
-      organization: "TechCorp Solutions"
-    },
+  const [blockouts, setBlockouts] = useState<TrainerBlockout[]>([
     {
       id: "2", 
       date: "2024-01-20",
@@ -66,13 +57,12 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
   ]);
   
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newAssignment, setNewAssignment] = useState({
+  const [newBlockout, setNewBlockout] = useState({
     startDate: "",
     endDate: "",
     title: "",
-    type: "assignment" as "assignment" | "unavailable",
-    description: "",
-    organization: ""
+    type: "unavailable" as const,
+    description: ""
   });
 
   const { toast } = useToast();
@@ -82,7 +72,7 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     
     setSelectedDate(date);
     setSelectedRange({ start: date, end: date });
-    setNewAssignment(prev => ({ 
+    setNewBlockout(prev => ({ 
       ...prev, 
       startDate: format(date, "yyyy-MM-dd"),
       endDate: format(date, "yyyy-MM-dd")
@@ -106,7 +96,7 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
       const startDate = isBefore(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
       const endDate = isAfter(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
       
-      setNewAssignment(prev => ({
+      setNewBlockout(prev => ({
         ...prev,
         startDate: format(startDate, "yyyy-MM-dd"),
         endDate: format(endDate, "yyyy-MM-dd")
@@ -116,10 +106,8 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     setIsDragging(false);
   };
 
-  const handleAddAssignment = () => {
-    const title = newAssignment.type === "unavailable" ? "Unavailable" : newAssignment.title;
-    
-    if (!newAssignment.startDate || (newAssignment.type === "assignment" && !newAssignment.title)) {
+  const handleAddBlockout = () => {
+    if (!newBlockout.startDate || !newBlockout.title) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -128,68 +116,52 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
       return;
     }
 
-    const startDate = new Date(newAssignment.startDate);
-    const endDate = new Date(newAssignment.endDate);
+    const startDate = new Date(newBlockout.startDate);
+    const endDate = new Date(newBlockout.endDate);
     
-    // Create assignments for each day in the range
+    // Create blockouts for each day in the range
     const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
     
-    const newAssignments = dateRange.map(date => ({
+    const newBlockouts = dateRange.map(date => ({
       id: `${Date.now()}-${format(date, "yyyy-MM-dd")}`,
       date: format(date, "yyyy-MM-dd"),
-      title: title,
-      type: newAssignment.type,
-      description: newAssignment.description,
-      organization: newAssignment.organization
+      title: newBlockout.title,
+      type: "unavailable" as const,
+      description: newBlockout.description
     }));
 
-    setAssignments(prev => [...prev, ...newAssignments]);
+    setBlockouts(prev => [...prev, ...newBlockouts]);
     
     const rangeText = isSameDay(startDate, endDate) 
       ? format(startDate, "PPP")
       : `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
     
     toast({
-      title: "Assignment Added",
-      description: `${newAssignment.type === "assignment" ? "Training assignment" : "Unavailable period"} added for ${rangeText}`,
+      title: "Blockout Added",
+      description: `Trainer blocked out for ${rangeText}`,
     });
 
-    setNewAssignment({
+    setNewBlockout({
       startDate: "",
       endDate: "",
       title: "",
-      type: "assignment",
-      description: "",
-      organization: ""
+      type: "unavailable",
+      description: ""
     });
     setSelectedRange({ start: null, end: null });
     setShowAddDialog(false);
   };
 
-  const handleToggleAvailability = (assignmentId: string) => {
-    setAssignments(prev => prev.map(assignment => {
-      if (assignment.id === assignmentId && assignment.type === "unavailable") {
-        return { ...assignment, type: "assignment", title: "Available" };
-      }
-      return assignment;
-    }));
-    
+  const handleRemoveBlockout = (blockoutId: string) => {
+    setBlockouts(prev => prev.filter(a => a.id !== blockoutId));
     toast({
-      title: "Availability Updated",
-      description: "Trainer availability has been updated",
+      title: "Blockout Removed",
+      description: "Blockout has been removed",
     });
   };
 
-  const handleRemoveAssignment = (assignmentId: string) => {
-    setAssignments(prev => prev.filter(a => a.id !== assignmentId));
-    toast({
-      title: "Assignment Removed",
-      description: "Assignment has been removed",
-    });
-  };
-
-  const getAssignmentDates = () => {
-    return assignments.map(a => new Date(a.date)).filter(date => isValid(date));
+  const getBlockoutDates = () => {
+    return blockouts.map(a => new Date(a.date)).filter(date => isValid(date));
   };
 
   const getSelectedRangeDates = () => {
@@ -199,10 +171,10 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     return eachDayOfInterval({ start: startDate, end: endDate });
   };
 
-  const getSelectedDateAssignments = () => {
+  const getSelectedDateBlockouts = () => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    return assignments.filter(a => a.date === dateStr);
+    return blockouts.filter(a => a.date === dateStr);
   };
 
   return (
@@ -214,7 +186,7 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
             {trainerName} Calendar
           </CardTitle>
           <CardDescription>
-            Manage training assignments and availability for this trainer
+            Manage unavailable dates and blockouts for this trainer
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -225,24 +197,24 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
                 selected={selectedDate}
                 onSelect={handleDateSelect}
                 modifiers={{
-                  assignment: getAssignmentDates(),
+                  blockout: getBlockoutDates(),
                   selectedRange: getSelectedRangeDates()
                 }}
                 modifiersStyles={{
-                  assignment: { backgroundColor: "hsl(var(--primary))", color: "white" },
+                  blockout: { backgroundColor: "hsl(var(--destructive))", color: "white" },
                   selectedRange: { backgroundColor: "hsl(var(--primary) / 0.3)", color: "hsl(var(--primary))" }
                 }}
                 className="rounded-md border pointer-events-auto"
               />
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Click a date to add single assignment
+                  Click a date to block out trainer
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setNewAssignment(prev => ({
+                    setNewBlockout(prev => ({
                       ...prev,
                       startDate: "",
                       endDate: ""
@@ -251,7 +223,7 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
                   }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Date Range
+                  Add Blockout Date Range
                 </Button>
               </div>
             </div>
@@ -261,39 +233,27 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
                 {selectedDate ? format(selectedDate, "PPP") : "Select a date"}
               </h3>
               
-              {getSelectedDateAssignments().length > 0 ? (
+              {getSelectedDateBlockouts().length > 0 ? (
                 <div className="space-y-3">
-                  {getSelectedDateAssignments().map((assignment) => (
-                    <Card key={assignment.id} className="p-4">
+                  {getSelectedDateBlockouts().map((blockout) => (
+                    <Card key={blockout.id} className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <div className="space-y-1">
-                            <h4 className="font-medium">{assignment.title}</h4>
-                            <Badge variant={assignment.type === "assignment" ? "default" : "secondary"}>
-                              {assignment.type}
+                            <h4 className="font-medium">{blockout.title}</h4>
+                            <Badge variant="destructive">
+                              Unavailable
                             </Badge>
                           </div>
-                          {assignment.organization && (
-                            <p className="text-sm text-muted-foreground">Organization: {assignment.organization}</p>
-                          )}
-                          {assignment.description && (
-                            <p className="text-sm text-muted-foreground">{assignment.description}</p>
+                          {blockout.description && (
+                            <p className="text-sm text-muted-foreground">{blockout.description}</p>
                           )}
                         </div>
                         <div className="flex gap-2">
-                          {assignment.type === "unavailable" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleAvailability(assignment.id)}
-                            >
-                              Make Available
-                            </Button>
-                          )}
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleRemoveAssignment(assignment.id)}
+                            onClick={() => handleRemoveBlockout(blockout.id)}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -303,7 +263,7 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No assignments for this date</p>
+                <p className="text-muted-foreground">No blockouts for this date</p>
               )}
             </div>
           </div>
@@ -313,9 +273,9 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Assignment</DialogTitle>
+            <DialogTitle>Add Blockout</DialogTitle>
             <DialogDescription>
-              Add a new training assignment or mark as unavailable for selected date range
+              Block out dates when trainer is unavailable
             </DialogDescription>
           </DialogHeader>
           
@@ -325,8 +285,8 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
               <Input
                 id="startDate"
                 type="date"
-                value={newAssignment.startDate}
-                onChange={(e) => setNewAssignment(prev => ({ ...prev, startDate: e.target.value }))}
+                value={newBlockout.startDate}
+                onChange={(e) => setNewBlockout(prev => ({ ...prev, startDate: e.target.value }))}
               />
             </div>
 
@@ -335,74 +295,27 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
               <Input
                 id="endDate"
                 type="date"
-                value={newAssignment.endDate}
-                onChange={(e) => setNewAssignment(prev => ({ ...prev, endDate: e.target.value }))}
+                value={newBlockout.endDate}
+                onChange={(e) => setNewBlockout(prev => ({ ...prev, endDate: e.target.value }))}
               />
             </div>
 
             <div>
-              <Label htmlFor="type">Type *</Label>
-              <Select onValueChange={(value: "assignment" | "unavailable") => setNewAssignment(prev => ({ ...prev, type: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="assignment">Training Assignment</SelectItem>
-                  <SelectItem value="unavailable">Unavailable</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="title">Reason *</Label>
+              <Input
+                id="title"
+                value={newBlockout.title}
+                onChange={(e) => setNewBlockout(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="e.g., Personal Leave, Training, Conference"
+              />
             </div>
-
-            {newAssignment.type === "assignment" && (
-              <div>
-                <Label htmlFor="title">Course/Title *</Label>
-                <Select 
-                  value={newAssignment.title}
-                  onValueChange={(value) => setNewAssignment(prev => ({ ...prev, title: value }))}
-                >
-                  <SelectTrigger className="bg-background z-50">
-                    <SelectValue placeholder="Select course or enter custom title" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-lg z-50">
-                    {trainerCourses.map((course) => (
-                      <SelectItem key={course} value={course} className="hover:bg-muted">
-                        {course}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="Other" className="hover:bg-muted">
-                      Other (Custom)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                {newAssignment.title === "Other" && (
-                  <Input
-                    className="mt-2"
-                    placeholder="Enter custom title"
-                    value={newAssignment.title === "Other" ? "" : newAssignment.title}
-                    onChange={(e) => setNewAssignment(prev => ({ ...prev, title: e.target.value }))}
-                  />
-                )}
-              </div>
-            )}
-
-            {newAssignment.type === "assignment" && (
-              <div>
-                <Label htmlFor="organization">Organization</Label>
-                <Input
-                  id="organization"
-                  value={newAssignment.organization}
-                  onChange={(e) => setNewAssignment(prev => ({ ...prev, organization: e.target.value }))}
-                  placeholder="Client organization"
-                />
-              </div>
-            )}
 
             <div>
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                value={newAssignment.description}
-                onChange={(e) => setNewAssignment(prev => ({ ...prev, description: e.target.value }))}
+                value={newBlockout.description}
+                onChange={(e) => setNewBlockout(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Additional details"
               />
             </div>
@@ -412,8 +325,8 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddAssignment}>
-              Add Assignment
+            <Button onClick={handleAddBlockout}>
+              Add Blockout
             </Button>
           </DialogFooter>
         </DialogContent>
