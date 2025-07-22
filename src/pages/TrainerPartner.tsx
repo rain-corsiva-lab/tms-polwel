@@ -32,6 +32,7 @@ const trainerData = {
   availabilityStatus: "Available",
   specializations: ["Leadership Development", "Team Building", "Communication Skills"],
   certifications: ["Certified Professional Trainer", "Leadership Coach", "Team Dynamics Specialist"],
+  writeUp: "Experienced trainer with over 5 years in corporate development. Passionate about empowering teams and individuals to reach their full potential through innovative training methodologies.",
   totalTrainingSessions: 45,
   upcomingSessions: 8,
   completedHours: 120,
@@ -97,6 +98,37 @@ const TrainerPartner = () => {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Joined {new Date(trainerData.joinDate).toLocaleDateString()}</span>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Complete Profile Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <BookOpen className="h-5 w-5 mr-2" />
+                Complete Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium text-foreground mb-2">Specializations</h4>
+                <div className="flex flex-wrap gap-2">
+                  {trainerData.specializations.map((spec, index) => (
+                    <Badge key={index} variant="secondary">
+                      {spec}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <h4 className="text-sm font-medium text-foreground mb-2">Professional Write-up</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {trainerData.writeUp}
+                </p>
               </div>
             </CardContent>
           </Card>
