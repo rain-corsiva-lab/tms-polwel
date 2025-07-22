@@ -198,37 +198,30 @@ const TrainersAndPartners = () => {
                       </TableCell>
                       <TableCell>{trainer.courses.join(", ")}</TableCell>
                       <TableCell>
-                        <div className="flex space-x-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  toast({
-                                    title: "Password Reset Link Sent",
-                                    description: `Password reset link has been sent to ${trainer.email}`,
-                                  });
-                                }}
-                              >
-                                <Mail className="h-4 w-4 mr-2" />
-                                Send Password Reset Link
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <AddTrainerBlockoutDialog 
-                            trainerId={trainer.id}
-                            trainerName={trainer.name}
-                            onBlockoutAdd={handleTrainerBlockoutAdd}
-                          />
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                toast({
+                                  title: "Password Reset Link Sent",
+                                  description: `Password reset link has been sent to ${trainer.email}`,
+                                });
+                              }}
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              Send Password Reset Link
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
