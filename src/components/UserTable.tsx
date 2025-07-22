@@ -90,7 +90,6 @@ const UserTable = ({ users, title }: UserTableProps) => {
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Name</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Email</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">MFA</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Password Expiry</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Last Login</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
@@ -128,11 +127,6 @@ const UserTable = ({ users, title }: UserTableProps) => {
                         </div>
                       )}
                    </td>
-                  <td className="py-3 px-4">
-                    <Badge variant={user.mfaEnabled ? "default" : "destructive"}>
-                      {user.mfaEnabled ? 'Enabled' : 'Disabled'}
-                    </Badge>
-                  </td>
                   <td className="py-3 px-4">
                     <div className="text-muted-foreground text-sm">
                       {user.passwordExpiry || 'Not set'}
