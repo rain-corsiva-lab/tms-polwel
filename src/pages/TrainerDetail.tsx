@@ -53,7 +53,7 @@ const TrainerDetail = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Contact Information</CardTitle>
@@ -70,38 +70,6 @@ const TrainerDetail = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Specializations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {trainer.specializations.map((spec, index) => (
-                <Badge key={index} variant="outline">{spec}</Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Performance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Experience</span>
-              <span className="text-sm font-medium">{trainer.experience}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Rating</span>
-              <span className="text-sm font-medium">{trainer.rating}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Courses Completed</span>
-              <span className="text-sm font-medium">{trainer.coursesCompleted}</span>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} trainerCourses={trainer.specializations} />

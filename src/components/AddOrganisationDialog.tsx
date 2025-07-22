@@ -28,7 +28,6 @@ export function AddOrganisationDialog() {
     organisationName: "",
     divisionDepartment: "",
     divisionAddress: "",
-    buCostCentre: "",
     paymentMode: "",
     requireBuNumber: false,
     buNumber: "",
@@ -58,7 +57,6 @@ export function AddOrganisationDialog() {
       organisationName: "",
       divisionDepartment: "",
       divisionAddress: "",
-      buCostCentre: "",
       paymentMode: "",
       requireBuNumber: false,
       buNumber: "",
@@ -116,15 +114,6 @@ export function AddOrganisationDialog() {
             />
           </div>
 
-          <div>
-            <Label htmlFor="buCostCentre">BU Cost Centre</Label>
-            <Input
-              id="buCostCentre"
-              value={formData.buCostCentre}
-              onChange={(e) => setFormData(prev => ({ ...prev, buCostCentre: e.target.value }))}
-              placeholder="Enter BU cost centre"
-            />
-          </div>
 
           <div className="flex items-center space-x-2">
             <Checkbox

@@ -73,13 +73,6 @@ const TrainerPartner = () => {
                 <Badge className={trainerData.status === 'Active' ? 'bg-success text-success-foreground' : 'bg-muted'}>
                   {trainerData.status}
                 </Badge>
-                <Badge variant="outline" className={
-                  trainerData.availabilityStatus === 'Available' ? 'border-success text-success' : 
-                  trainerData.availabilityStatus === 'Limited' ? 'border-warning text-warning' : 
-                  'border-destructive text-destructive'
-                }>
-                  {trainerData.availabilityStatus}
-                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -108,72 +101,6 @@ const TrainerPartner = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Training Statistics</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Total Sessions</span>
-                <span className="font-semibold">{trainerData.totalTrainingSessions}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Upcoming Sessions</span>
-                <Badge variant="secondary">{trainerData.upcomingSessions}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Completed Hours</span>
-                <span className="font-semibold">{trainerData.completedHours}h</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Average Rating</span>
-                <div className="flex items-center space-x-1">
-                  <span className="font-semibold">{trainerData.rating}</span>
-                  <span className="text-warning">★</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Specializations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <BookOpen className="h-5 w-5 mr-2" />
-                Specializations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {trainerData.specializations.map((spec, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {spec}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Certifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Certifications
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {trainerData.certifications.map((cert, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <div className="h-2 w-2 bg-success rounded-full" />
-                    <span className="text-sm">{cert}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Calendar Section */}

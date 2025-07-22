@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MoreHorizontal, Edit, Trash2, Eye, History } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, History, Mail } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: string;
@@ -81,6 +82,7 @@ const getStatusColor = (status: string) => {
 };
 
 const UserTable = ({ users, title }: UserTableProps) => {
+  const { toast } = useToast();
   return (
     <Card>
       <CardHeader>
@@ -188,6 +190,17 @@ const UserTable = ({ users, title }: UserTableProps) => {
                         <DropdownMenuItem>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit User
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            toast({
+                              title: "Password Reset Link Sent",
+                              description: `Password reset link has been sent to ${user.email}`,
+                            });
+                          }}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Send Password Reset Link
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
                           <Trash2 className="h-4 w-4 mr-2" />
