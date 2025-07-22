@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload, MoreHorizontal, Edit, Mail } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -338,7 +339,30 @@ const ClientOrganisationDetail = () => {
                       <TableCell>{coordinator.schedulesCount}</TableCell>
                       <TableCell>{coordinator.lastActive}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">Edit</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                toast({
+                                  title: "Password Reset Link Sent",
+                                  description: `Password reset link has been sent to ${coordinator.email}`,
+                                });
+                              }}
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              Send Password Reset Link
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -380,7 +404,30 @@ const ClientOrganisationDetail = () => {
                       <TableCell>{learner.completedCourses}</TableCell>
                       <TableCell>{getStatusBadge(learner.status)}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">Edit</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                toast({
+                                  title: "Password Reset Link Sent",
+                                  description: `Password reset link has been sent to ${learner.email}`,
+                                });
+                              }}
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              Send Password Reset Link
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
