@@ -40,6 +40,14 @@ const mockClientOrgs: ClientOrg[] = [
     coordinatorsCount: 4,
     learnersCount: 67,
     status: "active"
+  },
+  {
+    id: "4",
+    name: "Corsiva Lab",
+    industry: "Technology",
+    coordinatorsCount: 1,
+    learnersCount: 15,
+    status: "active"
   }
 ];
 
