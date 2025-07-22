@@ -198,12 +198,20 @@ const TrainersAndPartners = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Trainers"
-          value={totalTrainers}
-          icon={Users}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Trainers</p>
+                <p className="text-2xl font-bold text-foreground">{totalTrainers}</p>
+              </div>
+              <div className="p-2 bg-accent rounded-lg">
+                <Users className="h-5 w-5 text-accent-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <Dialog>
           <DialogTrigger asChild>
             <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
