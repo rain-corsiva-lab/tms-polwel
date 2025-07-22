@@ -458,17 +458,6 @@ const ClientOrganisationDetail = () => {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit User
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                toast({
-                                  title: "Password Reset Link Sent",
-                                  description: `Password reset link has been sent to ${learner.email}`,
-                                });
-                              }}
-                            >
-                              <Mail className="h-4 w-4 mr-2" />
-                              Send Password Reset Link
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
