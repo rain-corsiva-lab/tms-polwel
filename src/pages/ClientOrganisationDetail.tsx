@@ -152,8 +152,9 @@ const ClientOrganisationDetail = () => {
     const orgMap: Record<string, any> = {
       "1": {
         id: "1",
-        name: "Ang Mo Kio",
-        industry: "SPF",
+        organizationName: "Singapore Police Force",
+        divisionName: "Ang Mo Kio",
+        displayName: "Ang Mo Kio",
         address: "Ang Mo Kio Police Division HQ, Singapore",
         contact: "contact@spf.gov.sg",
         status: "active",
@@ -162,8 +163,9 @@ const ClientOrganisationDetail = () => {
       },
       "2": {
         id: "2", 
-        name: "Choa Chu Kang",
-        industry: "SPF",
+        organizationName: "Singapore Police Force",
+        divisionName: "Choa Chu Kang",
+        displayName: "Choa Chu Kang",
         address: "Choa Chu Kang Police Division HQ, Singapore",
         contact: "contact@spf.gov.sg",
         status: "active",
@@ -172,8 +174,9 @@ const ClientOrganisationDetail = () => {
       },
       "3": {
         id: "3",
-        name: "Yishun", 
-        industry: "SPF",
+        organizationName: "Singapore Police Force",
+        divisionName: "Yishun",
+        displayName: "Yishun", 
         address: "Yishun Police Division HQ, Singapore",
         contact: "contact@spf.gov.sg",
         status: "active",
@@ -182,8 +185,9 @@ const ClientOrganisationDetail = () => {
       },
       "4": {
         id: "4",
-        name: "Corsiva Lab",
-        industry: "Technology",
+        organizationName: "Corsiva Lab",
+        divisionName: null,
+        displayName: "Corsiva Lab",
         address: "123 Tech Street, Innovation City",
         contact: "contact@corsivalab.com",
         status: "active",
@@ -245,10 +249,10 @@ const ClientOrganisationDetail = () => {
         <div className="space-y-2">
           <div className="flex items-center space-x-3">
             <Building2 className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">{organization.name}</h1>
+            <h1 className="text-3xl font-bold text-foreground">{organization.displayName}</h1>
             {getStatusBadge(organization.status)}
           </div>
-          <p className="text-muted-foreground">{organization.industry}</p>
+          <p className="text-muted-foreground">{organization.organizationName}</p>
           <p className="text-sm text-muted-foreground">{organization.address}</p>
         </div>
       </div>
@@ -277,30 +281,32 @@ const ClientOrganisationDetail = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="orgName">Organization Name</Label>
+                  <Label htmlFor="organizationName">Organization Name</Label>
                   {isEditing ? (
                     <Input
-                      id="orgName"
-                      value={organization.name}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, name: e.target.value }))}
+                      id="organizationName"
+                      value={organization.organizationName}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, organizationName: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.organizationName}</p>
                   )}
                 </div>
                 
-                <div>
-                  <Label htmlFor="industry">Industry</Label>
-                  {isEditing ? (
-                    <Input
-                      id="industry"
-                      value={organization.industry}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, industry: e.target.value }))}
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.industry}</p>
-                  )}
-                </div>
+                {organization.divisionName && (
+                  <div>
+                    <Label htmlFor="divisionName">Division Name</Label>
+                    {isEditing ? (
+                      <Input
+                        id="divisionName"
+                        value={organization.divisionName}
+                        onChange={(e) => setOrganization(prev => ({ ...prev, divisionName: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-muted-foreground">{organization.divisionName}</p>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="buNumber">BU Number</Label>
