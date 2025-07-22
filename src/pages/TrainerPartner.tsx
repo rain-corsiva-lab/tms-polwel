@@ -171,6 +171,45 @@ const TrainerPartner = () => {
               />
             </CardContent>
           </Card>
+
+          {/* Recent Activity */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="h-2 w-2 bg-success rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium">Completed "Leadership Development" session</p>
+                    <p className="text-xs text-muted-foreground">2 days ago</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="h-2 w-2 bg-primary rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium">Upcoming "Team Building Workshop"</p>
+                    <p className="text-xs text-muted-foreground">Tomorrow at 2:00 PM</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="h-2 w-2 bg-warning rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium">Session feedback received</p>
+                    <p className="text-xs text-muted-foreground">3 days ago</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="h-2 w-2 bg-muted rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium">Profile updated</p>
+                    <p className="text-xs text-muted-foreground">1 week ago</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
