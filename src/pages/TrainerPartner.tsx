@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { TrainerCalendar } from "@/components/TrainerCalendar";
+import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { 
   User, 
   Mail, 
@@ -41,6 +43,15 @@ const trainerData = {
 };
 
 const TrainerPartner = () => {
+  const [trainerProfile, setTrainerProfile] = useState(trainerData);
+
+  const handleProfileUpdate = (updatedData: { specializations: string[]; writeUp: string }) => {
+    setTrainerProfile(prev => ({
+      ...prev,
+      specializations: updatedData.specializations,
+      writeUp: updatedData.writeUp
+    }));
+  };
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -105,16 +116,23 @@ const TrainerPartner = () => {
           {/* Complete Profile Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <BookOpen className="h-5 w-5 mr-2" />
-                Complete Profile
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  Complete Profile
+                </CardTitle>
+                <EditProfileDialog 
+                  specializations={trainerProfile.specializations}
+                  writeUp={trainerProfile.writeUp}
+                  onSave={handleProfileUpdate}
+                />
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-foreground mb-2">Specializations</h4>
                 <div className="flex flex-wrap gap-2">
-                  {trainerData.specializations.map((spec, index) => (
+                  {trainerProfile.specializations.map((spec, index) => (
                     <Badge key={index} variant="secondary">
                       {spec}
                     </Badge>
@@ -127,7 +145,7 @@ const TrainerPartner = () => {
               <div>
                 <h4 className="text-sm font-medium text-foreground mb-2">Professional Write-up</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {trainerData.writeUp}
+                  {trainerProfile.writeUp}
                 </p>
               </div>
             </CardContent>
@@ -147,9 +165,9 @@ const TrainerPartner = () => {
             </CardHeader>
             <CardContent>
               <TrainerCalendar 
-                trainerId={trainerData.id} 
-                trainerName={trainerData.name}
-                trainerCourses={trainerData.specializations}
+                trainerId={trainerProfile.id} 
+                trainerName={trainerProfile.name}
+                trainerCourses={trainerProfile.specializations}
               />
             </CardContent>
           </Card>
