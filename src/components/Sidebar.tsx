@@ -95,7 +95,7 @@ const Sidebar = ({ className }: SidebarProps) => {
                 }
               >
                 <Building2 className="mr-3 h-4 w-4" />
-                Client Organisations
+                Clients
               </NavLink>
             </div>
           )}
