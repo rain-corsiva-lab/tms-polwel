@@ -183,19 +183,14 @@ const CourseCreation = () => {
                   <SelectContent>
                     {categoryGroups.map((group) => (
                       <React.Fragment key={group.name}>
-                        <SelectItem 
-                          value={group.name} 
-                          className="font-semibold"
-                        >
-                          <span className={`px-2 py-1 rounded text-xs ${group.color}`}>
-                            {group.name}
-                          </span>
-                        </SelectItem>
+                        <div className={`px-2 py-1 text-xs font-semibold ${group.color} rounded mx-1 my-1 pointer-events-none`}>
+                          {group.name}
+                        </div>
                         {group.subcategories.map((subcategory) => (
                           <SelectItem 
                             key={subcategory} 
                             value={subcategory}
-                            className="ml-4 text-sm"
+                            className="ml-2 text-sm"
                           >
                             {subcategory}
                           </SelectItem>
