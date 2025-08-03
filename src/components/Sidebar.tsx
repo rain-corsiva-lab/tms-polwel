@@ -34,6 +34,7 @@ const clientOrgsItems = [
 
 const courseManagementItems = [
   { name: 'Course Creation', href: '/course-creation', icon: BookOpen },
+  { name: 'Venue Setup', href: '/venue-setup', icon: Building2 },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {

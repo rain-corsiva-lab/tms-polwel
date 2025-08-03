@@ -15,6 +15,7 @@ import ClientOrganisations from "./pages/ClientOrganisations";
 import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
 import OrganizationDashboard from "./pages/OrganizationDashboard";
 import CourseCreation from "./pages/CourseCreation";
+import VenueSetup from "./pages/VenueSetup";
 import Login from "./pages/Login";
 
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="client-organisations" element={<ClientOrganisations />} />
             <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
             <Route path="course-creation" element={<CourseCreation />} />
+            <Route path="venue-setup" element={<VenueSetup />} />
             <Route path="settings" element={<UserManagement />} />
           </Route>
           <Route path="*" element={<NotFound />} />
