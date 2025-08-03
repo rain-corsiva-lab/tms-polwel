@@ -42,24 +42,30 @@ const CourseCreation = () => {
     profitMargin: 0
   });
 
-  const categories = [
-    "Self-Mastery",
-    "Growth Mindset", 
-    "Personal Effectiveness",
-    "Self-awareness",
-    "Thinking Skills",
-    "Agile Mindset",
-    "Strategic Planning",
-    "Critical Thinking & Creative Problem-Solving",
-    "People Skills",
-    "Emotional Intelligence",
-    "Collaboration",
-    "Communication",
-    "Leadership Skills",
-    "Mindful Leadership",
-    "Empowerment",
-    "Decision-making"
+  const categoryGroups = [
+    {
+      name: "Self-Mastery",
+      color: "bg-red-100 text-red-800 border-red-200",
+      subcategories: ["Growth Mindset", "Personal Effectiveness", "Self-awareness"]
+    },
+    {
+      name: "Thinking Skills", 
+      color: "bg-blue-100 text-blue-800 border-blue-200",
+      subcategories: ["Agile Mindset", "Strategic Planning", "Critical Thinking & Creative Problem-Solving"]
+    },
+    {
+      name: "People Skills",
+      color: "bg-green-100 text-green-800 border-green-200", 
+      subcategories: ["Emotional Intelligence", "Collaboration", "Communication"]
+    },
+    {
+      name: "Leadership Skills",
+      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"]
+    }
   ];
+
+  const allCategories = categoryGroups.flatMap(group => [group.name, ...group.subcategories]);
 
   const trainers = [
     "John Smith",
@@ -184,10 +190,24 @@ const CourseCreation = () => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
+                    {categoryGroups.map((group) => (
+                      <div key={group.name}>
+                        <SelectItem 
+                          value={group.name} 
+                          className={`font-semibold ${group.color} border rounded-md mb-1`}
+                        >
+                          {group.name}
+                        </SelectItem>
+                        {group.subcategories.map((subcategory) => (
+                          <SelectItem 
+                            key={subcategory} 
+                            value={subcategory}
+                            className="ml-4 text-sm"
+                          >
+                            {subcategory}
+                          </SelectItem>
+                        ))}
+                      </div>
                     ))}
                   </SelectContent>
                 </Select>
