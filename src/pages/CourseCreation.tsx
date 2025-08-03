@@ -185,9 +185,11 @@ const CourseCreation = () => {
                       <React.Fragment key={group.name}>
                         <SelectItem 
                           value={group.name} 
-                          className={`font-semibold ${group.color}`}
+                          className="font-semibold"
                         >
-                          {group.name}
+                          <span className={`px-2 py-1 rounded text-xs ${group.color}`}>
+                            {group.name}
+                          </span>
                         </SelectItem>
                         {group.subcategories.map((subcategory) => (
                           <SelectItem 
