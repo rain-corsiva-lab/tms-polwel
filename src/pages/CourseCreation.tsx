@@ -26,7 +26,7 @@ const CourseCreation = () => {
     contingencyFees: 0,
     serviceFees: 0,
     vitalFees: 0,
-    discount: "none",
+    discount: 0,
     minPax: 1,
     amountPerPax: 0,
     venue: "",
@@ -84,21 +84,12 @@ const CourseCreation = () => {
     "External Venue"
   ];
 
-  const discountRates = {
-    none: 0,
-    earlyBird: 0.05,
-    group: 0.05,
-    earlyBirdGroup: 0.10,
-    promoCode: 0.05
-  };
-
   // Calculate fees whenever relevant fields change
   useEffect(() => {
     const totalFee = formData.courseFee + formData.venueFee + formData.trainerFee;
-    const discountRate = discountRates[formData.discount as keyof typeof discountRates];
-    const discountedFeePerPax = formData.amountPerPax * (1 - discountRate);
-    const minimumRevenue = discountedFeePerPax * formData.minPax;
-    const totalCost = formData.adminFees + formData.contingencyFees + formData.serviceFees + formData.vitalFees;
+    const minimumRevenue = formData.amountPerPax * formData.minPax;
+    const discountExpense = minimumRevenue * (formData.discount / 100);
+    const totalCost = formData.adminFees + formData.contingencyFees + formData.serviceFees + formData.vitalFees + discountExpense;
     const profit = minimumRevenue - totalCost;
     const profitMargin = minimumRevenue > 0 ? (profit / minimumRevenue) * 100 : 0;
 
@@ -150,7 +141,7 @@ const CourseCreation = () => {
       contingencyFees: 0,
       serviceFees: 0,
       vitalFees: 0,
-      discount: "none",
+      discount: 0,
       minPax: 1,
       amountPerPax: 0,
       venue: "",
@@ -397,19 +388,16 @@ const CourseCreation = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="discount">Discount</Label>
-                <Select value={formData.discount} onValueChange={(value) => handleInputChange("discount", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Discount</SelectItem>
-                    <SelectItem value="earlyBird">Early Bird (5%)</SelectItem>
-                    <SelectItem value="group">Group Discount (5%)</SelectItem>
-                    <SelectItem value="earlyBirdGroup">Early Bird + Group (10%)</SelectItem>
-                    <SelectItem value="promoCode">Promo Code (5%)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="discount">Discount (%)</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.discount}
+                  onChange={(e) => handleInputChange("discount", parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                />
               </div>
             </div>
 
