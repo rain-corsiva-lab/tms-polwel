@@ -182,10 +182,10 @@ const CourseCreation = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {categoryGroups.map((group) => (
-                      <div key={group.name}>
+                      <React.Fragment key={group.name}>
                         <SelectItem 
                           value={group.name} 
-                          className={`font-semibold ${group.color} border rounded-md mb-1`}
+                          className={`font-semibold ${group.color}`}
                         >
                           {group.name}
                         </SelectItem>
@@ -198,7 +198,7 @@ const CourseCreation = () => {
                             {subcategory}
                           </SelectItem>
                         ))}
-                      </div>
+                      </React.Fragment>
                     ))}
                   </SelectContent>
                 </Select>
