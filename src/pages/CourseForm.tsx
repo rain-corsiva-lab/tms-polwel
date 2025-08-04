@@ -5,9 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 
 const CourseForm = () => {
   const { toast } = useToast();
@@ -18,7 +22,7 @@ const CourseForm = () => {
     category: "",
     duration: "",
     durationType: "days",
-    trainer: "",
+    trainer: [] as string[],
     courseFee: 0,
     venueFee: 0,
     trainerFee: 0,
@@ -112,7 +116,7 @@ const CourseForm = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.category || !formData.trainer) {
+    if (!formData.title || !formData.category || formData.trainer.length === 0) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -133,7 +137,7 @@ const CourseForm = () => {
       category: "",
       duration: "",
       durationType: "days",
-      trainer: "",
+      trainer: [],
       courseFee: 0,
       venueFee: 0,
       trainerFee: 0,
@@ -239,19 +243,67 @@ const CourseForm = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="trainer">Trainer *</Label>
-                <Select value={formData.trainer} onValueChange={(value) => handleInputChange("trainer", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select trainer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {trainers.map((trainer) => (
-                      <SelectItem key={trainer} value={trainer}>
-                        {trainer}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="trainer">Trainers *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between min-h-10"
+                    >
+                      {formData.trainer.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {formData.trainer.map((trainerName) => (
+                            <Badge key={trainerName} variant="secondary" className="text-xs">
+                              {trainerName}
+                              <button
+                                type="button"
+                                className="ml-1 hover:bg-muted rounded-full"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInputChange("trainer", formData.trainer.filter(t => t !== trainerName));
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        "Select trainers..."
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search trainers..." />
+                      <CommandList>
+                        <CommandEmpty>No trainer found.</CommandEmpty>
+                        <CommandGroup>
+                          {trainers.map((trainer) => (
+                            <CommandItem
+                              key={trainer}
+                              value={trainer}
+                              onSelect={() => {
+                                if (!formData.trainer.includes(trainer)) {
+                                  handleInputChange("trainer", [...formData.trainer, trainer]);
+                                }
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  formData.trainer.includes(trainer) ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {trainer}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
