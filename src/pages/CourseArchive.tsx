@@ -14,7 +14,6 @@ interface Course {
   category: string;
   duration: string;
   durationType: string;
-  trainer: string;
   venue: string;
   amountPerPax: number;
   minPax: number;
@@ -27,7 +26,6 @@ const CourseArchive = () => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [selectedTrainer, setSelectedTrainer] = useState<string>("all");
   const [selectedVenue, setSelectedVenue] = useState<string>("all");
   const [selectedCertificate, setSelectedCertificate] = useState<string>("all");
   
@@ -70,7 +68,6 @@ const CourseArchive = () => {
       category: "Mindful Leadership",
       duration: "3",
       durationType: "days",
-      trainer: "John Smith",
       venue: "Main Training Room",
       amountPerPax: 850,
       minPax: 15,
@@ -83,7 +80,6 @@ const CourseArchive = () => {
       category: "Emotional Intelligence",
       duration: "8",
       durationType: "hours",
-      trainer: "Sarah Johnson",
       venue: "Conference Hall A",
       amountPerPax: 420,
       minPax: 20,
@@ -96,7 +92,6 @@ const CourseArchive = () => {
       category: "Strategic Planning",
       duration: "2",
       durationType: "days",
-      trainer: "Michael Chen",
       venue: "Online Platform",
       amountPerPax: 680,
       minPax: 12,
@@ -144,8 +139,7 @@ const CourseArchive = () => {
     });
   };
 
-  // Get unique trainers, venues, and certificates for filter options
-  const uniqueTrainers = [...new Set(courses.map(course => course.trainer))];
+  // Get unique venues and certificates for filter options
   const uniqueVenues = [...new Set(courses.map(course => course.venue))];
   const uniqueCertificates = [...new Set(courses.map(course => course.certificates))];
 
@@ -162,16 +156,13 @@ const CourseArchive = () => {
     // Status filter
     const statusMatch = selectedStatus === "all" || course.status === selectedStatus;
 
-    // Trainer filter
-    const trainerMatch = selectedTrainer === "all" || course.trainer === selectedTrainer;
-
     // Venue filter
     const venueMatch = selectedVenue === "all" || course.venue === selectedVenue;
 
     // Certificate filter
     const certificateMatch = selectedCertificate === "all" || course.certificates === selectedCertificate;
 
-    return categoryMatch && statusMatch && trainerMatch && venueMatch && certificateMatch;
+    return categoryMatch && statusMatch && venueMatch && certificateMatch;
   });
 
   return (
@@ -223,23 +214,6 @@ const CourseArchive = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Trainer:</label>
-              <Select value={selectedTrainer} onValueChange={setSelectedTrainer}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Trainers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Trainers</SelectItem>
-                  {uniqueTrainers.map((trainer) => (
-                    <SelectItem key={trainer} value={trainer}>
-                      {trainer}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Venue:</label>
               <Select value={selectedVenue} onValueChange={setSelectedVenue}>
                 <SelectTrigger className="w-[140px]">
@@ -279,7 +253,6 @@ const CourseArchive = () => {
                 <TableHead>Course Title</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Duration</TableHead>
-                <TableHead>Trainer</TableHead>
                 <TableHead>Venue</TableHead>
                 <TableHead>Amount/Pax</TableHead>
                 <TableHead>Min Pax</TableHead>
@@ -298,7 +271,6 @@ const CourseArchive = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>{course.duration} {course.durationType}</TableCell>
-                  <TableCell>{course.trainer}</TableCell>
                   <TableCell>{course.venue}</TableCell>
                   <TableCell>${course.amountPerPax}</TableCell>
                   <TableCell>{course.minPax}</TableCell>
