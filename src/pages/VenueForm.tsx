@@ -8,7 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, X } from "lucide-react";
+
+interface Contact {
+  id: string;
+  name: string;
+  number: string;
+  email: string;
+}
 
 interface Venue {
   id: string;
@@ -16,8 +23,7 @@ interface Venue {
   capacity: string;
   feeType: "per_head" | "per_venue";
   fee: number;
-  contactNumber: string;
-  contactEmail: string;
+  contacts: Contact[];
   remarks: string;
 }
 
@@ -29,8 +35,7 @@ const VenueForm = () => {
     capacity: "",
     feeType: "per_head" as "per_head" | "per_venue",
     fee: 0,
-    contactNumber: "",
-    contactEmail: "",
+    contacts: [{ id: "1", name: "", number: "", email: "" }] as Contact[],
     remarks: ""
   });
 
@@ -41,8 +46,14 @@ const VenueForm = () => {
       capacity: "70-80%",
       feeType: "per_head",
       fee: 25,
-      contactNumber: "+65 6734 7766",
-      contactEmail: "events@orchardhotel.com.sg",
+      contacts: [
+        {
+          id: "1",
+          name: "Sarah Chen",
+          number: "+65 6734 7766",
+          email: "events@orchardhotel.com.sg"
+        }
+      ],
       remarks: "Includes refreshments and WiFi. Minimum 20 pax required."
     },
     {
@@ -51,8 +62,20 @@ const VenueForm = () => {
       capacity: "25 pax",
       feeType: "per_venue",
       fee: 300,
-      contactNumber: "+65 6123 4567",
-      contactEmail: "bookings@polwel.org.sg",
+      contacts: [
+        {
+          id: "1",
+          name: "Michael Tan",
+          number: "+65 6123 4567",
+          email: "bookings@polwel.org.sg"
+        },
+        {
+          id: "2",
+          name: "Jessica Lim",
+          number: "+65 6123 4568",
+          email: "support@polwel.org.sg"
+        }
+      ],
       remarks: "Projector and whiteboard included. Tea/coffee service available."
     }
   ]);
@@ -66,23 +89,80 @@ const VenueForm = () => {
     }));
   };
 
+  const handleContactChange = (contactId: string, field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      contacts: prev.contacts.map(contact =>
+        contact.id === contactId ? { ...contact, [field]: value } : contact
+      )
+    }));
+  };
+
+  const addContact = () => {
+    const newContact: Contact = {
+      id: Date.now().toString(),
+      name: "",
+      number: "",
+      email: ""
+    };
+    setFormData(prev => ({
+      ...prev,
+      contacts: [...prev.contacts, newContact]
+    }));
+  };
+
+  const removeContact = (contactId: string) => {
+    if (formData.contacts.length === 1) {
+      toast({
+        title: "Error",
+        description: "At least one contact is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      contacts: prev.contacts.filter(contact => contact.id !== contactId)
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.contactNumber || !formData.contactEmail) {
+    // Validate required fields
+    if (!formData.name) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Venue name is required",
         variant: "destructive"
       });
       return;
     }
 
+    // Validate at least one complete contact
+    const hasValidContact = formData.contacts.some(contact => 
+      contact.name.trim() && contact.number.trim() && contact.email.trim()
+    );
+
+    if (!hasValidContact) {
+      toast({
+        title: "Error",
+        description: "At least one complete contact (name, number, email) is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Filter out incomplete contacts
+    const validContacts = formData.contacts.filter(contact => 
+      contact.name.trim() && contact.number.trim() && contact.email.trim()
+    );
+
     if (editingId) {
       // Update existing venue
       setVenues(prev => prev.map(venue => 
         venue.id === editingId 
-          ? { ...formData, id: editingId }
+          ? { ...formData, contacts: validContacts, id: editingId }
           : venue
       ));
       setEditingId(null);
@@ -94,6 +174,7 @@ const VenueForm = () => {
       // Add new venue
       const newVenue: Venue = {
         ...formData,
+        contacts: validContacts,
         id: Date.now().toString()
       };
       setVenues(prev => [...prev, newVenue]);
@@ -109,8 +190,7 @@ const VenueForm = () => {
       capacity: "",
       feeType: "per_head",
       fee: 0,
-      contactNumber: "",
-      contactEmail: "",
+      contacts: [{ id: "1", name: "", number: "", email: "" }],
       remarks: ""
     });
   };
@@ -121,8 +201,7 @@ const VenueForm = () => {
       capacity: venue.capacity,
       feeType: venue.feeType,
       fee: venue.fee,
-      contactNumber: venue.contactNumber,
-      contactEmail: venue.contactEmail,
+      contacts: venue.contacts.map(contact => ({ ...contact })),
       remarks: venue.remarks
     });
     setEditingId(venue.id);
@@ -142,8 +221,7 @@ const VenueForm = () => {
       capacity: "",
       feeType: "per_head",
       fee: 0,
-      contactNumber: "",
-      contactEmail: "",
+      contacts: [{ id: "1", name: "", number: "", email: "" }],
       remarks: ""
     });
     setEditingId(null);
@@ -163,7 +241,7 @@ const VenueForm = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Venue Name *</Label>
@@ -212,27 +290,73 @@ const VenueForm = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contactNumber">Point of Contact Number *</Label>
-                <Input
-                  id="contactNumber"
-                  value={formData.contactNumber}
-                  onChange={(e) => handleInputChange("contactNumber", e.target.value)}
-                  placeholder="+65 1234 5678"
-                />
+            {/* Points of Contact Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Points of Contact *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addContact}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Contact
+                </Button>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="contactEmail">Point of Contact Email *</Label>
-                <Input
-                  id="contactEmail"
-                  type="email"
-                  value={formData.contactEmail}
-                  onChange={(e) => handleInputChange("contactEmail", e.target.value)}
-                  placeholder="contact@venue.com"
-                />
-              </div>
+              {formData.contacts.map((contact, index) => (
+                <Card key={contact.id} className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium">Contact {index + 1}</h4>
+                    {formData.contacts.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeContact(contact.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`contact-name-${contact.id}`}>Name</Label>
+                      <Input
+                        id={`contact-name-${contact.id}`}
+                        value={contact.name}
+                        onChange={(e) => handleContactChange(contact.id, "name", e.target.value)}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor={`contact-number-${contact.id}`}>Phone Number</Label>
+                      <Input
+                        id={`contact-number-${contact.id}`}
+                        value={contact.number}
+                        onChange={(e) => handleContactChange(contact.id, "number", e.target.value)}
+                        placeholder="+65 1234 5678"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor={`contact-email-${contact.id}`}>Email</Label>
+                      <Input
+                        id={`contact-email-${contact.id}`}
+                        type="email"
+                        value={contact.email}
+                        onChange={(e) => handleContactChange(contact.id, "email", e.target.value)}
+                        placeholder="john@venue.com"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
 
             <div className="space-y-2">
@@ -257,6 +381,78 @@ const VenueForm = () => {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Venues List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Existing Venues</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Venue Name</TableHead>
+                <TableHead>Capacity</TableHead>
+                <TableHead>Fee</TableHead>
+                <TableHead>Contacts</TableHead>
+                <TableHead>Remarks</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {venues.map((venue) => (
+                <TableRow key={venue.id}>
+                  <TableCell className="font-medium">{venue.name}</TableCell>
+                  <TableCell>{venue.capacity}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span>${venue.fee}</span>
+                      <Badge variant="secondary" className="w-fit">
+                        {venue.feeType === "per_head" ? "Per Head" : "Per Venue"}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {venue.contacts.map((contact, index) => (
+                        <div key={contact.id} className="text-sm">
+                          <div className="font-medium">{contact.name}</div>
+                          <div className="text-muted-foreground">{contact.number}</div>
+                          <div className="text-muted-foreground">{contact.email}</div>
+                          {index < venue.contacts.length - 1 && <hr className="my-2" />}
+                        </div>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="max-w-xs">
+                    <div className="truncate" title={venue.remarks}>
+                      {venue.remarks}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(venue)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(venue.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
