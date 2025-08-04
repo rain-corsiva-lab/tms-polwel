@@ -124,14 +124,14 @@ export function AddTrainerDialog() {
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
-          Add New Trainer/Partner
+          Add New Trainer
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5" />
-            Add New Trainer/Partner
+            Add New Trainer
           </DialogTitle>
           <DialogDescription>
             Create a new standalone trainer account. User will set password in onboarding flow.
