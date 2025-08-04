@@ -26,7 +26,6 @@ const CourseArchive = () => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [selectedVenue, setSelectedVenue] = useState<string>("all");
   const [selectedCertificate, setSelectedCertificate] = useState<string>("all");
   
   const categoryGroups = [
@@ -139,8 +138,7 @@ const CourseArchive = () => {
     });
   };
 
-  // Get unique venues and certificates for filter options
-  const uniqueVenues = [...new Set(courses.map(course => course.venue))];
+  // Get unique certificates for filter options
   const uniqueCertificates = [...new Set(courses.map(course => course.certificates))];
 
   const filteredCourses = courses.filter(course => {
@@ -156,13 +154,10 @@ const CourseArchive = () => {
     // Status filter
     const statusMatch = selectedStatus === "all" || course.status === selectedStatus;
 
-    // Venue filter
-    const venueMatch = selectedVenue === "all" || course.venue === selectedVenue;
-
     // Certificate filter
     const certificateMatch = selectedCertificate === "all" || course.certificates === selectedCertificate;
 
-    return categoryMatch && statusMatch && venueMatch && certificateMatch;
+    return categoryMatch && statusMatch && certificateMatch;
   });
 
   return (
@@ -209,23 +204,6 @@ const CourseArchive = () => {
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Venue:</label>
-              <Select value={selectedVenue} onValueChange={setSelectedVenue}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Venues" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Venues</SelectItem>
-                  {uniqueVenues.map((venue) => (
-                    <SelectItem key={venue} value={venue}>
-                      {venue}
-                    </SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
             </div>
