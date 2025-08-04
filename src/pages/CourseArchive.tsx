@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Power } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Course {
   id: string;
@@ -22,6 +24,8 @@ interface Course {
 
 const CourseArchive = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   
   const categoryGroups = [
     {
@@ -55,7 +59,7 @@ const CourseArchive = () => {
     return "bg-gray-100 text-gray-800 border-gray-200";
   };
   
-  const [courses] = useState<Course[]>([
+  const [courses, setCourses] = useState<Course[]>([
     {
       id: "1",
       title: "Leadership Excellence Program",
@@ -123,6 +127,29 @@ const CourseArchive = () => {
     }
   };
 
+  const handleDeactivate = (courseId: string, courseTitle: string) => {
+    setCourses(courses.map(course => 
+      course.id === courseId 
+        ? { ...course, status: course.status === "active" ? "archived" : "active" } 
+        : course
+    ));
+    const newStatus = courses.find(c => c.id === courseId)?.status === "active" ? "deactivated" : "activated";
+    toast({
+      title: `Course ${newStatus}`,
+      description: `${courseTitle} has been ${newStatus} successfully.`,
+    });
+  };
+
+  const filteredCourses = selectedCategory === "all" 
+    ? courses 
+    : courses.filter(course => {
+        if (selectedCategory === "Self-Mastery") return categoryGroups[0].subcategories.includes(course.category);
+        if (selectedCategory === "Thinking Skills") return categoryGroups[1].subcategories.includes(course.category);
+        if (selectedCategory === "People Skills") return categoryGroups[2].subcategories.includes(course.category);
+        if (selectedCategory === "Leadership Skills") return categoryGroups[3].subcategories.includes(course.category);
+        return false;
+      });
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -135,7 +162,27 @@ const CourseArchive = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Courses</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>All Courses</CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label htmlFor="category-filter" className="text-sm font-medium">Filter by Category:</label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categoryGroups.map((group) => (
+                      <SelectItem key={group.name} value={group.name}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -154,7 +201,7 @@ const CourseArchive = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courses.map((course) => (
+              {filteredCourses.map((course) => (
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell>
@@ -174,7 +221,7 @@ const CourseArchive = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/course-creation/view/${course.id}`)}
+                        onClick={() => navigate(`/course-detail/${course.id}`)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -184,6 +231,14 @@ const CourseArchive = () => {
                         onClick={() => navigate(`/course-creation/edit/${course.id}`)}
                       >
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeactivate(course.id, course.title)}
+                        className={course.status === "active" ? "hover:bg-destructive hover:text-destructive-foreground" : "hover:bg-green-50 hover:text-green-700"}
+                      >
+                        <Power className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
