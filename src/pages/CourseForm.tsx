@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
-const CourseCreation = () => {
+const CourseForm = () => {
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -489,4 +489,4 @@ const CourseCreation = () => {
   );
 };
 
-export default CourseCreation;
+export default CourseForm;

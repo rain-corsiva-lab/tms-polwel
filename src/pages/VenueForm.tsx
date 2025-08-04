@@ -21,7 +21,7 @@ interface Venue {
   remarks: string;
 }
 
-const VenueSetup = () => {
+const VenueForm = () => {
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -322,4 +322,4 @@ const VenueSetup = () => {
   );
 };
 
-export default VenueSetup;
+export default VenueForm;

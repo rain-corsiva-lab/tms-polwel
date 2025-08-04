@@ -14,8 +14,10 @@ import TrainerPartner from "./pages/TrainerPartner";
 import ClientOrganisations from "./pages/ClientOrganisations";
 import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
 import OrganizationDashboard from "./pages/OrganizationDashboard";
-import CourseCreation from "./pages/CourseCreation";
-import VenueSetup from "./pages/VenueSetup";
+import CourseArchive from "./pages/CourseArchive";
+import CourseForm from "./pages/CourseForm";
+import VenueArchive from "./pages/VenueArchive";
+import VenueForm from "./pages/VenueForm";
 import Login from "./pages/Login";
 
 import NotFound from "./pages/NotFound";
@@ -42,8 +44,14 @@ const App = () => (
             <Route path="learners" element={<UserManagement />} />
             <Route path="client-organisations" element={<ClientOrganisations />} />
             <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
-            <Route path="course-creation" element={<CourseCreation />} />
-            <Route path="venue-setup" element={<VenueSetup />} />
+            <Route path="course-creation" element={<CourseArchive />} />
+            <Route path="course-creation/new" element={<CourseForm />} />
+            <Route path="course-creation/edit/:id" element={<CourseForm />} />
+            <Route path="course-creation/view/:id" element={<CourseForm />} />
+            <Route path="venue-setup" element={<VenueArchive />} />
+            <Route path="venue-setup/new" element={<VenueForm />} />
+            <Route path="venue-setup/edit/:id" element={<VenueForm />} />
+            <Route path="venue-setup/view/:id" element={<VenueForm />} />
             <Route path="settings" element={<UserManagement />} />
           </Route>
           <Route path="*" element={<NotFound />} />
