@@ -175,7 +175,7 @@ const CourseArchive = () => {
           <div className="flex items-center justify-between">
             <CardTitle>All Courses</CardTitle>
           </div>
-          <div className="flex flex-wrap items-center gap-4 mt-4">
+          <div className="flex justify-center items-center gap-6 mt-4">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Category:</label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
