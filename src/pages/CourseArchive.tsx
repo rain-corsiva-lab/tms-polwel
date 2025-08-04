@@ -23,6 +23,38 @@ interface Course {
 const CourseArchive = () => {
   const navigate = useNavigate();
   
+  const categoryGroups = [
+    {
+      name: "Self-Mastery",
+      color: "bg-red-100 text-red-800 border-red-200",
+      subcategories: ["Growth Mindset", "Personal Effectiveness", "Self-awareness"]
+    },
+    {
+      name: "Thinking Skills", 
+      color: "bg-blue-100 text-blue-800 border-blue-200",
+      subcategories: ["Agile Mindset", "Strategic Planning", "Critical Thinking & Creative Problem-Solving"]
+    },
+    {
+      name: "People Skills",
+      color: "bg-green-100 text-green-800 border-green-200", 
+      subcategories: ["Emotional Intelligence", "Collaboration", "Communication"]
+    },
+    {
+      name: "Leadership Skills",
+      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"]
+    }
+  ];
+
+  const getCategoryColor = (category: string) => {
+    for (const group of categoryGroups) {
+      if (group.subcategories.includes(category)) {
+        return group.color;
+      }
+    }
+    return "bg-gray-100 text-gray-800 border-gray-200";
+  };
+  
   const [courses] = useState<Course[]>([
     {
       id: "1",
@@ -94,7 +126,7 @@ const CourseArchive = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Course Archive</h1>
+        <h1 className="text-3xl font-bold text-foreground">Courses</h1>
         <Button onClick={() => navigate('/course-creation/new')}>
           <Plus className="h-4 w-4 mr-2" />
           Add New Course
@@ -125,7 +157,11 @@ const CourseArchive = () => {
               {courses.map((course) => (
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
-                  <TableCell>{course.category}</TableCell>
+                  <TableCell>
+                    <Badge className={getCategoryColor(course.category)}>
+                      {course.category}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{course.duration} {course.durationType}</TableCell>
                   <TableCell>{course.trainer}</TableCell>
                   <TableCell>{course.venue}</TableCell>
