@@ -4,7 +4,7 @@ import { Download, Filter } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddUserDialog } from "@/components/AddUserDialog";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
-import { AddPartnerDialog } from "@/components/AddPartnerDialog";
+
 
 // Enhanced user data structure matching system requirements
 interface User {
@@ -218,7 +218,6 @@ const UserManagement = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <AddPartnerDialog />
           <AddTrainerDialog />
           <AddUserDialog />
         </div>

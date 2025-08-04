@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
+import { AddPartnerDialog } from "@/components/AddPartnerDialog";
 import { AddTrainerBlockoutDialog } from "@/components/AddTrainerBlockoutDialog";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import StatsCard from "@/components/StatsCard";
@@ -193,6 +194,7 @@ const TrainersAndPartners = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
+          <AddPartnerDialog />
           <AddTrainerDialog />
         </div>
       </div>
