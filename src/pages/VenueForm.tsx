@@ -259,65 +259,6 @@ const VenueForm = () => {
           </form>
         </CardContent>
       </Card>
-
-      {/* Venues List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Training Venues</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Venue Name</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead>Fee Type</TableHead>
-                <TableHead>Fee Amount</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {venues.map((venue) => (
-                <TableRow key={venue.id}>
-                  <TableCell className="font-medium">{venue.name}</TableCell>
-                  <TableCell>{venue.capacity}</TableCell>
-                  <TableCell>
-                    <Badge variant={venue.feeType === "per_head" ? "default" : "secondary"}>
-                      {venue.feeType === "per_head" ? "Per Head" : "Per Venue"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>${venue.fee}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>{venue.contactNumber}</div>
-                      <div className="text-muted-foreground">{venue.contactEmail}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(venue)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(venue.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 };

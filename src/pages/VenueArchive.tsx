@@ -71,7 +71,7 @@ const VenueArchive = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Venue Archive</h1>
+        <h1 className="text-3xl font-bold text-foreground">Venue Management</h1>
         <Button onClick={() => navigate('/venue-setup/new')}>
           <Plus className="h-4 w-4 mr-2" />
           Add New Venue
