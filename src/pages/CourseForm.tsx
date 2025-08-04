@@ -76,8 +76,20 @@ const CourseForm = () => {
     "Sarah Johnson", 
     "Michael Chen",
     "Emily Davis",
-    "External Institution A",
-    "External Institution B"
+  ];
+
+  const partners = [
+    "Excellence Training Partners",
+    "Professional Development Corp",
+    "Leadership Institute Singapore",
+    "Corporate Training Solutions",
+    "Skills Development Academy"
+  ];
+
+  // Combine trainers and partners for the dropdown
+  const allTrainersAndPartners = [
+    ...trainers.map(trainer => ({ name: trainer, type: "Trainer" })),
+    ...partners.map(partner => ({ name: partner, type: "Partner" }))
   ];
 
   const venues = [
@@ -280,7 +292,7 @@ const CourseForm = () => {
                       <CommandInput placeholder="Search trainers..." />
                       <CommandList>
                         <CommandEmpty>No trainer found.</CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup heading="Trainers">
                           {trainers.map((trainer) => (
                             <CommandItem
                               key={trainer}
@@ -297,6 +309,26 @@ const CourseForm = () => {
                                 }`}
                               />
                               {trainer}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        <CommandGroup heading="Partners">
+                          {partners.map((partner) => (
+                            <CommandItem
+                              key={partner}
+                              value={partner}
+                              onSelect={() => {
+                                if (!formData.trainer.includes(partner)) {
+                                  handleInputChange("trainer", [...formData.trainer, partner]);
+                                }
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  formData.trainer.includes(partner) ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {partner}
                             </CommandItem>
                           ))}
                         </CommandGroup>
