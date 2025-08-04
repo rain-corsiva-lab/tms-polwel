@@ -26,6 +26,10 @@ const CourseArchive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedTrainer, setSelectedTrainer] = useState<string>("all");
+  const [selectedVenue, setSelectedVenue] = useState<string>("all");
+  const [selectedCertificate, setSelectedCertificate] = useState<string>("all");
   
   const categoryGroups = [
     {
@@ -140,15 +144,35 @@ const CourseArchive = () => {
     });
   };
 
-  const filteredCourses = selectedCategory === "all" 
-    ? courses 
-    : courses.filter(course => {
-        if (selectedCategory === "Self-Mastery") return categoryGroups[0].subcategories.includes(course.category);
-        if (selectedCategory === "Thinking Skills") return categoryGroups[1].subcategories.includes(course.category);
-        if (selectedCategory === "People Skills") return categoryGroups[2].subcategories.includes(course.category);
-        if (selectedCategory === "Leadership Skills") return categoryGroups[3].subcategories.includes(course.category);
-        return false;
-      });
+  // Get unique trainers, venues, and certificates for filter options
+  const uniqueTrainers = [...new Set(courses.map(course => course.trainer))];
+  const uniqueVenues = [...new Set(courses.map(course => course.venue))];
+  const uniqueCertificates = [...new Set(courses.map(course => course.certificates))];
+
+  const filteredCourses = courses.filter(course => {
+    // Category filter
+    const categoryMatch = selectedCategory === "all" || (() => {
+      if (selectedCategory === "Self-Mastery") return categoryGroups[0].subcategories.includes(course.category);
+      if (selectedCategory === "Thinking Skills") return categoryGroups[1].subcategories.includes(course.category);
+      if (selectedCategory === "People Skills") return categoryGroups[2].subcategories.includes(course.category);
+      if (selectedCategory === "Leadership Skills") return categoryGroups[3].subcategories.includes(course.category);
+      return false;
+    })();
+
+    // Status filter
+    const statusMatch = selectedStatus === "all" || course.status === selectedStatus;
+
+    // Trainer filter
+    const trainerMatch = selectedTrainer === "all" || course.trainer === selectedTrainer;
+
+    // Venue filter
+    const venueMatch = selectedVenue === "all" || course.venue === selectedVenue;
+
+    // Certificate filter
+    const certificateMatch = selectedCertificate === "all" || course.certificates === selectedCertificate;
+
+    return categoryMatch && statusMatch && trainerMatch && venueMatch && certificateMatch;
+  });
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -164,23 +188,87 @@ const CourseArchive = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>All Courses</CardTitle>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="category-filter" className="text-sm font-medium">Filter by Category:</label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categoryGroups.map((group) => (
-                      <SelectItem key={group.name} value={group.name}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 mt-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Category:</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categoryGroups.map((group) => (
+                    <SelectItem key={group.name} value={group.name}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Status:</label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Trainer:</label>
+              <Select value={selectedTrainer} onValueChange={setSelectedTrainer}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Trainers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Trainers</SelectItem>
+                  {uniqueTrainers.map((trainer) => (
+                    <SelectItem key={trainer} value={trainer}>
+                      {trainer}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Venue:</label>
+              <Select value={selectedVenue} onValueChange={setSelectedVenue}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Venues" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Venues</SelectItem>
+                  {uniqueVenues.map((venue) => (
+                    <SelectItem key={venue} value={venue}>
+                      {venue}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Certificate:</label>
+              <Select value={selectedCertificate} onValueChange={setSelectedCertificate}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="All Certs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="polwel">POLWEL</SelectItem>
+                  <SelectItem value="partner">Partner</SelectItem>
+                  <SelectItem value="no">None</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
