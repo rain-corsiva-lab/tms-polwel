@@ -5,10 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 interface Contact {
   id: string;
@@ -39,48 +37,6 @@ const VenueForm = () => {
     remarks: ""
   });
 
-  const [venues, setVenues] = useState<Venue[]>([
-    {
-      id: "1",
-      name: "Orchard Hotel",
-      capacity: "70-80%",
-      feeType: "per_head",
-      fee: 25,
-      contacts: [
-        {
-          id: "1",
-          name: "Sarah Chen",
-          number: "+65 6734 7766",
-          email: "events@orchardhotel.com.sg"
-        }
-      ],
-      remarks: "Includes refreshments and WiFi. Minimum 20 pax required."
-    },
-    {
-      id: "2", 
-      name: "POLWEL Learning Pod",
-      capacity: "25 pax",
-      feeType: "per_venue",
-      fee: 300,
-      contacts: [
-        {
-          id: "1",
-          name: "Michael Tan",
-          number: "+65 6123 4567",
-          email: "bookings@polwel.org.sg"
-        },
-        {
-          id: "2",
-          name: "Jessica Lim",
-          number: "+65 6123 4568",
-          email: "support@polwel.org.sg"
-        }
-      ],
-      remarks: "Projector and whiteboard included. Tea/coffee service available."
-    }
-  ]);
-
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -158,31 +114,16 @@ const VenueForm = () => {
       contact.name.trim() && contact.number.trim() && contact.email.trim()
     );
 
-    if (editingId) {
-      // Update existing venue
-      setVenues(prev => prev.map(venue => 
-        venue.id === editingId 
-          ? { ...formData, contacts: validContacts, id: editingId }
-          : venue
-      ));
-      setEditingId(null);
-      toast({
-        title: "Venue Updated",
-        description: "Venue has been successfully updated"
-      });
-    } else {
-      // Add new venue
-      const newVenue: Venue = {
-        ...formData,
-        contacts: validContacts,
-        id: Date.now().toString()
-      };
-      setVenues(prev => [...prev, newVenue]);
-      toast({
-        title: "Venue Added",
-        description: "Venue has been successfully added"
-      });
-    }
+    const newVenue: Venue = {
+      ...formData,
+      contacts: validContacts,
+      id: Date.now().toString()
+    };
+
+    toast({
+      title: "Venue Added",
+      description: "Venue has been successfully added"
+    });
     
     // Reset form
     setFormData({
@@ -195,37 +136,6 @@ const VenueForm = () => {
     });
   };
 
-  const handleEdit = (venue: Venue) => {
-    setFormData({
-      name: venue.name,
-      capacity: venue.capacity,
-      feeType: venue.feeType,
-      fee: venue.fee,
-      contacts: venue.contacts.map(contact => ({ ...contact })),
-      remarks: venue.remarks
-    });
-    setEditingId(venue.id);
-  };
-
-  const handleDelete = (id: string) => {
-    setVenues(prev => prev.filter(venue => venue.id !== id));
-    toast({
-      title: "Venue Deleted",
-      description: "Venue has been successfully deleted"
-    });
-  };
-
-  const handleCancel = () => {
-    setFormData({
-      name: "",
-      capacity: "",
-      feeType: "per_head",
-      fee: 0,
-      contacts: [{ id: "1", name: "", number: "", email: "" }],
-      remarks: ""
-    });
-    setEditingId(null);
-  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -236,9 +146,7 @@ const VenueForm = () => {
       {/* Add/Edit Venue Form */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            {editingId ? "Edit Venue" : "Add New Venue"}
-          </CardTitle>
+          <CardTitle>Add New Venue</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -370,91 +278,13 @@ const VenueForm = () => {
               />
             </div>
 
-            <div className="flex justify-end space-x-4">
-              {editingId && (
-                <Button type="button" variant="outline" onClick={handleCancel}>
-                  Cancel
-                </Button>
-              )}
-              <Button type="submit">
-                {editingId ? "Update Venue" : "Add Venue"}
-              </Button>
+            <div className="flex justify-end">
+              <Button type="submit">Add Venue</Button>
             </div>
           </form>
         </CardContent>
       </Card>
 
-      {/* Venues List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Existing Venues</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Venue Name</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead>Fee</TableHead>
-                <TableHead>Contacts</TableHead>
-                <TableHead>Remarks</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {venues.map((venue) => (
-                <TableRow key={venue.id}>
-                  <TableCell className="font-medium">{venue.name}</TableCell>
-                  <TableCell>{venue.capacity}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span>${venue.fee}</span>
-                      <Badge variant="secondary" className="w-fit">
-                        {venue.feeType === "per_head" ? "Per Head" : "Per Venue"}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {venue.contacts.map((contact, index) => (
-                        <div key={contact.id} className="text-sm">
-                          <div className="font-medium">{contact.name}</div>
-                          <div className="text-muted-foreground">{contact.number}</div>
-                          <div className="text-muted-foreground">{contact.email}</div>
-                          {index < venue.contacts.length - 1 && <hr className="my-2" />}
-                        </div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <div className="truncate" title={venue.remarks}>
-                      {venue.remarks}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(venue)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(venue.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 };
