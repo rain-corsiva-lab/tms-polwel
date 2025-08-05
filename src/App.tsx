@@ -16,6 +16,7 @@ import ClientOrganisationDetail from "./pages/ClientOrganisationDetail";
 import OrganizationDashboard from "./pages/OrganizationDashboard";
 import CourseArchive from "./pages/CourseArchive";
 import CourseForm from "./pages/CourseForm";
+import CourseDetail from "./pages/CourseDetail";
 import VenueArchive from "./pages/VenueArchive";
 import VenueForm from "./pages/VenueForm";
 import Login from "./pages/Login";
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="course-creation/new" element={<CourseForm />} />
             <Route path="course-creation/edit/:id" element={<CourseForm />} />
             <Route path="course-creation/view/:id" element={<CourseForm />} />
+            <Route path="course-detail/:id" element={<CourseDetail />} />
             <Route path="venue-setup" element={<VenueArchive />} />
             <Route path="venue-setup/new" element={<VenueForm />} />
             <Route path="venue-setup/edit/:id" element={<VenueForm />} />
