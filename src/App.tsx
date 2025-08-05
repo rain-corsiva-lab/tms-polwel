@@ -19,6 +19,7 @@ import CourseForm from "./pages/CourseForm";
 import CourseDetail from "./pages/CourseDetail";
 import VenueArchive from "./pages/VenueArchive";
 import VenueForm from "./pages/VenueForm";
+import VenueDetail from "./pages/VenueDetail";
 import Login from "./pages/Login";
 
 import NotFound from "./pages/NotFound";
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="venue-setup/new" element={<VenueForm />} />
             <Route path="venue-setup/edit/:id" element={<VenueForm />} />
             <Route path="venue-setup/view/:id" element={<VenueForm />} />
+            <Route path="venue-detail/:id" element={<VenueDetail />} />
             <Route path="settings" element={<UserManagement />} />
           </Route>
           <Route path="*" element={<NotFound />} />
