@@ -90,7 +90,6 @@ const VenueArchive = () => {
                 <TableHead>Capacity</TableHead>
                 <TableHead>Fee Type</TableHead>
                 <TableHead>Fee Amount</TableHead>
-                <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -106,12 +105,6 @@ const VenueArchive = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>${venue.fee}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>{venue.contactNumber}</div>
-                      <div className="text-muted-foreground">{venue.contactEmail}</div>
-                    </div>
-                  </TableCell>
                   <TableCell>{getStatusBadge(venue.status)}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
