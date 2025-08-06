@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { polwelUsersApi } from "@/lib/api";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 
 interface ModulePermissions {
@@ -36,10 +37,13 @@ interface UserPermissions {
 
 export function AddPolwelUserDialog() {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    status: "Active",
+    status: "ACTIVE",
+    department: "",
+    permissionLevel: "",
   });
 
   const [permissions, setPermissions] = useState<UserPermissions>({
@@ -54,7 +58,7 @@ export function AddPolwelUserDialog() {
 
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email) {
@@ -80,27 +84,53 @@ export function AddPolwelUserDialog() {
       return;
     }
 
-    toast({
-      title: "POLWEL User Created",
-      description: `POLWEL user "${formData.name}" has been created successfully. Onboarding email sent with secure link.`,
-    });
+    setLoading(true);
 
-    // Reset form and close dialog
-    setFormData({
-      name: "",
-      email: "",
-      status: "Active",
-    });
-    setPermissions({
-      'user-management-polwel': { view: false, create: false, edit: false, delete: false },
-      'user-management-trainers': { view: false, create: false, edit: false, delete: false },
-      'user-management-client-orgs': { view: false, create: false, edit: false, delete: false },
-      'course-venue-setup': { view: false, create: false, edit: false, delete: false },
-      'course-runs-operations': { view: false, create: false, edit: false, delete: false },
-      'email-reporting-library': { view: false, create: false, edit: false, delete: false },
-      'finance-activity': { view: false, create: false, edit: false, delete: false },
-    });
-    setOpen(false);
+    try {
+      const response = await polwelUsersApi.create({
+        name: formData.name,
+        email: formData.email,
+        status: formData.status,
+        department: formData.department || undefined,
+        permissionLevel: formData.permissionLevel || undefined,
+      });
+
+      toast({
+        title: "POLWEL User Created",
+        description: `POLWEL user "${formData.name}" has been created successfully. Temporary password: ${response.tempPassword}`,
+      });
+
+      // Reset form and close dialog
+      setFormData({
+        name: "",
+        email: "",
+        status: "ACTIVE",
+        department: "",
+        permissionLevel: "",
+      });
+      setPermissions({
+        'user-management-polwel': { view: false, create: false, edit: false, delete: false },
+        'user-management-trainers': { view: false, create: false, edit: false, delete: false },
+        'user-management-client-orgs': { view: false, create: false, edit: false, delete: false },
+        'course-venue-setup': { view: false, create: false, edit: false, delete: false },
+        'course-runs-operations': { view: false, create: false, edit: false, delete: false },
+        'email-reporting-library': { view: false, create: false, edit: false, delete: false },
+        'finance-activity': { view: false, create: false, edit: false, delete: false },
+      });
+      setOpen(false);
+
+      // Trigger a page refresh or parent component update
+      window.location.reload();
+    } catch (error) {
+      console.error('Error creating POLWEL user:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create POLWEL user",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePermissionChange = (module: keyof UserPermissions, permission: keyof ModulePermissions, checked: CheckedState) => {
@@ -151,6 +181,26 @@ export function AddPolwelUserDialog() {
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               placeholder="Enter @polwel.org email address"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="department">Department</Label>
+            <Input
+              id="department"
+              value={formData.department}
+              onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+              placeholder="Enter department"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="permissionLevel">Permission Level</Label>
+            <Input
+              id="permissionLevel"
+              value={formData.permissionLevel}
+              onChange={(e) => setFormData(prev => ({ ...prev, permissionLevel: e.target.value }))}
+              placeholder="e.g., Administrator, Manager, Staff"
             />
           </div>
           
@@ -219,11 +269,11 @@ export function AddPolwelUserDialog() {
         </form>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit}>
-            Create POLWEL User
+          <Button type="submit" onClick={handleSubmit} disabled={loading}>
+            {loading ? "Creating..." : "Create POLWEL User"}
           </Button>
         </DialogFooter>
       </DialogContent>

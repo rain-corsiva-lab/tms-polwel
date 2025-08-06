@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute, RoleBased } from "@/components/ProtectedRoute";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 
@@ -29,38 +31,206 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/trainerpartner" element={<TrainerPartner />} />
-          <Route path="/org" element={<OrganizationDashboard />} />
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="polwel-users" element={<PolwelUsers />} />
-            <Route path="clients" element={<UserManagement />} />
-            <Route path="trainers" element={<TrainersAndPartners />} />
-            <Route path="trainers/:id" element={<TrainerDetail />} />
-            <Route path="learners" element={<UserManagement />} />
-            <Route path="client-organisations" element={<ClientOrganisations />} />
-            <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
-            <Route path="course-creation" element={<CourseArchive />} />
-            <Route path="course-creation/new" element={<CourseForm />} />
-            <Route path="course-creation/edit/:id" element={<CourseForm />} />
-            <Route path="course-creation/view/:id" element={<CourseForm />} />
-            <Route path="course-detail/:id" element={<CourseDetail />} />
-            <Route path="venue-setup" element={<VenueArchive />} />
-            <Route path="venue-setup/new" element={<VenueForm />} />
-            <Route path="venue-setup/edit/:id" element={<VenueForm />} />
-            <Route path="venue-setup/view/:id" element={<VenueForm />} />
-            <Route path="venue-detail/:id" element={<VenueDetail />} />
-            <Route path="settings" element={<UserManagement />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public route - Login page */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Protected standalone routes */}
+            <Route 
+              path="/trainerpartner" 
+              element={
+                <ProtectedRoute requiredRoles={['TRAINER']}>
+                  <TrainerPartner />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/org" 
+              element={
+                <ProtectedRoute requiredRoles={['TRAINING_COORDINATOR', 'POLWEL']}>
+                  <OrganizationDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Protected main application routes */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Home />} />
+              
+              {/* User Management - Different roles for different sections */}
+              <Route 
+                path="users" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <UserManagement />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="polwel-users" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL']}>
+                    <PolwelUsers />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="clients" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <UserManagement />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Trainer Management */}
+              <Route 
+                path="trainers" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <TrainersAndPartners />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="trainers/:id" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR', 'TRAINER']}>
+                    <TrainerDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="learners" element={<UserManagement />} />
+              
+              {/* Organization Management */}
+              <Route 
+                path="client-organisations" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL']}>
+                    <ClientOrganisations />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="client-organisations/:id" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <ClientOrganisationDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Course Management */}
+              <Route 
+                path="course-creation" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <CourseArchive />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-creation/new" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <CourseForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-creation/edit/:id" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <CourseForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-creation/view/:id" 
+                element={
+                  <ProtectedRoute>
+                    <CourseForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-detail/:id" 
+                element={
+                  <ProtectedRoute>
+                    <CourseDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Venue Management */}
+              <Route 
+                path="venue-setup" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <VenueArchive />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="venue-setup/new" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <VenueForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="venue-setup/edit/:id" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <VenueForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="venue-setup/view/:id" 
+                element={
+                  <ProtectedRoute>
+                    <VenueForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="venue-detail/:id" 
+                element={
+                  <ProtectedRoute>
+                    <VenueDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Settings - Admin only */}
+              <Route 
+                path="settings" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL']}>
+                    <UserManagement />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+            
+            {/* 404 page */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

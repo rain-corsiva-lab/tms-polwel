@@ -1,31 +1,69 @@
 import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, User, Mail, Phone, Calendar, Edit } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Calendar, Edit, Loader2 } from "lucide-react";
 import { TrainerCalendar } from "@/components/TrainerCalendar";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
+import { trainersApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+
+interface Trainer {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  availabilityStatus?: string;
+  partnerOrganization?: string;
+  bio?: string;
+  specializations?: string[];
+  certifications?: string[];
+  experience?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const TrainerDetail = () => {
   const { id } = useParams();
+  const { toast } = useToast();
   
-  // State for editable profile data
-  const [specializations, setSpecializations] = useState(["Leadership", "Communication", "Project Management"]);
-  const [writeUp, setWriteUp] = useState("Experienced trainer specializing in leadership development and corporate communication strategies. Passionate about helping teams reach their full potential through targeted training programs.");
+  const [trainer, setTrainer] = useState<Trainer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock trainer data
-  const trainer = {
-    id: id || "1",
-    name: "Dr. Sarah Johnson",
-    email: "sarah.johnson@techcorp.com",
-    phone: "+65 9123 4567",
-    specializations,
-    status: "Available",
-    experience: "8 years",
-    rating: "4.8/5.0",
-    coursesCompleted: 156,
-    writeUp
+  // State for editable profile data
+  const [specializations, setSpecializations] = useState<string[]>([]);
+  const [writeUp, setWriteUp] = useState("");
+
+  useEffect(() => {
+    if (id) {
+      fetchTrainer();
+    }
+  }, [id]);
+
+  const fetchTrainer = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await trainersApi.getById(id);
+      setTrainer(data);
+      setSpecializations(data.specializations || []);
+      setWriteUp(data.bio || "");
+    } catch (error) {
+      console.error('Error fetching trainer:', error);
+      setError('Failed to load trainer details');
+      toast({
+        title: "Error",
+        description: "Failed to load trainer details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleProfileSave = (data: { specializations: string[]; writeUp: string }) => {
@@ -36,12 +74,50 @@ const TrainerDetail = () => {
   const getStatusBadge = (status: string) => {
     const variants = {
       Available: "default",
-      Unavailable: "secondary",
-      Limited: "outline"
+      AVAILABLE: "default",
+      Unavailable: "secondary", 
+      UNAVAILABLE: "secondary",
+      Limited: "outline",
+      LIMITED: "outline"
     } as const;
     
     return <Badge variant={variants[status as keyof typeof variants] || "secondary"}>{status}</Badge>;
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading trainer details...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !trainer) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center space-x-4 mb-6">
+          <Link to="/trainers">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Trainers
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Trainer</h3>
+              <p className="text-gray-600 mb-4">{error || 'Trainer not found'}</p>
+              <Button onClick={fetchTrainer}>Try Again</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -75,10 +151,12 @@ const TrainerDetail = () => {
               <Mail className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">{trainer.email}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">{trainer.phone}</span>
-            </div>
+            {trainer.partnerOrganization && (
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{trainer.partnerOrganization}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -86,8 +164,8 @@ const TrainerDetail = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Profile Information</CardTitle>
             <EditProfileDialog 
-              specializations={trainer.specializations}
-              writeUp={trainer.writeUp}
+              specializations={specializations}
+              writeUp={writeUp}
               onSave={handleProfileSave}
             />
           </CardHeader>
@@ -95,7 +173,7 @@ const TrainerDetail = () => {
             <div>
               <h4 className="text-sm font-medium mb-2">Specializations</h4>
               <div className="flex flex-wrap gap-2">
-                {trainer.specializations.map((spec, index) => (
+                {specializations.map((spec, index) => (
                   <Badge key={index} variant="secondary" className="text-xs">
                     {spec}
                   </Badge>
@@ -105,14 +183,14 @@ const TrainerDetail = () => {
             <div>
               <h4 className="text-sm font-medium mb-2">Professional Write-up</h4>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {trainer.writeUp}
+                {writeUp || trainer.bio || "No bio available"}
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} trainerCourses={trainer.specializations} />
+      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} trainerCourses={specializations} />
     </div>
   );
 };

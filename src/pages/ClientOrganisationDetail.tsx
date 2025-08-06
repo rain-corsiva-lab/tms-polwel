@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, 
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
+import { clientOrganizationsApi } from "@/lib/api";
 
 interface TrainingCoordinator {
   id: string;
