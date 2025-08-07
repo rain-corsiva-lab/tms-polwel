@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload, MoreHorizontal, Edit, Mail } from "lucide-react";
+import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload, MoreHorizontal, Edit, Mail, Loader2 } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -146,62 +146,112 @@ const ClientOrganisationDetail = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("information");
   const { toast } = useToast();
+  
+  // API state management
+  const [organization, setOrganization] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Mock data state (until backend endpoints are ready for these)
   const [trainerBlockouts, setTrainerBlockouts] = useState(mockTrainerBlockouts);
 
-  // Mock organization data - determine based on URL id
-  const getOrgData = () => {
-    const orgMap: Record<string, any> = {
-      "1": {
-        id: "1",
-        organizationName: "Singapore Police Force",
-        divisionName: "Ang Mo Kio",
-        displayName: "Ang Mo Kio",
-        address: "Ang Mo Kio Police Division HQ, Singapore",
-        contact: "contact@spf.gov.sg",
-        status: "active",
-        buNumber: "SPF-AMK-001",
-        divisionAddress: "Ang Mo Kio Police Division HQ, Singapore"
-      },
-      "2": {
-        id: "2", 
-        organizationName: "Singapore Police Force",
-        divisionName: "Choa Chu Kang",
-        displayName: "Choa Chu Kang",
-        address: "Choa Chu Kang Police Division HQ, Singapore",
-        contact: "contact@spf.gov.sg",
-        status: "active",
-        buNumber: "SPF-CCK-002",
-        divisionAddress: "Choa Chu Kang Police Division HQ, Singapore"
-      },
-      "3": {
-        id: "3",
-        organizationName: "Singapore Police Force",
-        divisionName: "Yishun",
-        displayName: "Yishun", 
-        address: "Yishun Police Division HQ, Singapore",
-        contact: "contact@spf.gov.sg",
-        status: "active",
-        buNumber: "SPF-YS-003",
-        divisionAddress: "Yishun Police Division HQ, Singapore"
-      },
-      "4": {
-        id: "4",
-        organizationName: "Corsiva Lab",
-        divisionName: null,
-        displayName: "Corsiva Lab",
-        address: "123 Tech Street, Innovation City",
-        contact: "contact@corsivalab.com",
-        status: "active",
-        buNumber: "CL-2024-001",
-        divisionAddress: "123 Tech Street, Innovation City"
-      }
-    };
-    return orgMap[id || "1"] || orgMap["1"];
+  useEffect(() => {
+    if (id) {
+      fetchOrganization();
+    }
+  }, [id]);
+
+  const fetchOrganization = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await clientOrganizationsApi.getById(id);
+      setOrganization(data);
+    } catch (error) {
+      console.error('Error fetching organization:', error);
+      setError('Failed to load organization details');
+      toast({
+        title: "Error",
+        description: "Failed to load organization details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const [organization, setOrganization] = useState(getOrgData());
+  const handleSaveChanges = async () => {
+    if (!organization || !id) return;
+    
+    try {
+      setSaving(true);
+      await clientOrganizationsApi.update(id, {
+        name: organization.name,
+        displayName: organization.name, // Use name as display name
+        industry: organization.industry,
+        status: organization.status,
+        address: organization.address,
+        contactEmail: organization.email,
+        contactPhone: organization.phoneNumber,
+        buNumber: organization.businessUnitNumber,
+        divisionAddress: organization.address, // Use address as division address
+      });
+      
+      toast({
+        title: "Organization Updated",
+        description: "Organization details have been updated successfully.",
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating organization:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update organization. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const [isEditing, setIsEditing] = useState(false);
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading organization details...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !organization) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center space-x-4 mb-6">
+          <Link to="/client-organizations">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Organizations
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Organization</h3>
+              <p className="text-gray-600 mb-4">{error || 'Organization not found'}</p>
+              <Button onClick={fetchOrganization}>Try Again</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -250,10 +300,10 @@ const ClientOrganisationDetail = () => {
         <div className="space-y-2">
           <div className="flex items-center space-x-3">
             <Building2 className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">{organization.displayName}</h1>
+            <h1 className="text-3xl font-bold text-foreground">{organization.name}</h1>
             {getStatusBadge(organization.status)}
           </div>
-          <p className="text-muted-foreground">{organization.organizationName}</p>
+          <p className="text-muted-foreground">{organization.email}</p>
           <p className="text-sm text-muted-foreground">{organization.address}</p>
         </div>
       </div>
@@ -274,78 +324,106 @@ const ClientOrganisationDetail = () => {
               </div>
               <Button
                 variant={isEditing ? "default" : "outline"}
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={isEditing ? handleSaveChanges : () => setIsEditing(!isEditing)}
+                disabled={saving}
               >
-                {isEditing ? "Save Changes" : "Edit Information"}
+                {saving ? "Saving..." : isEditing ? "Save Changes" : "Edit Information"}
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="organizationName">Organization Name</Label>
+                  <Label htmlFor="name">Organization Name</Label>
                   {isEditing ? (
                     <Input
-                      id="organizationName"
-                      value={organization.organizationName}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, organizationName: e.target.value }))}
+                      id="name"
+                      value={organization.name || ''}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, name: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.organizationName}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.name}</p>
                   )}
                 </div>
                 
-                {organization.divisionName && (
-                  <div>
-                    <Label htmlFor="divisionName">Division Name</Label>
-                    {isEditing ? (
-                      <Input
-                        id="divisionName"
-                        value={organization.divisionName}
-                        onChange={(e) => setOrganization(prev => ({ ...prev, divisionName: e.target.value }))}
-                      />
-                    ) : (
-                      <p className="mt-1 text-sm text-muted-foreground">{organization.divisionName}</p>
-                    )}
-                  </div>
-                )}
-
                 <div>
-                  <Label htmlFor="buNumber">BU Number</Label>
+                  <Label htmlFor="email">Contact Email</Label>
                   {isEditing ? (
                     <Input
-                      id="buNumber"
-                      value={organization.buNumber}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, buNumber: e.target.value }))}
+                      id="email"
+                      type="email"
+                      value={organization.email || ''}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, email: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.buNumber}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.email}</p>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="contact">Contact Email</Label>
+                  <Label htmlFor="businessUnitNumber">Business Unit Number</Label>
                   {isEditing ? (
                     <Input
-                      id="contact"
-                      value={organization.contact}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, contact: e.target.value }))}
+                      id="businessUnitNumber"
+                      value={organization.businessUnitNumber || ''}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, businessUnitNumber: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.contact}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.businessUnitNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="contactPerson">Contact Person</Label>
+                  {isEditing ? (
+                    <Input
+                      id="contactPerson"
+                      value={organization.contactPerson || ''}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, contactPerson: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.contactPerson || 'Not provided'}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  {isEditing ? (
+                    <Input
+                      id="phoneNumber"
+                      value={organization.phoneNumber || ''}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.phoneNumber || 'Not provided'}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="industry">Industry</Label>
+                  {isEditing ? (
+                    <Input
+                      id="industry"
+                      value={organization.industry || ''}
+                      onChange={(e) => setOrganization(prev => ({ ...prev, industry: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{organization.industry || 'Not specified'}</p>
                   )}
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="divisionAddress">Division Address</Label>
+                <Label htmlFor="address">Address</Label>
                 {isEditing ? (
-                  <Input
-                    id="divisionAddress"
-                    value={organization.divisionAddress}
-                    onChange={(e) => setOrganization(prev => ({ ...prev, divisionAddress: e.target.value }))}
+                  <textarea
+                    id="address"
+                    className="w-full mt-1 px-3 py-2 border border-input rounded-md text-sm"
+                    value={organization.address || ''}
+                    onChange={(e) => setOrganization(prev => ({ ...prev, address: e.target.value }))}
+                    rows={3}
                   />
                 ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">{organization.divisionAddress}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{organization.address}</p>
                 )}
               </div>
             </CardContent>
