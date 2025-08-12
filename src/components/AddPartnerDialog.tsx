@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Building2, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { trainersApi } from "@/lib/api";
 
 // Available courses for selection
 const availableCourses = [
@@ -53,8 +54,9 @@ const availableCourses = [
   "Change Management"
 ];
 
-export function AddPartnerDialog() {
+export function AddPartnerDialog({ onPartnerCreated }: { onPartnerCreated?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [courseSearchOpen, setCourseSearchOpen] = useState(false);
   const [formData, setFormData] = useState({
     partnerName: "",
@@ -66,7 +68,7 @@ export function AddPartnerDialog() {
 
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.partnerName || !formData.contactName || !formData.contactNumber) {
@@ -78,20 +80,41 @@ export function AddPartnerDialog() {
       return;
     }
 
-    toast({
-      title: "Partner Added",
-      description: `Partner organization "${formData.partnerName}" has been added successfully.`,
-    });
+    setLoading(true);
+    try {
+      // TODO: Implement partner organization API endpoint on backend
+      // For now, we'll simulate the API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Reset form and close dialog
-    setFormData({
-      partnerName: "",
-      courses: [],
-      contactName: "",
-      contactNumber: "",
-      contactDesignation: "",
-    });
-    setOpen(false);
+      toast({
+        title: "Partner Added",
+        description: `Partner organization "${formData.partnerName}" has been added successfully.`,
+      });
+
+      // Reset form and close dialog
+      setFormData({
+        partnerName: "",
+        courses: [],
+        contactName: "",
+        contactNumber: "",
+        contactDesignation: "",
+      });
+      setOpen(false);
+      
+      // Call the callback to refresh the parent component
+      if (onPartnerCreated) {
+        onPartnerCreated();
+      }
+    } catch (error) {
+      console.error('Error creating partner:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create partner organization. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addCourse = (course: string) => {
@@ -234,11 +257,20 @@ export function AddPartnerDialog() {
         </form>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit}>
-            Add Partner
+          <Button 
+            type="submit" 
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Adding..." : "Add Partner"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,11 +1,18 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Download, Filter, Shield, Users, Clock } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
+import { EditPolwelUserDialog } from "@/components/EditPolwelUserDialog";
 import { AuditTrailEntry } from "@/components/AuditTrailDialog";
+import { polwelUsersApi, debugAuthState } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 // Enhanced user data structure for POLWEL users
 interface PolwelUser {
@@ -13,281 +20,297 @@ interface PolwelUser {
   name: string;
   email: string;
   role: 'POLWEL';
-  status: 'Active' | 'Inactive' | 'Pending' | 'Locked';
-  lastLogin: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  lastLogin: string | null;
   mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
-  permissionLevel: string;
-  department: string;
+  permissionLevel: string | null;
+  department: string | null;
   createdAt: string;
-  createdBy: string;
-  lastModified: string;
-  modifiedBy: string;
-  auditTrail: AuditTrailEntry[];
+  updatedAt: string;
+  auditTrail?: AuditTrailEntry[];
 }
 
-const polwelUsers: PolwelUser[] = [
-  {
-    id: '1',
-    name: 'John Tan',
-    email: 'john.tan@polwel.org',
-    role: 'POLWEL',
-    status: 'Active',
-    lastLogin: '2024-01-15 09:30',
-    mfaEnabled: true,
-    passwordExpiry: '2024-04-15',
-    failedLoginAttempts: 0,
-    permissionLevel: 'Administrator',
-    department: 'System Administration',
-    createdAt: '2023-06-01',
-    createdBy: 'System',
-    lastModified: '2024-01-15',
-    modifiedBy: 'john.tan@polwel.org',
-    auditTrail: [
-      {
-        id: 'audit_1_1',
-        timestamp: '2024-01-15T09:30:00Z',
-        action: 'User Login',
-        actionType: 'login',
-        performedBy: 'john.tan@polwel.org',
-        details: 'Successful login from Singapore office',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      {
-        id: 'audit_1_2',
-        timestamp: '2024-01-10T14:20:00Z',
-        action: 'Permission Updated',
-        actionType: 'permission_change',
-        performedBy: 'admin@polwel.org',
-        details: 'User granted Administrator access to Training Management module',
-        ipAddress: '192.168.1.101'
-      },
-      {
-        id: 'audit_1_3',
-        timestamp: '2024-01-05T16:45:00Z',
-        action: 'Password Changed',
-        actionType: 'password_change',
-        performedBy: 'john.tan@polwel.org',
-        details: 'User changed password successfully',
-        ipAddress: '192.168.1.100'
-      },
-      {
-        id: 'audit_1_4',
-        timestamp: '2023-12-20T11:30:00Z',
-        action: 'Profile Updated',
-        actionType: 'profile_update',
-        performedBy: 'john.tan@polwel.org',
-        details: 'Updated contact information and department details',
-        ipAddress: '192.168.1.100'
-      },
-      {
-        id: 'audit_1_5',
-        timestamp: '2023-06-01T10:00:00Z',
-        action: 'Account Created',
-        actionType: 'creation',
-        performedBy: 'System',
-        details: 'POLWEL user account created with Administrator privileges',
-        ipAddress: 'System'
-      }
-    ]
-  },
-  {
-    id: '4',
-    name: 'Sarah Wong',
-    email: 'sarah.wong@polwel.org',
-    role: 'POLWEL',
-    status: 'Inactive',
-    lastLogin: '2024-01-10 11:15',
-    mfaEnabled: true,
-    passwordExpiry: '2024-04-10',
-    failedLoginAttempts: 0,
-    permissionLevel: 'Manager',
-    department: 'Course Management',
-    createdAt: '2023-07-01',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-10',
-    modifiedBy: 'john.tan@polwel.org',
-    auditTrail: [
-      {
-        id: 'audit_4_1',
-        timestamp: '2024-01-10T11:15:00Z',
-        action: 'User Login',
-        actionType: 'login',
-        performedBy: 'sarah.wong@polwel.org',
-        details: 'Last successful login before account deactivation',
-        ipAddress: '192.168.1.105',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-      },
-      {
-        id: 'audit_4_2',
-        timestamp: '2024-01-11T09:00:00Z',
-        action: 'Status Changed',
-        actionType: 'status_change',
-        performedBy: 'john.tan@polwel.org',
-        details: 'User account status changed from Active to Inactive due to resignation',
-        ipAddress: '192.168.1.100'
-      },
-      {
-        id: 'audit_4_3',
-        timestamp: '2023-12-15T13:20:00Z',
-        action: 'Permission Updated',
-        actionType: 'permission_change',
-        performedBy: 'john.tan@polwel.org',
-        details: 'User granted Manager access to Course Management module',
-        ipAddress: '192.168.1.100'
-      },
-      {
-        id: 'audit_4_4',
-        timestamp: '2023-11-20T10:30:00Z',
-        action: 'Password Changed',
-        actionType: 'password_change',
-        performedBy: 'sarah.wong@polwel.org',
-        details: 'User changed password after security policy update',
-        ipAddress: '192.168.1.105'
-      },
-      {
-        id: 'audit_4_5',
-        timestamp: '2023-07-01T08:00:00Z',
-        action: 'Account Created',
-        actionType: 'creation',
-        performedBy: 'john.tan@polwel.org',
-        details: 'POLWEL user account created for Course Management department',
-        ipAddress: '192.168.1.100'
-      }
-    ]
-  },
-  {
-    id: '9',
-    name: 'Alex Kumar',
-    email: 'alex.kumar@polwel.org',
-    role: 'POLWEL',
-    status: 'Pending',
-    lastLogin: 'Never',
-    mfaEnabled: false,
-    permissionLevel: 'Staff',
-    department: 'Training Coordination',
-    createdAt: '2024-01-12',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-12',
-    modifiedBy: 'john.tan@polwel.org',
-    auditTrail: []
-  },
-  {
-    id: '10',
-    name: 'Lisa Chen',
-    email: 'lisa.chen@polwel.org',
-    role: 'POLWEL',
-    status: 'Pending',
-    lastLogin: 'Never',
-    mfaEnabled: false,
-    permissionLevel: 'Staff',
-    department: 'Quality Assurance',
-    createdAt: '2024-01-14',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-14',
-    modifiedBy: 'john.tan@polwel.org',
-    auditTrail: []
-  }
-];
+export default function PolwelUsers() {
+  const [users, setUsers] = useState<PolwelUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const { toast } = useToast();
+  const { isAuthenticated, user } = useAuth();
 
-const PolwelUsers = () => {
-  // Calculate stats
-  const totalUsers = polwelUsers.length;
-  const pendingUsers = polwelUsers.filter(user => user.status === 'Pending');
+  // Debug authentication state
+  useEffect(() => {
+    console.log('PolwelUsers - Auth State:', { isAuthenticated, user });
+    debugAuthState();
+  }, [isAuthenticated, user]);
+
+  // Fetch users from API
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await polwelUsersApi.getAll({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: searchQuery || undefined,
+        status: statusFilter || undefined,
+      });
+
+      setUsers(response.users || []);
+      setPagination(response.pagination || pagination);
+    } catch (error) {
+      console.error('Error fetching POLWEL users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load POLWEL users",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch users on component mount and when filters change
+  useEffect(() => {
+    fetchUsers();
+  }, [pagination.page, searchQuery, statusFilter]);
+
+  // Handle user actions
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await polwelUsersApi.delete(userId);
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    try {
+      const response = await polwelUsersApi.resetPassword(userId);
+      toast({
+        title: "Password Reset",
+        description: `New temporary password: ${response.tempPassword}`,
+      });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset password",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleMfa = async (userId: string, enabled: boolean) => {
+    try {
+      await polwelUsersApi.toggleMfa(userId, enabled);
+      toast({
+        title: "MFA Updated",
+        description: `MFA ${enabled ? 'enabled' : 'disabled'} successfully`,
+      });
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error toggling MFA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update MFA settings",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Compute stats from real data
+  const totalUsers = users.length;
+  const activeUsers = users.filter(user => user.status === 'ACTIVE').length;
+  const pendingUsers = users.filter(user => user.status === 'PENDING').length;
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading POLWEL users...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Shield className="h-6 w-6" />
-            POLWEL Users
-          </h2>
-          <p className="text-muted-foreground">Manage POLWEL staff and their system permissions</p>
+          <h1 className="text-3xl font-bold tracking-tight">POLWEL Staff Management</h1>
+          <p className="text-muted-foreground">
+            Manage POLWEL staff accounts, permissions, and access controls
+          </p>
         </div>
-        <div className="flex space-x-3">
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
+          </Button>
+          <Button variant="outline" size="sm">
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
           </Button>
           <AddPolwelUserDialog />
         </div>
       </div>
 
-      {/* POLWEL Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total POLWEL Users</p>
-                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
-              </div>
-              <div className="p-2 bg-accent rounded-lg">
-                <Users className="h-5 w-5 text-accent-foreground" />
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total POLWEL Staff</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              Active staff members with system access
+            </p>
           </CardContent>
         </Card>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Pending Onboarding</p>
-                    <p className="text-2xl font-bold text-foreground">{pendingUsers.length}</p>
-                  </div>
-                  <div className="p-2 bg-accent rounded-lg">
-                    <Clock className="h-5 w-5 text-accent-foreground" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Pending POLWEL Users</DialogTitle>
-              <DialogDescription>
-                POLWEL staff who haven't clicked their secure onboarding link
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4">
-              {pendingUsers.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pendingUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div>
-                        <p className="font-medium text-foreground">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                        <p className="text-xs text-muted-foreground">Department: {user.department}</p>
-                        <p className="text-xs text-muted-foreground">Created: {new Date(user.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <Badge variant="outline" className="text-warning border-warning">
-                        Pending
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">No pending users</p>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              Currently active and authorized
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Accounts</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting activation or verification
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* POLWEL User Table */}
-      <UserTable users={polwelUsers} title="POLWEL Staff Members" />
+      {/* User Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>POLWEL Staff Members</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Permission Level</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>MFA</TableHead>
+                <TableHead>Last Login</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.department || 'Not Set'}</TableCell>
+                  <TableCell>{user.permissionLevel || 'Not Set'}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={user.status === 'ACTIVE' ? 'default' : 
+                               user.status === 'PENDING' ? 'outline' : 'secondary'}
+                    >
+                      {user.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={user.mfaEnabled ? "default" : "outline"}>
+                      {user.mfaEnabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <EditPolwelUserDialog user={user} onUserUpdated={fetchUsers} />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleResetPassword(user.id)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Reset Password
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleToggleMfa(user.id, !user.mfaEnabled)}
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            {user.mfaEnabled ? 'Disable' : 'Enable'} MFA
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
+          {users.length === 0 && (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No users found</h3>
+              <p className="text-muted-foreground">
+                {searchQuery || statusFilter ? "Try adjusting your search filters" : "No POLWEL users have been added yet"}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default PolwelUsers;
+}

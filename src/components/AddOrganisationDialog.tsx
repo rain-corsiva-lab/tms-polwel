@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/select";
 import { Plus, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { clientOrganizationsApi } from "@/lib/api";
 
-export function AddOrganisationDialog() {
+export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisationCreated?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     organisationName: "",
     divisionDepartment: "",
@@ -35,7 +37,7 @@ export function AddOrganisationDialog() {
 
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.organisationName) {
@@ -47,21 +49,45 @@ export function AddOrganisationDialog() {
       return;
     }
 
-    toast({
-      title: "Organisation Created",
-      description: `Organisation "${formData.organisationName}" has been created successfully.`,
-    });
+    setLoading(true);
+    try {
+      await clientOrganizationsApi.create({
+        name: formData.organisationName,
+        industry: formData.divisionDepartment || undefined,
+        address: formData.divisionAddress || undefined,
+        buNumber: formData.requireBuNumber ? formData.buNumber : undefined,
+      });
 
-    // Reset form and close dialog
-    setFormData({
-      organisationName: "",
-      divisionDepartment: "",
-      divisionAddress: "",
-      paymentMode: "",
-      requireBuNumber: false,
-      buNumber: "",
-    });
-    setOpen(false);
+      toast({
+        title: "Organisation Created",
+        description: `Organisation "${formData.organisationName}" has been created successfully.`,
+      });
+
+      // Reset form and close dialog
+      setFormData({
+        organisationName: "",
+        divisionDepartment: "",
+        divisionAddress: "",
+        paymentMode: "",
+        requireBuNumber: false,
+        buNumber: "",
+      });
+      setOpen(false);
+      
+      // Call the callback to refresh the parent component
+      if (onOrganisationCreated) {
+        onOrganisationCreated();
+      }
+    } catch (error) {
+      console.error('Error creating organisation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create organisation. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -153,11 +179,20 @@ export function AddOrganisationDialog() {
         </form>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit}>
-            Create Organisation
+          <Button 
+            type="submit" 
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Create Organisation"}
           </Button>
         </DialogFooter>
       </DialogContent>

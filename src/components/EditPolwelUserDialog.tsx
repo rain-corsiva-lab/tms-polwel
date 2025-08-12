@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,9 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Shield } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Edit, Shield } from "lucide-react";
 import { polwelUsersApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 
 interface ModulePermissions {
@@ -35,12 +35,37 @@ interface UserPermissions {
   'finance-activity': ModulePermissions;
 }
 
-export function AddPolwelUserDialog() {
+interface PolwelUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'POLWEL';
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  lastLogin: string | null;
+  mfaEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  permissions?: Array<{
+    permission: {
+      id: string;
+      name: string;
+      module: string;
+      action: string;
+    };
+  }>;
+}
+
+interface EditPolwelUserDialogProps {
+  user: PolwelUser;
+  onUserUpdated: () => void;
+}
+
+export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
+    name: user.name,
+    email: user.email,
   });
 
   const [permissions, setPermissions] = useState<UserPermissions>({
@@ -55,32 +80,26 @@ export function AddPolwelUserDialog() {
 
   const { toast } = useToast();
 
+  // Load user permissions when dialog opens
+  useEffect(() => {
+    if (open && user.permissions) {
+      const updatedPermissions = { ...permissions };
+      
+      user.permissions.forEach(({ permission }) => {
+        const module = permission.module as keyof UserPermissions;
+        const action = permission.action as keyof ModulePermissions;
+        
+        if (updatedPermissions[module] && updatedPermissions[module][action] !== undefined) {
+          updatedPermissions[module][action] = true;
+        }
+      });
+      
+      setPermissions(updatedPermissions);
+    }
+  }, [open, user.permissions]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.email) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if at least one permission is granted
-    const hasAnyPermission = Object.values(permissions).some(module =>
-      Object.values(module).some(permission => permission)
-    );
-
-    if (!hasAnyPermission) {
-      toast({
-        title: "Permission Error",
-        description: "Please grant at least one permission to the user.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -94,40 +113,24 @@ export function AddPolwelUserDialog() {
         });
       });
 
-      const response = await polwelUsersApi.create({
+      await polwelUsersApi.update(user.id, {
         name: formData.name,
         email: formData.email,
         permissions: permissionNames,
       });
 
       toast({
-        title: "POLWEL User Created",
-        description: `POLWEL user "${formData.name}" has been created successfully. Temporary password: ${response.tempPassword}`,
+        title: "User Updated",
+        description: `${formData.name} has been updated successfully.`,
       });
 
-      // Reset form and close dialog
-      setFormData({
-        name: "",
-        email: "",
-      });
-      setPermissions({
-        'user-management-polwel': { view: false, create: false, edit: false, delete: false },
-        'user-management-trainers': { view: false, create: false, edit: false, delete: false },
-        'user-management-client-orgs': { view: false, create: false, edit: false, delete: false },
-        'course-venue-setup': { view: false, create: false, edit: false, delete: false },
-        'course-runs-operations': { view: false, create: false, edit: false, delete: false },
-        'email-reporting-library': { view: false, create: false, edit: false, delete: false },
-        'finance-activity': { view: false, create: false, edit: false, delete: false },
-      });
       setOpen(false);
-
-      // Trigger a page refresh or parent component update
-      window.location.reload();
+      onUserUpdated();
     } catch (error) {
-      console.error('Error creating POLWEL user:', error);
+      console.error('Error updating user:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create POLWEL user",
+        description: "Failed to update user. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -148,19 +151,18 @@ export function AddPolwelUserDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New POLWEL User
+        <Button variant="ghost" size="icon">
+          <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Add New POLWEL User
+            Edit POLWEL User
           </DialogTitle>
           <DialogDescription>
-            Create a new POLWEL staff account with appropriate system permissions.
+            Update user information and permissions for {user.name}.
           </DialogDescription>
         </DialogHeader>
         
@@ -172,6 +174,7 @@ export function AddPolwelUserDialog() {
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Enter full name"
+              required
             />
           </div>
           
@@ -183,6 +186,7 @@ export function AddPolwelUserDialog() {
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               placeholder="Enter @polwel.org email address"
+              required
             />
           </div>
 
@@ -246,7 +250,6 @@ export function AddPolwelUserDialog() {
               </CardContent>
             </Card>
           </div>
-
         </form>
 
         <DialogFooter>
@@ -254,7 +257,7 @@ export function AddPolwelUserDialog() {
             Cancel
           </Button>
           <Button type="submit" onClick={handleSubmit} disabled={loading}>
-            {loading ? "Creating..." : "Create POLWEL User"}
+            {loading ? "Updating..." : "Update User"}
           </Button>
         </DialogFooter>
       </DialogContent>

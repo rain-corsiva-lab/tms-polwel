@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String              @id @default(cuid())
+  email               String              @unique
+  password            String
+  name                String
+  role                UserRole
+  status              UserStatus          @default(PENDING)
+  emailVerified       Boolean             @default(false)
+  mfaEnabled          Boolean             @default(false)
+  mfaSecret           String?
+  lastLogin           DateTime?
+  passwordExpiry      DateTime?
+  failedLoginAttempts Int                 @default(0)
+  lockedUntil         DateTime?
+  refreshToken        String?
+  permissionLevel     String?
+  department          String?
+  organizationId      String?
+  division            String?
+  buCostCentre        String?
+  buNumberRequired    Boolean?
+  paymentMode         PaymentMode?
+  contactNumber       String?
+  additionalEmails    String[]
+  availabilityStatus  AvailabilityStatus?
+  partnerOrganization String?
+  bio                 String?
+  specializations     String[]
+  certifications      String[]
+  profileImage        String?
+  experience          String?
+  rating              Float?
+  employeeId          String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  createdBy           String?
+  auditLogs           AuditLog[]
+  bookingsCreated     Booking[]           @relation("BookingCreatedBy")
+  bookings            Booking[]           @relation("BookingUser")
+  courseRunsAssigned  CourseRun[]         @relation("CourseTrainer")
+  coursesCreated      Course[]            @relation("CourseCreator")
+  trainerBlockouts    TrainerBlockout[]
+  createdByUser       User?               @relation("UserCreatedBy", fields: [createdBy], references: [id])
+  usersCreated        User[]              @relation("UserCreatedBy")
+  organization        Organization?       @relation(fields: [organizationId], references: [id])
+  venuesCreated       Venue[]
+  permissions         UserPermission[]
+
+  @@map("users")
+}
+
+model Organization {
+  id              String     @id @default(cuid())
+  name            String
+  displayName     String?
+  industry        String?
+  address         String?
+  contactEmail    String?
+  contactPhone    String?
+  buNumber        String?
+  divisionAddress String?
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  bookings        Booking[]
+  users           User[]
+
+  @@map("organizations")
+}
+
+model Course {
+  id                String       @id @default(cuid())
+  title             String
+  description       String?
+  objectives        String[]
+  duration          Int
+  maxParticipants   Int
+  minParticipants   Int          @default(1)
+  category          String?
+  level             String?
+  prerequisites     String[]
+  materials         String[]
+  status            CourseStatus @default(DRAFT)
+  courseFee         Float        @default(0)
+  amountPerPax      Float        @default(0)
+  discount          Float        @default(0)
+  adminFees         Float        @default(0)
+  contingencyFees   Float        @default(0)
+  serviceFees       Float        @default(0)
+  vitalFees         Float        @default(0)
+  syllabus          String?
+  assessmentMethod  String?
+  certificationType String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  createdBy         String?
+  bookings          Booking[]
+  runs              CourseRun[]
+  creator           User?        @relation("CourseCreator", fields: [createdBy], references: [id])
+
+  @@map("courses")
+}
+
+model CourseRun {
+  id                  String       @id @default(cuid())
+  courseId            String
+  startDate           DateTime
+  endDate             DateTime
+  startTime           String
+  endTime             String
+  timezone            String       @default("Asia/Singapore")
+  venueId             String?
+  trainerId           String?
+  externalTrainerName String?
+  maxParticipants     Int
+  currentParticipants Int          @default(0)
+  status              CourseStatus @default(DRAFT)
+  trainerFee          Float        @default(0)
+  venueFee            Float        @default(0)
+  totalCost           Float        @default(0)
+  notes               String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  bookings            Booking[]
+  course              Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  trainer             User?        @relation("CourseTrainer", fields: [trainerId], references: [id])
+  venue               Venue?       @relation(fields: [venueId], references: [id])
+
+  @@map("course_runs")
+}
+
+model Venue {
+  id            String      @id @default(cuid())
+  name          String
+  address       String?
+  capacity      String
+  description   String?
+  facilities    String[]
+  contactName   String?
+  contactNumber String?
+  contactEmail  String?
+  feeType       FeeType     @default(PER_VENUE)
+  fee           Float       @default(0)
+  status        VenueStatus @default(ACTIVE)
+  remarks       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  createdBy     String?
+  bookings      Booking[]
+  courseRuns    CourseRun[]
+  creator       User?       @relation(fields: [createdBy], references: [id])
+
+  @@map("venues")
+}
+
+model Booking {
+  id                  String        @id @default(cuid())
+  courseId            String
+  courseRunId         String?
+  userId              String
+  organizationId      String?
+  venueId             String?
+  participantCount    Int           @default(1)
+  status              BookingStatus @default(PENDING)
+  notes               String?
+  specialRequirements String?
+  customStartDate     DateTime?
+  customEndDate       DateTime?
+  customStartTime     String?
+  customEndTime       String?
+  totalAmount         Float         @default(0)
+  paymentStatus       String?       @default("PENDING")
+  paymentReference    String?
+  bookingReference    String        @unique
+  confirmedAt         DateTime?
+  cancelledAt         DateTime?
+  cancellationReason  String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  createdBy           String?
+  course              Course        @relation(fields: [courseId], references: [id])
+  courseRun           CourseRun?    @relation(fields: [courseRunId], references: [id])
+  creator             User?         @relation("BookingCreatedBy", fields: [createdBy], references: [id])
+  organization        Organization? @relation(fields: [organizationId], references: [id])
+  user                User          @relation("BookingUser", fields: [userId], references: [id])
+  venue               Venue?        @relation(fields: [venueId], references: [id])
+
+  @@map("bookings")
+}
+
+model TrainerBlockout {
+  id               String   @id @default(cuid())
+  trainerId        String
+  date             DateTime
+  reason           String
+  type             String
+  description      String?
+  isRecurring      Boolean  @default(false)
+  recurringPattern String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  trainer          User     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@map("trainer_blockouts")
+}
+
+model AuditLog {
+  id          String          @id @default(cuid())
+  userId      String?
+  action      String
+  actionType  AuditActionType
+  tableName   String?
+  recordId    String?
+  oldValues   Json?
+  newValues   Json?
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  performedBy String?
+  timestamp   DateTime        @default(now())
+  user        User?           @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  module      String
+  action      String
+  userPermissions UserPermission[]
+
+  @@map("permissions")
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  permissionId String
+  granted      Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  dataType    String   @default("string")
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+enum UserRole {
+  POLWEL
+  TRAINING_COORDINATOR
+  TRAINER
+  LEARNER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  LOCKED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  LIMITED
+}
+
+enum PaymentMode {
+  ULTF
+  TRANSITION_DOLLARS
+  BANK_TRANSFER
+  CHEQUE
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum VenueStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum FeeType {
+  PER_HEAD
+  PER_VENUE
+  FIXED
+}
+
+enum AuditActionType {
+  LOGIN
+  LOGOUT
+  CREATION
+  UPDATE
+  DELETION
+  STATUS_CHANGE
+  PERMISSION_CHANGE
+  PASSWORD_CHANGE
+  PROFILE_UPDATE
+}

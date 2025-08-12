@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, GraduationCap, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { trainersApi } from "@/lib/api";
 
 // Available courses for selection
 const availableCourses = [
@@ -60,20 +61,24 @@ const availableCourses = [
   "Change Management"
 ];
 
-export function AddTrainerDialog() {
+export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [courseSearchOpen, setCourseSearchOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     contactNumber: "",
     courses: [] as string[],
-    status: "Active",
+    status: "ACTIVE",
+    partnerOrganization: "",
+    bio: "",
+    experience: "",
   });
 
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email) {
@@ -85,21 +90,51 @@ export function AddTrainerDialog() {
       return;
     }
 
+    setLoading(true);
+    try {
+      await trainersApi.create({
+        name: formData.name,
+        email: formData.email,
+        status: formData.status,
+        availabilityStatus: "AVAILABLE",
+        partnerOrganization: formData.partnerOrganization || undefined,
+        bio: formData.bio || undefined,
+        specializations: formData.courses,
+        experience: formData.experience || undefined,
+      });
 
-    toast({
-      title: "Trainer Created",
-      description: `Trainer "${formData.name}" has been created successfully. Onboarding email sent with secure link.`,
-    });
+      toast({
+        title: "Trainer Created",
+        description: `Trainer "${formData.name}" has been created successfully. Onboarding email sent with secure link.`,
+      });
 
-    // Reset form and close dialog
-    setFormData({
-      name: "",
-      email: "",
-      contactNumber: "",
-      courses: [],
-      status: "Active",
-    });
-    setOpen(false);
+      // Reset form and close dialog
+      setFormData({
+        name: "",
+        email: "",
+        contactNumber: "",
+        courses: [],
+        status: "ACTIVE",
+        partnerOrganization: "",
+        bio: "",
+        experience: "",
+      });
+      setOpen(false);
+      
+      // Call the callback to refresh the parent component
+      if (onTrainerCreated) {
+        onTrainerCreated();
+      }
+    } catch (error) {
+      console.error('Error creating trainer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create trainer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addCourse = (course: string) => {
@@ -157,6 +192,16 @@ export function AddTrainerDialog() {
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               placeholder="Enter trainer's email address"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="partnerOrganization">Partner Organization</Label>
+            <Input
+              id="partnerOrganization"
+              value={formData.partnerOrganization}
+              onChange={(e) => setFormData(prev => ({ ...prev, partnerOrganization: e.target.value }))}
+              placeholder="Enter partner organization name"
             />
           </div>
           
@@ -234,11 +279,20 @@ export function AddTrainerDialog() {
         </form>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit}>
-            Create Trainer
+          <Button 
+            type="submit" 
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Create Trainer"}
           </Button>
         </DialogFooter>
       </DialogContent>

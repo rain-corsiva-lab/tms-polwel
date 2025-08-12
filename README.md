@@ -29,10 +29,10 @@ git clone <YOUR_GIT_URL>
 # Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
+# Step 3: Install the necessary dependencies for the frontend.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Start the frontend development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
@@ -50,6 +50,95 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
+## How to completely install and configure this project
+
+This project uses React (TypeScript) for the frontend, Node.js with Express.js for the backend (located in `/polwel-backend/`), PostgreSQL as the database, and Prisma ORM.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- [PostgreSQL](https://www.postgresql.org/) (Ensure it's running and you have credentials)
+- [Prisma CLI](https://www.prisma.io/docs/getting-started)
+
+### 1. Clone the repository
+
+```sh
+git clone <YOUR_GIT_URL>
+cd <YOUR_PROJECT_NAME>
+```
+
+### 2. Install frontend dependencies
+
+In the root project directory:
+
+```sh
+npm install
+# or
+yarn install
+```
+
+### 3. Install backend dependencies
+
+Navigate to the backend directory and install dependencies:
+
+```sh
+cd polwel-backend
+npm install
+# or
+yarn install
+```
+
+### 4. Configure backend environment variables
+
+In `/polwel-backend/`, copy the example environment file and update it with your settings:
+
+```sh
+cp .env.example .env
+```
+
+Edit `.env` and set your PostgreSQL connection string, e.g.:
+
+```
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+```
+
+### 5. Set up the database
+
+In `/polwel-backend/`, run Prisma migrations to set up your database schema:
+
+```sh
+npx prisma migrate dev
+```
+
+(Optional) Generate Prisma client:
+
+```sh
+npx prisma generate
+```
+
+### 6. Start the backend server
+
+In `/polwel-backend/`:
+
+```sh
+npm run server
+# or
+yarn server
+```
+
+### 7. Start the frontend
+
+Open a new terminal in the root project directory:
+
+```sh
+npm run dev
+# or
+yarn dev
+```
+
+The frontend will be available at `http://localhost:5173` (default Vite port), and the backend at `http://localhost:3000` (or as configured).
+
 ## What technologies are used for this project?
 
 This project is built with:
@@ -59,6 +148,10 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Node.js
+- Express.js
+- PostgreSQL
+- Prisma ORM
 
 ## How can I deploy this project?
 
