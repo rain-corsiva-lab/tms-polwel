@@ -102,9 +102,7 @@ export const polwelUsersApi = {
   create: async (userData: {
     name: string;
     email: string;
-    status?: string;
-    department?: string;
-    permissionLevel?: string;
+    permissions: string[];
   }) => {
     return apiRequest('/polwel-users', {
       method: 'POST',
@@ -116,9 +114,7 @@ export const polwelUsersApi = {
   update: async (id: string, userData: {
     name?: string;
     email?: string;
-    status?: string;
-    department?: string;
-    permissionLevel?: string;
+    permissions?: string[];
   }) => {
     return apiRequest(`/polwel-users/${id}`, {
       method: 'PUT',

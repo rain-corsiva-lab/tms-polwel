@@ -6,6 +6,38 @@ import { AuthenticatedRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
+// Get available permissions
+export const getAvailablePermissions = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const permissions = await prisma.permission.findMany({
+      orderBy: [
+        { module: 'asc' },
+        { action: 'asc' }
+      ]
+    });
+
+    // Group permissions by module for easier frontend consumption
+    const groupedPermissions = permissions.reduce((acc, permission) => {
+      if (!acc[permission.module]) {
+        acc[permission.module] = [];
+      }
+      acc[permission.module]!.push(permission);
+      return acc;
+    }, {} as Record<string, typeof permissions>);
+
+    return res.json({
+      permissions,
+      groupedPermissions
+    });
+  } catch (error) {
+    console.error('Get available permissions error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 // Get all POLWEL users with pagination and filtering
 export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -40,10 +72,13 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
           status: true,
           lastLogin: true,
           mfaEnabled: true,
-          department: true,
-          permissionLevel: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          permissions: {
+            include: {
+              permission: true
+            }
+          }
         },
         skip,
         take: Number(limit),
@@ -95,10 +130,13 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
         status: true,
         lastLogin: true,
         mfaEnabled: true,
-        department: true,
-        permissionLevel: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        permissions: {
+          include: {
+            permission: true
+          }
+        }
       }
     });
 
@@ -125,9 +163,7 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     const {
       name,
       email,
-      status = UserStatus.ACTIVE,
-      department,
-      permissionLevel
+      permissions = []
     } = req.body;
 
     // Validation
@@ -135,6 +171,13 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       return res.status(400).json({
         success: false,
         message: 'Name and email are required'
+      });
+    }
+
+    if (!Array.isArray(permissions) || permissions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one permission must be granted'
       });
     }
 
@@ -150,37 +193,59 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
+    // Validate permissions exist
+    const validPermissions = await prisma.permission.findMany({
+      where: {
+        name: { in: permissions }
+      }
+    });
+
+    if (validPermissions.length !== permissions.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid permissions provided'
+      });
+    }
+
     // Generate temporary password
     const tempPassword = crypto.randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: UserRole.POLWEL,
-        status,
-        department: department || null,
-        permissionLevel: permissionLevel || null,
-        ...(req.user?.userId && { createdBy: req.user.userId })
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        department: true,
-        permissionLevel: true,
-        createdAt: true
-      }
+    // Create user with permissions in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: UserRole.POLWEL,
+          status: UserStatus.ACTIVE,
+          ...(req.user?.userId && { createdBy: req.user.userId })
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          createdAt: true
+        }
+      });
+
+      // Create user permissions
+      await tx.userPermission.createMany({
+        data: validPermissions.map(permission => ({
+          userId: user.id,
+          permissionId: permission.id,
+          granted: true
+        }))
+      });
+
+      return { user, tempPassword };
     });
 
-    return res.status(201).json({
-      user,
-      tempPassword
-    });
+    return res.status(201).json(result);
   } catch (error) {
     console.error('Create POLWEL user error:', error);
     return res.status(500).json({
@@ -194,7 +259,7 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
 export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, email, status, department, permissionLevel } = req.body;
+    const { name, email, permissions = [] } = req.body;
 
     if (!id) {
       return res.status(400).json({
@@ -232,28 +297,63 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       }
     }
 
-    const user = await prisma.user.update({
-      where: { id: id },
-      data: {
-        ...(name && { name }),
-        ...(email && { email }),
-        ...(status && { status }),
-        ...(department !== undefined && { department }),
-        ...(permissionLevel !== undefined && { permissionLevel })
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        department: true,
-        permissionLevel: true,
-        updatedAt: true
+    // Validate permissions if provided
+    let validPermissions: any[] = [];
+    if (Array.isArray(permissions) && permissions.length > 0) {
+      validPermissions = await prisma.permission.findMany({
+        where: {
+          name: { in: permissions }
+        }
+      });
+
+      if (validPermissions.length !== permissions.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid permissions provided'
+        });
       }
+    }
+
+    // Update user and permissions in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Update user
+      const user = await tx.user.update({
+        where: { id: id },
+        data: {
+          ...(name && { name }),
+          ...(email && { email })
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          updatedAt: true
+        }
+      });
+
+      // Update permissions if provided
+      if (validPermissions.length > 0) {
+        // Delete existing permissions
+        await tx.userPermission.deleteMany({
+          where: { userId: id }
+        });
+
+        // Create new permissions
+        await tx.userPermission.createMany({
+          data: validPermissions.map(permission => ({
+            userId: id,
+            permissionId: permission.id,
+            granted: true
+          }))
+        });
+      }
+
+      return user;
     });
 
-    return res.json(user);
+    return res.json(result);
   } catch (error) {
     console.error('Update POLWEL user error:', error);
     return res.status(500).json({

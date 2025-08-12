@@ -7,7 +7,8 @@ import {
   updatePolwelUser,
   deletePolwelUser,
   resetPolwelUserPassword,
-  togglePolwelUserMfa
+  togglePolwelUserMfa,
+  getAvailablePermissions
 } from '../controllers/polwelUsersController';
 
 const router = express.Router();
@@ -17,6 +18,9 @@ router.use(authenticateToken);
 
 // Apply POLWEL role authorization to all routes
 router.use(authorizeRoles('POLWEL'));
+
+// Get available permissions
+router.get('/permissions', getAvailablePermissions);
 
 // POLWEL Users routes
 router.get('/', getPolwelUsers);

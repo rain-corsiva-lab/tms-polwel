@@ -41,9 +41,6 @@ export function AddPolwelUserDialog() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    status: "ACTIVE",
-    department: "",
-    permissionLevel: "",
   });
 
   const [permissions, setPermissions] = useState<UserPermissions>({
@@ -87,12 +84,20 @@ export function AddPolwelUserDialog() {
     setLoading(true);
 
     try {
+      // Convert permissions to array of permission names
+      const permissionNames: string[] = [];
+      Object.entries(permissions).forEach(([module, modulePermissions]) => {
+        Object.entries(modulePermissions).forEach(([action, granted]) => {
+          if (granted) {
+            permissionNames.push(`${module}:${action}`);
+          }
+        });
+      });
+
       const response = await polwelUsersApi.create({
         name: formData.name,
         email: formData.email,
-        status: formData.status,
-        department: formData.department || undefined,
-        permissionLevel: formData.permissionLevel || undefined,
+        permissions: permissionNames,
       });
 
       toast({
@@ -104,9 +109,6 @@ export function AddPolwelUserDialog() {
       setFormData({
         name: "",
         email: "",
-        status: "ACTIVE",
-        department: "",
-        permissionLevel: "",
       });
       setPermissions({
         'user-management-polwel': { view: false, create: false, edit: false, delete: false },
@@ -183,27 +185,6 @@ export function AddPolwelUserDialog() {
               placeholder="Enter @polwel.org email address"
             />
           </div>
-
-          <div>
-            <Label htmlFor="department">Department</Label>
-            <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-              placeholder="Enter department"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="permissionLevel">Permission Level</Label>
-            <Input
-              id="permissionLevel"
-              value={formData.permissionLevel}
-              onChange={(e) => setFormData(prev => ({ ...prev, permissionLevel: e.target.value }))}
-              placeholder="e.g., Administrator, Manager, Staff"
-            />
-          </div>
-          
 
           <div>
             <Label>Access Level *</Label>
