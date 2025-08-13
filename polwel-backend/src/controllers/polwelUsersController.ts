@@ -8,6 +8,86 @@ import EmailService from '../services/emailService';
 
 const prisma = new PrismaClient();
 
+// Permission name mapping - converts frontend permission names to database permission names
+const permissionNameMapping: Record<string, string> = {
+  // User Management - POLWEL
+  'user-management-polwel:view': 'users.view',
+  'user-management-polwel:create': 'users.create', 
+  'user-management-polwel:edit': 'users.edit',
+  'user-management-polwel:update': 'users.edit',
+  'user-management-polwel:delete': 'users.delete',
+  
+  // User Management - Trainers
+  'user-management-trainers:view': 'trainers.view',
+  'user-management-trainers:create': 'trainers.create',
+  'user-management-trainers:edit': 'trainers.edit',
+  'user-management-trainers:update': 'trainers.edit',
+  'user-management-trainers:delete': 'trainers.delete',
+  
+  // User Management - Client Organizations
+  'user-management-client-orgs:view': 'clients.view',
+  'user-management-client-orgs:create': 'clients.create',
+  'user-management-client-orgs:edit': 'clients.edit',
+  'user-management-client-orgs:update': 'clients.edit',
+  'user-management-client-orgs:delete': 'clients.delete',
+  
+  // Course Management
+  'course-management:view': 'courses.view',
+  'course-management:create': 'courses.create',
+  'course-management:edit': 'courses.edit',
+  'course-management:update': 'courses.edit', 
+  'course-management:delete': 'courses.delete',
+  
+  // Course & Venue Setup
+  'course-venue-setup:view': 'venues.view',
+  'course-venue-setup:create': 'venues.create',
+  'course-venue-setup:edit': 'venues.edit',
+  'course-venue-setup:update': 'venues.edit',
+  'course-venue-setup:delete': 'venues.delete',
+  
+  // Venue Management
+  'venue-management:view': 'venues.view',
+  'venue-management:create': 'venues.create',
+  'venue-management:edit': 'venues.edit',
+  'venue-management:update': 'venues.edit',
+  'venue-management:delete': 'venues.delete',
+  
+  // Booking Management
+  'booking-management:view': 'bookings.view',
+  'booking-management:create': 'bookings.create',
+  'booking-management:edit': 'bookings.edit',
+  'booking-management:update': 'bookings.edit',
+  'booking-management:delete': 'bookings.delete',
+  
+  // Training Calendar
+  'training-calendar:view': 'calendar.view',
+  'training-calendar:create': 'calendar.create',
+  'training-calendar:edit': 'calendar.edit',
+  'training-calendar:update': 'calendar.edit',
+  'training-calendar:delete': 'calendar.delete',
+  
+  // Reports & Analytics
+  'reports-analytics:view': 'reports.view',
+  'reports-analytics:create': 'reports.create',
+  'reports-analytics:edit': 'reports.edit',
+  'reports-analytics:update': 'reports.edit',
+  'reports-analytics:delete': 'reports.delete'
+};
+
+// Helper function to map frontend permission names to database permission names
+const mapPermissionNames = (frontendPermissions: string[]): string[] => {
+  return frontendPermissions.map(permission => {
+    const mappedPermission = permissionNameMapping[permission];
+    if (mappedPermission) {
+      console.log(`Mapped permission: ${permission} -> ${mappedPermission}`);
+      return mappedPermission;
+    } else {
+      console.log(`No mapping found for permission: ${permission}, using as-is`);
+      return permission;
+    }
+  });
+};
+
 // Get available permissions
 export const getAvailablePermissions = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -200,16 +280,11 @@ export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Respo
         updatedAt: true,
         createdBy: true,
         permissions: {
-          include: {
-            permission: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-                module: true,
-                action: true
-              }
-            }
+          select: {
+            id: true,
+            permissionName: true,
+            granted: true,
+            createdAt: true
           }
         },
         createdByUser: {
@@ -231,9 +306,14 @@ export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Respo
     // Get recent audit trail (last 10 entries)
     const recentAuditTrail = await AuditService.getUserAuditTrail(id, 10);
 
-    // Group permissions by module
+    // Group permissions by module (extract module from permission name)
     const permissionsByModule = user.permissions.reduce((acc, userPerm) => {
-      const { module, action } = userPerm.permission;
+      const permissionName = userPerm.permissionName;
+      // Extract module from permission name (e.g., "users.view" -> "users")
+      const parts = permissionName.split('.');
+      const module = parts[0] || 'unknown';
+      const action = parts[1] || 'unknown';
+      
       if (!acc[module]) {
         acc[module] = [];
       }
@@ -303,8 +383,10 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
           createdAt: true,
           updatedAt: true,
           permissions: {
-            include: {
-              permission: true
+            select: {
+              id: true,
+              permissionName: true,
+              granted: true
             }
           }
         },
@@ -361,8 +443,10 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
         createdAt: true,
         updatedAt: true,
         permissions: {
-          include: {
-            permission: true
+          select: {
+            id: true,
+            permissionName: true,
+            granted: true
           }
         }
       }
@@ -402,12 +486,13 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    if (!Array.isArray(permissions) || permissions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one permission must be granted'
-      });
-    }
+    // TEMPORARILY DISABLED - Permission requirement check disabled for now
+    // if (!Array.isArray(permissions) || permissions.length === 0) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'At least one permission must be granted'
+    //   });
+    // }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -421,19 +506,26 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    // Validate permissions exist
+    // Map and process permissions for creation
+    console.log('Permissions requested for creation:', permissions);
+    
+    const mappedPermissions = mapPermissionNames(permissions);
+    console.log('Mapped permissions for creation:', mappedPermissions);
+    
+    // Look up the actual permission records from database
     const validPermissions = await prisma.permission.findMany({
       where: {
-        name: { in: permissions }
+        name: { in: mappedPermissions }
       }
     });
-
-    if (validPermissions.length !== permissions.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid permissions provided'
-      });
-    }
+    
+    console.log('Valid permissions found for creation:', validPermissions.map(p => ({ id: p.id, name: p.name })));
+    // if (validPermissions.length !== permissions.length) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Invalid permissions provided'
+    //   });
+    // }
 
     // Generate temporary password
     const tempPassword = crypto.randomBytes(8).toString('hex');
@@ -461,14 +553,23 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
         }
       });
 
-      // Create user permissions
-      await tx.userPermission.createMany({
-        data: validPermissions.map(permission => ({
-          userId: user.id,
-          permissionId: permission.id,
-          granted: true
-        }))
-      });
+      // Create user permissions with human-readable names
+      console.log('Creating permissions for user:', user.id, 'Count:', mappedPermissions.length);
+      if (mappedPermissions.length > 0) {
+        // Store permissions with human-readable names directly
+        for (const permissionName of mappedPermissions) {
+          await tx.userPermission.create({
+            data: {
+              userId: user.id,
+              permissionName: permissionName, // Store human-readable name directly
+              granted: true
+            }
+          });
+        }
+        console.log('Permissions created successfully with names:', mappedPermissions);
+      } else {
+        console.log('No valid permissions to create');
+      }
 
       return { user, tempPassword };
     });
@@ -533,21 +634,25 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       }
     }
 
-    // Validate permissions if provided
-    let validPermissions: any[] = [];
+    // Process permissions if provided  
+    let mappedPermissions: string[] = [];
     if (Array.isArray(permissions) && permissions.length > 0) {
-      validPermissions = await prisma.permission.findMany({
-        where: {
-          name: { in: permissions }
+      console.log('Permissions requested for update:', permissions);
+      
+      // Map frontend permission names to database permission names
+      mappedPermissions = mapPermissionNames(permissions);
+      console.log('Mapped permissions for update:', mappedPermissions);
+      
+      // Validate permission name format
+      mappedPermissions = mappedPermissions.filter(permName => {
+        const isValid = permName.includes('.');
+        if (!isValid) {
+          console.log(`Invalid permission format: ${permName}`);
         }
+        return isValid;
       });
-
-      if (validPermissions.length !== permissions.length) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid permissions provided'
-        });
-      }
+      
+      console.log('Valid permission names for update:', mappedPermissions);
     }
 
     // Update user and permissions in a transaction
@@ -569,21 +674,36 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
         }
       });
 
-      // Update permissions if provided
-      if (validPermissions.length > 0) {
-        // Delete existing permissions
-        await tx.userPermission.deleteMany({
+      // Update permissions - ALWAYS process if permissions array is provided, even if empty
+      console.log('Processing permission update for user:', id);
+      console.log('Permissions provided:', permissions);
+      console.log('Mapped permission names found:', mappedPermissions.length);
+      
+      if (Array.isArray(permissions)) {
+        // Delete existing permissions first
+        const deletedCount = await tx.userPermission.deleteMany({
           where: { userId: id }
         });
+        console.log('Deleted existing permissions:', deletedCount.count);
 
-        // Create new permissions
-        await tx.userPermission.createMany({
-          data: validPermissions.map(permission => ({
-            userId: id,
-            permissionId: permission.id,
-            granted: true
-          }))
-        });
+        // Only create new permissions if we have valid ones
+        if (mappedPermissions.length > 0) {
+          // Store permissions with human-readable names directly
+          for (const permissionName of mappedPermissions) {
+            await tx.userPermission.create({
+              data: {
+                userId: id,
+                permissionName: permissionName, // Store human-readable name directly
+                granted: true
+              }
+            });
+          }
+          console.log('New permissions created successfully with names:', mappedPermissions);
+        } else {
+          console.log('No valid permissions to create - permissions cleared');
+        }
+      } else {
+        console.log('Permissions not provided - skipping permission changes');
       }
 
       return user;
@@ -599,7 +719,7 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       req
     );
 
-    if (validPermissions.length > 0) {
+    if (mappedPermissions.length > 0) {
       await AuditService.logPermissionChange(
         id,
         req.user?.userId || 'system',

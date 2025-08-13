@@ -168,9 +168,7 @@ model Venue {
   capacity      String
   description   String?
   facilities    String[]
-  contactName   String?
-  contactNumber String?
-  contactEmail  String?
+  contacts      Json[]      @default([]) // Array of contact objects with {id, name, number, email}
   feeType       FeeType     @default(PER_VENUE)
   fee           Float       @default(0)
   status        VenueStatus @default(ACTIVE)
@@ -256,28 +254,26 @@ model AuditLog {
 }
 
 model Permission {
-  id          String           @id @default(cuid())
-  name        String           @unique
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String?
   module      String
   action      String
-  userPermissions UserPermission[]
 
   @@map("permissions")
 }
 
 model UserPermission {
-  id           String     @id @default(cuid())
-  userId       String
-  permissionId String
-  granted      Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  permissionName String  // Store human-readable permission name directly
+  granted       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, permissionId])
+  @@unique([userId, permissionName])
   @@map("user_permissions")
 }
 

@@ -561,6 +561,94 @@ export const coursesApi = {
   },
 };
 
+// Define venue interfaces
+export interface Contact {
+  id: string;
+  name: string;
+  number: string;
+  email: string;
+}
+
+export interface Venue {
+  id: string;
+  name: string;
+  capacity: string;
+  feeType: "per_head" | "per_venue";
+  fee: number;
+  contacts: Contact[];
+  remarks: string;
+  status?: string;
+  address?: string;
+  description?: string;
+  facilities?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  creator?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  bookingCount?: number;
+  courseRunCount?: number;
+}
+
+export interface VenueCreateRequest {
+  name: string;
+  capacity?: string;
+  address?: string;
+  description?: string;
+  facilities?: string[];
+  contacts: Contact[];
+  feeType: "PER_HEAD" | "PER_VENUE";
+  fee: number;
+  status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+  remarks?: string;
+}
+
+// Venues API
+export const venuesApi = {
+  // Get all venues
+  getAll: async () => {
+    return apiRequest('/venues');
+  },
+
+  // Get venue by ID
+  getById: async (id: string) => {
+    return apiRequest(`/venues/${id}`);
+  },
+
+  // Create new venue
+  create: async (venueData: VenueCreateRequest) => {
+    return apiRequest('/venues', {
+      method: 'POST',
+      body: JSON.stringify(venueData),
+    });
+  },
+
+  // Update venue
+  update: async (id: string, venueData: VenueCreateRequest) => {
+    return apiRequest(`/venues/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(venueData),
+    });
+  },
+
+  // Delete venue
+  delete: async (id: string) => {
+    return apiRequest(`/venues/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Toggle venue status
+  updateStatus: async (id: string, status: string) => {
+    return apiRequest(`/venues/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+};
+
 // References API
 export const referencesApi = {
   // Get all trainers
@@ -589,5 +677,6 @@ export default {
   trainersApi,
   clientOrganizationsApi,
   coursesApi,
+  venuesApi,
   referencesApi,
 };

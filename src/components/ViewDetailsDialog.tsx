@@ -100,8 +100,24 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
       // Handle different permission formats
       if (typeof permission === 'string') {
         permissionString = permission;
+      } else if (permission?.permissionName) {
+        // New database format: { permissionName: 'users.view' }
+        const [module, action] = permission.permissionName.split('.');
+        // Convert to frontend format
+        const moduleMapping: Record<string, string> = {
+          'users': 'user-management-polwel',
+          'trainers': 'user-management-trainers',
+          'clients': 'user-management-client-orgs',
+          'courses': 'course-management',
+          'venues': 'course-venue-setup',
+          'bookings': 'booking-management',
+          'calendar': 'training-calendar',
+          'reports': 'reports-analytics'
+        };
+        const frontendModule = moduleMapping[module] || module;
+        permissionString = `${frontendModule}:${action}`;
       } else if (permission?.permission) {
-        // Database format: { permission: { module: 'xxx', action: 'xxx' } }
+        // Old database format: { permission: { module: 'xxx', action: 'xxx' } }
         permissionString = `${permission.permission.module}:${permission.permission.action}`;
       } else if (permission?.module && permission?.action) {
         // Direct object format: { module: 'xxx', action: 'xxx' }
