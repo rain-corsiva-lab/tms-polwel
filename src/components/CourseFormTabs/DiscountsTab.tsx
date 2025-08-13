@@ -66,7 +66,7 @@ const DiscountsTab: React.FC<DiscountsTabProps> = ({ formData, onInputChange }) 
       {/* Add New Discount */}
       <Card>
         <CardHeader>
-          <CardTitle>Add New Discount</CardTitle>
+          <CardTitle>Add Applicable Discounts</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
