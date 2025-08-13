@@ -80,34 +80,55 @@ model Organization {
 }
 
 model Course {
-  id                String       @id @default(cuid())
-  title             String
-  description       String?
-  objectives        String[]
-  duration          Int
-  maxParticipants   Int
-  minParticipants   Int          @default(1)
-  category          String?
-  level             String?
-  prerequisites     String[]
-  materials         String[]
-  status            CourseStatus @default(DRAFT)
-  courseFee         Float        @default(0)
-  amountPerPax      Float        @default(0)
-  discount          Float        @default(0)
-  adminFees         Float        @default(0)
-  contingencyFees   Float        @default(0)
-  serviceFees       Float        @default(0)
-  vitalFees         Float        @default(0)
-  syllabus          String?
-  assessmentMethod  String?
-  certificationType String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  createdBy         String?
-  bookings          Booking[]
-  runs              CourseRun[]
-  creator           User?        @relation("CourseCreator", fields: [createdBy], references: [id])
+  id                  String       @id @default(cuid())
+  title               String
+  description         String?
+  objectives          String[]     @default([])
+  duration            String       // Changed to String to support both days and hours
+  durationType        String       @default("days") // "days" or "hours"
+  maxParticipants     Int          @default(25)
+  minParticipants     Int          @default(1)
+  category            String?
+  level               String?
+  prerequisites       String[]     @default([])
+  materials           String[]     @default([])
+  status              CourseStatus @default(DRAFT)
+  
+  // Pricing Structure
+  courseFee           Float        @default(0)
+  venueFee            Float        @default(0)
+  trainerFee          Float        @default(0)
+  amountPerPax        Float        @default(0)
+  discount            Float        @default(0)
+  adminFees           Float        @default(0)
+  contingencyFees     Float        @default(0)
+  serviceFees         Float        @default(0)
+  vitalFees           Float        @default(0)
+  
+  // Additional course details
+  venue               String?      // Venue name/type
+  trainers            String[]     @default([]) // Array of trainer names
+  certificates        String       @default("polwel") // "polwel", "partner", "no"
+  remarks             String?      // Remarks for minimum pax not met
+  
+  // Course outline and structure
+  courseOutline       Json?        // Store course modules and topics as JSON
+  targetAudience      String?
+  
+  // Legacy fields to maintain compatibility
+  syllabus            String?
+  assessmentMethod    String?
+  certificationType   String?
+  
+  // Metadata
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  createdBy           String?
+  
+  // Relations
+  bookings            Booking[]
+  runs                CourseRun[]
+  creator             User?        @relation("CourseCreator", fields: [createdBy], references: [id])
 
   @@map("courses")
 }
@@ -300,6 +321,8 @@ enum PaymentMode {
 
 enum CourseStatus {
   DRAFT
+  ACTIVE
+  ARCHIVED
   PUBLISHED
   ONGOING
   COMPLETED

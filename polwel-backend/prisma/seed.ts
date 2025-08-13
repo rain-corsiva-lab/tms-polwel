@@ -323,97 +323,223 @@ async function main() {
   // Create Courses
   const leadershipCourse = await prisma.course.create({
     data: {
-      title: 'Leadership Development Program',
-      description: 'Comprehensive leadership training program designed to develop effective leadership skills.',
+      title: 'Leadership Excellence Program',
+      description: 'A comprehensive leadership development program designed to enhance your management capabilities and inspire effective team leadership. This program covers essential leadership principles, communication strategies, and practical tools for managing diverse teams.',
       objectives: [
-        'Understand different leadership styles',
-        'Develop emotional intelligence',
-        'Learn effective communication techniques',
-        'Master team motivation strategies'
+        'Develop authentic leadership presence and communication skills',
+        'Master techniques for motivating and engaging team members', 
+        'Learn conflict resolution and decision-making frameworks',
+        'Build emotional intelligence and self-awareness',
+        'Create actionable leadership development plans'
       ],
-      duration: 16, // 2 days
-      maxParticipants: 20,
-      minParticipants: 8,
-      category: 'Leadership',
+      duration: '3',
+      durationType: 'days',
+      maxParticipants: 25,
+      minParticipants: 15,
+      category: 'Mindful Leadership',
       level: 'Intermediate',
-      prerequisites: ['Basic management experience', 'Supervisory role'],
-      materials: ['Workbook', 'Case studies', 'Assessment tools'],
-      status: CourseStatus.PUBLISHED,
+      prerequisites: ['2+ years management experience recommended'],
+      materials: ['Leadership Workbook', 'Case Studies', 'Assessment Tools', 'Action Planning Templates'],
+      status: CourseStatus.ACTIVE,
+      venue: 'Main Training Room',
+      trainers: ['John Smith', 'Sarah Johnson'],
+      certificates: 'polwel',
+      remarks: 'Course will be postponed if minimum participants not met',
+      courseOutline: {
+        "modules": [
+          {
+            "module": "Module 1: Leadership Foundations", 
+            "duration": "Day 1",
+            "topics": ["Leadership styles and approaches", "Self-assessment and awareness", "Building trust and credibility"]
+          },
+          {
+            "module": "Module 2: Communication & Influence",
+            "duration": "Day 2", 
+            "topics": ["Effective communication strategies", "Influencing without authority", "Active listening and feedback"]
+          },
+          {
+            "module": "Module 3: Team Leadership",
+            "duration": "Day 3",
+            "topics": ["Team building and motivation", "Performance management", "Action planning and implementation"]
+          }
+        ]
+      },
+      targetAudience: 'Middle managers, team leaders, and aspiring executives',
       courseFee: 800.0,
-      amountPerPax: 400.0,
-      discount: 10.0,
+      venueFee: 150.0,
+      trainerFee: 2000.0,
+      amountPerPax: 850.0,
+      discount: 0.0,
       adminFees: 50.0,
       contingencyFees: 25.0,
       serviceFees: 30.0,
       vitalFees: 15.0,
-      syllabus: 'Day 1: Leadership Fundamentals, Communication Skills\\nDay 2: Team Management, Performance Coaching',
+      syllabus: 'Day 1: Leadership Fundamentals, Communication Skills\\nDay 2: Team Management, Performance Coaching\\nDay 3: Strategic Leadership, Change Management',
       assessmentMethod: 'Practical exercises, group discussions, and case study presentations',
       certificationType: 'Certificate of Completion',
       createdBy: johnTan.id,
     },
   });
 
-  const communicationCourse = await prisma.course.create({
+  const emotionalIntelligenceCourse = await prisma.course.create({
     data: {
-      title: 'Effective Communication Skills',
-      description: 'Master the art of clear, confident, and persuasive communication.',
+      title: 'Emotional Intelligence Workshop',
+      description: 'Master the art of emotional intelligence to enhance personal and professional relationships through self-awareness, empathy, and effective emotional regulation.',
       objectives: [
-        'Improve verbal and non-verbal communication',
-        'Develop active listening skills',
-        'Learn presentation techniques',
-        'Handle difficult conversations'
+        'Develop self-awareness of emotional patterns',
+        'Learn techniques for emotional regulation',
+        'Build empathy and social awareness skills', 
+        'Apply EQ principles in workplace situations'
       ],
-      duration: 8, // 1 day
-      maxParticipants: 25,
-      minParticipants: 10,
-      category: 'Communication',
+      duration: '8',
+      durationType: 'hours',
+      maxParticipants: 20,
+      minParticipants: 12,
+      category: 'Emotional Intelligence',
       level: 'Beginner',
-      prerequisites: ['None'],
-      materials: ['Handbook', 'Video resources', 'Practice exercises'],
-      status: CourseStatus.PUBLISHED,
-      courseFee: 400.0,
-      amountPerPax: 200.0,
+      prerequisites: ['None - open to all levels'],
+      materials: ['EQ Assessment Tools', 'Practical Exercises', 'Reference Guide'],
+      status: CourseStatus.ACTIVE,
+      venue: 'Conference Hall A',
+      trainers: ['Jennifer Lee'],
+      certificates: 'partner',
+      remarks: '',
+      courseOutline: {
+        "modules": [
+          {
+            "module": "Morning Session: EQ Foundations",
+            "duration": "4 hours",
+            "topics": ["Understanding emotional intelligence", "Self-awareness techniques", "Emotional triggers identification"]
+          },
+          {
+            "module": "Afternoon Session: Practical Application", 
+            "duration": "4 hours",
+            "topics": ["Empathy building exercises", "Communication under pressure", "Workplace EQ scenarios"]
+          }
+        ]
+      },
+      targetAudience: 'All professionals seeking to improve interpersonal skills',
+      courseFee: 300.0,
+      venueFee: 80.0,
+      trainerFee: 800.0,
+      amountPerPax: 420.0,
       discount: 5.0,
       adminFees: 25.0,
       contingencyFees: 15.0,
       serviceFees: 20.0,
       vitalFees: 10.0,
-      syllabus: 'Morning: Communication Fundamentals, Listening Skills\\nAfternoon: Presentation Skills, Difficult Conversations',
-      assessmentMethod: 'Role-playing exercises and peer feedback',
+      syllabus: 'Morning: EQ Fundamentals, Self-Assessment\\nAfternoon: Practical Applications, Action Planning',
+      assessmentMethod: 'Interactive exercises, peer feedback, and self-reflection activities',
       certificationType: 'Certificate of Attendance',
       createdBy: sarahWong.id,
     },
   });
 
-  const projectManagementCourse = await prisma.course.create({
+  const strategicThinkingCourse = await prisma.course.create({
     data: {
-      title: 'Project Management Essentials',
-      description: 'Learn fundamental project management principles and practices.',
+      title: 'Strategic Thinking Masterclass',
+      description: 'Develop strategic thinking capabilities to analyze complex business situations, make informed decisions, and create long-term value for your organization.',
       objectives: [
-        'Understand project lifecycle',
-        'Learn planning and scheduling techniques',
-        'Master risk management',
-        'Develop team coordination skills'
+        'Master strategic analysis frameworks',
+        'Learn systems thinking approaches',
+        'Develop scenario planning skills',
+        'Create strategic action plans'
       ],
-      duration: 24, // 3 days
+      duration: '2',
+      durationType: 'days',
       maxParticipants: 15,
-      minParticipants: 6,
-      category: 'Project Management',
-      level: 'Intermediate',
-      prerequisites: ['Work experience in project environment'],
-      materials: ['PM Toolkit', 'Templates', 'Software access'],
+      minParticipants: 12,
+      category: 'Strategic Planning',
+      level: 'Advanced',
+      prerequisites: ['Senior management experience', 'Strategic planning background'],
+      materials: ['Strategy Toolkit', 'Case Study Collection', 'Planning Templates'],
       status: CourseStatus.DRAFT,
-      courseFee: 1200.0,
-      amountPerPax: 500.0,
-      discount: 15.0,
-      adminFees: 75.0,
-      contingencyFees: 40.0,
-      serviceFees: 50.0,
-      vitalFees: 25.0,
-      syllabus: 'Day 1: Project Initiation\\nDay 2: Planning and Execution\\nDay 3: Monitoring and Closure',
-      assessmentMethod: 'Project simulation and practical assessment',
+      venue: 'Online Platform',
+      trainers: ['Michael Brown', 'Excellence Training Partners'],
+      certificates: 'polwel',
+      remarks: 'Hybrid delivery with online and in-person components',
+      courseOutline: {
+        "modules": [
+          {
+            "module": "Day 1: Strategic Analysis",
+            "duration": "8 hours", 
+            "topics": ["SWOT and competitive analysis", "Market dynamics", "Strategic frameworks"]
+          },
+          {
+            "module": "Day 2: Strategy Implementation",
+            "duration": "8 hours",
+            "topics": ["Action planning", "Risk assessment", "Performance metrics", "Change management"]
+          }
+        ]
+      },
+      targetAudience: 'Senior managers, directors, and strategic planning professionals',
+      courseFee: 600.0,
+      venueFee: 0.0, // Online delivery
+      trainerFee: 1500.0,
+      amountPerPax: 680.0,
+      discount: 0.0,
+      adminFees: 40.0,
+      contingencyFees: 20.0,
+      serviceFees: 35.0,
+      vitalFees: 15.0,
+      syllabus: 'Day 1: Strategic Analysis Tools, Competitive Intelligence\\nDay 2: Strategy Development, Implementation Planning',
+      assessmentMethod: 'Strategic case study analysis and presentation of strategic plan',
       certificationType: 'Professional Certificate',
       createdBy: johnTan.id,
+    },
+  });
+
+  const growthMindsetCourse = await prisma.course.create({
+    data: {
+      title: 'Growth Mindset Development',
+      description: 'Transform your approach to challenges and learning through developing a growth mindset that embraces continuous improvement and resilience.',
+      objectives: [
+        'Understand fixed vs growth mindset concepts',
+        'Develop resilience in face of setbacks',
+        'Learn continuous learning strategies',
+        'Build self-efficacy and confidence'
+      ],
+      duration: '6',
+      durationType: 'hours',
+      maxParticipants: 30,
+      minParticipants: 15,
+      category: 'Growth Mindset',
+      level: 'Beginner',
+      prerequisites: ['Open to all - no prerequisites'],
+      materials: ['Mindset Assessment', 'Personal Development Plan', 'Resource Library'],
+      status: CourseStatus.ACTIVE,
+      venue: 'Main Training Room',
+      trainers: ['David Chen'],
+      certificates: 'no',
+      remarks: 'Highly interactive workshop with practical exercises',
+      courseOutline: {
+        "modules": [
+          {
+            "module": "Session 1: Mindset Foundations",
+            "duration": "3 hours",
+            "topics": ["Fixed vs Growth mindset", "Neuroscience of learning", "Self-assessment tools"]
+          },
+          {
+            "module": "Session 2: Practical Application",
+            "duration": "3 hours", 
+            "topics": ["Overcoming limiting beliefs", "Goal setting strategies", "Action planning"]
+          }
+        ]
+      },
+      targetAudience: 'All employees seeking personal and professional development',
+      courseFee: 250.0,
+      venueFee: 50.0,
+      trainerFee: 600.0,
+      amountPerPax: 320.0,
+      discount: 10.0,
+      adminFees: 20.0,
+      contingencyFees: 10.0,
+      serviceFees: 15.0,
+      vitalFees: 8.0,
+      syllabus: 'Session 1: Mindset Theory, Self-Discovery\\nSession 2: Practical Strategies, Goal Setting',
+      assessmentMethod: 'Self-reflection exercises and personal development plan creation',
+      certificationType: 'Certificate of Participation',
+      createdBy: sarahWong.id,
     },
   });
 
@@ -429,7 +555,7 @@ async function main() {
       endTime: '17:00',
       venueId: orchardHotel.id,
       trainerId: davidChen.id,
-      maxParticipants: 20,
+      maxParticipants: 25,
       currentParticipants: 0,
       status: CourseStatus.PUBLISHED,
       trainerFee: 2000.0,
@@ -439,9 +565,9 @@ async function main() {
     },
   });
 
-  const communicationRun1 = await prisma.courseRun.create({
+  const emotionalIntelligenceRun1 = await prisma.courseRun.create({
     data: {
-      courseId: communicationCourse.id,
+      courseId: emotionalIntelligenceCourse.id,
       startDate: new Date('2024-02-20T09:00:00Z'),
       endDate: new Date('2024-02-20T17:00:00Z'),
       startTime: '09:00',
@@ -481,8 +607,8 @@ async function main() {
 
   const booking2 = await prisma.booking.create({
     data: {
-      courseId: communicationCourse.id,
-      courseRunId: communicationRun1.id,
+      courseId: emotionalIntelligenceCourse.id,
+      courseRunId: emotionalIntelligenceRun1.id,
       userId: lisaTeo.id,
       organizationId: choaChuKangDiv.id,
       participantCount: 1,
