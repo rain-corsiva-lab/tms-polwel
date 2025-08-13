@@ -176,12 +176,6 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     
     setSelectedDate(date);
     setSelectedRange({ start: date, end: date });
-    setNewBlockout(prev => ({ 
-      ...prev, 
-      startDate: format(date, "yyyy-MM-dd"),
-      endDate: format(date, "yyyy-MM-dd")
-    }));
-    setShowAddDialog(true);
   };
 
   const handleMouseDown = (date: Date) => {
