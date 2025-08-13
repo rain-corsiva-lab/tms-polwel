@@ -3,6 +3,8 @@ import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
+import AuditService from '../services/auditService';
+import EmailService from '../services/emailService';
 
 const prisma = new PrismaClient();
 
@@ -31,6 +33,232 @@ export const getAvailablePermissions = async (req: AuthenticatedRequest, res: Re
     });
   } catch (error) {
     console.error('Get available permissions error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Get user audit trail
+export const getUserAuditTrail = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { limit = '50' } = req.query;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Check if user exists and is POLWEL
+    const user = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found'
+      });
+    }
+
+    const auditTrail = await AuditService.getUserAuditTrail(id, parseInt(limit as string));
+
+    // Transform audit trail for frontend
+    const transformedAuditTrail = auditTrail.map(entry => ({
+      id: entry.id,
+      timestamp: entry.timestamp,
+      action: entry.action,
+      actionType: entry.actionType.toLowerCase(),
+      performedBy: entry.performedBy || entry.user?.name || 'System',
+      details: entry.details || 'No details provided',
+      ipAddress: entry.ipAddress,
+      userAgent: entry.userAgent
+    }));
+
+    return res.json(transformedAuditTrail);
+  } catch (error) {
+    console.error('Get user audit trail error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Send password reset link
+export const sendPasswordResetLink = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Check if user exists and is POLWEL
+    const user = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = EmailService.generateResetToken();
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // Save reset token to database
+    await prisma.user.update({
+      where: { id: id },
+      data: {
+        resetToken,
+        resetTokenExpiry
+      }
+    });
+
+    // Send reset email
+    const emailSent = await EmailService.sendPasswordResetEmail(
+      user.email,
+      user.name,
+      resetToken
+    );
+
+    if (emailSent) {
+      // Log password reset request
+      await AuditService.logPasswordChange(
+        id,
+        req.user?.userId || 'system',
+        'Password reset link sent via email',
+        req
+      );
+
+      return res.json({
+        success: true,
+        message: 'Password reset link has been sent to the user\'s email address'
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset email'
+      });
+    }
+  } catch (error) {
+    console.error('Send password reset link error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Get detailed user information
+export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        lastLogin: true,
+        mfaEnabled: true,
+        emailVerified: true,
+        failedLoginAttempts: true,
+        lockedUntil: true,
+        passwordExpiry: true,
+        createdAt: true,
+        updatedAt: true,
+        createdBy: true,
+        permissions: {
+          include: {
+            permission: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                module: true,
+                action: true
+              }
+            }
+          }
+        },
+        createdByUser: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found'
+      });
+    }
+
+    // Get recent audit trail (last 10 entries)
+    const recentAuditTrail = await AuditService.getUserAuditTrail(id, 10);
+
+    // Group permissions by module
+    const permissionsByModule = user.permissions.reduce((acc, userPerm) => {
+      const { module, action } = userPerm.permission;
+      if (!acc[module]) {
+        acc[module] = [];
+      }
+      acc[module].push(action);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    return res.json({
+      ...user,
+      permissionsByModule,
+      recentActivity: recentAuditTrail.slice(0, 5).map(entry => ({
+        action: entry.action,
+        timestamp: entry.timestamp,
+        details: entry.details
+      })),
+      securityInfo: {
+        passwordExpired: user.passwordExpiry ? new Date() > user.passwordExpiry : false,
+        accountLocked: user.lockedUntil ? new Date() < user.lockedUntil : false,
+        failedLoginAttempts: user.failedLoginAttempts,
+        mfaEnabled: user.mfaEnabled,
+        emailVerified: user.emailVerified
+      }
+    });
+  } catch (error) {
+    console.error('Get POLWEL user details error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -245,6 +473,14 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       return { user, tempPassword };
     });
 
+    // Log user creation
+    await AuditService.logUserCreation(
+      result.user.id, 
+      req.user?.userId || 'system', 
+      `POLWEL user created with email ${email}`,
+      req
+    );
+
     return res.status(201).json(result);
   } catch (error) {
     console.error('Create POLWEL user error:', error);
@@ -352,6 +588,25 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
 
       return user;
     });
+
+    // Log user update
+    await AuditService.logUserUpdate(
+      id,
+      req.user?.userId || 'system',
+      {}, // old values - could be enhanced to capture actual old values
+      result,
+      `POLWEL user updated: ${result.name} (${result.email})`,
+      req
+    );
+
+    if (validPermissions.length > 0) {
+      await AuditService.logPermissionChange(
+        id,
+        req.user?.userId || 'system',
+        `Permissions updated for POLWEL user: ${result.name}`,
+        req
+      );
+    }
 
     return res.json(result);
   } catch (error) {

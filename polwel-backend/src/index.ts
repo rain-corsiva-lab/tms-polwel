@@ -18,6 +18,7 @@ import organizationRoutes from './routes/organizations';
 import polwelUsersRoutes from './routes/polwelUsers';
 import trainersRoutes from './routes/trainers';
 import clientOrganizationsRoutes from './routes/clientOrganizations';
+import passwordResetRoutes from './routes/passwordReset';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -69,6 +70,7 @@ app.use('/api/organizations', authenticate, organizationRoutes);
 app.use('/api/polwel-users', polwelUsersRoutes);
 app.use('/api/trainers', trainersRoutes);
 app.use('/api/client-organizations', clientOrganizationsRoutes);
+app.use('/api/password-reset', passwordResetRoutes);
 
 // Error handling middleware
 app.use(notFound);

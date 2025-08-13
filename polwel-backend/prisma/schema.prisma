@@ -22,6 +22,8 @@ model User {
   failedLoginAttempts Int                 @default(0)
   lockedUntil         DateTime?
   refreshToken        String?
+  resetToken          String?
+  resetTokenExpiry    DateTime?
   permissionLevel     String?
   department          String?
   organizationId      String?

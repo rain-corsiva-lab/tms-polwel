@@ -8,7 +8,10 @@ import {
   deletePolwelUser,
   resetPolwelUserPassword,
   togglePolwelUserMfa,
-  getAvailablePermissions
+  getAvailablePermissions,
+  getUserAuditTrail,
+  sendPasswordResetLink,
+  getPolwelUserDetails
 } from '../controllers/polwelUsersController';
 
 const router = express.Router();
@@ -25,10 +28,13 @@ router.get('/permissions', getAvailablePermissions);
 // POLWEL Users routes
 router.get('/', getPolwelUsers);
 router.get('/:id', getPolwelUserById);
+router.get('/:id/details', getPolwelUserDetails);
+router.get('/:id/audit-trail', getUserAuditTrail);
 router.post('/', createPolwelUser);
 router.put('/:id', updatePolwelUser);
 router.delete('/:id', deletePolwelUser);
 router.post('/:id/reset-password', resetPolwelUserPassword);
+router.post('/:id/send-reset-link', sendPasswordResetLink);
 router.post('/:id/toggle-mfa', togglePolwelUserMfa);
 
 export default router;

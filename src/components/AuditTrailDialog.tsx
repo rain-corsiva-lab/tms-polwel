@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { History, User, Settings, Lock, Key, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { polwelUsersApi } from "@/lib/api";
 
 export interface AuditTrailEntry {
   id: string;
@@ -22,9 +25,9 @@ export interface AuditTrailEntry {
 }
 
 interface AuditTrailDialogProps {
+  userId: string | number;
   userName: string;
   userEmail: string;
-  auditTrail: AuditTrailEntry[];
   children: React.ReactNode;
 }
 
@@ -65,9 +68,53 @@ const getActionColor = (actionType: string) => {
   }
 };
 
-export const AuditTrailDialog = ({ userName, userEmail, auditTrail, children }: AuditTrailDialogProps) => {
+export const AuditTrailDialog = ({ userId, userName, userEmail, children }: AuditTrailDialogProps) => {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [auditTrail, setAuditTrail] = useState<AuditTrailEntry[]>([]);
+  const { toast } = useToast();
+
+  const fetchAuditTrail = async () => {
+    setLoading(true);
+    try {
+      console.log('AuditTrailDialog: Fetching audit trail for userId:', userId, 'type:', typeof userId);
+      
+      if (!userId || userId === 'undefined' || userId === 'null') {
+        throw new Error('Invalid user ID');
+      }
+      
+      const response = await polwelUsersApi.getAuditTrail(userId);
+      console.log('AuditTrailDialog: Response received:', response);
+      
+      // Ensure response is an array
+      if (Array.isArray(response)) {
+        setAuditTrail(response);
+      } else if (response?.auditTrail && Array.isArray(response.auditTrail)) {
+        setAuditTrail(response.auditTrail);
+      } else {
+        setAuditTrail([]);
+      }
+    } catch (error) {
+      console.error('Error fetching audit trail:', error);
+      setAuditTrail([]);
+      toast({
+        title: "Error",
+        description: "Failed to load audit trail",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchAuditTrail();
+    }
+  }, [open, userId]);
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -80,44 +127,50 @@ export const AuditTrailDialog = ({ userName, userEmail, auditTrail, children }: 
           <p className="text-sm text-muted-foreground">{userEmail}</p>
         </DialogHeader>
         
-        <ScrollArea className="h-[500px] pr-4">
-          <div className="space-y-4">
-            {auditTrail.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No audit trail entries found
-              </div>
-            ) : (
-              auditTrail.map((entry) => (
-                <div key={entry.id} className="border border-border rounded-lg p-4 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge className={getActionColor(entry.actionType)}>
-                        {getActionIcon(entry.actionType)}
-                        <span className="ml-1">{entry.action}</span>
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(entry.timestamp).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-sm">
-                    <p className="text-foreground">{entry.details}</p>
-                    <div className="mt-2 space-y-1 text-muted-foreground">
-                      <p><strong>Performed by:</strong> {entry.performedBy}</p>
-                      {entry.ipAddress && (
-                        <p><strong>IP Address:</strong> {entry.ipAddress}</p>
-                      )}
-                      {entry.userAgent && (
-                        <p><strong>User Agent:</strong> {entry.userAgent}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        </ScrollArea>
+        ) : (
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="space-y-4">
+              {!Array.isArray(auditTrail) || auditTrail.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No audit trail entries found
+                </div>
+              ) : (
+                auditTrail.map((entry) => (
+                  <div key={entry.id} className="border border-border rounded-lg p-4 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge className={getActionColor(entry.actionType)}>
+                          {getActionIcon(entry.actionType)}
+                          <span className="ml-1">{entry.action}</span>
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(entry.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm">
+                      <p className="text-foreground">{entry.details}</p>
+                      <div className="mt-2 space-y-1 text-muted-foreground">
+                        <p><strong>Performed by:</strong> {entry.performedBy}</p>
+                        {entry.ipAddress && (
+                          <p><strong>IP Address:</strong> {entry.ipAddress}</p>
+                        )}
+                        {entry.userAgent && (
+                          <p><strong>User Agent:</strong> {entry.userAgent}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        )}
       </DialogContent>
     </Dialog>
   );

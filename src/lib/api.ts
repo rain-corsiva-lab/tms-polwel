@@ -143,6 +143,23 @@ export const polwelUsersApi = {
       body: JSON.stringify({ enabled }),
     });
   },
+
+  // Get detailed user information
+  getDetails: async (id: string | number) => {
+    return apiRequest(`/polwel-users/${id}/details`);
+  },
+
+  // Get user audit trail
+  getAuditTrail: async (id: string | number) => {
+    return apiRequest(`/polwel-users/${id}/audit-trail`);
+  },
+
+  // Send password reset link
+  sendPasswordResetLink: async (id: string | number) => {
+    return apiRequest(`/polwel-users/${id}/send-reset-link`, {
+      method: 'POST',
+    });
+  },
 };
 
 // Trainers API

@@ -23,6 +23,7 @@ import VenueArchive from "./pages/VenueArchive";
 import VenueForm from "./pages/VenueForm";
 import VenueDetail from "./pages/VenueDetail";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +39,9 @@ const App = () => (
           <Routes>
             {/* Public route - Login page */}
             <Route path="/login" element={<Login />} />
+            
+            {/* Public route - Password Reset */}
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             
             {/* Protected standalone routes */}
             <Route 
