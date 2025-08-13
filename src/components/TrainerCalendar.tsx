@@ -101,7 +101,17 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     {
       id: "c4",
       date: "2025-08-25",
-      title: "Project Management Essentials",
+      title: "Advanced Project Management - Day 1",
+      type: "course",
+      time: "09:00 - 17:00", 
+      venue: "Training Room C",
+      participants: 18,
+      organization: "Financial Services Ltd"
+    },
+    {
+      id: "c4b",
+      date: "2025-08-26",
+      title: "Advanced Project Management - Day 2",
       type: "course",
       time: "09:00 - 17:00", 
       venue: "Training Room C",
@@ -111,12 +121,42 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     {
       id: "c5",
       date: "2025-08-28",
-      title: "Leadership Development Workshop",
+      title: "Executive Leadership Programme - Day 1",
       type: "course",
-      time: "13:00 - 17:00",
-      venue: "Training Room A",
+      time: "09:00 - 17:00",
+      venue: "Executive Conference Room",
       participants: 12,
       organization: "Healthcare Partners"
+    },
+    {
+      id: "c5b",
+      date: "2025-08-29",
+      title: "Executive Leadership Programme - Day 2",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Executive Conference Room",
+      participants: 12,
+      organization: "Healthcare Partners"
+    },
+    {
+      id: "c6",
+      date: "2025-09-02",
+      title: "Strategic Planning Masterclass - Day 1",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Training Room A",
+      participants: 16,
+      organization: "Singapore Police Force"
+    },
+    {
+      id: "c6b",
+      date: "2025-09-03",
+      title: "Strategic Planning Masterclass - Day 2",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Training Room A",
+      participants: 16,
+      organization: "Singapore Police Force"
     }
   ]);
   
