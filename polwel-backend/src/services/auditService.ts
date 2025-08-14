@@ -45,7 +45,7 @@ class AuditService {
   }
 
   static async getUserAuditTrail(userId: string, limit: number = 50) {
-    return await prisma.auditLog.findMany({
+    const auditLogs = await prisma.auditLog.findMany({
       where: { userId },
       orderBy: { timestamp: 'desc' },
       take: limit,
@@ -58,6 +58,36 @@ class AuditService {
         }
       }
     });
+
+    // Resolve performedBy names for each entry
+    const resolvedLogs = await Promise.all(
+      auditLogs.map(async (log) => {
+        let performedByName = log.performedBy || 'System';
+        
+        // If performedBy looks like a user ID, resolve it to name and email
+        if (log.performedBy && log.performedBy.length > 10) {
+          try {
+            const performer = await prisma.user.findUnique({
+              where: { id: log.performedBy },
+              select: { name: true, email: true }
+            });
+            
+            if (performer) {
+              performedByName = `${performer.name} (${performer.email})`;
+            }
+          } catch (error) {
+            console.error('Error resolving performer:', error);
+          }
+        }
+
+        return {
+          ...log,
+          performedBy: performedByName
+        };
+      })
+    );
+
+    return resolvedLogs;
   }
 
   static async logLogin(userId: string, details: string, req?: Request) {

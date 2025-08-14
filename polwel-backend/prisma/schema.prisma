@@ -221,7 +221,8 @@ model Booking {
 model TrainerBlockout {
   id               String   @id @default(cuid())
   trainerId        String
-  date             DateTime
+  startDate        DateTime
+  endDate          DateTime
   reason           String
   type             String
   description      String?

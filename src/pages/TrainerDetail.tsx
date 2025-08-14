@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Mail, Phone, Calendar, Edit, Loader2 } from "lucide-react";
-import { TrainerCalendar } from "@/components/TrainerCalendar";
+import TrainerCalendar from "@/components/TrainerCalendar";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { trainersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";

@@ -139,7 +139,20 @@ export default function PolwelUsers() {
       }
     } catch (error) {
       console.error('Error fetching POLWEL users:', error);
-      // Use dummy data when API fails
+      
+      // Check if it's an authentication error
+      if (error instanceof Error) {
+        if (error.message.includes('Session expired') || 
+            error.message.includes('Authentication') ||
+            error.message.includes('TOKEN_EXPIRED')) {
+          console.log('Authentication error detected, user will be redirected to login');
+          // Don't set dummy data for auth errors - let auth service handle redirect
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Use dummy data only for non-authentication errors
       setUsers(dummyUsers);
       setPagination({
         page: 1,

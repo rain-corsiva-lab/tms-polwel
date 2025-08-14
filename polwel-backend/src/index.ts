@@ -19,7 +19,9 @@ import polwelUsersRoutes from './routes/polwelUsers';
 import trainersRoutes from './routes/trainers';
 import clientOrganizationsRoutes from './routes/clientOrganizations';
 import passwordResetRoutes from './routes/passwordReset';
+import userSetupRoutes from './routes/userSetup';
 import referencesRoutes from './routes/references';
+import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -93,7 +95,9 @@ app.use('/api/polwel-users', polwelUsersRoutes);
 app.use('/api/trainers', trainersRoutes);
 app.use('/api/client-organizations', clientOrganizationsRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/user-setup', userSetupRoutes);
 app.use('/api/references', authenticate, referencesRoutes);
+app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
 
 // Error handling middleware
 app.use(notFound);

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { TrainerCalendar } from "@/components/TrainerCalendar";
+import TrainerCalendar from "@/components/TrainerCalendar";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { 
   User, 
@@ -167,7 +167,6 @@ const TrainerPartner = () => {
               <TrainerCalendar 
                 trainerId={trainerProfile.id} 
                 trainerName={trainerProfile.name}
-                trainerCourses={trainerProfile.specializations}
               />
             </CardContent>
           </Card>

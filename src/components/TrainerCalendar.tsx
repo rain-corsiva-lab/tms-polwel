@@ -1,487 +1,425 @@
-import { useState, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar as CalendarIcon, Plus, X } from "lucide-react";
-import { format, isValid, isAfter, isBefore, isSameDay, eachDayOfInterval } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-
-interface TrainerBlockout {
-  id: string;
-  date: string;
-  title: string;
-  type: "unavailable";
-  description?: string;
-}
-
-interface ScheduledCourse {
-  id: string;
-  date: string;
-  title: string;
-  type: "course";
-  time: string;
-  venue: string;
-  participants?: number;
-  organization?: string;
-}
+import { useState, useEffect, useMemo } from "react"
+import { Calendar } from "@/components/ui/calendar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { Plus, CalendarIcon, Clock, MapPin, Users, Building } from "lucide-react"
+import { format, isSameDay, parseISO } from "date-fns"
+import { getTrainerBlockouts, getTrainerCourseRuns, createTrainerBlockout, updateTrainerBlockout, deleteTrainerBlockout } from "@/lib/api"
+import { AddTrainerBlockoutDialog } from "./AddTrainerBlockoutDialog"
+import { EditTrainerBlockoutDialog } from "./EditTrainerBlockoutDialog"
+import { TrainerBlockout, CourseRun } from "@/types/trainer"
 
 interface TrainerCalendarProps {
-  trainerId: string;
-  trainerName: string;
-  trainerCourses: string[];
+  trainerId: string
+  trainerName?: string
 }
 
-export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: TrainerCalendarProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedRange, setSelectedRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
-  const [isDragging, setIsDragging] = useState(false);
-  const calendarRef = useRef<HTMLDivElement>(null);
-  const [blockouts, setBlockouts] = useState<TrainerBlockout[]>([
-    {
-      id: "2", 
-      date: "2024-01-20",
-      title: "Personal Leave",
-      type: "unavailable",
-      description: "Family commitment"
-    }
-  ]);
+const TrainerCalendar: React.FC<TrainerCalendarProps> = ({ trainerId, trainerName }) => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [blockouts, setBlockouts] = useState<TrainerBlockout[]>([])
+  const [courseRuns, setCourseRuns] = useState<CourseRun[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showAddBlockoutDialog, setShowAddBlockoutDialog] = useState(false)
+  const [editingBlockout, setEditingBlockout] = useState<TrainerBlockout | null>(null)
+  const { toast } = useToast()
 
-  const [scheduledCourses] = useState<ScheduledCourse[]>([
-    {
-      id: "c1",
-      date: "2025-08-15",
-      title: "Leadership Development Workshop",
-      type: "course",
-      time: "09:00 - 17:00",
-      venue: "Training Room A",
-      participants: 20,
-      organization: "Singapore Police Force"
-    },
-    {
-      id: "c2", 
-      date: "2025-08-18",
-      title: "Team Building Session",
-      type: "course",
-      time: "14:00 - 18:00",
-      venue: "Conference Hall B",
-      participants: 15,
-      organization: "Tech Innovations Pte Ltd"
-    },
-    {
-      id: "c3",
-      date: "2025-08-22",
-      title: "Communication Skills Training",
-      type: "course", 
-      time: "10:00 - 16:00",
-      venue: "Online Session",
-      participants: 25,
-      organization: "Global Manufacturing Corp"
-    },
-    {
-      id: "c4",
-      date: "2025-08-25",
-      title: "Advanced Project Management - Day 1",
-      type: "course",
-      time: "09:00 - 17:00", 
-      venue: "Training Room C",
-      participants: 18,
-      organization: "Financial Services Ltd"
-    },
-    {
-      id: "c4b",
-      date: "2025-08-26",
-      title: "Advanced Project Management - Day 2",
-      type: "course",
-      time: "09:00 - 17:00", 
-      venue: "Training Room C",
-      participants: 18,
-      organization: "Financial Services Ltd"
-    },
-    {
-      id: "c5",
-      date: "2025-08-28",
-      title: "Executive Leadership Programme - Day 1",
-      type: "course",
-      time: "09:00 - 17:00",
-      venue: "Executive Conference Room",
-      participants: 12,
-      organization: "Healthcare Partners"
-    },
-    {
-      id: "c5b",
-      date: "2025-08-29",
-      title: "Executive Leadership Programme - Day 2",
-      type: "course",
-      time: "09:00 - 17:00",
-      venue: "Executive Conference Room",
-      participants: 12,
-      organization: "Healthcare Partners"
-    },
-    {
-      id: "c6",
-      date: "2025-09-02",
-      title: "Strategic Planning Masterclass - Day 1",
-      type: "course",
-      time: "09:00 - 17:00",
-      venue: "Training Room A",
-      participants: 16,
-      organization: "Singapore Police Force"
-    },
-    {
-      id: "c6b",
-      date: "2025-09-03",
-      title: "Strategic Planning Masterclass - Day 2",
-      type: "course",
-      time: "09:00 - 17:00",
-      venue: "Training Room A",
-      participants: 16,
-      organization: "Singapore Police Force"
-    }
-  ]);
-  
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newBlockout, setNewBlockout] = useState({
-    startDate: "",
-    endDate: "",
-    title: "",
-    type: "unavailable" as const,
-    description: ""
-  });
+  // Load data
+  useEffect(() => {
+    loadData()
+  }, [trainerId])
 
-  const { toast } = useToast();
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    
-    setSelectedDate(date);
-    setSelectedRange({ start: date, end: date });
-  };
-
-  const handleMouseDown = (date: Date) => {
-    setIsDragging(true);
-    setSelectedRange({ start: date, end: date });
-  };
-
-  const handleMouseEnter = (date: Date) => {
-    if (isDragging && selectedRange.start) {
-      setSelectedRange(prev => ({ ...prev, end: date }));
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (isDragging && selectedRange.start && selectedRange.end) {
-      const startDate = isBefore(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
-      const endDate = isAfter(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
+  const loadData = async () => {
+    try {
+      setLoading(true)
       
-      setNewBlockout(prev => ({
-        ...prev,
-        startDate: format(startDate, "yyyy-MM-dd"),
-        endDate: format(endDate, "yyyy-MM-dd")
-      }));
-      setShowAddDialog(true);
-    }
-    setIsDragging(false);
-  };
+      // Get current month's date range
+      const now = new Date()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      
+      // Load blockouts and course runs
+      const [blockoutsResponse, courseRunsResponse] = await Promise.all([
+        getTrainerBlockouts(trainerId, startOfMonth.toISOString().split('T')[0], endOfMonth.toISOString().split('T')[0]),
+        getTrainerCourseRuns(trainerId)
+      ])
 
-  const handleAddBlockout = () => {
-    if (!newBlockout.startDate || !newBlockout.title) {
+      if (blockoutsResponse?.data) {
+        setBlockouts(Array.isArray(blockoutsResponse.data) ? blockoutsResponse.data : [])
+      }
+      
+      if (courseRunsResponse?.runs) {
+        setCourseRuns(courseRunsResponse.runs || [])
+      }
+      
+    } catch (error: any) {
+      console.error('Failed to load trainer data:', error)
+      
+      let errorMessage = "Failed to load trainer data. Please refresh the page."
+      
+      // Handle specific error types
+      if (error.message?.includes('unauthorized') || error.message?.includes('authentication')) {
+        errorMessage = "You don't have permission to view this trainer's data. Please check your access rights."
+      } else if (error.message?.includes('not found')) {
+        errorMessage = "Trainer not found. Please verify the trainer ID."
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = "Network error. Please check your connection and try again."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
+        title: "Error",
+        description: errorMessage,
         variant: "destructive",
-      });
-      return;
+      })
+      
+      setBlockouts([])
+      setCourseRuns([])
+    } finally {
+      setLoading(false)
     }
+  }
 
-    const startDate = new Date(newBlockout.startDate);
-    const endDate = new Date(newBlockout.endDate);
+  // Handle blockout add
+  const handleBlockoutAdd = async (blockoutData: Omit<TrainerBlockout, 'id'>) => {
+    try {
+      // Extract trainerId from the blockout data since dialog includes it
+      const { trainerId: providedTrainerId, ...dataWithoutTrainerId } = blockoutData;
+      await createTrainerBlockout({
+        ...dataWithoutTrainerId,
+        trainerId
+      })
+      
+      await loadData() // Refresh data
+      
+      toast({
+        title: "Success",
+        description: "Blockout date has been added successfully.",
+        variant: "default",
+      })
+    } catch (error: any) {
+      console.error('Failed to create blockout:', error)
+      
+      let errorMessage = "Failed to create blockout. Please try again."
+      
+      // Handle specific error types
+      if (error.message?.includes('conflicts with scheduled courses')) {
+        errorMessage = "This blockout conflicts with scheduled courses. Please choose different dates or remove conflicting courses first."
+      } else if (error.message?.includes('validation')) {
+        errorMessage = "Invalid blockout data. Please check your input and try again."
+      } else if (error.message?.includes('unauthorized') || error.message?.includes('authentication')) {
+        errorMessage = "You don't have permission to create blockouts. Please check your access rights."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle blockout edit
+  const handleBlockoutEdit = async (id: string, blockoutData: Partial<TrainerBlockout>) => {
+    try {
+      await updateTrainerBlockout(id, blockoutData)
+      await loadData() // Refresh data
+      setEditingBlockout(null)
+      
+      toast({
+        title: "Success",
+        description: "Blockout has been updated successfully.",
+        variant: "default",
+      })
+    } catch (error: any) {
+      console.error('Failed to update blockout:', error)
+      
+      let errorMessage = "Failed to update blockout. Please try again."
+      
+      // Handle specific error types
+      if (error.message?.includes('conflicts with scheduled courses')) {
+        errorMessage = "This blockout update conflicts with scheduled courses. Please choose different dates or remove conflicting courses first."
+      } else if (error.message?.includes('validation')) {
+        errorMessage = "Invalid blockout data. Please check your input and try again."
+      } else if (error.message?.includes('unauthorized') || error.message?.includes('authentication')) {
+        errorMessage = "You don't have permission to update blockouts. Please check your access rights."
+      } else if (error.message?.includes('not found')) {
+        errorMessage = "Blockout not found. It may have been deleted by another user."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      
+      // Refresh data in case blockout was deleted
+      await loadData()
+    }
+  }
+
+  // Handle blockout delete
+  const handleBlockoutDelete = async (id: string) => {
+    try {
+      await deleteTrainerBlockout(id)
+      await loadData() // Refresh data
+      setEditingBlockout(null)
+      
+      toast({
+        title: "Success",
+        description: "Blockout has been deleted successfully.",
+        variant: "default",
+      })
+    } catch (error: any) {
+      console.error('Failed to delete blockout:', error)
+      
+      let errorMessage = "Failed to delete blockout. Please try again."
+      
+      // Handle specific error types
+      if (error.message?.includes('unauthorized') || error.message?.includes('authentication')) {
+        errorMessage = "You don't have permission to delete blockouts. Please check your access rights."
+      } else if (error.message?.includes('not found')) {
+        errorMessage = "Blockout not found. It may have already been deleted."
+      } else if (error.message?.includes('constraint') || error.message?.includes('dependency')) {
+        errorMessage = "Cannot delete blockout as it may be referenced by other records."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      
+      // Refresh data in case blockout was already deleted
+      await loadData()
+    }
+  }
+
+  // Get events for selected date
+  const selectedDateEvents = useMemo(() => {
+    const events = []
     
-    // Create blockouts for each day in the range
-    const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+    // Add blockouts for selected date
+    const dayBlockouts = blockouts.filter(blockout => {
+      const start = parseISO(blockout.startDate)
+      const end = parseISO(blockout.endDate)
+      return selectedDate >= start && selectedDate <= end
+    })
     
-    const newBlockouts = dateRange.map(date => ({
-      id: `${Date.now()}-${format(date, "yyyy-MM-dd")}`,
-      date: format(date, "yyyy-MM-dd"),
-      title: newBlockout.title,
-      type: "unavailable" as const,
-      description: newBlockout.description
-    }));
+    // Add course runs for selected date
+    const dayCourseRuns = courseRuns.filter(run => {
+      const runDate = parseISO(run.startDate)
+      return isSameDay(runDate, selectedDate)
+    })
 
-    setBlockouts(prev => [...prev, ...newBlockouts]);
-    
-    const rangeText = isSameDay(startDate, endDate) 
-      ? format(startDate, "PPP")
-      : `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
-    
-    toast({
-      title: "Blockout Added",
-      description: `Trainer blocked out for ${rangeText}`,
-    });
+    return { blockouts: dayBlockouts, courseRuns: dayCourseRuns }
+  }, [selectedDate, blockouts, courseRuns])
 
-    setNewBlockout({
-      startDate: "",
-      endDate: "",
-      title: "",
-      type: "unavailable",
-      description: ""
-    });
-    setSelectedRange({ start: null, end: null });
-    setShowAddDialog(false);
-  };
+  // Get calendar modifiers
+  const calendarModifiers = useMemo(() => {
+    const blockedDates: Date[] = []
+    const scheduledDates: Date[] = []
 
-  const handleRemoveBlockout = (blockoutId: string) => {
-    setBlockouts(prev => prev.filter(a => a.id !== blockoutId));
-    toast({
-      title: "Blockout Removed",
-      description: "Blockout has been removed",
-    });
-  };
+    blockouts.forEach(blockout => {
+      const start = parseISO(blockout.startDate)
+      const end = parseISO(blockout.endDate)
+      const currentDate = new Date(start)
+      
+      while (currentDate <= end) {
+        blockedDates.push(new Date(currentDate))
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    })
 
-  const getBlockoutDates = () => {
-    return blockouts.map(a => new Date(a.date)).filter(date => isValid(date));
-  };
+    courseRuns.forEach(run => {
+      const runDate = parseISO(run.startDate)
+      scheduledDates.push(runDate)
+    })
 
-  const getCourseDates = () => {
-    return scheduledCourses.map(c => new Date(c.date)).filter(date => isValid(date));
-  };
+    return {
+      blocked: blockedDates,
+      scheduled: scheduledDates
+    }
+  }, [blockouts, courseRuns])
 
-  const getSelectedRangeDates = () => {
-    if (!selectedRange.start || !selectedRange.end) return [];
-    const startDate = isBefore(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
-    const endDate = isAfter(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
-    return eachDayOfInterval({ start: startDate, end: endDate });
-  };
+  const calendarModifiersClassNames = {
+    blocked: "bg-red-100 text-red-900 hover:bg-red-200",
+    scheduled: "bg-blue-100 text-blue-900 hover:bg-blue-200"
+  }
 
-  const getSelectedDateBlockouts = () => {
-    if (!selectedDate) return [];
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    return blockouts.filter(a => a.date === dateStr);
-  };
-
-  const getSelectedDateCourses = () => {
-    if (!selectedDate) return [];
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    return scheduledCourses.filter(c => c.date === dateStr);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-muted-foreground">Loading calendar...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            {trainerName} Calendar
-          </CardTitle>
-          <CardDescription>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <CalendarIcon className="h-6 w-6" />
+            {trainerName || 'Trainer'} Calendar
+          </h2>
+          <p className="text-muted-foreground">
             Manage unavailable dates and blockouts for this trainer
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                modifiers={{
-                  blockout: getBlockoutDates(),
-                  course: getCourseDates(),
-                  selectedRange: getSelectedRangeDates()
-                }}
-                modifiersStyles={{
-                  blockout: { backgroundColor: "hsl(var(--destructive))", color: "white" },
-                  course: { backgroundColor: "hsl(var(--primary))", color: "white" },
-                  selectedRange: { backgroundColor: "hsl(var(--primary) / 0.3)", color: "hsl(var(--primary))" }
-                }}
-                className="rounded-md border pointer-events-auto"
-              />
-              <div className="space-y-2">
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>Click a date to block out trainer</p>
-                  <div className="flex gap-4 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-primary"></div>
-                      <span>Scheduled Course</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-destructive"></div>
-                      <span>Unavailable</span>
-                    </div>
-                  </div>
+          </p>
+        </div>
+        {/* <Button onClick={() => setShowAddBlockoutDialog(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Blockout Date Range
+        </Button> */}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left side - Calendar */}
+        <Card>
+          <CardContent className="p-6">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              modifiers={calendarModifiers}
+              modifiersClassNames={calendarModifiersClassNames}
+              className="rounded-md border"
+            />
+            
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium">Click a date to block out trainer</p>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-100 rounded border"></div>
+                  <span>Scheduled Course</span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setNewBlockout(prev => ({
-                      ...prev,
-                      startDate: "",
-                      endDate: ""
-                    }));
-                    setShowAddDialog(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Blockout Date Range
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-100 rounded border"></div>
+                  <span>Unavailable</span>
+                </div>
               </div>
             </div>
-            
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">
-                {selectedDate ? format(selectedDate, "PPP") : "Select a date"}
-              </h3>
-              
-              {/* Scheduled Courses */}
-              {getSelectedDateCourses().length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-primary">Scheduled Courses</h4>
-                  {getSelectedDateCourses().map((course) => (
-                    <Card key={course.id} className="p-4 border-primary/20">
+          </CardContent>
+        </Card>
+
+        {/* Right side - Event Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{format(selectedDate, 'MMMM do, yyyy')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Scheduled Courses */}
+            {selectedDateEvents.courseRuns.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-blue-600 mb-2">Scheduled Courses</h4>
+                {selectedDateEvents.courseRuns.map((run) => (
+                  <Card key={run.id} className="mb-2">
+                    <CardContent className="p-4">
                       <div className="space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <h4 className="font-medium">{course.title}</h4>
-                            <Badge variant="default">
-                              Course
-                            </Badge>
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <h5 className="font-medium">{run.course.title}</h5>
+                          <Badge>Course</Badge>
                         </div>
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <p><strong>Time:</strong> {course.time}</p>
-                          <p><strong>Venue:</strong> {course.venue}</p>
-                          <p><strong>Participants:</strong> {course.participants}</p>
-                          <p><strong>Organization:</strong> {course.organization}</p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-              
-              {/* Blockouts */}
-              {getSelectedDateBlockouts().length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-destructive">Blockouts</h4>
-                  {getSelectedDateBlockouts().map((blockout) => (
-                    <Card key={blockout.id} className="p-4 border-destructive/20">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="space-y-1">
-                            <h4 className="font-medium">{blockout.title}</h4>
-                            <Badge variant="destructive">
-                              Unavailable
-                            </Badge>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3" />
+                            <span>{run.startTime} - {run.endTime}</span>
                           </div>
-                          {blockout.description && (
-                            <p className="text-sm text-muted-foreground">{blockout.description}</p>
+                          {run.venue && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-3 w-3" />
+                              <span>{run.venue.name}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Users className="h-3 w-3" />
+                            <span>{run.currentParticipants} / {run.maxParticipants} participants</span>
+                          </div>
+                          {run.organization && (
+                            <div className="flex items-center gap-2">
+                              <Building className="h-3 w-3" />
+                              <span>{run.organization.name}</span>
+                            </div>
                           )}
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveBlockout(blockout.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Blockouts */}
+            {selectedDateEvents.blockouts.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-red-600 mb-2">Blockouts</h4>
+                {selectedDateEvents.blockouts.map((blockout) => (
+                  <Card key={blockout.id} className="mb-2 cursor-pointer hover:bg-muted/50"
+                        onClick={() => setEditingBlockout({...blockout, trainerName: trainerName || 'Trainer'})}>
+                    <CardContent className="p-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h5 className="font-medium">{blockout.reason}</h5>
+                          <Badge variant="destructive">Unavailable</Badge>
+                        </div>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-3 w-3" />
+                            <span>
+                              {blockout.startDate === blockout.endDate 
+                                ? format(parseISO(blockout.startDate), 'MMM do, yyyy')
+                                : `${format(parseISO(blockout.startDate), 'MMM do')} - ${format(parseISO(blockout.endDate), 'MMM do, yyyy')}`
+                              }
+                            </span>
+                          </div>
+                          {blockout.description && (
+                            <p className="text-xs">{blockout.description}</p>
+                          )}
                         </div>
                       </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-              
-              {getSelectedDateCourses().length === 0 && getSelectedDateBlockouts().length === 0 && (
-                <p className="text-muted-foreground">No scheduled courses or blockouts for this date</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Blockout</DialogTitle>
-            <DialogDescription>
-              Block out dates when trainer is unavailable
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="startDate">Start Date *</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={newBlockout.startDate}
-                onChange={(e) => setNewBlockout(prev => ({ ...prev, startDate: e.target.value }))}
-              />
-            </div>
+            {/* No events */}
+            {selectedDateEvents.courseRuns.length === 0 && selectedDateEvents.blockouts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No events scheduled for this date</p>
+                <p className="text-sm">Click "Add Blockout Date Range" to block this date</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-            <div>
-              <Label htmlFor="endDate">End Date *</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={newBlockout.endDate}
-                onChange={(e) => setNewBlockout(prev => ({ ...prev, endDate: e.target.value }))}
-              />
-            </div>
+      {/* Add Blockout Dialog */}
+      <AddTrainerBlockoutDialog
+        trainerId={trainerId}
+        trainerName={trainerName || 'Trainer'}
+        onBlockoutAdd={handleBlockoutAdd}
+      />
 
-            <div>
-              <Label htmlFor="title">Reason *</Label>
-              <Input
-                id="title"
-                value={newBlockout.title}
-                onChange={(e) => setNewBlockout(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="e.g., Personal Leave, Training, Conference"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={newBlockout.description}
-                onChange={(e) => setNewBlockout(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Additional details"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddBlockout}>
-              Add Blockout
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Blockout Dialog */}
+      {editingBlockout && (
+        <EditTrainerBlockoutDialog
+          blockout={editingBlockout}
+          onBlockoutUpdate={handleBlockoutEdit}
+          onClose={() => setEditingBlockout(null)}
+        />
+      )}
     </div>
-  );
+  )
 }
+
+export default TrainerCalendar

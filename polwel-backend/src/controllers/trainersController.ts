@@ -55,7 +55,7 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
         },
         skip,
         take: Number(limit),
-        orderBy: { createdAt: 'desc' }
+        orderBy: { name: 'asc' }
       }),
       prisma.user.count({ where })
     ]);
@@ -370,15 +370,31 @@ export const getTrainerBlockouts = async (req: AuthenticatedRequest, res: Respon
     const where: any = { trainerId: id };
 
     if (startDate && endDate) {
-      where.date = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string)
-      };
+      where.OR = [
+        {
+          startDate: {
+            gte: new Date(startDate as string),
+            lte: new Date(endDate as string)
+          }
+        },
+        {
+          endDate: {
+            gte: new Date(startDate as string),
+            lte: new Date(endDate as string)
+          }
+        },
+        {
+          AND: [
+            { startDate: { lte: new Date(startDate as string) } },
+            { endDate: { gte: new Date(endDate as string) } }
+          ]
+        }
+      ];
     }
 
     const blockouts = await prisma.trainerBlockout.findMany({
       where,
-      orderBy: { date: 'asc' }
+      orderBy: { startDate: 'asc' }
     });
 
     return res.json(blockouts);
@@ -395,12 +411,23 @@ export const getTrainerBlockouts = async (req: AuthenticatedRequest, res: Respon
 export const createTrainerBlockout = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { date, reason, type, description, isRecurring, recurringPattern } = req.body;
+    const { startDate, endDate, reason, type, description, isRecurring, recurringPattern } = req.body;
 
-    if (!id || !date || !reason || !type) {
+    if (!id || !startDate || !endDate || !reason || !type) {
       return res.status(400).json({
         success: false,
-        message: 'Trainer ID, date, reason, and type are required'
+        message: 'Trainer ID, start date, end date, reason, and type are required'
+      });
+    }
+
+    // Validate date range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (start > end) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date cannot be after end date'
       });
     }
 
@@ -422,7 +449,8 @@ export const createTrainerBlockout = async (req: AuthenticatedRequest, res: Resp
     const blockout = await prisma.trainerBlockout.create({
       data: {
         trainerId: id,
-        date: new Date(date),
+        startDate: start,
+        endDate: end,
         reason,
         type,
         description: description || null,
@@ -536,6 +564,76 @@ export const getPartnerOrganizations = async (req: AuthenticatedRequest, res: Re
     });
   } catch (error) {
     console.error('Get partner organizations error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Get trainer course runs
+export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trainer ID is required'
+      });
+    }
+
+    let whereClause: any = {
+      trainerId: id
+    };
+
+    // Add date filtering if provided
+    if (startDate && endDate) {
+      whereClause.startDate = {
+        gte: new Date(startDate as string),
+        lte: new Date(endDate as string)
+      };
+    }
+
+    const courseRuns = await prisma.courseRun.findMany({
+      where: whereClause,
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true
+          }
+        },
+        venue: {
+          select: {
+            id: true,
+            name: true,
+            address: true
+          }
+        },
+        trainer: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        startDate: 'asc'
+      }
+    });
+
+    return res.json({
+      success: true,
+      runs: courseRuns,
+      message: `Found ${courseRuns.length} course run(s) for trainer`
+    });
+
+  } catch (error) {
+    console.error('Get trainer course runs error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

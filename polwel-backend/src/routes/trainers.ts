@@ -9,7 +9,8 @@ import {
   getTrainerBlockouts,
   createTrainerBlockout,
   deleteTrainerBlockout,
-  getPartnerOrganizations
+  getPartnerOrganizations,
+  getTrainerCourseRuns
 } from '../controllers/trainersController';
 
 const router = express.Router();
@@ -31,5 +32,8 @@ router.delete('/:id', authorizeRoles('POLWEL'), deleteTrainer);
 router.get('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getTrainerBlockouts);
 router.post('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), createTrainerBlockout);
 router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), deleteTrainerBlockout);
+
+// Trainer course runs
+router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getTrainerCourseRuns);
 
 export default router;
