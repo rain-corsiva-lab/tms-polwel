@@ -85,12 +85,35 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
     if (open && user.permissions) {
       const updatedPermissions = { ...permissions };
       
-      user.permissions.forEach(({ permission }) => {
-        const module = permission.module as keyof UserPermissions;
-        const action = permission.action as keyof ModulePermissions;
+      user.permissions.forEach((userPermission) => {
+        // Extract module and action from permission name (e.g., "users.view" -> module: "users", action: "view")
+        const permissionName = userPermission.permissionName;
+        const [permissionModule, permissionAction] = permissionName.split('.');
         
-        if (updatedPermissions[module] && updatedPermissions[module][action] !== undefined) {
-          updatedPermissions[module][action] = true;
+        // Map database permission names to frontend module names
+        const moduleMapping: Record<string, keyof UserPermissions> = {
+          'users': 'user-management-polwel',
+          'trainers': 'user-management-trainers',
+          'clients': 'user-management-client-orgs',
+          'courses': 'course-management',
+          'venues': 'course-venue-setup',
+          'bookings': 'booking-management',
+          'calendar': 'training-calendar',
+          'reports': 'reports-analytics'
+        };
+        
+        const frontendModule = moduleMapping[permissionModule];
+        const actionMapping: Record<string, keyof ModulePermissions> = {
+          'view': 'view',
+          'create': 'create',
+          'edit': 'edit',
+          'delete': 'delete'
+        };
+        
+        const frontendAction = actionMapping[permissionAction];
+        
+        if (frontendModule && frontendAction && updatedPermissions[frontendModule] && updatedPermissions[frontendModule][frontendAction] !== undefined) {
+          updatedPermissions[frontendModule][frontendAction] = true;
         }
       });
       

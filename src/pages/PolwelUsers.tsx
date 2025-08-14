@@ -5,11 +5,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key } from "lucide-react";
+import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
 import { EditPolwelUserDialog } from "@/components/EditPolwelUserDialog";
-import { AuditTrailEntry } from "@/components/AuditTrailDialog";
+import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog";
+import { ViewDetailsDialog } from "@/components/ViewDetailsDialog";
+import { PasswordResetDialog } from "@/components/PasswordResetDialog";
 import { polwelUsersApi, debugAuthState } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -129,6 +131,12 @@ export default function PolwelUsers() {
 
       setUsers(response.users || []);
       setPagination(response.pagination || pagination);
+      
+      // Debug: Log the first user to see the data structure
+      if (response.users && response.users.length > 0) {
+        console.log('PolwelUsers: Sample user data:', response.users[0]);
+        console.log('PolwelUsers: User ID type:', typeof response.users[0].id, 'Value:', response.users[0].id);
+      }
     } catch (error) {
       console.error('Error fetching POLWEL users:', error);
       // Use dummy data when API fails
@@ -341,10 +349,41 @@ export default function PolwelUsers() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleResetPassword(user.id)}>
+                          <ViewDetailsDialog 
+                            userId={user.id} 
+                            userName={user.name}
+                            trigger={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                            }
+                          />
+                          <AuditTrailDialog 
+                            userId={user.id} 
+                            userName={user.name} 
+                            userEmail={user.email}
+                          >
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <History className="h-4 w-4 mr-2" />
+                              View Audit Trail
+                            </DropdownMenuItem>
+                          </AuditTrailDialog>
+                          <PasswordResetDialog 
+                            userId={user.id} 
+                            userName={user.name} 
+                            userEmail={user.email}
+                            trigger={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Send Password Reset Link
+                              </DropdownMenuItem>
+                            }
+                          />
+                          {/* <DropdownMenuItem onClick={() => handleResetPassword(user.id)}>
                             <Key className="h-4 w-4 mr-2" />
-                            Reset Password
-                          </DropdownMenuItem>
+                            Reset Password (Legacy)
+                          </DropdownMenuItem> */}
                           <DropdownMenuItem 
                             onClick={() => handleToggleMfa(user.id, !user.mfaEnabled)}
                           >

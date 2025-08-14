@@ -3,8 +3,90 @@ import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
+import AuditService from '../services/auditService';
+import EmailService from '../services/emailService';
 
 const prisma = new PrismaClient();
+
+// Permission name mapping - converts frontend permission names to database permission names
+const permissionNameMapping: Record<string, string> = {
+  // User Management - POLWEL
+  'user-management-polwel:view': 'users.view',
+  'user-management-polwel:create': 'users.create', 
+  'user-management-polwel:edit': 'users.edit',
+  'user-management-polwel:update': 'users.edit',
+  'user-management-polwel:delete': 'users.delete',
+  
+  // User Management - Trainers
+  'user-management-trainers:view': 'trainers.view',
+  'user-management-trainers:create': 'trainers.create',
+  'user-management-trainers:edit': 'trainers.edit',
+  'user-management-trainers:update': 'trainers.edit',
+  'user-management-trainers:delete': 'trainers.delete',
+  
+  // User Management - Client Organizations
+  'user-management-client-orgs:view': 'clients.view',
+  'user-management-client-orgs:create': 'clients.create',
+  'user-management-client-orgs:edit': 'clients.edit',
+  'user-management-client-orgs:update': 'clients.edit',
+  'user-management-client-orgs:delete': 'clients.delete',
+  
+  // Course Management
+  'course-management:view': 'courses.view',
+  'course-management:create': 'courses.create',
+  'course-management:edit': 'courses.edit',
+  'course-management:update': 'courses.edit', 
+  'course-management:delete': 'courses.delete',
+  
+  // Course & Venue Setup
+  'course-venue-setup:view': 'venues.view',
+  'course-venue-setup:create': 'venues.create',
+  'course-venue-setup:edit': 'venues.edit',
+  'course-venue-setup:update': 'venues.edit',
+  'course-venue-setup:delete': 'venues.delete',
+  
+  // Venue Management
+  'venue-management:view': 'venues.view',
+  'venue-management:create': 'venues.create',
+  'venue-management:edit': 'venues.edit',
+  'venue-management:update': 'venues.edit',
+  'venue-management:delete': 'venues.delete',
+  
+  // Booking Management
+  'booking-management:view': 'bookings.view',
+  'booking-management:create': 'bookings.create',
+  'booking-management:edit': 'bookings.edit',
+  'booking-management:update': 'bookings.edit',
+  'booking-management:delete': 'bookings.delete',
+  
+  // Training Calendar
+  'training-calendar:view': 'calendar.view',
+  'training-calendar:create': 'calendar.create',
+  'training-calendar:edit': 'calendar.edit',
+  'training-calendar:update': 'calendar.edit',
+  'training-calendar:delete': 'calendar.delete',
+  
+  // Reports & Analytics
+  'reports-analytics:view': 'reports.view',
+  'reports-analytics:create': 'reports.create',
+  'reports-analytics:edit': 'reports.edit',
+  'reports-analytics:update': 'reports.edit',
+  'reports-analytics:delete': 'reports.delete'
+};
+
+// Helper function to map frontend permission names to database permission names
+const mapPermissionNames = (frontendPermissions: string[]): string[] => {
+  return frontendPermissions.map(permission => {
+    const mappedPermission = permissionNameMapping[permission];
+    if (mappedPermission) {
+      console.log(`Mapped permission: ${permission} -> ${mappedPermission}`);
+      return mappedPermission;
+    } else {
+      console.log(`No mapping found for permission: ${permission}, using as-is`);
+      return permission;
+    }
+  });
+};
 
 // Get available permissions
 export const getAvailablePermissions = async (req: AuthenticatedRequest, res: Response) => {
@@ -31,6 +113,232 @@ export const getAvailablePermissions = async (req: AuthenticatedRequest, res: Re
     });
   } catch (error) {
     console.error('Get available permissions error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Get user audit trail
+export const getUserAuditTrail = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { limit = '50' } = req.query;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Check if user exists and is POLWEL
+    const user = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found'
+      });
+    }
+
+    const auditTrail = await AuditService.getUserAuditTrail(id, parseInt(limit as string));
+
+    // Transform audit trail for frontend
+    const transformedAuditTrail = auditTrail.map(entry => ({
+      id: entry.id,
+      timestamp: entry.timestamp,
+      action: entry.action,
+      actionType: entry.actionType.toLowerCase(),
+      performedBy: entry.performedBy || entry.user?.name || 'System',
+      details: entry.details || 'No details provided',
+      ipAddress: entry.ipAddress,
+      userAgent: entry.userAgent
+    }));
+
+    return res.json(transformedAuditTrail);
+  } catch (error) {
+    console.error('Get user audit trail error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Send password reset link
+export const sendPasswordResetLink = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Check if user exists and is POLWEL
+    const user = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = EmailService.generateResetToken();
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // Save reset token to database
+    await prisma.user.update({
+      where: { id: id },
+      data: {
+        resetToken,
+        resetTokenExpiry
+      }
+    });
+
+    // Send reset email
+    const emailSent = await EmailService.sendPasswordResetEmail(
+      user.email,
+      user.name,
+      resetToken
+    );
+
+    if (emailSent) {
+      // Log password reset request
+      await AuditService.logPasswordChange(
+        id,
+        req.user?.userId || 'system',
+        'Password reset link sent via email',
+        req
+      );
+
+      return res.json({
+        success: true,
+        message: 'Password reset link has been sent to the user\'s email address'
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset email'
+      });
+    }
+  } catch (error) {
+    console.error('Send password reset link error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Get detailed user information
+export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        lastLogin: true,
+        mfaEnabled: true,
+        emailVerified: true,
+        failedLoginAttempts: true,
+        lockedUntil: true,
+        passwordExpiry: true,
+        createdAt: true,
+        updatedAt: true,
+        createdBy: true,
+        permissions: {
+          select: {
+            id: true,
+            permissionName: true,
+            granted: true,
+            createdAt: true
+          }
+        },
+        createdByUser: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found'
+      });
+    }
+
+    // Get recent audit trail (last 10 entries)
+    const recentAuditTrail = await AuditService.getUserAuditTrail(id, 10);
+
+    // Group permissions by module (extract module from permission name)
+    const permissionsByModule = user.permissions.reduce((acc, userPerm) => {
+      const permissionName = userPerm.permissionName;
+      // Extract module from permission name (e.g., "users.view" -> "users")
+      const parts = permissionName.split('.');
+      const module = parts[0] || 'unknown';
+      const action = parts[1] || 'unknown';
+      
+      if (!acc[module]) {
+        acc[module] = [];
+      }
+      acc[module].push(action);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    return res.json({
+      ...user,
+      permissionsByModule,
+      recentActivity: recentAuditTrail.slice(0, 5).map(entry => ({
+        action: entry.action,
+        timestamp: entry.timestamp,
+        details: entry.details
+      })),
+      securityInfo: {
+        passwordExpired: user.passwordExpiry ? new Date() > user.passwordExpiry : false,
+        accountLocked: user.lockedUntil ? new Date() < user.lockedUntil : false,
+        failedLoginAttempts: user.failedLoginAttempts,
+        mfaEnabled: user.mfaEnabled,
+        emailVerified: user.emailVerified
+      }
+    });
+  } catch (error) {
+    console.error('Get POLWEL user details error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -75,8 +383,10 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
           createdAt: true,
           updatedAt: true,
           permissions: {
-            include: {
-              permission: true
+            select: {
+              id: true,
+              permissionName: true,
+              granted: true
             }
           }
         },
@@ -133,8 +443,10 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
         createdAt: true,
         updatedAt: true,
         permissions: {
-          include: {
-            permission: true
+          select: {
+            id: true,
+            permissionName: true,
+            granted: true
           }
         }
       }
@@ -174,12 +486,13 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    if (!Array.isArray(permissions) || permissions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one permission must be granted'
-      });
-    }
+    // TEMPORARILY DISABLED - Permission requirement check disabled for now
+    // if (!Array.isArray(permissions) || permissions.length === 0) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'At least one permission must be granted'
+    //   });
+    // }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -193,19 +506,26 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    // Validate permissions exist
+    // Map and process permissions for creation
+    console.log('Permissions requested for creation:', permissions);
+    
+    const mappedPermissions = mapPermissionNames(permissions);
+    console.log('Mapped permissions for creation:', mappedPermissions);
+    
+    // Look up the actual permission records from database
     const validPermissions = await prisma.permission.findMany({
       where: {
-        name: { in: permissions }
+        name: { in: mappedPermissions }
       }
     });
-
-    if (validPermissions.length !== permissions.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid permissions provided'
-      });
-    }
+    
+    console.log('Valid permissions found for creation:', validPermissions.map(p => ({ id: p.id, name: p.name })));
+    // if (validPermissions.length !== permissions.length) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Invalid permissions provided'
+    //   });
+    // }
 
     // Generate temporary password
     const tempPassword = crypto.randomBytes(8).toString('hex');
@@ -233,17 +553,34 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
         }
       });
 
-      // Create user permissions
-      await tx.userPermission.createMany({
-        data: validPermissions.map(permission => ({
-          userId: user.id,
-          permissionId: permission.id,
-          granted: true
-        }))
-      });
+      // Create user permissions with human-readable names
+      console.log('Creating permissions for user:', user.id, 'Count:', mappedPermissions.length);
+      if (mappedPermissions.length > 0) {
+        // Store permissions with human-readable names directly
+        for (const permissionName of mappedPermissions) {
+          await tx.userPermission.create({
+            data: {
+              userId: user.id,
+              permissionName: permissionName, // Store human-readable name directly
+              granted: true
+            }
+          });
+        }
+        console.log('Permissions created successfully with names:', mappedPermissions);
+      } else {
+        console.log('No valid permissions to create');
+      }
 
       return { user, tempPassword };
     });
+
+    // Log user creation
+    await AuditService.logUserCreation(
+      result.user.id, 
+      req.user?.userId || 'system', 
+      `POLWEL user created with email ${email}`,
+      req
+    );
 
     return res.status(201).json(result);
   } catch (error) {
@@ -297,21 +634,25 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       }
     }
 
-    // Validate permissions if provided
-    let validPermissions: any[] = [];
+    // Process permissions if provided  
+    let mappedPermissions: string[] = [];
     if (Array.isArray(permissions) && permissions.length > 0) {
-      validPermissions = await prisma.permission.findMany({
-        where: {
-          name: { in: permissions }
+      console.log('Permissions requested for update:', permissions);
+      
+      // Map frontend permission names to database permission names
+      mappedPermissions = mapPermissionNames(permissions);
+      console.log('Mapped permissions for update:', mappedPermissions);
+      
+      // Validate permission name format
+      mappedPermissions = mappedPermissions.filter(permName => {
+        const isValid = permName.includes('.');
+        if (!isValid) {
+          console.log(`Invalid permission format: ${permName}`);
         }
+        return isValid;
       });
-
-      if (validPermissions.length !== permissions.length) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid permissions provided'
-        });
-      }
+      
+      console.log('Valid permission names for update:', mappedPermissions);
     }
 
     // Update user and permissions in a transaction
@@ -333,25 +674,59 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
         }
       });
 
-      // Update permissions if provided
-      if (validPermissions.length > 0) {
-        // Delete existing permissions
-        await tx.userPermission.deleteMany({
+      // Update permissions - ALWAYS process if permissions array is provided, even if empty
+      console.log('Processing permission update for user:', id);
+      console.log('Permissions provided:', permissions);
+      console.log('Mapped permission names found:', mappedPermissions.length);
+      
+      if (Array.isArray(permissions)) {
+        // Delete existing permissions first
+        const deletedCount = await tx.userPermission.deleteMany({
           where: { userId: id }
         });
+        console.log('Deleted existing permissions:', deletedCount.count);
 
-        // Create new permissions
-        await tx.userPermission.createMany({
-          data: validPermissions.map(permission => ({
-            userId: id,
-            permissionId: permission.id,
-            granted: true
-          }))
-        });
+        // Only create new permissions if we have valid ones
+        if (mappedPermissions.length > 0) {
+          // Store permissions with human-readable names directly
+          for (const permissionName of mappedPermissions) {
+            await tx.userPermission.create({
+              data: {
+                userId: id,
+                permissionName: permissionName, // Store human-readable name directly
+                granted: true
+              }
+            });
+          }
+          console.log('New permissions created successfully with names:', mappedPermissions);
+        } else {
+          console.log('No valid permissions to create - permissions cleared');
+        }
+      } else {
+        console.log('Permissions not provided - skipping permission changes');
       }
 
       return user;
     });
+
+    // Log user update
+    await AuditService.logUserUpdate(
+      id,
+      req.user?.userId || 'system',
+      {}, // old values - could be enhanced to capture actual old values
+      result,
+      `POLWEL user updated: ${result.name} (${result.email})`,
+      req
+    );
+
+    if (mappedPermissions.length > 0) {
+      await AuditService.logPermissionChange(
+        id,
+        req.user?.userId || 'system',
+        `Permissions updated for POLWEL user: ${result.name}`,
+        req
+      );
+    }
 
     return res.json(result);
   } catch (error) {

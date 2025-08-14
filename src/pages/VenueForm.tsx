@@ -1,155 +1,266 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, X } from "lucide-react";
+import { venuesApi, type Contact, type Venue } from "@/lib/api";
 
-interface Contact {
-  id: string;
-  name: string;
-  number: string;
-  email: string;
-}
-
-interface Venue {
-  id: string;
+interface VenueFormData {
   name: string;
   capacity: string;
-  feeType: "per_head" | "per_venue";
-  fee: number;
+  feeType: string;
+  fee: number | string;
   contacts: Contact[];
   remarks: string;
+  status: string;
 }
 
 const VenueForm = () => {
+  const navigate = useNavigate();
+  const { id: venueId } = useParams();
   const { toast } = useToast();
-  
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<VenueFormData>({
     name: "",
     capacity: "",
-    feeType: "per_head" as "per_head" | "per_venue",
-    fee: 0,
-    contacts: [{ id: "1", name: "", number: "", email: "" }] as Contact[],
-    remarks: ""
+    feeType: "per_head",
+    fee: "",
+    contacts: [{ id: "temp-1", name: "", number: "", email: "" }],
+    remarks: "",
+    status: "ACTIVE"
   });
 
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleInputChange = (field: string, value: any) => {
+  useEffect(() => {
+    if (venueId) {
+      loadVenueData();
+    }
+  }, [venueId]);
+
+  const loadVenueData = async () => {
+    try {
+      setLoading(true);
+      const response = await venuesApi.getById(venueId!);
+      
+      if (response.success && response.data.venue) {
+        const venue = response.data.venue;
+        setFormData({
+          name: venue.name,
+          capacity: venue.capacity,
+          feeType: venue.feeType,
+          fee: venue.fee,
+          contacts: venue.contacts && venue.contacts.length > 0 
+            ? venue.contacts 
+            : [{ id: "temp-1", name: "", number: "", email: "" }],
+          remarks: venue.remarks || "",
+          status: venue.status || "ACTIVE"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Failed to load venue data",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error loading venue:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load venue data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof VenueFormData, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleContactChange = (contactId: string, field: string, value: string) => {
+  const handleContactChange = (index: number, field: keyof Contact, value: string) => {
     setFormData(prev => ({
       ...prev,
-      contacts: prev.contacts.map(contact =>
-        contact.id === contactId ? { ...contact, [field]: value } : contact
+      contacts: prev.contacts.map((contact, i) => 
+        i === index ? { ...contact, [field]: value } : contact
       )
     }));
   };
 
   const addContact = () => {
-    const newContact: Contact = {
-      id: Date.now().toString(),
-      name: "",
-      number: "",
-      email: ""
-    };
+    const newId = `temp-${Date.now()}`;
     setFormData(prev => ({
       ...prev,
-      contacts: [...prev.contacts, newContact]
+      contacts: [...prev.contacts, { id: newId, name: "", number: "", email: "" }]
     }));
   };
 
-  const removeContact = (contactId: string) => {
-    if (formData.contacts.length === 1) {
-      toast({
-        title: "Error",
-        description: "At least one contact is required",
-        variant: "destructive"
-      });
-      return;
+  const removeContact = (index: number) => {
+    if (formData.contacts.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        contacts: prev.contacts.filter((_, i) => i !== index)
+      }));
     }
-    setFormData(prev => ({
-      ...prev,
-      contacts: prev.contacts.filter(contact => contact.id !== contactId)
-    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate required fields
-    if (!formData.name) {
+  const validateForm = () => {
+    if (!formData.name.trim()) {
       toast({
-        title: "Error",
+        title: "Validation Error",
         description: "Venue name is required",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
-    // Validate at least one complete contact
-    const hasValidContact = formData.contacts.some(contact => 
-      contact.name.trim() && contact.number.trim() && contact.email.trim()
-    );
-
-    if (!hasValidContact) {
+    if (!formData.capacity.trim()) {
       toast({
-        title: "Error",
-        description: "At least one complete contact (name, number, email) is required",
+        title: "Validation Error", 
+        description: "Capacity is required",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
-    // Filter out incomplete contacts
+    if (!formData.fee || formData.fee === "") {
+      toast({
+        title: "Validation Error",
+        description: "Fee is required",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validate contacts
     const validContacts = formData.contacts.filter(contact => 
-      contact.name.trim() && contact.number.trim() && contact.email.trim()
+      contact.name.trim() || contact.number.trim() || contact.email.trim()
     );
 
-    const newVenue: Venue = {
-      ...formData,
-      contacts: validContacts,
-      id: Date.now().toString()
-    };
+    if (validContacts.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "At least one contact is required",
+        variant: "destructive"
+      });
+      return false;
+    }
 
-    toast({
-      title: "Venue Added",
-      description: "Venue has been successfully added"
-    });
-    
-    // Reset form
-    setFormData({
-      name: "",
-      capacity: "",
-      feeType: "per_head",
-      fee: 0,
-      contacts: [{ id: "1", name: "", number: "", email: "" }],
-      remarks: ""
-    });
+    for (const contact of validContacts) {
+      if (contact.name.trim() && (!contact.number.trim() || !contact.email.trim())) {
+        toast({
+          title: "Validation Error",
+          description: "Complete contact information is required (name, number, and email)",
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+
+    return true;
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    try {
+      setSubmitting(true);
+
+      // Filter out empty contacts
+      const validContacts = formData.contacts.filter(contact => 
+        contact.name.trim() && contact.number.trim() && contact.email.trim()
+      );
+
+      const venueData = {
+        name: formData.name.trim(),
+        capacity: formData.capacity.trim(),
+        feeType: (formData.feeType === "per_head" ? "PER_HEAD" : "PER_VENUE") as "PER_HEAD" | "PER_VENUE",
+        fee: typeof formData.fee === 'string' ? parseFloat(formData.fee) : formData.fee,
+        contacts: validContacts,
+        remarks: formData.remarks.trim(),
+        status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE"
+      };
+
+      let response;
+      if (venueId) {
+        response = await venuesApi.update(venueId, venueData);
+      } else {
+        response = await venuesApi.create(venueData);
+      }
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: venueId ? "Venue updated successfully" : "Venue created successfully"
+        });
+        navigate('/venue-setup');
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Failed to save venue",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error saving venue:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save venue",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading venue data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Venue Setup</h1>
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate("/venue-setup")}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Venues
+        </Button>
+        <h1 className="text-3xl font-bold">
+          {venueId ? 'Edit Venue' : 'Add New Venue'}
+        </h1>
       </div>
 
-      {/* Add/Edit Venue Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Add New Venue</CardTitle>
+          <CardTitle>Venue Information</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Venue Name *</Label>
@@ -157,25 +268,31 @@ const VenueForm = () => {
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="e.g. Orchard Hotel, POLWEL Learning Pod"
+                  placeholder="Enter venue name"
+                  required
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="capacity">Capacity</Label>
+                <Label htmlFor="capacity">Capacity *</Label>
                 <Input
                   id="capacity"
                   value={formData.capacity}
                   onChange={(e) => handleInputChange("capacity", e.target.value)}
-                  placeholder="e.g. 70-80%, 25 pax"
+                  placeholder="e.g., 50-60 pax"
+                  required
                 />
               </div>
             </div>
 
+            {/* Fee Structure */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="feeType">Fee Type</Label>
-                <Select value={formData.feeType} onValueChange={(value) => handleInputChange("feeType", value)}>
+                <Label htmlFor="feeType">Fee Type *</Label>
+                <Select 
+                  value={formData.feeType} 
+                  onValueChange={(value) => handleInputChange("feeType", value)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -185,81 +302,92 @@ const VenueForm = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="fee">Fee Amount ($)</Label>
+                <Label htmlFor="fee">Fee Amount ($) *</Label>
                 <Input
                   id="fee"
                   type="number"
+                  step="0.01"
+                  min="0"
                   value={formData.fee}
-                  onChange={(e) => handleInputChange("fee", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
+                  onChange={(e) => handleInputChange("fee", e.target.value)}
+                  placeholder="Enter fee amount"
+                  required
                 />
               </div>
             </div>
 
-            {/* Points of Contact Section */}
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select 
+                value={formData.status} 
+                onValueChange={(value) => handleInputChange("status", value)}
+              >
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Contact Information */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-semibold">Points of Contact *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addContact}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
+                <Button type="button" variant="outline" onClick={addContact}>
+                  <Plus className="h-4 w-4 mr-2" />
                   Add Contact
                 </Button>
               </div>
-              
+
               {formData.contacts.map((contact, index) => (
-                <Card key={contact.id} className="p-4">
+                <Card key={index} className="p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium">Contact {index + 1}</h4>
+                    <h4 className="font-semibold">Contact {index + 1}</h4>
                     {formData.contacts.length > 1 && (
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="destructive"
                         size="sm"
-                        onClick={() => removeContact(contact.id)}
-                        className="text-destructive hover:text-destructive"
+                        onClick={() => removeContact(index)}
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`contact-name-${contact.id}`}>Name</Label>
+                      <Label>Name</Label>
                       <Input
-                        id={`contact-name-${contact.id}`}
                         value={contact.name}
-                        onChange={(e) => handleContactChange(contact.id, "name", e.target.value)}
-                        placeholder="John Doe"
+                        onChange={(e) => handleContactChange(index, "name", e.target.value)}
+                        placeholder="Contact name"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor={`contact-number-${contact.id}`}>Phone Number</Label>
+                      <Label>Phone Number</Label>
                       <Input
-                        id={`contact-number-${contact.id}`}
                         value={contact.number}
-                        onChange={(e) => handleContactChange(contact.id, "number", e.target.value)}
+                        onChange={(e) => handleContactChange(index, "number", e.target.value)}
                         placeholder="+65 1234 5678"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor={`contact-email-${contact.id}`}>Email</Label>
+                      <Label>Email</Label>
                       <Input
-                        id={`contact-email-${contact.id}`}
                         type="email"
                         value={contact.email}
-                        onChange={(e) => handleContactChange(contact.id, "email", e.target.value)}
-                        placeholder="john@venue.com"
+                        onChange={(e) => handleContactChange(index, "email", e.target.value)}
+                        placeholder="contact@example.com"
                       />
                     </div>
                   </div>
@@ -267,24 +395,32 @@ const VenueForm = () => {
               ))}
             </div>
 
+            {/* Remarks */}
             <div className="space-y-2">
               <Label htmlFor="remarks">Remarks</Label>
               <Textarea
                 id="remarks"
                 value={formData.remarks}
                 onChange={(e) => handleInputChange("remarks", e.target.value)}
-                placeholder="Enter venue details, amenities, requirements, etc. (for mass email to clients)"
-                rows={3}
+                placeholder="Additional notes about the venue..."
+                rows={4}
               />
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit">Add Venue</Button>
+            {/* Submit Button */}
+            <div className="flex justify-end pt-4">
+              <Button type="submit" disabled={submitting}>
+                {submitting 
+                  ? "Saving..." 
+                  : venueId 
+                    ? "Update Venue" 
+                    : "Create Venue"
+                }
+              </Button>
             </div>
           </form>
         </CardContent>
       </Card>
-
     </div>
   );
 };

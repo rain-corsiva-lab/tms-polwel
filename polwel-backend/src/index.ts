@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
@@ -18,6 +18,8 @@ import organizationRoutes from './routes/organizations';
 import polwelUsersRoutes from './routes/polwelUsers';
 import trainersRoutes from './routes/trainers';
 import clientOrganizationsRoutes from './routes/clientOrganizations';
+import passwordResetRoutes from './routes/passwordReset';
+import referencesRoutes from './routes/references';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -38,13 +40,34 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
+// CORS configuration
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:8080,http://localhost:8081')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const corsOptions: CorsOptions = {
+  origin(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl)
+    if (!origin) return callback(null, true);
+    // Allow configured origins
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow any localhost origin in dev to avoid port mismatch during Vite port switching
+    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+};
+
 // Middleware
 app.use(helmet());
 app.use(limiter);
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true,
-}));
+app.use(cors(corsOptions));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -69,6 +92,8 @@ app.use('/api/organizations', authenticate, organizationRoutes);
 app.use('/api/polwel-users', polwelUsersRoutes);
 app.use('/api/trainers', trainersRoutes);
 app.use('/api/client-organizations', clientOrganizationsRoutes);
+app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/references', authenticate, referencesRoutes);
 
 // Error handling middleware
 app.use(notFound);

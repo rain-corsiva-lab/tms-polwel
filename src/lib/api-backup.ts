@@ -28,7 +28,7 @@ export const debugAuthState = () => {
 };
 
 // API request helper with connection retry and fallback
-const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+const apiRequest = async (endpoint: string, options: RequestInit = {}, retries = 2) => {
   const token = getAuthToken();
   
   const config: RequestInit = {
@@ -40,14 +40,14 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     },
   };
 
+  let lastError;
+  
   // Try different approaches to handle connection issues
   const attempts = [
     () => fetch(`${API_BASE_URL}${endpoint}`, config),
     () => fetch(`${API_BASE_URL}${endpoint}`, { ...config, mode: 'cors' }),
     () => fetch(`http://127.0.0.1:3001/api${endpoint}`, config),
   ];
-
-  let lastError;
 
   for (let i = 0; i < attempts.length; i++) {
     try {
@@ -59,15 +59,6 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           error: 'Network error', 
           message: `HTTP error! status: ${response.status}` 
         }));
-        
-        // Handle specific authentication errors
-        if (response.status === 401) {
-          localStorage.removeItem('polwel_access_token');
-          localStorage.removeItem('polwel_refresh_token');
-          localStorage.removeItem('polwel_user_data');
-          window.location.href = '/login';
-          throw new Error('Session expired. Please login again.');
-        }
         
         console.error(`API Error (${response.status}):`, errorData);
         throw new Error(`API Error: ${errorData.message || response.statusText}`);
@@ -91,17 +82,18 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         
         if (i < attempts.length - 1) {
           console.log(`Connection refused, trying alternative approach...`);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
           continue;
         }
       }
     }
   }
 
-  // Fallback data for critical endpoints
-  console.error('All API attempts failed, using fallback data for:', endpoint);
+  // If all attempts failed, return fallback data for certain endpoints
+  console.error('All API attempts failed, checking for fallback data...');
   
   if (endpoint === '/references/categories') {
+    console.log('Returning fallback categories data');
     return {
       success: true,
       data: {
@@ -132,6 +124,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   }
   
   if (endpoint === '/references/trainers') {
+    console.log('Returning fallback trainers data');
     return {
       success: true,
       data: {
@@ -145,6 +138,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   }
   
   if (endpoint === '/references/venues') {
+    console.log('Returning fallback venues data');
     return {
       success: true,
       data: {
@@ -158,6 +152,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   }
   
   if (endpoint === '/references/partners') {
+    console.log('Returning fallback partners data');
     return {
       success: true,
       data: {
@@ -169,7 +164,32 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     };
   }
 
+  // For other endpoints, throw the last error
   throw lastError;
+      
+      // Handle specific authentication errors
+      if (response.status === 401) {
+        // Token expired or invalid - redirect to login
+        localStorage.removeItem('polwel_access_token');
+        localStorage.removeItem('polwel_refresh_token');
+        localStorage.removeItem('polwel_user_data');
+        window.location.href = '/login';
+        throw new Error('Session expired. Please login again.');
+      }
+      
+      throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    // Log the error for debugging
+    console.error('API Request Error:', {
+      endpoint,
+      error: error.message,
+      token: token ? 'Present' : 'Missing'
+    });
+    throw error;
+  }
 };
 
 // POLWEL Users API
@@ -561,94 +581,6 @@ export const coursesApi = {
   },
 };
 
-// Define venue interfaces
-export interface Contact {
-  id: string;
-  name: string;
-  number: string;
-  email: string;
-}
-
-export interface Venue {
-  id: string;
-  name: string;
-  capacity: string;
-  feeType: "per_head" | "per_venue";
-  fee: number;
-  contacts: Contact[];
-  remarks: string;
-  status?: string;
-  address?: string;
-  description?: string;
-  facilities?: string[];
-  createdAt?: string;
-  updatedAt?: string;
-  creator?: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  bookingCount?: number;
-  courseRunCount?: number;
-}
-
-export interface VenueCreateRequest {
-  name: string;
-  capacity?: string;
-  address?: string;
-  description?: string;
-  facilities?: string[];
-  contacts: Contact[];
-  feeType: "PER_HEAD" | "PER_VENUE";
-  fee: number;
-  status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
-  remarks?: string;
-}
-
-// Venues API
-export const venuesApi = {
-  // Get all venues
-  getAll: async () => {
-    return apiRequest('/venues');
-  },
-
-  // Get venue by ID
-  getById: async (id: string) => {
-    return apiRequest(`/venues/${id}`);
-  },
-
-  // Create new venue
-  create: async (venueData: VenueCreateRequest) => {
-    return apiRequest('/venues', {
-      method: 'POST',
-      body: JSON.stringify(venueData),
-    });
-  },
-
-  // Update venue
-  update: async (id: string, venueData: VenueCreateRequest) => {
-    return apiRequest(`/venues/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(venueData),
-    });
-  },
-
-  // Delete venue
-  delete: async (id: string) => {
-    return apiRequest(`/venues/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  // Toggle venue status
-  updateStatus: async (id: string, status: string) => {
-    return apiRequest(`/venues/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
-  },
-};
-
 // References API
 export const referencesApi = {
   // Get all trainers
@@ -677,6 +609,5 @@ export default {
   trainersApi,
   clientOrganizationsApi,
   coursesApi,
-  venuesApi,
   referencesApi,
 };

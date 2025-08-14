@@ -23,6 +23,7 @@ import VenueArchive from "./pages/VenueArchive";
 import VenueForm from "./pages/VenueForm";
 import VenueDetail from "./pages/VenueDetail";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 
 import NotFound from "./pages/NotFound";
 
@@ -39,9 +40,26 @@ const App = () => (
             {/* Public route - Login page */}
             <Route path="/login" element={<Login />} />
             
-            {/* Standalone routes */}
-            <Route path="/trainerpartner" element={<TrainerPartner />} />
-            <Route path="/org" element={<OrganizationDashboard />} />
+            {/* Public route - Password Reset */}
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+            
+            {/* Protected standalone routes */}
+            <Route 
+              path="/trainerpartner" 
+              element={
+                <ProtectedRoute requiredRoles={['TRAINER']}>
+                  <TrainerPartner />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/org" 
+              element={
+                <ProtectedRoute requiredRoles={['TRAINING_COORDINATOR', 'POLWEL']}>
+                  <OrganizationDashboard />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Main application routes */}
             <Route path="/" element={<Layout />}>
@@ -62,11 +80,54 @@ const App = () => (
               <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
               
               {/* Course Management */}
-              <Route path="course-creation" element={<CourseArchive />} />
-              <Route path="course-creation/new" element={<CourseForm />} />
-              <Route path="course-creation/edit/:id" element={<CourseForm />} />
-              <Route path="course-creation/view/:id" element={<CourseForm />} />
-              <Route path="course-detail/:id" element={<CourseDetail />} />
+              <Route 
+                path="course-creation" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <CourseArchive />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-creation/new" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <CourseForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-creation/edit/:id" 
+                element={
+                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                    <CourseForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-creation/view/:id" 
+                element={
+                  <ProtectedRoute>
+                    <CourseForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-creation/detail/:id" 
+                element={
+                  <ProtectedRoute>
+                    <CourseDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="course-detail/:id" 
+                element={
+                  <ProtectedRoute>
+                    <CourseDetail />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Venue Management */}
               <Route path="venue-setup" element={<VenueArchive />} />

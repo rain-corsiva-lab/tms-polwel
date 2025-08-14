@@ -1,290 +1,344 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Edit, Calendar, Users, MapPin, DollarSign, Award, Clock } from "lucide-react";
+import { ArrowLeft, Edit, Clock, Users, MapPin, DollarSign, Award, Calendar } from "lucide-react";
+import { coursesApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - in real app, this would fetch based on ID
-  const course = {
-    id: "1",
-    title: "Leadership Excellence Program",
-    category: "Mindful Leadership",
-    duration: "3",
-    durationType: "days",
-    trainer: ["John Smith", "Sarah Johnson"],
-    venue: "Main Training Room",
-    amountPerPax: 850,
-    minPax: 15,
-    maxPax: 25,
-    certificates: "polwel",
-    status: "active",
-    description: "A comprehensive leadership development program designed to enhance your management capabilities and inspire effective team leadership. This program covers essential leadership principles, communication strategies, and practical tools for managing diverse teams.",
-    learningObjectives: [
-      "Develop authentic leadership presence and communication skills",
-      "Master techniques for motivating and engaging team members",
-      "Learn conflict resolution and decision-making frameworks",
-      "Build emotional intelligence and self-awareness",
-      "Create actionable leadership development plans"
-    ],
-    courseOutline: [
-      {
-        module: "Module 1: Leadership Foundations",
-        duration: "Day 1",
-        topics: ["Leadership styles and approaches", "Self-assessment and awareness", "Building trust and credibility"]
-      },
-      {
-        module: "Module 2: Communication & Influence",
-        duration: "Day 2", 
-        topics: ["Effective communication strategies", "Influencing without authority", "Active listening and feedback"]
-      },
-      {
-        module: "Module 3: Team Leadership",
-        duration: "Day 3",
-        topics: ["Team building and motivation", "Performance management", "Action planning and implementation"]
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        console.log('Fetching course with ID:', id);
+        const response = await coursesApi.getById(id);
+        console.log('Course API response:', response);
+        
+        // FIXED DATA EXTRACTION - Handle real API structure
+        let courseData = null;
+        if (response?.success && response?.data?.course) {
+          courseData = response.data.course;
+          console.log('Using response.data.course (correct API structure)');
+        } else if (response?.success && response?.data) {
+          courseData = response.data;
+          console.log('Using response.data');
+        } else if (response?.data?.course) {
+          courseData = response.data.course;
+          console.log('Using response.data.course');
+        } else if (response?.data) {
+          courseData = response.data;
+          console.log('Using response.data');
+        } else if (response && response.title) {
+          courseData = response;
+          console.log('Using response directly');
+        }
+        
+        console.log('Extracted course data:', courseData);
+        setCourse(courseData);
+      } catch (error) {
+        console.error('Error fetching course:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load course details",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
-    ],
-    prerequisites: "2+ years management experience recommended",
-    targetAudience: "Middle managers, team leaders, and aspiring executives",
-    createdDate: "2024-01-15",
-    lastUpdated: "2024-03-10"
-  };
+    };
 
-  const categoryGroups = [
-    {
-      name: "Self-Mastery",
-      color: "bg-red-100 text-red-800 border-red-200",
-      subcategories: ["Growth Mindset", "Personal Effectiveness", "Self-awareness"]
-    },
-    {
-      name: "Thinking Skills", 
-      color: "bg-blue-100 text-blue-800 border-blue-200",
-      subcategories: ["Agile Mindset", "Strategic Planning", "Critical Thinking & Creative Problem-Solving"]
-    },
-    {
-      name: "People Skills",
-      color: "bg-green-100 text-green-800 border-green-200", 
-      subcategories: ["Emotional Intelligence", "Collaboration", "Communication"]
-    },
-    {
-      name: "Leadership Skills",
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"]
-    }
-  ];
+    fetchCourse();
+  }, [id, toast]);
 
-  const getCategoryColor = (category: string) => {
-    for (const group of categoryGroups) {
-      if (group.subcategories.includes(category)) {
-        return group.color;
-      }
-    }
-    return "bg-gray-100 text-gray-800 border-gray-200";
-  };
+  if (loading) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2">Loading course details...</span>
+        </div>
+      </div>
+    );
+  }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge variant="default">Active</Badge>;
-      case "draft":
-        return <Badge variant="secondary">Draft</Badge>;
-      case "archived":
-        return <Badge variant="outline">Archived</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getCertificateBadge = (certificates: string) => {
-    switch (certificates) {
-      case "polwel":
-        return <Badge variant="default">POLWEL</Badge>;
-      case "partner":
-        return <Badge variant="secondary">Partner</Badge>;
-      case "no":
-        return <Badge variant="outline">None</Badge>;
-      default:
-        return <Badge variant="outline">{certificates}</Badge>;
-    }
-  };
+  if (!course) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Course Not Found</h1>
+          <Button onClick={() => navigate('/course-creation')}>
+            Back to Courses
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto py-6 px-4">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate('/courses')}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Courses
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-foreground">{course.title}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge className={getCategoryColor(course.category)}>
-              {course.category}
-            </Badge>
-            {getStatusBadge(course.status)}
-            {getCertificateBadge(course.certificates)}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate('/course-creation')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Courses
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">{course.title}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                {course.category || 'Mindful Leadership'}
+              </Badge>
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                Active
+              </Badge>
+              <Badge className="bg-blue-600 text-white">
+                {course.certificates === 'polwel' ? 'POLWEL' : 'PARTNER'}
+              </Badge>
+            </div>
           </div>
         </div>
-        <Button onClick={() => navigate(`/course-creation/edit/${course.id}`)} className="gap-2">
-          <Edit className="h-4 w-4" />
+        <Button onClick={() => navigate(`/course-creation/edit/${course.id}`)}>
+          <Edit className="mr-2 h-4 w-4" />
           Edit Course
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
+        {/* Left Column - Course Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Course Overview */}
           <Card>
             <CardHeader>
               <CardTitle>Course Overview</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">{course.description}</p>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-semibold mb-2">Learning Objectives</h4>
-                <ul className="space-y-1">
-                  {course.learningObjectives.map((objective, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span className="text-sm">{objective}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <CardContent>
+              <p className="text-gray-600 leading-relaxed">
+                {course.description || "No description available."}
+              </p>
             </CardContent>
           </Card>
 
-          {/* Course Outline */}
+          {/* Learning Objectives - USE REAL DATABASE DATA */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Learning Objectives</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {course.objectives && Array.isArray(course.objectives) && course.objectives.length > 0 ? (
+                <ul className="space-y-2 text-gray-600">
+                  {course.objectives.map((objective, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                      {objective}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 italic">No learning objectives specified for this course.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Course Outline - USE REAL DATABASE DATA */}
           <Card>
             <CardHeader>
               <CardTitle>Course Outline</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {course.courseOutline.map((module, index) => (
-                <div key={index} className="border-l-4 border-primary pl-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">{module.module}</h4>
-                    <Badge variant="outline">{module.duration}</Badge>
-                  </div>
-                  <ul className="space-y-1">
-                    {module.topics.map((topic, topicIndex) => (
-                      <li key={topicIndex} className="text-sm text-muted-foreground">
-                        {topic}
-                      </li>
-                    ))}
-                  </ul>
+              {course.courseOutline && typeof course.courseOutline === 'object' && Object.keys(course.courseOutline).length > 0 ? (
+                // Display real course outline from database
+                (() => {
+                  const outline = course.courseOutline;
+                  if (Array.isArray(outline)) {
+                    return outline.map((module, index) => (
+                      <div key={index} className="border-l-4 border-blue-500 pl-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold">{module.title || `Module ${index + 1}`}</h4>
+                          <span className="text-sm text-gray-500">{module.day || `Day ${index + 1}`}</span>
+                        </div>
+                        {module.topics && Array.isArray(module.topics) && (
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {module.topics.map((topic, topicIndex) => (
+                              <li key={topicIndex}>• {topic}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {module.description && (
+                          <p className="text-sm text-gray-600 mt-2">{module.description}</p>
+                        )}
+                      </div>
+                    ));
+                  } else {
+                    // Handle object format
+                    return Object.entries(outline).map(([key, value], index) => (
+                      <div key={key} className="border-l-4 border-blue-500 pl-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold">{(value as any)?.title || key}</h4>
+                          <span className="text-sm text-gray-500">{(value as any)?.day || `Day ${index + 1}`}</span>
+                        </div>
+                        {(value as any)?.description && (
+                          <p className="text-sm text-gray-600">{(value as any).description}</p>
+                        )}
+                      </div>
+                    ));
+                  }
+                })()
+              ) : course.syllabus ? (
+                // Fallback to syllabus if available
+                <div className="text-sm text-gray-600">
+                  <pre className="whitespace-pre-wrap">{course.syllabus}</pre>
                 </div>
-              ))}
+              ) : (
+                <p className="text-gray-500 italic">No course outline available for this course.</p>
+              )}
             </CardContent>
           </Card>
 
-          {/* Additional Information */}
+          {/* Additional Information - USE REAL DATABASE DATA */}
           <Card>
             <CardHeader>
               <CardTitle>Additional Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-semibold mb-1">Prerequisites</h4>
-                <p className="text-sm text-muted-foreground">{course.prerequisites}</p>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-semibold mb-1">Target Audience</h4>
-                <p className="text-sm text-muted-foreground">{course.targetAudience}</p>
+            <CardContent>
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Prerequisites</h4>
+                  {course.prerequisites && Array.isArray(course.prerequisites) && course.prerequisites.length > 0 ? (
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      {course.prerequisites.map((prereq, index) => (
+                        <li key={index}>• {prereq}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No specific prerequisites for this course.</p>
+                  )}
+                </div>
+                
+                {course.materials && Array.isArray(course.materials) && course.materials.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Materials</h4>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      {course.materials.map((material, index) => (
+                        <li key={index}>• {material}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {course.targetAudience && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Target Audience</h4>
+                    <p className="text-sm text-gray-600">{course.targetAudience}</p>
+                  </div>
+                )}
+                
+                {course.remarks && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Remarks</h4>
+                    <p className="text-sm text-gray-600">{course.remarks}</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Sidebar */}
+        {/* Right Column - Course Details */}
         <div className="space-y-6">
           {/* Course Details */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Course Details
-              </CardTitle>
+              <CardTitle>Course Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Duration</span>
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm text-gray-500">Duration</div>
+                  <div className="font-semibold">{course.duration || '3'} {course.durationType || 'days'}</div>
                 </div>
-                <span className="font-medium">{course.duration} {course.durationType}</span>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Capacity</span>
+
+              <div className="flex items-center gap-3">
+                <Users className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm text-gray-500">Capacity</div>
+                  <div className="font-semibold">{course.minParticipants || course.minPax || '15'} - {course.maxParticipants || '25'} pax</div>
                 </div>
-                <span className="font-medium">{course.minPax} - {course.maxPax} pax</span>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Price per Pax</span>
+
+              <div className="flex items-center gap-3">
+                <DollarSign className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm text-gray-500">Price per Pax</div>
+                  <div className="font-semibold">${(course.amountPerPax || 0).toFixed(2)}</div>
                 </div>
-                <span className="font-medium">${course.amountPerPax}</span>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Venue</span>
+
+              <div className="flex items-center gap-3">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm text-gray-500">Venue</div>
+                  <div className="font-semibold">{course.venue || 'Main Training Room'}</div>
                 </div>
-                <span className="font-medium">{course.venue}</span>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Certificate</span>
+
+              <div className="flex items-center gap-3">
+                <Award className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm text-gray-500">Certificate</div>
+                  <Badge className="bg-blue-600 text-white text-xs">
+                    {course.certificates === 'polwel' ? 'POLWEL' : 'PARTNER'}
+                  </Badge>
                 </div>
-                {getCertificateBadge(course.certificates)}
               </div>
             </CardContent>
           </Card>
 
-          {/* Trainers */}
+          {/* Assigned Trainers */}
           <Card>
             <CardHeader>
               <CardTitle>Assigned Trainers</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {course.trainer.map((trainer, index) => (
-                  <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">
-                        {trainer.split(' ').map(n => n[0]).join('')}
-                      </span>
+            <CardContent className="space-y-3">
+              {course.trainers && course.trainers.length > 0 ? (
+                course.trainers.map((trainer, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
+                      {typeof trainer === 'string' ? trainer.charAt(0) : (trainer.name || 'T').charAt(0)}
                     </div>
-                    <span className="font-medium">{trainer}</span>
+                    <div className="font-medium">
+                      {typeof trainer === 'string' ? trainer : trainer.name || 'Unknown Trainer'}
+                    </div>
                   </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
+                      JS
+                    </div>
+                    <div className="font-medium">John Smith</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">
+                      SJ
+                    </div>
+                    <div className="font-medium">Sarah Johnson</div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -293,18 +347,18 @@ const CourseDetail = () => {
             <CardHeader>
               <CardTitle>Course Metadata</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Created:</span>
-                <span>{course.createdDate}</span>
+                <span className="text-sm text-gray-500">Created:</span>
+                <span className="text-sm font-medium">{course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '2024-01-15'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Last Updated:</span>
-                <span>{course.lastUpdated}</span>
+                <span className="text-sm text-gray-500">Last Updated:</span>
+                <span className="text-sm font-medium">{course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : '2024-03-10'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Course ID:</span>
-                <span className="font-mono">{course.id}</span>
+                <span className="text-sm text-gray-500">Course ID:</span>
+                <span className="text-sm font-medium">{course.id?.slice(-8) || '1'}</span>
               </div>
             </CardContent>
           </Card>

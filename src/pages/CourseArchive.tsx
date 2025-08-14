@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Eye, Power } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Power, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { coursesApi, referencesApi } from "@/lib/api";
 
 interface Course {
   id: string;
@@ -16,9 +17,11 @@ interface Course {
   durationType: string;
   venue: string;
   amountPerPax: number;
-  minPax: number;
+  minParticipants?: number;
   certificates: string;
   status: "active" | "archived" | "draft";
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const CourseArchive = () => {
@@ -28,268 +31,359 @@ const CourseArchive = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCertificate, setSelectedCertificate] = useState<string>("all");
   
-  const categoryGroups = [
-    {
-      name: "Self-Mastery",
-      color: "bg-red-100 text-red-800 border-red-200",
-      subcategories: ["Growth Mindset", "Personal Effectiveness", "Self-awareness"]
-    },
-    {
-      name: "Thinking Skills", 
-      color: "bg-blue-100 text-blue-800 border-blue-200",
-      subcategories: ["Agile Mindset", "Strategic Planning", "Critical Thinking & Creative Problem-Solving"]
-    },
-    {
-      name: "People Skills",
-      color: "bg-green-100 text-green-800 border-green-200", 
-      subcategories: ["Emotional Intelligence", "Collaboration", "Communication"]
-    },
-    {
-      name: "Leadership Skills",
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"]
+  // Loading and data states
+  const [loading, setLoading] = useState({
+    courses: false,
+    categories: false
+  });
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load categories
+        setLoading(prev => ({ ...prev, categories: true }));
+        const categoriesResponse = await referencesApi.getCategories();
+        setCategories(categoriesResponse.success && categoriesResponse.data && Array.isArray(categoriesResponse.data.categories) 
+          ? categoriesResponse.data.categories 
+          : []);
+
+        // Load courses
+        setLoading(prev => ({ ...prev, courses: true }));
+        const coursesResponse = await coursesApi.getAll();
+        console.log('Courses API response:', coursesResponse);
+        
+        // Handle the correct API response structure: { success: true, data: { courses: [...] } }
+        let coursesData = [];
+        if (coursesResponse.success && coursesResponse.data && Array.isArray(coursesResponse.data.courses)) {
+          coursesData = coursesResponse.data.courses;
+        } else if (Array.isArray(coursesResponse.data)) {
+          coursesData = coursesResponse.data;
+        } else if (Array.isArray(coursesResponse)) {
+          coursesData = coursesResponse;
+        }
+          
+        setCourses(coursesData);
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load courses data",
+          variant: "destructive"
+        });
+        
+        // Fallback to default categories
+        setCategories([
+          {
+            name: "Self-Mastery",
+            color: "bg-red-100 text-red-800 border-red-200",
+            subcategories: ["Growth Mindset", "Personal Effectiveness", "Self-awareness"]
+          },
+          {
+            name: "Thinking Skills", 
+            color: "bg-blue-100 text-blue-800 border-blue-200",
+            subcategories: ["Agile Mindset", "Strategic Planning", "Critical Thinking & Creative Problem-Solving"]
+          },
+          {
+            name: "People Skills",
+            color: "bg-green-100 text-green-800 border-green-200", 
+            subcategories: ["Emotional Intelligence", "Collaboration", "Communication"]
+          },
+          {
+            name: "Leadership Skills",
+            color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+            subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"]
+          }
+        ]);
+      } finally {
+        setLoading(prev => ({ ...prev, courses: false, categories: false }));
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const allCategories = () => {
+    const cats: string[] = [];
+    for (const group of categories) {
+      cats.push(group.name);
+      if (group.subcategories) {
+        cats.push(...group.subcategories);
+      }
     }
-  ];
+    return cats;
+  };
 
   const getCategoryColor = (category: string) => {
-    for (const group of categoryGroups) {
-      if (group.subcategories.includes(category)) {
-        return group.color;
+    for (const group of categories) {
+      if (group.name === category || (group.subcategories && group.subcategories.includes(category))) {
+        return group.color || "bg-gray-100 text-gray-800 border-gray-200";
       }
     }
     return "bg-gray-100 text-gray-800 border-gray-200";
   };
-  
-  const [courses, setCourses] = useState<Course[]>([
-    {
-      id: "1",
-      title: "Leadership Excellence Program",
-      category: "Mindful Leadership",
-      duration: "3",
-      durationType: "days",
-      venue: "Main Training Room",
-      amountPerPax: 850,
-      minPax: 15,
-      certificates: "polwel",
-      status: "active"
-    },
-    {
-      id: "2",
-      title: "Emotional Intelligence Workshop",
-      category: "Emotional Intelligence",
-      duration: "8",
-      durationType: "hours",
-      venue: "Conference Hall A",
-      amountPerPax: 420,
-      minPax: 20,
-      certificates: "partner",
-      status: "active"
-    },
-    {
-      id: "3",
-      title: "Strategic Thinking Masterclass",
-      category: "Strategic Planning",
-      duration: "2",
-      durationType: "days",
-      venue: "Online Platform",
-      amountPerPax: 680,
-      minPax: 12,
-      certificates: "polwel",
-      status: "draft"
-    }
-  ]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge variant="default">Active</Badge>;
-      case "draft":
-        return <Badge variant="secondary">Draft</Badge>;
-      case "archived":
-        return <Badge variant="outline">Archived</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const handleStatusToggle = async (courseId: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === "active" ? "archived" : "active";
+      await coursesApi.updateStatus(courseId, newStatus);
+      
+      setCourses(prev =>
+        prev.map(course =>
+          course.id === courseId ? { ...course, status: newStatus } : course
+        )
+      );
+      
+      toast({
+        title: "Status Updated",
+        description: `Course ${newStatus === "active" ? "activated" : "archived"} successfully`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update course status",
+        variant: "destructive"
+      });
     }
   };
 
-  const getCertificateBadge = (certificates: string) => {
-    switch (certificates) {
-      case "polwel":
-        return <Badge variant="default">POLWEL</Badge>;
-      case "partner":
-        return <Badge variant="secondary">Partner</Badge>;
-      case "no":
-        return <Badge variant="outline">None</Badge>;
-      default:
-        return <Badge variant="outline">{certificates}</Badge>;
+  const handleDelete = async (courseId: string) => {
+    if (window.confirm("Are you sure you want to delete this course? This action cannot be undone.")) {
+      try {
+        await coursesApi.delete(courseId);
+        setCourses(prev => prev.filter(course => course.id !== courseId));
+        toast({
+          title: "Course Deleted",
+          description: "Course has been successfully deleted"
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete course",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const handleDeactivate = (courseId: string, courseTitle: string) => {
-    setCourses(courses.map(course => 
-      course.id === courseId 
-        ? { ...course, status: course.status === "active" ? "archived" : "active" } 
-        : course
-    ));
-    const newStatus = courses.find(c => c.id === courseId)?.status === "active" ? "deactivated" : "activated";
-    toast({
-      title: `Course ${newStatus}`,
-      description: `${courseTitle} has been ${newStatus} successfully.`,
-    });
-  };
-
-  // Get unique certificates for filter options
-  const uniqueCertificates = [...new Set(courses.map(course => course.certificates))];
-
-  const filteredCourses = courses.filter(course => {
-    // Category filter
+  // Filter courses based on selected filters
+  const filteredCourses = Array.isArray(courses) ? courses.filter(course => {
     const categoryMatch = selectedCategory === "all" || (() => {
-      if (selectedCategory === "Self-Mastery") return categoryGroups[0].subcategories.includes(course.category);
-      if (selectedCategory === "Thinking Skills") return categoryGroups[1].subcategories.includes(course.category);
-      if (selectedCategory === "People Skills") return categoryGroups[2].subcategories.includes(course.category);
-      if (selectedCategory === "Leadership Skills") return categoryGroups[3].subcategories.includes(course.category);
+      if (selectedCategory === course.category) return true;
+      
+      // Check if category is a subcategory of selected main category
+      for (const group of categories) {
+        if (group.name === selectedCategory && group.subcategories) {
+          return group.subcategories.includes(course.category);
+        }
+      }
       return false;
     })();
 
-    // Status filter
     const statusMatch = selectedStatus === "all" || course.status === selectedStatus;
-
-    // Certificate filter
     const certificateMatch = selectedCertificate === "all" || course.certificates === selectedCertificate;
 
     return categoryMatch && statusMatch && certificateMatch;
-  });
+  }) : [];
+
+  if (loading.courses) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+          <span>Loading courses...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Courses</h1>
+    <div className="container mx-auto py-6 px-4">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Course Archive</h1>
+          <p className="text-muted-foreground">Manage and view all courses in the system.</p>
+        </div>
         <Button onClick={() => navigate('/course-creation/new')}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Add New Course
         </Button>
       </div>
 
-      <Card>
+      {/* Filters */}
+      <Card className="mb-6">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>All Courses</CardTitle>
-          </div>
-          <div className="flex justify-center items-center gap-6 mt-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Category:</label>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category</label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="All Categories" />
+                <SelectTrigger>
+                  <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {categoryGroups.map((group) => (
-                    <SelectItem key={group.name} value={group.name}>
-                      {group.name}
-                    </SelectItem>
+                  {categories.map((group) => (
+                    <div key={group.name}>
+                      <SelectItem value={group.name}>{group.name}</SelectItem>
+                      {(group.subcategories || []).map((subcategory) => (
+                        <SelectItem key={subcategory} value={subcategory} className="ml-4">
+                          {subcategory}
+                        </SelectItem>
+                      ))}
+                    </div>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Status:</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger>
+                  <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Certificate:</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Certificate Type</label>
               <Select value={selectedCertificate} onValueChange={setSelectedCertificate}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="All Certs" />
+                <SelectTrigger>
+                  <SelectValue placeholder="All certificates" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="all">All Certificates</SelectItem>
                   <SelectItem value="polwel">POLWEL</SelectItem>
                   <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="no">None</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Course Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Courses ({filteredCourses.length})
+            {courses.length > 0 && filteredCourses.length !== courses.length && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                of {courses.length} total
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Course Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Venue</TableHead>
-                <TableHead>Amount/Pax</TableHead>
-                <TableHead>Min Pax</TableHead>
-                <TableHead>Certificates</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCourses.map((course) => (
-                <TableRow key={course.id}>
-                  <TableCell className="font-medium">{course.title}</TableCell>
-                  <TableCell>
-                    <Badge className={getCategoryColor(course.category)}>
-                      {course.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{course.duration} {course.durationType}</TableCell>
-                  <TableCell>{course.venue}</TableCell>
-                  <TableCell>${course.amountPerPax}</TableCell>
-                  <TableCell>{course.minPax}</TableCell>
-                  <TableCell>{getCertificateBadge(course.certificates)}</TableCell>
-                  <TableCell>{getStatusBadge(course.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/course-detail/${course.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/course-creation/edit/${course.id}`)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeactivate(course.id, course.title)}
-                        className={course.status === "active" ? "hover:bg-destructive hover:text-destructive-foreground" : "hover:bg-green-50 hover:text-green-700"}
-                      >
-                        <Power className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {filteredCourses.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No courses found matching the selected filters.</p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedCategory("all");
+                  setSelectedStatus("all");
+                  setSelectedCertificate("all");
+                }}
+                className="mt-4"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Course Title</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Venue</TableHead>
+                  <TableHead>Price/Pax</TableHead>
+                  <TableHead>Min Pax</TableHead>
+                  <TableHead>Certificate</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredCourses.map((course) => (
+                  <TableRow key={course.id}>
+                    <TableCell className="font-medium">{course.title}</TableCell>
+                    <TableCell>
+                      <Badge className={getCategoryColor(course.category)}>
+                        {course.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{course.duration} {course.durationType}</TableCell>
+                    <TableCell>{course.venue || 'TBD'}</TableCell>
+                    <TableCell>${course.amountPerPax?.toFixed(2) || '0.00'}</TableCell>
+                    <TableCell>{course.minParticipants || 1}</TableCell>
+                    <TableCell>
+                      <Badge variant={course.certificates === "polwel" ? "default" : "secondary"}>
+                        {course.certificates?.toUpperCase() || 'POLWEL'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          course.status === "active" ? "default" : 
+                          course.status === "archived" ? "secondary" : "outline"
+                        }
+                      >
+                        {course.status?.toUpperCase() || 'DRAFT'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/course-creation/detail/${course.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/course-creation/edit/${course.id}`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStatusToggle(course.id, course.status)}
+                          className={course.status === "active" ? "text-orange-600" : "text-green-600"}
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(course.id)}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

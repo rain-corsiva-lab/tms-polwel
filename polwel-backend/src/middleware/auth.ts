@@ -33,6 +33,11 @@ export const authenticateToken = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
+  // Allow CORS preflight requests to pass through
+  if (req.method === 'OPTIONS') {
+    next();
+    return;
+  }
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN

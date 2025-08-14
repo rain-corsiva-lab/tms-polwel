@@ -3,47 +3,53 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const permissions = [
-  // User Management - POLWEL Users
-  { name: 'user-management-polwel:view', description: 'View POLWEL users', module: 'user-management-polwel', action: 'view' },
-  { name: 'user-management-polwel:create', description: 'Create POLWEL users', module: 'user-management-polwel', action: 'create' },
-  { name: 'user-management-polwel:edit', description: 'Edit POLWEL users', module: 'user-management-polwel', action: 'edit' },
-  { name: 'user-management-polwel:delete', description: 'Delete POLWEL users', module: 'user-management-polwel', action: 'delete' },
+  // User Management
+  { name: 'users.view', description: 'View users', module: 'User Management', action: 'read' },
+  { name: 'users.create', description: 'Create users', module: 'User Management', action: 'create' },
+  { name: 'users.edit', description: 'Edit users', module: 'User Management', action: 'update' },
+  { name: 'users.delete', description: 'Delete users', module: 'User Management', action: 'delete' },
 
-  // User Management - Trainers & Partners
-  { name: 'user-management-trainers:view', description: 'View trainers & partners', module: 'user-management-trainers', action: 'view' },
-  { name: 'user-management-trainers:create', description: 'Create trainers & partners', module: 'user-management-trainers', action: 'create' },
-  { name: 'user-management-trainers:edit', description: 'Edit trainers & partners', module: 'user-management-trainers', action: 'edit' },
-  { name: 'user-management-trainers:delete', description: 'Delete trainers & partners', module: 'user-management-trainers', action: 'delete' },
+  // Trainer Management
+  { name: 'trainers.view', description: 'View trainers', module: 'Trainer Management', action: 'read' },
+  { name: 'trainers.create', description: 'Create trainers', module: 'Trainer Management', action: 'create' },
+  { name: 'trainers.edit', description: 'Edit trainers', module: 'Trainer Management', action: 'update' },
+  { name: 'trainers.delete', description: 'Delete trainers', module: 'Trainer Management', action: 'delete' },
 
-  // User Management - Client Organisations
-  { name: 'user-management-client-orgs:view', description: 'View client organisations', module: 'user-management-client-orgs', action: 'view' },
-  { name: 'user-management-client-orgs:create', description: 'Create client organisations', module: 'user-management-client-orgs', action: 'create' },
-  { name: 'user-management-client-orgs:edit', description: 'Edit client organisations', module: 'user-management-client-orgs', action: 'edit' },
-  { name: 'user-management-client-orgs:delete', description: 'Delete client organisations', module: 'user-management-client-orgs', action: 'delete' },
+  // Client Management
+  { name: 'clients.view', description: 'View clients', module: 'Client Management', action: 'read' },
+  { name: 'clients.create', description: 'Create clients', module: 'Client Management', action: 'create' },
+  { name: 'clients.edit', description: 'Edit clients', module: 'Client Management', action: 'update' },
+  { name: 'clients.delete', description: 'Delete clients', module: 'Client Management', action: 'delete' },
 
-  // Course & Venue Setup
-  { name: 'course-venue-setup:view', description: 'View courses & venues', module: 'course-venue-setup', action: 'view' },
-  { name: 'course-venue-setup:create', description: 'Create courses & venues', module: 'course-venue-setup', action: 'create' },
-  { name: 'course-venue-setup:edit', description: 'Edit courses & venues', module: 'course-venue-setup', action: 'edit' },
-  { name: 'course-venue-setup:delete', description: 'Delete courses & venues', module: 'course-venue-setup', action: 'delete' },
+  // Course Management
+  { name: 'courses.view', description: 'View courses', module: 'Course Management', action: 'read' },
+  { name: 'courses.create', description: 'Create courses', module: 'Course Management', action: 'create' },
+  { name: 'courses.edit', description: 'Edit courses', module: 'Course Management', action: 'update' },
+  { name: 'courses.delete', description: 'Delete courses', module: 'Course Management', action: 'delete' },
 
-  // Course Runs & Operations
-  { name: 'course-runs-operations:view', description: 'View course runs & operations', module: 'course-runs-operations', action: 'view' },
-  { name: 'course-runs-operations:create', description: 'Create course runs & operations', module: 'course-runs-operations', action: 'create' },
-  { name: 'course-runs-operations:edit', description: 'Edit course runs & operations', module: 'course-runs-operations', action: 'edit' },
-  { name: 'course-runs-operations:delete', description: 'Delete course runs & operations', module: 'course-runs-operations', action: 'delete' },
+  // Venue Management
+  { name: 'venues.view', description: 'View venues', module: 'Venue Management', action: 'read' },
+  { name: 'venues.create', description: 'Create venues', module: 'Venue Management', action: 'create' },
+  { name: 'venues.edit', description: 'Edit venues', module: 'Venue Management', action: 'update' },
+  { name: 'venues.delete', description: 'Delete venues', module: 'Venue Management', action: 'delete' },
 
-  // Email, Reporting and Resource Library
-  { name: 'email-reporting-library:view', description: 'View email, reporting & resources', module: 'email-reporting-library', action: 'view' },
-  { name: 'email-reporting-library:create', description: 'Create email, reporting & resources', module: 'email-reporting-library', action: 'create' },
-  { name: 'email-reporting-library:edit', description: 'Edit email, reporting & resources', module: 'email-reporting-library', action: 'edit' },
-  { name: 'email-reporting-library:delete', description: 'Delete email, reporting & resources', module: 'email-reporting-library', action: 'delete' },
+  // Booking Management
+  { name: 'bookings.view', description: 'View bookings', module: 'Booking Management', action: 'read' },
+  { name: 'bookings.create', description: 'Create bookings', module: 'Booking Management', action: 'create' },
+  { name: 'bookings.edit', description: 'Edit bookings', module: 'Booking Management', action: 'update' },
+  { name: 'bookings.delete', description: 'Delete bookings', module: 'Booking Management', action: 'delete' },
 
-  // Finance and Activity
-  { name: 'finance-activity:view', description: 'View finance & activity', module: 'finance-activity', action: 'view' },
-  { name: 'finance-activity:create', description: 'Create finance & activity', module: 'finance-activity', action: 'create' },
-  { name: 'finance-activity:edit', description: 'Edit finance & activity', module: 'finance-activity', action: 'edit' },
-  { name: 'finance-activity:delete', description: 'Delete finance & activity', module: 'finance-activity', action: 'delete' },
+  // Calendar Management
+  { name: 'calendar.view', description: 'View calendar', module: 'Calendar Management', action: 'read' },
+  { name: 'calendar.create', description: 'Create calendar events', module: 'Calendar Management', action: 'create' },
+  { name: 'calendar.edit', description: 'Edit calendar events', module: 'Calendar Management', action: 'update' },
+  { name: 'calendar.delete', description: 'Delete calendar events', module: 'Calendar Management', action: 'delete' },
+
+  // Reports Management
+  { name: 'reports.view', description: 'View reports', module: 'Reports Management', action: 'read' },
+  { name: 'reports.create', description: 'Create reports', module: 'Reports Management', action: 'create' },
+  { name: 'reports.edit', description: 'Edit reports', module: 'Reports Management', action: 'update' },
+  { name: 'reports.delete', description: 'Delete reports', module: 'Reports Management', action: 'delete' },
 ];
 
 async function seedPermissions() {
