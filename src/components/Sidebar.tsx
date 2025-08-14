@@ -109,7 +109,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         </div>
 
         {/* Course Management Dropdown */}
-        <div className="space-y-1">
+        {/* <div className="space-y-1">
           <button
             onClick={() => setCourseManagementOpen(!courseManagementOpen)}
             className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
@@ -144,7 +144,7 @@ const Sidebar = ({ className }: SidebarProps) => {
               ))}
             </div>
           )}
-        </div>
+        </div> */}
       </nav>
     </aside>
   );
