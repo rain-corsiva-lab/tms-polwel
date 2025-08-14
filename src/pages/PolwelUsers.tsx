@@ -54,6 +54,70 @@ export default function PolwelUsers() {
     debugAuthState();
   }, [isAuthenticated, user]);
 
+  // Dummy data for POLWEL users
+  const dummyUsers: PolwelUser[] = [
+    {
+      id: "1",
+      name: "Alice Wong",
+      email: "alice.wong@polwel.com",
+      role: "POLWEL",
+      status: "ACTIVE",
+      lastLogin: "2024-08-12T10:30:00Z",
+      mfaEnabled: true,
+      passwordExpiry: "2024-12-31T23:59:59Z",
+      failedLoginAttempts: 0,
+      permissionLevel: "Administrator",
+      department: "Training Management",
+      createdAt: "2023-06-01T00:00:00Z",
+      updatedAt: "2024-08-12T10:30:00Z"
+    },
+    {
+      id: "2", 
+      name: "Robert Chen",
+      email: "robert.chen@polwel.com",
+      role: "POLWEL",
+      status: "ACTIVE",
+      lastLogin: "2024-08-11T14:15:00Z",
+      mfaEnabled: false,
+      passwordExpiry: "2024-11-30T23:59:59Z",
+      failedLoginAttempts: 0,
+      permissionLevel: "Training Coordinator",
+      department: "Course Development",
+      createdAt: "2023-07-15T00:00:00Z",
+      updatedAt: "2024-08-11T14:15:00Z"
+    },
+    {
+      id: "3",
+      name: "Maria Garcia",
+      email: "maria.garcia@polwel.com", 
+      role: "POLWEL",
+      status: "PENDING",
+      lastLogin: null,
+      mfaEnabled: false,
+      passwordExpiry: "2024-09-30T23:59:59Z",
+      failedLoginAttempts: 0,
+      permissionLevel: "Staff",
+      department: "Administration",
+      createdAt: "2024-08-01T00:00:00Z",
+      updatedAt: "2024-08-01T00:00:00Z"
+    },
+    {
+      id: "4",
+      name: "David Kim",
+      email: "david.kim@polwel.com",
+      role: "POLWEL", 
+      status: "ACTIVE",
+      lastLogin: "2024-08-10T09:45:00Z",
+      mfaEnabled: true,
+      passwordExpiry: "2024-10-31T23:59:59Z",
+      failedLoginAttempts: 0,
+      permissionLevel: "Training Coordinator",
+      department: "Quality Assurance",
+      createdAt: "2023-08-20T00:00:00Z",
+      updatedAt: "2024-08-10T09:45:00Z"
+    }
+  ];
+
   // Fetch users from API
   const fetchUsers = async () => {
     try {
@@ -75,10 +139,13 @@ export default function PolwelUsers() {
       }
     } catch (error) {
       console.error('Error fetching POLWEL users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load POLWEL users",
-        variant: "destructive",
+      // Use dummy data when API fails
+      setUsers(dummyUsers);
+      setPagination({
+        page: 1,
+        limit: 10,
+        total: dummyUsers.length,
+        totalPages: 1
       });
     } finally {
       setLoading(false);

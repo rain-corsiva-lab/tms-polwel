@@ -83,7 +83,7 @@ const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.profileImage || undefined} alt={user.name} />
+                  <AvatarImage src={undefined} alt={user.name} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>

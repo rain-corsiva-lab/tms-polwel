@@ -1,16 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Check, ChevronsUpDown, X, Loader2 } from "lucide-react";
 import { referencesApi, coursesApi } from "@/lib/api";
@@ -60,8 +52,11 @@ const CourseForm = () => {
     minPax: 1,
     amountPerPax: 0,
     venue: "",
+    specifiedLocation: "",
     certificates: "polwel",
-    remarks: ""
+    remarks: "",
+    defaultCourseFee: 0,
+    discounts: [] as any[]
   });
   
   console.log('=== CURRENT FORM DATA ===');

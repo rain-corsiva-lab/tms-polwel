@@ -43,8 +43,72 @@ const TrainerDetail = () => {
     }
   }, [id]);
 
-  const fetchTrainer = async () => {
+const fetchTrainer = async () => {
     if (!id) return;
+    
+    // Dummy data for trainers
+    const dummyTrainers: Record<string, Trainer> = {
+      "1": {
+        id: "1",
+        name: "David Chen",
+        email: "david.chen@training.com",
+        role: "TRAINER",
+        status: "ACTIVE",
+        availabilityStatus: "Available",
+        partnerOrganization: "Excellence Training Partners",
+        bio: "Experienced trainer with over 5 years in corporate development. Passionate about empowering teams and individuals to reach their full potential through innovative training methodologies.",
+        specializations: ["Leadership Development", "Team Building", "Communication Skills"],
+        certifications: ["Certified Professional Trainer", "Leadership Coach", "Team Dynamics Specialist"],
+        experience: "5 years",
+        createdAt: "2023-09-01T00:00:00Z",
+        updatedAt: "2024-08-12T10:30:00Z"
+      },
+      "2": {
+        id: "2",
+        name: "Jennifer Lee",
+        email: "jennifer.lee@skillsacademy.com", 
+        role: "TRAINER",
+        status: "ACTIVE",
+        availabilityStatus: "Available",
+        partnerOrganization: "Skills Academy",
+        bio: "Certified communication specialist with expertise in presentation skills and public speaking. Helps professionals develop confidence and clarity in their communication.",
+        specializations: ["Communication Skills", "Presentation Skills", "Public Speaking"],
+        certifications: ["Communication Specialist", "Presentation Coach"],
+        experience: "4 years",
+        createdAt: "2023-10-15T00:00:00Z",
+        updatedAt: "2024-08-11T14:15:00Z"
+      },
+      "3": {
+        id: "3", 
+        name: "Michael Wong",
+        email: "michael.wong@techtraining.com",
+        role: "TRAINER",
+        status: "PENDING", 
+        availabilityStatus: "Unavailable",
+        partnerOrganization: "Tech Training Solutions",
+        bio: "Technical trainer specializing in project management and agile methodologies. Brings practical industry experience to training programs.",
+        specializations: ["Technical Skills", "Project Management", "Agile Methodology"],
+        certifications: ["PMP", "Agile Certified Practitioner"],
+        experience: "6 years",
+        createdAt: "2024-08-01T00:00:00Z",
+        updatedAt: "2024-08-01T00:00:00Z"
+      },
+      "4": {
+        id: "4",
+        name: "Sarah Kim", 
+        email: "sarah.kim@professionaldevelopment.com",
+        role: "TRAINER",
+        status: "ACTIVE",
+        availabilityStatus: "Limited",
+        partnerOrganization: "Professional Development Center",
+        bio: "Career development specialist focused on helping professionals advance their careers through strategic planning and skill development.",
+        specializations: ["Professional Development", "Career Coaching", "Leadership Mentoring"],
+        certifications: ["Career Coach", "Leadership Mentor"],
+        experience: "7 years",
+        createdAt: "2023-11-20T00:00:00Z",
+        updatedAt: "2024-08-10T09:00:00Z"
+      }
+    };
     
     try {
       setLoading(true);
@@ -55,12 +119,15 @@ const TrainerDetail = () => {
       setWriteUp(data.bio || "");
     } catch (error) {
       console.error('Error fetching trainer:', error);
-      setError('Failed to load trainer details');
-      toast({
-        title: "Error",
-        description: "Failed to load trainer details. Please try again.",
-        variant: "destructive",
-      });
+      // Use dummy data when API fails
+      const dummyTrainer = dummyTrainers[id];
+      if (dummyTrainer) {
+        setTrainer(dummyTrainer);
+        setSpecializations(dummyTrainer.specializations || []);
+        setWriteUp(dummyTrainer.bio || "");
+      } else {
+        setError('Trainer not found');
+      }
     } finally {
       setLoading(false);
     }

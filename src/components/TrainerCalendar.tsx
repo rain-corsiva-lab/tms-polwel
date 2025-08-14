@@ -35,6 +35,17 @@ interface TrainerBlockout {
   description?: string;
 }
 
+interface ScheduledCourse {
+  id: string;
+  date: string;
+  title: string;
+  type: "course";
+  time: string;
+  venue: string;
+  participants?: number;
+  organization?: string;
+}
+
 interface TrainerCalendarProps {
   trainerId: string;
   trainerName: string;
@@ -55,6 +66,99 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
       description: "Family commitment"
     }
   ]);
+
+  const [scheduledCourses] = useState<ScheduledCourse[]>([
+    {
+      id: "c1",
+      date: "2025-08-15",
+      title: "Leadership Development Workshop",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Training Room A",
+      participants: 20,
+      organization: "Singapore Police Force"
+    },
+    {
+      id: "c2", 
+      date: "2025-08-18",
+      title: "Team Building Session",
+      type: "course",
+      time: "14:00 - 18:00",
+      venue: "Conference Hall B",
+      participants: 15,
+      organization: "Tech Innovations Pte Ltd"
+    },
+    {
+      id: "c3",
+      date: "2025-08-22",
+      title: "Communication Skills Training",
+      type: "course", 
+      time: "10:00 - 16:00",
+      venue: "Online Session",
+      participants: 25,
+      organization: "Global Manufacturing Corp"
+    },
+    {
+      id: "c4",
+      date: "2025-08-25",
+      title: "Advanced Project Management - Day 1",
+      type: "course",
+      time: "09:00 - 17:00", 
+      venue: "Training Room C",
+      participants: 18,
+      organization: "Financial Services Ltd"
+    },
+    {
+      id: "c4b",
+      date: "2025-08-26",
+      title: "Advanced Project Management - Day 2",
+      type: "course",
+      time: "09:00 - 17:00", 
+      venue: "Training Room C",
+      participants: 18,
+      organization: "Financial Services Ltd"
+    },
+    {
+      id: "c5",
+      date: "2025-08-28",
+      title: "Executive Leadership Programme - Day 1",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Executive Conference Room",
+      participants: 12,
+      organization: "Healthcare Partners"
+    },
+    {
+      id: "c5b",
+      date: "2025-08-29",
+      title: "Executive Leadership Programme - Day 2",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Executive Conference Room",
+      participants: 12,
+      organization: "Healthcare Partners"
+    },
+    {
+      id: "c6",
+      date: "2025-09-02",
+      title: "Strategic Planning Masterclass - Day 1",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Training Room A",
+      participants: 16,
+      organization: "Singapore Police Force"
+    },
+    {
+      id: "c6b",
+      date: "2025-09-03",
+      title: "Strategic Planning Masterclass - Day 2",
+      type: "course",
+      time: "09:00 - 17:00",
+      venue: "Training Room A",
+      participants: 16,
+      organization: "Singapore Police Force"
+    }
+  ]);
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newBlockout, setNewBlockout] = useState({
@@ -72,12 +176,6 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     
     setSelectedDate(date);
     setSelectedRange({ start: date, end: date });
-    setNewBlockout(prev => ({ 
-      ...prev, 
-      startDate: format(date, "yyyy-MM-dd"),
-      endDate: format(date, "yyyy-MM-dd")
-    }));
-    setShowAddDialog(true);
   };
 
   const handleMouseDown = (date: Date) => {
@@ -164,6 +262,10 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     return blockouts.map(a => new Date(a.date)).filter(date => isValid(date));
   };
 
+  const getCourseDates = () => {
+    return scheduledCourses.map(c => new Date(c.date)).filter(date => isValid(date));
+  };
+
   const getSelectedRangeDates = () => {
     if (!selectedRange.start || !selectedRange.end) return [];
     const startDate = isBefore(selectedRange.start, selectedRange.end) ? selectedRange.start : selectedRange.end;
@@ -175,6 +277,12 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     return blockouts.filter(a => a.date === dateStr);
+  };
+
+  const getSelectedDateCourses = () => {
+    if (!selectedDate) return [];
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    return scheduledCourses.filter(c => c.date === dateStr);
   };
 
   return (
@@ -198,18 +306,30 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
                 onSelect={handleDateSelect}
                 modifiers={{
                   blockout: getBlockoutDates(),
+                  course: getCourseDates(),
                   selectedRange: getSelectedRangeDates()
                 }}
                 modifiersStyles={{
                   blockout: { backgroundColor: "hsl(var(--destructive))", color: "white" },
+                  course: { backgroundColor: "hsl(var(--primary))", color: "white" },
                   selectedRange: { backgroundColor: "hsl(var(--primary) / 0.3)", color: "hsl(var(--primary))" }
                 }}
                 className="rounded-md border pointer-events-auto"
               />
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Click a date to block out trainer
-                </p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>Click a date to block out trainer</p>
+                  <div className="flex gap-4 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-primary"></div>
+                      <span>Scheduled Course</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-destructive"></div>
+                      <span>Unavailable</span>
+                    </div>
+                  </div>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -233,10 +353,39 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
                 {selectedDate ? format(selectedDate, "PPP") : "Select a date"}
               </h3>
               
-              {getSelectedDateBlockouts().length > 0 ? (
+              {/* Scheduled Courses */}
+              {getSelectedDateCourses().length > 0 && (
                 <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-primary">Scheduled Courses</h4>
+                  {getSelectedDateCourses().map((course) => (
+                    <Card key={course.id} className="p-4 border-primary/20">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <h4 className="font-medium">{course.title}</h4>
+                            <Badge variant="default">
+                              Course
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p><strong>Time:</strong> {course.time}</p>
+                          <p><strong>Venue:</strong> {course.venue}</p>
+                          <p><strong>Participants:</strong> {course.participants}</p>
+                          <p><strong>Organization:</strong> {course.organization}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              
+              {/* Blockouts */}
+              {getSelectedDateBlockouts().length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-destructive">Blockouts</h4>
                   {getSelectedDateBlockouts().map((blockout) => (
-                    <Card key={blockout.id} className="p-4">
+                    <Card key={blockout.id} className="p-4 border-destructive/20">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <div className="space-y-1">
@@ -262,8 +411,10 @@ export function TrainerCalendar({ trainerId, trainerName, trainerCourses }: Trai
                     </Card>
                   ))}
                 </div>
-              ) : (
-                <p className="text-muted-foreground">No blockouts for this date</p>
+              )}
+              
+              {getSelectedDateCourses().length === 0 && getSelectedDateBlockouts().length === 0 && (
+                <p className="text-muted-foreground">No scheduled courses or blockouts for this date</p>
               )}
             </div>
           </div>
