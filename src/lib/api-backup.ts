@@ -166,30 +166,6 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, retries =
 
   // For other endpoints, throw the last error
   throw lastError;
-      
-      // Handle specific authentication errors
-      if (response.status === 401) {
-        // Token expired or invalid - redirect to login
-        localStorage.removeItem('polwel_access_token');
-        localStorage.removeItem('polwel_refresh_token');
-        localStorage.removeItem('polwel_user_data');
-        window.location.href = '/login';
-        throw new Error('Session expired. Please login again.');
-      }
-      
-      throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
-    }
-    
-    return response.json();
-  } catch (error) {
-    // Log the error for debugging
-    console.error('API Request Error:', {
-      endpoint,
-      error: error.message,
-      token: token ? 'Present' : 'Missing'
-    });
-    throw error;
-  }
 };
 
 // POLWEL Users API
