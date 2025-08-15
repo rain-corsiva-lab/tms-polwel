@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,15 +25,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Building2, Check, ChevronsUpDown, X } from "lucide-react";
+import { Plus, Building2, Edit, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { trainersApi } from "@/lib/api";
+import { partnersApi } from "@/lib/api";
 
 // Available courses for selection
 const availableCourses = [
   "Leadership Development",
-  "Team Building",
+  "Team Building", 
   "Communication Skills",
   "Customer Service",
   "Project Management",
@@ -48,33 +48,68 @@ const availableCourses = [
   "Software Development",
   "Technical Skills",
   "Sales Training",
-  "Marketing Fundamentals",
-  "Financial Management",
-  "Strategic Planning",
-  "Change Management"
+  "Professional Development",
+  "Career Coaching",
+  "Presentation Skills"
 ];
 
-export function AddPartnerDialog({ onPartnerCreated }: { onPartnerCreated?: () => void }) {
+interface PartnerData {
+  id?: string;
+  partnerName: string;
+  coursesAssigned: string[];
+  pointOfContact: string;
+  contactNumber: string;
+  contactDesignation: string;
+}
+
+interface AddPartnerDialogProps {
+  onPartnerCreated?: () => void;
+  onSuccess?: () => void;
+  mode?: 'create' | 'edit';
+  partner?: PartnerData;
+}
+
+export function AddPartnerDialog({ 
+  onPartnerCreated, 
+  onSuccess, 
+  mode = 'create', 
+  partner 
+}: AddPartnerDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [courseSearchOpen, setCourseSearchOpen] = useState(false);
   const [formData, setFormData] = useState({
     partnerName: "",
-    courses: [] as string[],
-    contactName: "",
+    coursesAssigned: [] as string[],
+    pointOfContact: "",
     contactNumber: "",
     contactDesignation: "",
   });
 
   const { toast } = useToast();
+  const isEditMode = mode === 'edit';
+
+  // Initialize form data when in edit mode
+  useEffect(() => {
+    if (isEditMode && partner) {
+      setFormData({
+        partnerName: partner.partnerName || "",
+        coursesAssigned: partner.coursesAssigned || [],
+        pointOfContact: partner.pointOfContact || "",
+        contactNumber: partner.contactNumber || "",
+        contactDesignation: partner.contactDesignation || "",
+      });
+    }
+  }, [isEditMode, partner]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.partnerName || !formData.contactName || !formData.contactNumber) {
+    // Only partner name is required since it's just data, not a user account
+    if (!formData.partnerName) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: "Please enter the partner name.",
         variant: "destructive",
       });
       return;
@@ -82,34 +117,33 @@ export function AddPartnerDialog({ onPartnerCreated }: { onPartnerCreated?: () =
 
     setLoading(true);
     try {
-      // TODO: Implement partner organization API endpoint on backend
-      // For now, we'll simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      toast({
-        title: "Partner Added",
-        description: `Partner organization "${formData.partnerName}" has been added successfully.`,
-      });
+      if (isEditMode && partner?.id) {
+        // Update existing partner
+        await partnersApi.update(partner.id, formData);
+        toast({
+          title: "Partner Updated",
+          description: `Partner "${formData.partnerName}" has been updated successfully.`,
+        });
+      } else {
+        // Create new partner
+        await partnersApi.create(formData);
+        toast({
+          title: "Partner Created",
+          description: `Partner "${formData.partnerName}" has been created successfully.`,
+        });
+      }
 
       // Reset form and close dialog
-      setFormData({
-        partnerName: "",
-        courses: [],
-        contactName: "",
-        contactNumber: "",
-        contactDesignation: "",
-      });
+      resetForm();
       setOpen(false);
       
-      // Call the callback to refresh the parent component
-      if (onPartnerCreated) {
-        onPartnerCreated();
-      }
+      if (onPartnerCreated) onPartnerCreated();
+      if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error creating partner:', error);
+      console.error('Error saving partner:', error);
       toast({
         title: "Error",
-        description: "Failed to create partner organization. Please try again.",
+        description: `Failed to ${isEditMode ? 'update' : 'create'} partner. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -117,11 +151,21 @@ export function AddPartnerDialog({ onPartnerCreated }: { onPartnerCreated?: () =
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      partnerName: "",
+      coursesAssigned: [],
+      pointOfContact: "",
+      contactNumber: "",
+      contactDesignation: "",
+    });
+  };
+
   const addCourse = (course: string) => {
-    if (!formData.courses.includes(course)) {
+    if (!formData.coursesAssigned.includes(course)) {
       setFormData(prev => ({
         ...prev,
-        courses: [...prev.courses, course]
+        coursesAssigned: [...prev.coursesAssigned, course]
       }));
     }
     setCourseSearchOpen(false);
@@ -130,149 +174,149 @@ export function AddPartnerDialog({ onPartnerCreated }: { onPartnerCreated?: () =
   const removeCourse = (courseToRemove: string) => {
     setFormData(prev => ({
       ...prev,
-      courses: prev.courses.filter(course => course !== courseToRemove)
+      coursesAssigned: prev.coursesAssigned.filter(course => course !== courseToRemove)
     }));
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Partner
-        </Button>
+        {isEditMode ? (
+          <Button variant="ghost" size="sm">
+            <Edit className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Partner
+          </Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Add New Partner
+            {isEditMode ? 'Edit Partner' : 'Add New Partner'}
           </DialogTitle>
           <DialogDescription>
-            Add a new partner organization with course assignments and contact details.
+            {isEditMode 
+              ? 'Update partner organization information and contact details.'
+              : 'Register a new partner organization with their contact details and assigned courses.'
+            }
           </DialogDescription>
         </DialogHeader>
-        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="partnerName">Partner Name *</Label>
             <Input
               id="partnerName"
               value={formData.partnerName}
-              onChange={(e) => setFormData(prev => ({ ...prev, partnerName: e.target.value }))}
+              onChange={(e) => setFormData({ ...formData, partnerName: e.target.value })}
               placeholder="Enter partner organization name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Courses Assigned</Label>
+            <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={courseSearchOpen}
+                  className="w-full justify-between"
+                >
+                  Search and select courses...
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Search courses..." />
+                  <CommandList>
+                    <CommandEmpty>No course found.</CommandEmpty>
+                    <CommandGroup>
+                      {availableCourses
+                        .filter(course => !formData.coursesAssigned.includes(course))
+                        .map((course) => (
+                        <CommandItem
+                          key={course}
+                          onSelect={() => addCourse(course)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.coursesAssigned.includes(course) ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {course}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            
+            {formData.coursesAssigned.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {formData.coursesAssigned.map((course) => (
+                  <Badge key={course} variant="secondary" className="flex items-center gap-1">
+                    {course}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => removeCourse(course)} 
+                    />
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="pointOfContact">Point of Contact</Label>
+            <Input
+              id="pointOfContact"
+              value={formData.pointOfContact}
+              onChange={(e) => setFormData({ ...formData, pointOfContact: e.target.value })}
+              placeholder="Enter contact person name"
             />
           </div>
 
           <div>
-            <Label htmlFor="courses">Courses Assigned</Label>
-            <div className="space-y-2">
-              <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={courseSearchOpen}
-                    className="w-full justify-between"
-                  >
-                    Search and select courses...
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Search courses..." />
-                    <CommandList>
-                      <CommandEmpty>No courses found.</CommandEmpty>
-                      <CommandGroup>
-                        {availableCourses
-                          .filter(course => !formData.courses.includes(course))
-                          .map((course) => (
-                            <CommandItem
-                              key={course}
-                              value={course}
-                              onSelect={() => addCourse(course)}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.courses.includes(course) ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {course}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              
-              {/* Selected courses display */}
-              {formData.courses.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.courses.map((course) => (
-                    <Badge key={course} variant="secondary" className="flex items-center gap-1">
-                      {course}
-                      <X
-                        className="h-3 w-3 cursor-pointer hover:text-destructive"
-                        onClick={() => removeCourse(course)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="contactName">Point of Contact Name *</Label>
-            <Input
-              id="contactName"
-              value={formData.contactName}
-              onChange={(e) => setFormData(prev => ({ ...prev, contactName: e.target.value }))}
-              placeholder="Enter contact person's name"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="contactNumber">Contact Number *</Label>
+            <Label htmlFor="contactNumber">Contact Number</Label>
             <Input
               id="contactNumber"
               value={formData.contactNumber}
-              onChange={(e) => setFormData(prev => ({ ...prev, contactNumber: e.target.value }))}
+              onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
               placeholder="Enter contact number"
             />
           </div>
-          
+
           <div>
             <Label htmlFor="contactDesignation">Contact Designation</Label>
             <Input
               id="contactDesignation"
               value={formData.contactDesignation}
-              onChange={(e) => setFormData(prev => ({ ...prev, contactDesignation: e.target.value }))}
-              placeholder="Enter contact person's designation"
+              onChange={(e) => setFormData({ ...formData, contactDesignation: e.target.value })}
+              placeholder="Enter contact person designation"
             />
           </div>
-        </form>
 
-        <DialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => setOpen(false)}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Partner"}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Saving...' : (isEditMode ? 'Update Partner' : 'Add Partner')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

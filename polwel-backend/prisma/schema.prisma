@@ -68,6 +68,7 @@ model Organization {
   address         String?
   contactEmail    String?
   contactPhone    String?
+  contactPerson   String?
   buNumber        String?
   divisionAddress String?
   status          UserStatus @default(ACTIVE)
