@@ -3,8 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import { ProtectedRoute, RoleBased } from "@/components/ProtectedRoute";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 
@@ -32,36 +30,11 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public route - Login page */}
-            <Route path="/login" element={<Login />} />
-            
-            {/* Public route - Password Reset */}
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
-            
-            {/* Protected standalone routes */}
-            <Route 
-              path="/trainerpartner" 
-              element={
-                <ProtectedRoute requiredRoles={['TRAINER']}>
-                  <TrainerPartner />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/org" 
-              element={
-                <ProtectedRoute requiredRoles={['TRAINING_COORDINATOR', 'POLWEL']}>
-                  <OrganizationDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Main application routes */}
+            {/* Main application routes - no authentication required */}
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               
@@ -80,54 +53,12 @@ const App = () => (
               <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
               
               {/* Course Management */}
-              <Route 
-                path="course-creation" 
-                element={
-                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
-                    <CourseArchive />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="course-creation/new" 
-                element={
-                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
-                    <CourseForm />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="course-creation/edit/:id" 
-                element={
-                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
-                    <CourseForm />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="course-creation/view/:id" 
-                element={
-                  <ProtectedRoute>
-                    <CourseForm />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="course-creation/detail/:id" 
-                element={
-                  <ProtectedRoute>
-                    <CourseDetail />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="course-detail/:id" 
-                element={
-                  <ProtectedRoute>
-                    <CourseDetail />
-                  </ProtectedRoute>
-                } 
-              />
+              <Route path="course-creation" element={<CourseArchive />} />
+              <Route path="course-creation/new" element={<CourseForm />} />
+              <Route path="course-creation/edit/:id" element={<CourseForm />} />
+              <Route path="course-creation/view/:id" element={<CourseForm />} />
+              <Route path="course-creation/detail/:id" element={<CourseDetail />} />
+              <Route path="course-detail/:id" element={<CourseDetail />} />
               
               {/* Venue Management */}
               <Route path="venue-setup" element={<VenueArchive />} />
@@ -140,11 +71,18 @@ const App = () => (
               <Route path="settings" element={<UserManagement />} />
             </Route>
             
+            {/* Standalone routes */}
+            <Route path="/trainerpartner" element={<TrainerPartner />} />
+            <Route path="/org" element={<OrganizationDashboard />} />
+            
+            {/* Keep login routes for potential future use */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+            
             {/* 404 page */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
