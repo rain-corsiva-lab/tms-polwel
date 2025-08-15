@@ -7,30 +7,36 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload, MoreHorizontal, Edit, Mail, Loader2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload, MoreHorizontal, Edit, Mail, Loader2, Trash2 } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
+import { EditCoordinatorDialog } from "@/components/EditCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
 import { clientOrganizationsApi } from "@/lib/api";
+import Swal from 'sweetalert2';
 
 interface TrainingCoordinator {
   id: string;
   name: string;
   email: string;
   department: string;
-  schedulesCount: number;
-  lastActive: string;
+  status: string;
+  organizationId: string;
+  createdAt: string;
 }
 
 interface Learner {
   id: string;
   name: string;
   email: string;
-  department: string;
-  enrolledCourses: number;
-  completedCourses: number;
-  status: "active" | "inactive";
+  department?: string;
+  status?: string;
+  enrolledCourses?: number;
+  completedCourses?: number;
+  organizationId?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 interface Trainer {
@@ -49,46 +55,6 @@ interface TrainerBlockout {
   type: "maintenance" | "holiday" | "unavailable" | "personal" | "other";
   description?: string;
 }
-
-const mockCoordinators: TrainingCoordinator[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@spf.gov.sg",
-    department: "HR Development",
-    schedulesCount: 3,
-    lastActive: "2 hours ago"
-  },
-  {
-    id: "2",
-    name: "Mike Chen",
-    email: "mike.chen@spf.gov.sg", 
-    department: "Technical Training",
-    schedulesCount: 5,
-    lastActive: "1 day ago"
-  }
-];
-
-const mockLearners: Learner[] = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@spf.gov.sg",
-    department: "Engineering",
-    enrolledCourses: 3,
-    completedCourses: 8,
-    status: "active"
-  },
-  {
-    id: "2",
-    name: "Emily Davis",
-    email: "emily.davis@spf.gov.sg",
-    department: "Marketing", 
-    enrolledCourses: 2,
-    completedCourses: 5,
-    status: "active"
-  }
-];
 
 const mockTrainers: Trainer[] = [
   {
@@ -149,13 +115,31 @@ const ClientOrganisationDetail = () => {
   
   // API state management
   const [organization, setOrganization] = useState<any>(null);
+  const [coordinators, setCoordinators] = useState<TrainingCoordinator[]>([]);
+  const [learners, setLearners] = useState<Learner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [coordinatorsLoading, setCoordinatorsLoading] = useState(false);
+  const [learnersLoading, setLearnersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  // Mock data state (until backend endpoints are ready for these)
-  const [trainerBlockouts, setTrainerBlockouts] = useState(mockTrainerBlockouts);
+  // Form data for organization editing
+  const [formData, setFormData] = useState({
+    name: '',
+    contactEmail: '',
+    contactPhone: '',
+    contactPerson: '',
+    address: '',
+    industry: '',
+    buNumber: ''
+  });
+
+  // Edit coordinator dialog state
+  const [editCoordinatorDialog, setEditCoordinatorDialog] = useState({
+    open: false,
+    coordinator: null as TrainingCoordinator | null
+  });
 
   useEffect(() => {
     if (id) {
@@ -171,33 +155,81 @@ const ClientOrganisationDetail = () => {
       setError(null);
       const data = await clientOrganizationsApi.getById(id);
       setOrganization(data);
-    } catch (error) {
+      
+      // Set form data
+      setFormData({
+        name: data.name || '',
+        contactEmail: data.contactEmail || '',
+        contactPhone: data.contactPhone || '',
+        contactPerson: data.contactPerson || '',
+        address: data.address || '',
+        industry: data.industry || '',
+        buNumber: data.buNumber || ''
+      });
+    } catch (error: any) {
       console.error('Error fetching organization:', error);
-      
-      // Use mock data when API fails
-      const mockOrganization = {
-        id: id,
-        name: "Singapore Police Force",
-        email: "contact@spf.gov.sg",
-        address: "New Phoenix Park, 28 Irrawaddy Road, Singapore 329560",
-        businessUnitNumber: "SPF-2024-001",
-        contactPerson: "John Tan",
-        phoneNumber: "+65 6357 0000",
-        industry: "Law Enforcement",
-        status: "active",
-        createdAt: "2024-01-15",
-        updatedAt: "2024-08-13"
-      };
-      
-      setOrganization(mockOrganization);
+      setError(error.message || 'Failed to fetch organization');
       toast({
-        title: "Using Sample Data",
-        description: "Connected to sample organization data.",
+        title: "Error",
+        description: "Failed to load organization data. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchCoordinators = async () => {
+    if (!id) return;
+    
+    try {
+      setCoordinatorsLoading(true);
+      const response = await clientOrganizationsApi.getCoordinators(id);
+      setCoordinators(response.coordinators || []);
+    } catch (error: any) {
+      console.error('Error fetching coordinators:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load coordinators. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoordinatorsLoading(false);
+    }
+  };
+
+  const fetchLearners = async () => {
+    if (!id) return;
+    
+    try {
+      setLearnersLoading(true);
+      const response = await clientOrganizationsApi.getLearners(id);
+      setLearners(response.learners || []);
+    } catch (error: any) {
+      console.error('Error fetching learners:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load learners. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLearnersLoading(false);
+    }
+  };
+
+  // Load coordinators when coordinators tab is activated
+  useEffect(() => {
+    if (activeTab === "coordinators" && coordinators.length === 0) {
+      fetchCoordinators();
+    }
+  }, [activeTab, id]);
+
+  // Load learners when learners tab is activated
+  useEffect(() => {
+    if (activeTab === "learners" && learners.length === 0) {
+      fetchLearners();
+    }
+  }, [activeTab, id]);
 
   const handleSaveChanges = async () => {
     if (!organization || !id) return;
@@ -205,32 +237,148 @@ const ClientOrganisationDetail = () => {
     try {
       setSaving(true);
       await clientOrganizationsApi.update(id, {
-        name: organization.name,
-        displayName: organization.name, // Use name as display name
-        industry: organization.industry,
-        status: organization.status,
-        address: organization.address,
-        contactEmail: organization.email,
-        contactPhone: organization.phoneNumber,
-        buNumber: organization.businessUnitNumber,
-        divisionAddress: organization.address, // Use address as division address
+        name: formData.name,
+        displayName: formData.name,
+        industry: formData.industry,
+        address: formData.address,
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        contactPerson: formData.contactPerson,
+        buNumber: formData.buNumber,
+        divisionAddress: formData.address,
+      });
+      
+      // Update local state
+      setOrganization({
+        ...organization,
+        name: formData.name,
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        contactPerson: formData.contactPerson,
+        address: formData.address,
+        industry: formData.industry,
+        buNumber: formData.buNumber
       });
       
       toast({
-        title: "Organization Updated",
+        title: "Success",
         description: "Organization details have been updated successfully.",
       });
       setIsEditing(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating organization:', error);
       toast({
         title: "Error",
-        description: "Failed to update organization. Please try again.",
+        description: error.message || "Failed to update organization. Please try again.",
         variant: "destructive",
       });
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCoordinatorAdd = async (coordinatorData: { name: string; email: string; department: string; password: string }) => {
+    if (!id) return;
+
+    try {
+      const newCoordinator = await clientOrganizationsApi.createCoordinator(id, coordinatorData);
+      setCoordinators(prev => [newCoordinator, ...prev]);
+      toast({
+        title: "Success",
+        description: "Training coordinator has been added successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error creating coordinator:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create coordinator. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCoordinatorEdit = async (coordinatorId: string, coordinatorData: { name?: string; email?: string; department?: string; status?: string }) => {
+    if (!id) return;
+
+    try {
+      const updatedCoordinator = await clientOrganizationsApi.updateCoordinator(id, coordinatorId, coordinatorData);
+      setCoordinators(prev => prev.map(coord => 
+        coord.id === coordinatorId ? updatedCoordinator : coord
+      ));
+      toast({
+        title: "Success",
+        description: "Training coordinator has been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error updating coordinator:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update coordinator. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCoordinatorDelete = async (coordinatorId: string) => {
+    if (!id) return;
+
+    // Find the coordinator to get their name
+    const coordinator = coordinators.find(coord => coord.id === coordinatorId);
+    const coordinatorName = coordinator?.name || 'this coordinator';
+
+    // Show SweetAlert2 confirmation dialog
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to delete ${coordinatorName}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) {
+      return; // User cancelled
+    }
+
+    try {
+      await clientOrganizationsApi.deleteCoordinator(id, coordinatorId);
+      setCoordinators(prev => prev.filter(coord => coord.id !== coordinatorId));
+      
+      // Success message with SweetAlert2
+      await Swal.fire({
+        title: 'Deleted!',
+        text: `${coordinatorName} has been deleted successfully.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error: any) {
+      console.error('Error deleting coordinator:', error);
+      
+      // Error message with SweetAlert2
+      await Swal.fire({
+        title: 'Error!',
+        text: error.message || "Failed to delete coordinator. Please try again.",
+        icon: 'error',
+        confirmButtonColor: '#dc2626'
+      });
+    }
+  };
+
+  const handleEditCoordinatorClick = (coordinator: TrainingCoordinator) => {
+    setEditCoordinatorDialog({
+      open: true,
+      coordinator
+    });
+  };
+
+  const handleEditCoordinatorClose = () => {
+    setEditCoordinatorDialog({
+      open: false,
+      coordinator: null
+    });
   };
 
   if (loading) {
@@ -278,26 +426,6 @@ const ClientOrganisationDetail = () => {
     } as const;
     
     return <Badge variant={variants[status as keyof typeof variants] || "secondary"}>{status}</Badge>;
-  };
-
-  const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, 'id'>) => {
-    const newBlockout = {
-      ...blockout,
-      id: Date.now().toString()
-    };
-    setTrainerBlockouts(prev => [...prev, newBlockout]);
-    toast({
-      title: "Trainer Blocked Out",
-      description: `${blockout.trainerName} has been blocked out for ${blockout.date}`,
-    });
-  };
-
-  const handleTrainerBlockoutRemove = (blockoutId: string) => {
-    setTrainerBlockouts(prev => prev.filter(b => b.id !== blockoutId));
-    toast({
-      title: "Trainer Blockout Removed",
-      description: "The trainer blockout has been removed",
-    });
   };
 
   return (
@@ -352,11 +480,11 @@ const ClientOrganisationDetail = () => {
                   {isEditing ? (
                     <Input
                       id="name"
-                      value={organization.name || ''}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, name: e.target.value }))}
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization?.name || 'N/A'}</p>
                   )}
                 </div>
                 
@@ -366,11 +494,11 @@ const ClientOrganisationDetail = () => {
                     <Input
                       id="email"
                       type="email"
-                      value={organization.email || ''}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, email: e.target.value }))}
+                      value={formData.contactEmail}
+                      onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.email}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization?.contactEmail || 'N/A'}</p>
                   )}
                 </div>
 
@@ -379,11 +507,11 @@ const ClientOrganisationDetail = () => {
                   {isEditing ? (
                     <Input
                       id="businessUnitNumber"
-                      value={organization.businessUnitNumber || ''}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, businessUnitNumber: e.target.value }))}
+                      value={formData.buNumber}
+                      onChange={(e) => setFormData(prev => ({ ...prev, buNumber: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.businessUnitNumber}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization?.buNumber || 'N/A'}</p>
                   )}
                 </div>
 
@@ -392,11 +520,11 @@ const ClientOrganisationDetail = () => {
                   {isEditing ? (
                     <Input
                       id="contactPerson"
-                      value={organization.contactPerson || ''}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, contactPerson: e.target.value }))}
+                      value={formData.contactPerson}
+                      onChange={(e) => setFormData(prev => ({ ...prev, contactPerson: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.contactPerson || 'Not provided'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization?.contactPerson || 'N/A'}</p>
                   )}
                 </div>
 
@@ -405,11 +533,11 @@ const ClientOrganisationDetail = () => {
                   {isEditing ? (
                     <Input
                       id="phoneNumber"
-                      value={organization.phoneNumber || ''}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                      value={formData.contactPhone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.phoneNumber || 'Not provided'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{organization?.contactPhone || 'N/A'}</p>
                   )}
                 </div>
 
@@ -418,8 +546,8 @@ const ClientOrganisationDetail = () => {
                   {isEditing ? (
                     <Input
                       id="industry"
-                      value={organization.industry || ''}
-                      onChange={(e) => setOrganization(prev => ({ ...prev, industry: e.target.value }))}
+                      value={formData.industry}
+                      onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
                     />
                   ) : (
                     <p className="mt-1 text-sm text-muted-foreground">{organization.industry || 'Not specified'}</p>
@@ -433,12 +561,12 @@ const ClientOrganisationDetail = () => {
                   <textarea
                     id="address"
                     className="w-full mt-1 px-3 py-2 border border-input rounded-md text-sm"
-                    value={organization.address || ''}
-                    onChange={(e) => setOrganization(prev => ({ ...prev, address: e.target.value }))}
+                    value={formData.address}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                     rows={3}
                   />
                 ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">{organization.address}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{organization?.address || 'N/A'}</p>
                 )}
               </div>
             </CardContent>
@@ -451,7 +579,7 @@ const ClientOrganisationDetail = () => {
               <h2 className="text-2xl font-bold">Training Coordinators</h2>
               <p className="text-muted-foreground">Manage training coordinators for this organization</p>
             </div>
-            <AddCoordinatorDialog />
+            <AddCoordinatorDialog onCoordinatorAdd={handleCoordinatorAdd} />
           </div>
 
           <Card>
@@ -468,41 +596,66 @@ const ClientOrganisationDetail = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockCoordinators.map((coordinator) => (
-                    <TableRow key={coordinator.id}>
-                      <TableCell className="font-medium">{coordinator.name}</TableCell>
-                      <TableCell>{coordinator.email}</TableCell>
-                      <TableCell>{coordinator.department}</TableCell>
-                      <TableCell>{coordinator.schedulesCount}</TableCell>
-                      <TableCell>{coordinator.lastActive}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                toast({
-                                  title: "Password Reset Link Sent",
-                                  description: `Password reset link has been sent to ${coordinator.email}`,
-                                });
-                              }}
-                            >
-                              <Mail className="h-4 w-4 mr-2" />
-                              Send Password Reset Link
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {coordinatorsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Loading coordinators...</span>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : coordinators.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No coordinators found. Add a new coordinator to get started.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    coordinators.map((coordinator) => (
+                      <TableRow key={coordinator.id}>
+                        <TableCell className="font-medium">{coordinator.name}</TableCell>
+                        <TableCell>{coordinator.email}</TableCell>
+                        <TableCell>{coordinator.department}</TableCell>
+                        <TableCell>0</TableCell>
+                        <TableCell>{new Date(coordinator.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditCoordinatorClick(coordinator)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Password Reset Link Sent",
+                                    description: `Password reset link has been sent to ${coordinator.email}`,
+                                  });
+                                }}
+                              >
+                                <Mail className="h-4 w-4 mr-2" />
+                                Send Password Reset Link
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleCoordinatorDelete(coordinator.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -532,31 +685,48 @@ const ClientOrganisationDetail = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockLearners.map((learner) => (
-                    <TableRow key={learner.id}>
-                      <TableCell className="font-medium">{learner.name}</TableCell>
-                      <TableCell>{learner.email}</TableCell>
-                      <TableCell>{learner.department}</TableCell>
-                      <TableCell>{learner.enrolledCourses}</TableCell>
-                      <TableCell>{learner.completedCourses}</TableCell>
-                      <TableCell>{getStatusBadge(learner.status)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit User
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {learnersLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Loading learners...</span>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : learners.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        No learners found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    learners.map((learner) => (
+                      <TableRow key={learner.id}>
+                        <TableCell className="font-medium">{learner.name}</TableCell>
+                        <TableCell>{learner.email}</TableCell>
+                        <TableCell>{learner.department || 'N/A'}</TableCell>
+                        <TableCell>{learner.enrolledCourses || 0}</TableCell>
+                        <TableCell>{learner.completedCourses || 0}</TableCell>
+                        <TableCell>{getStatusBadge(learner.status || 'active')}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Edit className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -564,6 +734,14 @@ const ClientOrganisationDetail = () => {
         </TabsContent>
 
       </Tabs>
+
+      {/* Edit Coordinator Dialog */}
+      <EditCoordinatorDialog
+        coordinator={editCoordinatorDialog.coordinator}
+        open={editCoordinatorDialog.open}
+        onOpenChange={(open) => setEditCoordinatorDialog(prev => ({ ...prev, open }))}
+        onCoordinatorUpdate={handleCoordinatorEdit}
+      />
     </div>
   );
 };

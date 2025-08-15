@@ -436,6 +436,72 @@ export const trainersApi = {
   },
 };
 
+// Partners API
+export const partnersApi = {
+  // Get all partners with pagination and filtering
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/partners?${queryParams}`);
+  },
+
+  // Get partner by ID
+  getById: async (id: string) => {
+    return apiRequest(`/partners/${id}`);
+  },
+
+  // Create new partner (no email/password needed since partners are just data)
+  create: async (partnerData: {
+    partnerName: string;
+    coursesAssigned?: string[];
+    pointOfContact?: string;
+    contactNumber?: string;
+    contactDesignation?: string;
+  }) => {
+    return apiRequest('/partners', {
+      method: 'POST',
+      body: JSON.stringify(partnerData),
+    });
+  },
+
+  // Update partner
+  update: async (id: string, partnerData: {
+    partnerName?: string;
+    coursesAssigned?: string[];
+    pointOfContact?: string;
+    contactNumber?: string;
+    contactDesignation?: string;
+    status?: string;
+  }) => {
+    return apiRequest(`/partners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(partnerData),
+    });
+  },
+
+  // Delete partner (soft delete)
+  delete: async (id: string) => {
+    return apiRequest(`/partners/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Get partner statistics
+  getStatistics: async () => {
+    return apiRequest('/partners/statistics');
+  },
+};
+
 // Client Organizations API
 export const clientOrganizationsApi = {
   // Get all organizations with pagination and filtering
@@ -470,6 +536,7 @@ export const clientOrganizationsApi = {
     address?: string;
     contactEmail?: string;
     contactPhone?: string;
+    contactPerson?: string;
     buNumber?: string;
     divisionAddress?: string;
   }) => {
@@ -488,6 +555,7 @@ export const clientOrganizationsApi = {
     address?: string;
     contactEmail?: string;
     contactPhone?: string;
+    contactPerson?: string;
     buNumber?: string;
     divisionAddress?: string;
   }) => {
@@ -512,6 +580,76 @@ export const clientOrganizationsApi = {
   // Get all industries
   getIndustries: async () => {
     return apiRequest('/client-organizations/industries');
+  },
+
+  // ============ TRAINING COORDINATORS ============
+  
+  // Get coordinators for an organization
+  getCoordinators: async (organizationId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/client-organizations/${organizationId}/coordinators?${queryParams}`);
+  },
+
+  // Create coordinator for an organization
+  createCoordinator: async (organizationId: string, coordinatorData: {
+    name: string;
+    email: string;
+    department?: string;
+    password: string;
+  }) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators`, {
+      method: 'POST',
+      body: JSON.stringify(coordinatorData),
+    });
+  },
+
+  // Update coordinator
+  updateCoordinator: async (organizationId: string, coordinatorId: string, coordinatorData: {
+    name?: string;
+    email?: string;
+    department?: string;
+    status?: string;
+  }) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {
+      method: 'PUT',
+      body: JSON.stringify(coordinatorData),
+    });
+  },
+
+  // Delete coordinator (soft delete)
+  deleteCoordinator: async (organizationId: string, coordinatorId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ============ LEARNERS ============
+  
+  // Get learners for an organization
+  getLearners: async (organizationId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/client-organizations/${organizationId}/learners?${queryParams}`);
   },
 };
 
@@ -815,6 +953,7 @@ export const deleteTrainerBlockout = trainerBlockoutsApi.delete;
 export default {
   polwelUsersApi,
   trainersApi,
+  partnersApi,
   clientOrganizationsApi,
   coursesApi,
   venuesApi,

@@ -7,7 +7,12 @@ import {
   updateClientOrganization,
   deleteClientOrganization,
   getOrganizationStats,
-  getIndustries
+  getIndustries,
+  getOrganizationCoordinators,
+  createOrganizationCoordinator,
+  updateOrganizationCoordinator,
+  deleteOrganizationCoordinator,
+  getOrganizationLearners
 } from '../controllers/clientOrganizationsController';
 
 const router = express.Router();
@@ -25,5 +30,14 @@ router.get('/:id', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getClientOr
 router.post('/', authorizeRoles('POLWEL'), createClientOrganization);
 router.put('/:id', authorizeRoles('POLWEL'), updateClientOrganization);
 router.delete('/:id', authorizeRoles('POLWEL'), deleteClientOrganization);
+
+// Training Coordinators routes
+router.get('/:organizationId/coordinators', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getOrganizationCoordinators);
+router.post('/:organizationId/coordinators', authorizeRoles('POLWEL'), createOrganizationCoordinator);
+router.put('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), updateOrganizationCoordinator);
+router.delete('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), deleteOrganizationCoordinator);
+
+// Learners routes
+router.get('/:organizationId/learners', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getOrganizationLearners);
 
 export default router;

@@ -17,7 +17,7 @@ import { EditTrainerDialog } from "@/components/EditTrainerDialog";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import StatsCard from "@/components/StatsCard";
 import { useToast } from "@/hooks/use-toast";
-import { trainersApi } from "@/lib/api";
+import { trainersApi, partnersApi } from "@/lib/api";
 
 // Enhanced user data structure for Trainers
 interface Trainer {
@@ -38,6 +38,19 @@ interface Trainer {
   specializations?: string[];
 }
 
+// Enhanced data structure for Partners (data-only, not user accounts)
+interface Partner {
+  id: string;
+  partnerName: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  coursesAssigned: string[];
+  pointOfContact: string;
+  contactNumber: string;
+  contactDesignation: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface TrainerBlockout {
   id: string;
   trainerId: string;
@@ -51,8 +64,16 @@ interface TrainerBlockout {
 const TrainersAndPartners = () => {
   const [activeTab, setActiveTab] = useState("trainers");
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [partnersLoading, setPartnersLoading] = useState(false);
   const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
+  const [partnersPagination, setPartnersPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
@@ -128,6 +149,43 @@ const TrainersAndPartners = () => {
     }
   ];
 
+// Dummy data for partners (data-only entities, no login credentials)
+  const dummyPartners: Partner[] = [
+    {
+      id: "p1",
+      partnerName: "Excellence Training Partners",
+      status: 'ACTIVE',
+      coursesAssigned: ["Leadership Development", "Team Building", "Management Training"],
+      pointOfContact: "John Smith",
+      contactNumber: "+65 9123 4567",
+      contactDesignation: "Training Manager",
+      createdAt: "2020-01-15T00:00:00Z",
+      updatedAt: "2024-08-12T10:30:00Z",
+    },
+    {
+      id: "p2",
+      partnerName: "Skills Academy",
+      status: 'ACTIVE',
+      coursesAssigned: ["Communication Skills", "Presentation Skills", "Customer Service"],
+      pointOfContact: "Sarah Lee",
+      contactNumber: "+65 8765 4321",
+      contactDesignation: "Operations Director",
+      createdAt: "2021-03-20T00:00:00Z",
+      updatedAt: "2024-08-11T14:15:00Z",
+    },
+    {
+      id: "p3",
+      partnerName: "Tech Training Solutions",
+      status: 'PENDING',
+      coursesAssigned: ["Technical Skills", "Digital Literacy", "Software Training"],
+      pointOfContact: "Michael Wong",
+      contactNumber: "+65 6543 2109",
+      contactDesignation: "Business Development Manager",
+      createdAt: "2024-08-01T00:00:00Z",
+      updatedAt: "2024-08-01T00:00:00Z",
+    }
+  ];
+
   // Fetch trainers from API or use dummy data
   const fetchTrainers = async () => {
     try {
@@ -165,14 +223,55 @@ const TrainersAndPartners = () => {
     }
   };
 
+  // Fetch partners from API or use dummy data
+  const fetchPartners = async () => {
+    try {
+      setPartnersLoading(true);
+      const response = await partnersApi.getAll({
+        page: partnersPagination.page,
+        limit: partnersPagination.limit,
+        search: searchQuery || undefined,
+        status: statusFilter || undefined,
+      });
+
+      // Map backend data to frontend interface
+      const mappedPartners = response.partners?.map(partner => ({
+        ...partner,
+        role: 'PARTNER' as const,
+      })) || [];
+
+      setPartners(mappedPartners);
+      setPartnersPagination(response.pagination || partnersPagination);
+    } catch (error) {
+      console.error('Error fetching partners:', error);
+      // Use dummy data when API fails
+      setPartners(dummyPartners);
+      setPartnersPagination({
+        page: 1,
+        limit: 10,
+        total: dummyPartners.length,
+        totalPages: 1,
+      });
+    } finally {
+      setPartnersLoading(false);
+    }
+  };
+
   // Fetch trainers on component mount and when filters change
   useEffect(() => {
     fetchTrainers();
   }, [pagination.page, searchQuery, statusFilter]);
 
+  // Fetch partners on component mount and when filters change
+  useEffect(() => {
+    fetchPartners();
+  }, [partnersPagination.page, searchQuery, statusFilter]);
+
   // Calculate stats from real data
   const totalTrainers = trainers.length;
   const pendingTrainers = trainers.filter(trainer => trainer.status === 'PENDING');
+  const totalPartners = partners.length;
+  const pendingPartners = partners.filter(partner => partner.status === 'PENDING');
 
   const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, 'id'>) => {
     const newBlockout = {
@@ -212,7 +311,7 @@ const TrainersAndPartners = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <AddPartnerDialog onPartnerCreated={fetchTrainers} />
+          <AddPartnerDialog onPartnerCreated={fetchPartners} />
           <AddTrainerDialog onTrainerCreated={fetchTrainers} />
         </div>
       </div>
@@ -291,6 +390,7 @@ const TrainersAndPartners = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList>
               <TabsTrigger value="trainers">Trainers</TabsTrigger>
+              <TabsTrigger value="partners">Partners</TabsTrigger>
             </TabsList>
 
             <TabsContent value="trainers" className="space-y-6">
@@ -355,6 +455,139 @@ const TrainersAndPartners = () => {
                           </TableCell>
                         </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="partners" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Partner Organizations</CardTitle>
+                  <CardDescription>Manage partner organizations and their details</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Partner Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Contact Info</TableHead>
+                        <TableHead>Courses Assigned</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {partnersLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            Loading partners...
+                          </TableCell>
+                        </TableRow>
+                      ) : partners.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            No partners found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        partners.map((partner) => (
+                          <TableRow key={partner.id}>
+                            <TableCell className="font-medium">
+                              <div>
+                                <div className="text-sm font-medium">{partner.partnerName}</div>
+                                <div className="text-xs text-muted-foreground">Contact: {partner.pointOfContact}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  partner.status === 'ACTIVE' ? 'default' :
+                                  partner.status === 'PENDING' ? 'secondary' :
+                                  partner.status === 'INACTIVE' ? 'destructive' :
+                                  'outline'
+                                }
+                              >
+                                {partner.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>{partner.contactNumber}</div>
+                                <div className="text-xs text-muted-foreground">{partner.contactDesignation}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {partner.coursesAssigned?.slice(0, 2).map((course, index) => (
+                                  <Badge key={index} variant="outline" className="text-xs">
+                                    {course}
+                                  </Badge>
+                                ))}
+                                {partner.coursesAssigned && partner.coursesAssigned.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{partner.coursesAssigned.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <AddPartnerDialog 
+                                  mode="edit"
+                                  partner={partner}
+                                  onSuccess={() => {
+                                    fetchPartners();
+                                    toast({
+                                      title: "Partner Updated",
+                                      description: "Partner details have been updated successfully.",
+                                    });
+                                  }}
+                                />
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        if (confirm('Are you sure you want to delete this partner?')) {
+                                          partnersApi.delete(partner.id).then(() => {
+                                            fetchPartners();
+                                            toast({
+                                              title: "Partner Deleted",
+                                              description: "The partner has been removed successfully.",
+                                            });
+                                          });
+                                        }
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <Ban className="h-4 w-4 mr-2" />
+                                      Delete Partner
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        // Handle password reset
+                                        toast({
+                                          title: "Password Reset Link Sent",
+                                          description: "Password reset link has been sent to the partner's email.",
+                                        });
+                                      }}
+                                    >
+                                      <Mail className="h-4 w-4 mr-2" />
+                                      Send Password Reset Link
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
