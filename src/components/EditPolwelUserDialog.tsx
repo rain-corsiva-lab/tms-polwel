@@ -87,7 +87,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       
       user.permissions.forEach((userPermission) => {
         // Extract module and action from permission name (e.g., "users.view" -> module: "users", action: "view")
-        const permissionName = userPermission.permissionName;
+        const permissionName = userPermission.permission.name;
         const [permissionModule, permissionAction] = permissionName.split('.');
         
         // Map database permission names to frontend module names
@@ -95,11 +95,11 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
           'users': 'user-management-polwel',
           'trainers': 'user-management-trainers',
           'clients': 'user-management-client-orgs',
-          'courses': 'course-management',
+          'courses': 'course-venue-setup',
           'venues': 'course-venue-setup',
-          'bookings': 'booking-management',
-          'calendar': 'training-calendar',
-          'reports': 'reports-analytics'
+          'bookings': 'course-runs-operations',
+          'calendar': 'course-runs-operations',
+          'reports': 'email-reporting-library'
         };
         
         const frontendModule = moduleMapping[permissionModule];

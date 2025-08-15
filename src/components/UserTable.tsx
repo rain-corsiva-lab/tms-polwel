@@ -108,9 +108,9 @@ const UserTable = ({ users, title }: UserTableProps) => {
                     <div>
                       {user.role === 'POLWEL' && user.auditTrail ? (
                         <AuditTrailDialog 
+                          userId={user.id}
                           userName={user.name} 
-                          userEmail={user.email} 
-                          auditTrail={user.auditTrail}
+                          userEmail={user.email}
                         >
                           <button className="text-left hover:text-primary transition-colors">
                             <div className="font-medium text-foreground underline decoration-dotted">{user.name}</div>
@@ -176,10 +176,10 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           View Details
                         </DropdownMenuItem>
                         {user.role === 'POLWEL' && user.auditTrail && (
-                          <AuditTrailDialog 
-                            userName={user.name} 
-                            userEmail={user.email} 
-                            auditTrail={user.auditTrail}
+            <AuditTrailDialog 
+              userId={user.id}
+              userName={user.name} 
+              userEmail={user.email}
                           >
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               <History className="h-4 w-4 mr-2" />

@@ -3,6 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Check, ChevronsUpDown, X, Loader2 } from "lucide-react";
 import { referencesApi, coursesApi } from "@/lib/api";
@@ -205,7 +213,7 @@ const CourseForm = () => {
             remarks: "Test course data loaded successfully"
           };
           
-          setFormData(testData);
+          setFormData({...testData, specifiedLocation: "", defaultCourseFee: 0, discounts: []});
           toast({
             title: "Test Mode",
             description: "Sample course data loaded for testing",
@@ -320,7 +328,7 @@ const CourseForm = () => {
           });
           
           console.log('21. Setting form data...');
-          setFormData(mappedData);
+          setFormData({...mappedData, specifiedLocation: "", defaultCourseFee: 0, discounts: []});
           
           // Verify form data was set
           setTimeout(() => {
@@ -383,7 +391,7 @@ const CourseForm = () => {
               };
               
               console.log('27. Last resort mapped data:', lastResortData);
-              setFormData(lastResortData);
+              setFormData({...lastResortData, specifiedLocation: "", defaultCourseFee: 0, discounts: []});
               
               toast({
                 title: "Partial Data Loaded",
@@ -560,8 +568,11 @@ const CourseForm = () => {
           minPax: 1,
           amountPerPax: 0,
           venue: "",
+          specifiedLocation: "",
           certificates: "polwel",
-          remarks: ""
+          remarks: "",
+          defaultCourseFee: 0,
+          discounts: []
         });
         
         navigate('/course-creation');
