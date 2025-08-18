@@ -4,9 +4,18 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables based on NODE_ENV
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const envFile = `.env.${NODE_ENV}`;
+
+// Try to load environment-specific file first, then fallback to .env
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+dotenv.config(); // Fallback to .env
+
+console.log(`🌍 Environment: ${NODE_ENV}`);
+console.log(`📁 Config file: ${envFile}`);
 
 // Import routes
 import authRoutes from './routes/auth';
