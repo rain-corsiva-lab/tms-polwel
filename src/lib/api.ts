@@ -1,5 +1,16 @@
-// API Configuration
-const API_BASE_URL = 'http://localhost:3001/api';
+// API Configuration - Use environment variable or fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+// Debug logging for environment
+console.log('🔧 Environment Debug:', {
+  mode: import.meta.env.MODE,
+  nodeEnv: import.meta.env.VITE_NODE_ENV,
+  apiUrl: import.meta.env.VITE_API_URL,
+  resolvedApiUrl: API_BASE_URL,
+  allEnvVars: import.meta.env
+});
+
+console.log('🌐 API Base URL:', API_BASE_URL);
 
 // Get auth token from localStorage (matching the token key used in auth service)
 const getAuthToken = () => {
