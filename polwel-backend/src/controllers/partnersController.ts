@@ -1,15 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
-
-// Type definition for authenticated request
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-    role: string;
-    organizationId?: string;
-  };
-}
+import { AuthenticatedRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
