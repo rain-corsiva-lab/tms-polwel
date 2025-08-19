@@ -37,7 +37,7 @@ import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { authenticate } from './middleware/auth';
-import { apiLogger, errorLogger } from './middleware/logging';
+// import { apiLogger, errorLogger } from './middleware/logging'; // Temporarily disabled due to module resolution issue
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -94,19 +94,19 @@ const corsOptions: CorsOptions = {
 app.use(helmet());
 app.use(limiter);
 app.use(cors(corsOptions));
-// app.use(apiLogger); // Add comprehensive API logging - TEMPORARILY DISABLED
+// app.use(apiLogger); // Add comprehensive API logging - Temporarily disabled
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Handle preflight OPTIONS requests globally
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(200);
-});
+// app.options('*', (req, res) => {
+//   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+//   res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
+//   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+//   res.header('Access-Control-Allow-Credentials', 'true');
+//   res.sendStatus(200);
+// });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -135,7 +135,7 @@ app.use('/api/references', authenticate, referencesRoutes);
 app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
 
 // Error handling middleware
-app.use(errorLogger); // Add error logging before error handlers
+// app.use(errorLogger); // Add error logging before error handlers - Temporarily disabled
 app.use(notFound);
 app.use(errorHandler);
 

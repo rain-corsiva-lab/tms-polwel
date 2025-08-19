@@ -2,13 +2,13 @@ import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, authorizeRoles, authorizeOwnershipOrAdmin } from '../middleware/auth';
-import { logRoute, logDatabaseQuery } from '../middleware/logging';
+// import { logRoute, logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all users (POLWEL and TRAINING_COORDINATOR only)
-router.get('/', logRoute('USERS_GET_ALL'), authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), async (req: Request, res: Response): Promise<void> => {
+router.get('/', /* logRoute('USERS_GET_ALL'), */ authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
   console.log(`👥 [USERS] Get all users request started`);
   
@@ -36,7 +36,7 @@ router.get('/', logRoute('USERS_GET_ALL'), authenticateToken, authorizeRoles('PO
       whereClause.organizationId = organizationId;
     }
 
-    logDatabaseQuery('User', 'findMany', whereClause);
+    // logDatabaseQuery('User', 'findMany', whereClause);
     const users = await prisma.user.findMany({
       where: whereClause,
       select: {
@@ -76,7 +76,7 @@ router.get('/', logRoute('USERS_GET_ALL'), authenticateToken, authorizeRoles('PO
 });
 
 // Get user by ID (users can access their own profile, admins can access any)
-router.get('/:id', logRoute('USERS_GET_BY_ID'), authenticateToken, authorizeOwnershipOrAdmin('id'), async (req: Request, res: Response): Promise<void> => {
+router.get('/:id', /* logRoute('USERS_GET_BY_ID'), */ authenticateToken, authorizeOwnershipOrAdmin('id'), async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
   console.log(`👤 [USERS] Get user by ID request started`);
   
@@ -88,7 +88,7 @@ router.get('/:id', logRoute('USERS_GET_BY_ID'), authenticateToken, authorizeOwne
       return;
     }
 
-    logDatabaseQuery('User', 'findUnique', { id });
+    // logDatabaseQuery('User', 'findUnique', { id });
     const user = await prisma.user.findUnique({
       where: { id },
       select: {

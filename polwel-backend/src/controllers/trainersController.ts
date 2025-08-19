@@ -3,7 +3,7 @@ import { PrismaClient, UserRole, UserStatus, AvailabilityStatus } from '@prisma/
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { logDatabaseQuery } from '../middleware/logging';
+// import { logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 const prisma = new PrismaClient();
 
@@ -38,7 +38,7 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Get trainers with pagination
-    logDatabaseQuery('User', 'findMany', { where, skip, limit });
+    // logDatabaseQuery('User', 'findMany', { where, skip, limit });
     const [trainers, total] = await Promise.all([
       prisma.user.findMany({
         where,
