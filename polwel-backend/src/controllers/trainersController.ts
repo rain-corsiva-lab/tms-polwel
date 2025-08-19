@@ -3,11 +3,15 @@ import { PrismaClient, UserRole, UserStatus, AvailabilityStatus } from '@prisma/
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { logDatabaseQuery } from '../middleware/logging';
 
 const prisma = new PrismaClient();
 
 // Get all trainers with pagination and filtering
 export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
+  const startTime = Date.now();
+  console.log(`👨‍🏫 [TRAINERS] Get trainers request started`);
+  
   try {
     const { page = 1, limit = 10, search, status, availabilityStatus } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
@@ -34,6 +38,7 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Get trainers with pagination
+    logDatabaseQuery('User', 'findMany', { where, skip, limit });
     const [trainers, total] = await Promise.all([
       prisma.user.findMany({
         where,

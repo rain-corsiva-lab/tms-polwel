@@ -2,38 +2,42 @@ import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from '../middleware/auth';
+// import { logRoute, logDatabaseQuery } from '../middleware/logging';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Generate access token
-const generateAccessToken = (user: any): string => {
-  const jwtSecret = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
+
+// Generate access token (short-lived)
+function generateAccessToken(user: any): string {
   return jwt.sign(
     { 
       userId: user.id, 
       email: user.email, 
       role: user.role,
-      ...(user.organizationId && { organizationId: user.organizationId })
+      organizationId: user.organizationId 
     },
-    jwtSecret,
-    { expiresIn: '15m' } // Short-lived access token
+    JWT_SECRET,
+    { expiresIn: '15m' }
   );
-};
+}
 
-// Generate refresh token
-const generateRefreshToken = (user: any): string => {
-  const jwtSecret = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret';
+// Generate refresh token (long-lived)
+function generateRefreshToken(user: any): string {
   return jwt.sign(
-    { userId: user.id },
-    jwtSecret,
-    { expiresIn: '7d' } // Long-lived refresh token
+    { userId: user.id, email: user.email },
+    JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
   );
-};
+}
 
 // Login endpoint
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  console.log(`🔐 [AUTH] Login attempt started`);
+  
   try {
     const { email, password, rememberMe = false } = req.body;
 
@@ -42,7 +46,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Find user by email
+    // Find user by email with logging
+    // logDatabaseQuery('User', 'findUnique', { email });
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -51,6 +56,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     });
 
     if (!user) {
+      console.log(`❌ [AUTH] User not found: ${email}`);
       res.status(401).json({ error: 'Invalid credentials' });
       return;
     }
@@ -58,7 +64,10 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log(`❌ [AUTH] Invalid password for user: ${email}`);
+      
       // Increment failed login attempts
+      // logDatabaseQuery('User', 'update', { failedLoginAttempts: 'increment' });
       await prisma.user.update({
         where: { id: user.id },
         data: { 
@@ -75,12 +84,14 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     // Check if user is active
     if (user.status !== 'ACTIVE') {
+      console.log(`❌ [AUTH] User account not active: ${email} (status: ${user.status})`);
       res.status(401).json({ error: 'Account is not active' });
       return;
     }
 
     // Check if account is locked
     if (user.lockedUntil && user.lockedUntil > new Date()) {
+      console.log(`❌ [AUTH] Account locked: ${email} (locked until: ${user.lockedUntil})`);
       res.status(423).json({ 
         error: 'Account is temporarily locked due to multiple failed login attempts',
         code: 'ACCOUNT_LOCKED',
@@ -94,172 +105,144 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const refreshToken = generateRefreshToken(user);
 
     // Update user login info
+    // logDatabaseQuery('User', 'update', { lastLogin: 'now', failedLoginAttempts: 0 });
     await prisma.user.update({
       where: { id: user.id },
       data: {
         lastLogin: new Date(),
         failedLoginAttempts: 0,
         lockedUntil: null,
-        refreshToken: rememberMe ? refreshToken : null
+        refreshToken: refreshToken
       }
     });
 
-    // Return user data and tokens (excluding sensitive data)
-    const { password: _, refreshToken: __, ...userWithoutSensitiveData } = user;
-    
-    res.json({
+    // Prepare user data for response (exclude sensitive fields)
+    const userData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      organizationId: user.organizationId,
+      department: user.department,
+      division: user.division,
+      lastLogin: new Date(),
+      organization: user.organization ? {
+        id: user.organization.id,
+        name: user.organization.name,
+        status: user.organization.status
+      } : null
+    };
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ [AUTH] Successful login for user: ${user.email} (${user.role}) - Duration: ${duration}ms`);
+
+    res.status(200).json({
       success: true,
+      message: 'Login successful',
       accessToken,
-      ...(rememberMe && { refreshToken }),
-      user: userWithoutSensitiveData,
+      refreshToken,
+      user: userData,
       expiresIn: '15m'
     });
+
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const duration = Date.now() - startTime;
+    console.error(`❌ [AUTH] Login error - Duration: ${duration}ms`, error);
+    const errorMessage = error instanceof Error ? error.message : 'Login failed';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
 // Refresh token endpoint
-router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
+router.post('/refresh', /* logRoute('AUTH_REFRESH'), */ async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  console.log(`🔄 [AUTH] Token refresh attempt started`);
+  
   try {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      res.status(401).json({ error: 'Refresh token required' });
+      res.status(401).json({ error: 'Refresh token is required' });
       return;
     }
 
-    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret';
-    
-    jwt.verify(refreshToken, jwtRefreshSecret, async (err: any, decoded: any) => {
-      if (err) {
-        res.status(403).json({ error: 'Invalid refresh token' });
+    try {
+      const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as any;
+      
+      // Find user and verify refresh token
+      // logDatabaseQuery('User', 'findUnique', { id: decoded.userId });
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        include: { organization: true }
+      });
+
+      if (!user || user.refreshToken !== refreshToken) {
+        console.log(`❌ [AUTH] Invalid refresh token for user: ${decoded.userId}`);
+        res.status(401).json({ error: 'Invalid refresh token' });
         return;
       }
 
-      const payload = decoded as any;
-      
-      // Find user and verify refresh token
-      const user = await prisma.user.findUnique({
-        where: { 
-          id: payload.userId,
-          refreshToken: refreshToken
-        }
-      });
-
-      if (!user || user.status !== 'ACTIVE') {
-        res.status(403).json({ error: 'Invalid refresh token' });
+      if (user.status !== 'ACTIVE') {
+        console.log(`❌ [AUTH] User account not active during refresh: ${user.email}`);
+        res.status(401).json({ error: 'Account is not active' });
         return;
       }
 
       // Generate new access token
       const newAccessToken = generateAccessToken(user);
       
-      res.json({
+      const duration = Date.now() - startTime;
+      console.log(`✅ [AUTH] Token refreshed for user: ${user.email} - Duration: ${duration}ms`);
+
+      res.status(200).json({
         success: true,
         accessToken: newAccessToken,
         expiresIn: '15m'
       });
-    });
+
+    } catch (jwtError) {
+      console.log(`❌ [AUTH] JWT verification failed:`, jwtError);
+      res.status(401).json({ error: 'Invalid refresh token' });
+    }
+
   } catch (error) {
-    console.error('Refresh token error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get current user profile
-router.get('/me', authenticateToken, async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Authentication required' });
-      return;
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        status: true,
-        emailVerified: true,
-        mfaEnabled: true,
-        lastLogin: true,
-        permissionLevel: true,
-        department: true,
-        organizationId: true,
-        division: true,
-        buCostCentre: true,
-        paymentMode: true,
-        contactNumber: true,
-        availabilityStatus: true,
-        partnerOrganization: true,
-        bio: true,
-        specializations: true,
-        certifications: true,
-        experience: true,
-        rating: true,
-        employeeId: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
-
-    let organization = null;
-    if (user?.organizationId) {
-      organization = await prisma.organization.findUnique({
-        where: { id: user.organizationId }
-      });
-    }
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    res.json({
-      success: true,
-      user: {
-        ...user,
-        organization
-      }
-    });
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const duration = Date.now() - startTime;
+    console.error(`❌ [AUTH] Refresh error - Duration: ${duration}ms`, error);
+    res.status(500).json({ error: 'Failed to refresh token' });
   }
 });
 
 // Logout endpoint
-router.post('/logout', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.post('/logout', /* logRoute('AUTH_LOGOUT'), */ async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  console.log(`🚪 [AUTH] Logout attempt started`);
+  
   try {
-    if (req.user) {
-      // Clear refresh token
+    const { refreshToken, userId } = req.body;
+
+    if (userId && refreshToken) {
+      // Clear refresh token from database
+      // logDatabaseQuery('User', 'update', { refreshToken: null });
       await prisma.user.update({
-        where: { id: req.user.userId },
+        where: { id: userId },
         data: { refreshToken: null }
       });
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Logged out successfully' 
-    });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const duration = Date.now() - startTime;
+    console.log(`✅ [AUTH] Logout successful - Duration: ${duration}ms`);
 
-// Validate token endpoint (for frontend to check if token is still valid)
-router.get('/validate', authenticateToken, (req: Request, res: Response): void => {
-  res.json({ 
-    success: true, 
-    valid: true,
-    user: req.user
-  });
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful'
+    });
+
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`❌ [AUTH] Logout error - Duration: ${duration}ms`, error);
+    res.status(500).json({ error: 'Logout failed' });
+  }
 });
 
 export default router;

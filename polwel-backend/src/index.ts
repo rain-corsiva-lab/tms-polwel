@@ -37,6 +37,7 @@ import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { authenticate } from './middleware/auth';
+import { apiLogger, errorLogger } from './middleware/logging';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -53,7 +54,7 @@ const limiter = rateLimit({
 });
 
 // CORS configuration
-const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:8080,http://localhost:8081')
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'https://polwel-pdms.customized3.corsivalab.xyz,http://localhost:8080,http://localhost:8081')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
@@ -93,6 +94,7 @@ const corsOptions: CorsOptions = {
 app.use(helmet());
 app.use(limiter);
 app.use(cors(corsOptions));
+// app.use(apiLogger); // Add comprehensive API logging - TEMPORARILY DISABLED
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -133,6 +135,7 @@ app.use('/api/references', authenticate, referencesRoutes);
 app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
 
 // Error handling middleware
+app.use(errorLogger); // Add error logging before error handlers
 app.use(notFound);
 app.use(errorHandler);
 
