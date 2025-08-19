@@ -58,22 +58,35 @@ const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 
   .map((o) => o.trim())
   .filter(Boolean);
 
+console.log('🔐 CORS configured for origins:', allowedOrigins);
+
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl)
+    // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
     if (!origin) return callback(null, true);
-    // Allow configured origins
+    
+    // Allow configured origins (exact match)
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Allow any localhost origin in dev to avoid port mismatch during Vite port switching
-    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+    
+    // Allow both HTTP and HTTPS versions of configured domains
+    const originWithoutProtocol = origin.replace(/^https?:\/\//, '');
+    const allowedDomains = allowedOrigins.map(o => o.replace(/^https?:\/\//, ''));
+    if (allowedDomains.includes(originWithoutProtocol)) return callback(null, true);
+    
+    // Allow any localhost origin in dev
+    if (origin.startsWith('http://localhost') || origin.startsWith('https://localhost') || 
+        origin.startsWith('http://127.0.0.1') || origin.startsWith('https://127.0.0.1')) {
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    
+    console.error('❌ CORS blocked origin:', origin);
+    console.error('📋 Allowed origins:', allowedOrigins);
+    return callback(new Error(`CORS policy violation: Origin ${origin} not allowed`));
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 204,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200, // Changed from 204 to 200 for better compatibility
 };
 
 // Middleware
@@ -83,6 +96,15 @@ app.use(cors(corsOptions));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Handle preflight OPTIONS requests globally
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
