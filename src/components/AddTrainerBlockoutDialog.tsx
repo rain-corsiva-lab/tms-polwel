@@ -28,16 +28,7 @@ import { Ban, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-interface TrainerBlockout {
-  id: string;
-  trainerId: string;
-  trainerName: string;
-  date: string;
-  reason: string;
-  type: "maintenance" | "holiday" | "unavailable" | "personal" | "other";
-  description?: string;
-}
+import { TrainerBlockout } from "@/types/trainer";
 
 interface AddTrainerBlockoutDialogProps {
   trainerId: string;
@@ -47,7 +38,8 @@ interface AddTrainerBlockoutDialogProps {
 
 export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd }: AddTrainerBlockoutDialogProps) {
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState<Date>();
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
   const [formData, setFormData] = useState({
     reason: "",
     type: "personal" as const,
@@ -59,10 +51,19 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !formData.reason) {
+    if (!startDate || !endDate || !formData.reason) {
       toast({
         title: "Validation Error",
-        description: "Please select a date and provide a reason.",
+        description: "Please select start date, end date, and provide a reason.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (startDate > endDate) {
+      toast({
+        title: "Validation Error",
+        description: "Start date cannot be after end date.",
         variant: "destructive",
       });
       return;
@@ -71,16 +72,22 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
     const blockout: Omit<TrainerBlockout, 'id'> = {
       trainerId,
       trainerName,
-      date: format(date, "yyyy-MM-dd"),
+      startDate: format(startDate, "yyyy-MM-dd"),
+      endDate: format(endDate, "yyyy-MM-dd"),
       reason: formData.reason,
       type: formData.type,
       description: formData.description,
+      isRecurring: false,
+      recurringPattern: undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     onBlockoutAdd(blockout);
 
     // Reset form and close dialog
-    setDate(undefined);
+    setStartDate(undefined);
+    setEndDate(undefined);
     setFormData({
       reason: "",
       type: "personal",
@@ -109,32 +116,68 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="date">Date *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                  disabled={(date) => date < new Date()}
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="startDate">Start Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "MMM dd") : <span>Start</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      // If end date is before start date, reset it
+                      if (date && endDate && endDate < date) {
+                        setEndDate(undefined);
+                      }
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                    disabled={(date) => date < new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label htmlFor="endDate">End Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "MMM dd") : <span>End</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                    disabled={(date) => date < new Date() || (startDate && date < startDate)}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           
           <div>

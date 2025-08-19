@@ -527,20 +527,23 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     //   });
     // }
 
-    // Generate temporary password
+    // Generate temporary password and setup token
     const tempPassword = crypto.randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    const setupToken = crypto.randomBytes(32).toString('hex');
 
     // Create user with permissions in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create user
+      // Create user with PENDING status
       const user = await tx.user.create({
         data: {
           name,
           email,
           password: hashedPassword,
           role: UserRole.POLWEL,
-          status: UserStatus.ACTIVE,
+          status: UserStatus.PENDING, // Set as PENDING instead of ACTIVE
+          resetToken: setupToken, // Use resetToken for account completion
+          resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           ...(req.user?.userId && { createdBy: req.user.userId })
         },
         select: {
@@ -571,18 +574,31 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
         console.log('No valid permissions to create');
       }
 
-      return { user, tempPassword };
+      return { user, tempPassword, setupToken };
     });
+
+    // Send setup completion email
+    try {
+      const setupUrl = `${process.env.FRONTEND_URL}/complete-setup/${setupToken}`;
+      await EmailService.sendUserSetupEmail(result.user.email, result.user.name, setupUrl);
+    } catch (emailError) {
+      console.error('Failed to send setup email:', emailError);
+      // Don't fail the user creation if email fails
+    }
 
     // Log user creation
     await AuditService.logUserCreation(
       result.user.id, 
       req.user?.userId || 'system', 
-      `POLWEL user created with email ${email}`,
+      `POLWEL user created with email ${email} - setup email sent`,
       req
     );
 
-    return res.status(201).json(result);
+    return res.status(201).json({
+      user: result.user,
+      message: 'User created successfully. Setup email has been sent.',
+      setupEmailSent: true
+    });
   } catch (error) {
     console.error('Create POLWEL user error:', error);
     return res.status(500).json({

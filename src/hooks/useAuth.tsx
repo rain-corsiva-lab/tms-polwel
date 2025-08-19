@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check authentication status on mount
+  // Check authentication status on mount and set up session monitoring
   useEffect(() => {
     const checkAuth = () => {
       const authenticated = authService.isAuthenticated();
@@ -31,6 +31,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     checkAuth();
+
+    // Set up less frequent auth checks (every 2 minutes instead of 30 seconds)
+    const authCheckInterval = setInterval(checkAuth, 2 * 60 * 1000);
+
+    // Listen for storage changes (for cross-tab synchronization)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'polwel_access_token' || e.key === 'polwel_user_data') {
+        checkAuth();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Cleanup
+    return () => {
+      clearInterval(authCheckInterval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const login = async (email: string, password: string, rememberMe: boolean = false) => {

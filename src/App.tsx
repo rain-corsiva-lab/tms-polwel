@@ -22,6 +22,7 @@ import VenueForm from "./pages/VenueForm";
 import VenueDetail from "./pages/VenueDetail";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
+import CompleteSetup from "./pages/CompleteSetup";
 
 import NotFound from "./pages/NotFound";
 
@@ -34,7 +35,34 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Main application routes - no authentication required */}
+            {/* Public route - Login page */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Public route - Password Reset */}
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+            
+            {/* Public route - Complete Setup */}
+            <Route path="/complete-setup/:token" element={<CompleteSetup />} />
+            
+            {/* Protected standalone routes */}
+            <Route 
+              path="/trainerpartner" 
+              element={
+                <ProtectedRoute requiredRoles={['TRAINER']}>
+                  <TrainerPartner />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/org" 
+              element={
+                <ProtectedRoute requiredRoles={['TRAINING_COORDINATOR', 'POLWEL']}>
+                  <OrganizationDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Main application routes */}
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               

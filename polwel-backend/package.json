@@ -4,7 +4,12 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
+    "start:local": "NODE_ENV=local node dist/index.js",
+    "start:staging": "NODE_ENV=staging node dist/index.js",
+    "start:production": "NODE_ENV=production node dist/index.js",
     "dev": "nodemon src/index.ts",
+    "dev:local": "NODE_ENV=local nodemon src/index.ts",
+    "dev:staging": "NODE_ENV=staging nodemon src/index.ts",
     "build": "tsc",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -37,6 +42,7 @@
     "prisma": "^6.13.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.9.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",

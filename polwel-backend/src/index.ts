@@ -4,9 +4,18 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables based on NODE_ENV
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const envFile = `.env.${NODE_ENV}`;
+
+// Try to load environment-specific file first, then fallback to .env
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+dotenv.config(); // Fallback to .env
+
+console.log(`🌍 Environment: ${NODE_ENV}`);
+console.log(`📁 Config file: ${envFile}`);
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -17,9 +26,12 @@ import bookingRoutes from './routes/bookings';
 import organizationRoutes from './routes/organizations';
 import polwelUsersRoutes from './routes/polwelUsers';
 import trainersRoutes from './routes/trainers';
+import partnersRoutes from './routes/partners';
 import clientOrganizationsRoutes from './routes/clientOrganizations';
 import passwordResetRoutes from './routes/passwordReset';
+import userSetupRoutes from './routes/userSetup';
 import referencesRoutes from './routes/references';
+import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -91,9 +103,12 @@ app.use('/api/bookings', authenticate, bookingRoutes);
 app.use('/api/organizations', authenticate, organizationRoutes);
 app.use('/api/polwel-users', polwelUsersRoutes);
 app.use('/api/trainers', trainersRoutes);
+app.use('/api/partners', partnersRoutes);
 app.use('/api/client-organizations', clientOrganizationsRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/user-setup', userSetupRoutes);
 app.use('/api/references', authenticate, referencesRoutes);
+app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
 
 // Error handling middleware
 app.use(notFound);

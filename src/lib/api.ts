@@ -1,5 +1,16 @@
-// API Configuration
-const API_BASE_URL = 'http://localhost:3001/api';
+// API Configuration - Use environment variable or fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+// Debug logging for environment
+console.log('🔧 Environment Debug:', {
+  mode: import.meta.env.MODE,
+  nodeEnv: import.meta.env.VITE_NODE_ENV,
+  apiUrl: import.meta.env.VITE_API_URL,
+  resolvedApiUrl: API_BASE_URL,
+  allEnvVars: import.meta.env
+});
+
+console.log('🌐 API Base URL:', API_BASE_URL);
 
 // Get auth token from localStorage (matching the token key used in auth service)
 const getAuthToken = () => {
@@ -61,16 +72,43 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         }));
         
         // Handle specific authentication errors
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
+          console.error(`Authentication Error (${response.status}):`, errorData);
+          
+          // Check if it's a token expiration error
+          if (errorData.code === 'TOKEN_EXPIRED' || errorData.error?.includes('expired')) {
+            console.log('Token expired detected in API, clearing tokens and redirecting...');
+            localStorage.removeItem('polwel_access_token');
+            localStorage.removeItem('polwel_refresh_token');
+            localStorage.removeItem('polwel_user_data');
+            localStorage.removeItem('polwel_last_activity');
+            
+            // Show error message
+            console.error('Session expired, redirecting to login');
+            
+            // Redirect to login
+            if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+              window.location.replace('/login');
+            }
+            
+            throw new Error('Session expired. Please login again.');
+          }
+          
+          // Other authentication errors
           localStorage.removeItem('polwel_access_token');
           localStorage.removeItem('polwel_refresh_token');
           localStorage.removeItem('polwel_user_data');
-          window.location.href = '/login';
-          throw new Error('Session expired. Please login again.');
+          localStorage.removeItem('polwel_last_activity');
+          
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            window.location.replace('/login');
+          }
+          
+          throw new Error('Authentication failed. Please login again.');
         }
         
         console.error(`API Error (${response.status}):`, errorData);
-        throw new Error(`API Error: ${errorData.message || response.statusText}`);
+        throw new Error(`API Error: ${errorData.message || errorData.error || response.statusText}`);
       }
 
       const data = await response.json();
@@ -95,10 +133,37 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           continue;
         }
       }
+      
+      // Don't retry on authentication errors
+      if (error.message.includes('Session expired') || 
+          error.message.includes('Authentication failed') ||
+          error.message.includes('TOKEN_EXPIRED')) {
+        throw error;
+      }
     }
   }
 
-  // Fallback data for critical endpoints
+  // For certain endpoints requiring authentication, don't provide fallback data
+  const authRequiredEndpoints = [
+    '/polwel-users',
+    '/users',
+    '/audit/',
+    '/profile',
+    '/organizations',
+    '/courses',
+    '/venues'
+  ];
+  
+  const requiresAuth = authRequiredEndpoints.some(authEndpoint => 
+    endpoint.includes(authEndpoint)
+  );
+  
+  if (requiresAuth) {
+    console.error('Authentication required endpoint failed, not using fallback data');
+    throw lastError || new Error('Authentication required for this endpoint');
+  }
+
+  // Fallback data for non-authentication endpoints only
   console.error('All API attempts failed, using fallback data for:', endpoint);
   
   if (endpoint === '/references/categories') {
@@ -382,6 +447,72 @@ export const trainersApi = {
   },
 };
 
+// Partners API
+export const partnersApi = {
+  // Get all partners with pagination and filtering
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/partners?${queryParams}`);
+  },
+
+  // Get partner by ID
+  getById: async (id: string) => {
+    return apiRequest(`/partners/${id}`);
+  },
+
+  // Create new partner (no email/password needed since partners are just data)
+  create: async (partnerData: {
+    partnerName: string;
+    coursesAssigned?: string[];
+    pointOfContact?: string;
+    contactNumber?: string;
+    contactDesignation?: string;
+  }) => {
+    return apiRequest('/partners', {
+      method: 'POST',
+      body: JSON.stringify(partnerData),
+    });
+  },
+
+  // Update partner
+  update: async (id: string, partnerData: {
+    partnerName?: string;
+    coursesAssigned?: string[];
+    pointOfContact?: string;
+    contactNumber?: string;
+    contactDesignation?: string;
+    status?: string;
+  }) => {
+    return apiRequest(`/partners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(partnerData),
+    });
+  },
+
+  // Delete partner (soft delete)
+  delete: async (id: string) => {
+    return apiRequest(`/partners/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Get partner statistics
+  getStatistics: async () => {
+    return apiRequest('/partners/statistics');
+  },
+};
+
 // Client Organizations API
 export const clientOrganizationsApi = {
   // Get all organizations with pagination and filtering
@@ -416,6 +547,7 @@ export const clientOrganizationsApi = {
     address?: string;
     contactEmail?: string;
     contactPhone?: string;
+    contactPerson?: string;
     buNumber?: string;
     divisionAddress?: string;
   }) => {
@@ -434,6 +566,7 @@ export const clientOrganizationsApi = {
     address?: string;
     contactEmail?: string;
     contactPhone?: string;
+    contactPerson?: string;
     buNumber?: string;
     divisionAddress?: string;
   }) => {
@@ -458,6 +591,76 @@ export const clientOrganizationsApi = {
   // Get all industries
   getIndustries: async () => {
     return apiRequest('/client-organizations/industries');
+  },
+
+  // ============ TRAINING COORDINATORS ============
+  
+  // Get coordinators for an organization
+  getCoordinators: async (organizationId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/client-organizations/${organizationId}/coordinators?${queryParams}`);
+  },
+
+  // Create coordinator for an organization
+  createCoordinator: async (organizationId: string, coordinatorData: {
+    name: string;
+    email: string;
+    department?: string;
+    password: string;
+  }) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators`, {
+      method: 'POST',
+      body: JSON.stringify(coordinatorData),
+    });
+  },
+
+  // Update coordinator
+  updateCoordinator: async (organizationId: string, coordinatorId: string, coordinatorData: {
+    name?: string;
+    email?: string;
+    department?: string;
+    status?: string;
+  }) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {
+      method: 'PUT',
+      body: JSON.stringify(coordinatorData),
+    });
+  },
+
+  // Delete coordinator (soft delete)
+  deleteCoordinator: async (organizationId: string, coordinatorId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ============ LEARNERS ============
+  
+  // Get learners for an organization
+  getLearners: async (organizationId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/client-organizations/${organizationId}/learners?${queryParams}`);
   },
 };
 
@@ -672,9 +875,96 @@ export const referencesApi = {
   },
 };
 
+// Trainer Blockouts API
+export const trainerBlockoutsApi = {
+  // Get all blockouts for a trainer
+  async getByTrainerId(trainerId: string, startDate?: string, endDate?: string) {
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.append('startDate', startDate);
+    if (endDate) queryParams.append('endDate', endDate);
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/trainer-blockouts/trainer/${trainerId}/blockouts${queryString ? `?${queryString}` : ''}`;
+    
+    return apiRequest(endpoint, { method: 'GET' });
+  },
+
+  // Create a new blockout
+  async create(blockoutData: {
+    trainerId: string;
+    startDate: string;
+    endDate: string;
+    reason: string;
+    type?: string;
+    description?: string;
+    isRecurring?: boolean;
+    recurringPattern?: string;
+  }) {
+    return apiRequest('/trainer-blockouts/blockouts', {
+      method: 'POST',
+      body: JSON.stringify(blockoutData),
+    });
+  },
+
+  // Update a blockout
+  async update(blockoutId: string, updateData: {
+    startDate?: string;
+    endDate?: string;
+    reason?: string;
+    type?: string;
+    description?: string;
+    isRecurring?: boolean;
+    recurringPattern?: string;
+  }) {
+    return apiRequest(`/trainer-blockouts/blockouts/${blockoutId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  },
+
+  // Delete a blockout
+  async delete(blockoutId: string) {
+    return apiRequest(`/trainer-blockouts/blockouts/${blockoutId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Get blockout by ID
+  async getById(blockoutId: string) {
+    return apiRequest(`/trainer-blockouts/blockouts/${blockoutId}`, {
+      method: 'GET',
+    });
+  },
+
+  // Get calendar view
+  async getCalendarView(trainerId: string, startDate?: string, endDate?: string, view: string = 'month') {
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.append('startDate', startDate);
+    if (endDate) queryParams.append('endDate', endDate);
+    queryParams.append('view', view);
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/trainer-blockouts/trainer/${trainerId}/calendar${queryString ? `?${queryString}` : ''}`;
+    
+    return apiRequest(endpoint, { method: 'GET' });
+  },
+};
+
+// Trainer Course Runs API
+export const getTrainerCourseRuns = async (trainerId: string) => {
+  return apiRequest(`/trainers/${trainerId}/course-runs`, { method: 'GET' });
+};
+
+// Individual trainer blockout function exports for convenience
+export const getTrainerBlockouts = trainerBlockoutsApi.getByTrainerId;
+export const createTrainerBlockout = trainerBlockoutsApi.create;
+export const updateTrainerBlockout = trainerBlockoutsApi.update;
+export const deleteTrainerBlockout = trainerBlockoutsApi.delete;
+
 export default {
   polwelUsersApi,
   trainersApi,
+  partnersApi,
   clientOrganizationsApi,
   coursesApi,
   venuesApi,

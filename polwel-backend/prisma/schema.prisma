@@ -68,6 +68,7 @@ model Organization {
   address         String?
   contactEmail    String?
   contactPhone    String?
+  contactPerson   String?
   buNumber        String?
   divisionAddress String?
   status          UserStatus @default(ACTIVE)
@@ -221,7 +222,8 @@ model Booking {
 model TrainerBlockout {
   id               String   @id @default(cuid())
   trainerId        String
-  date             DateTime
+  startDate        DateTime
+  endDate          DateTime
   reason           String
   type             String
   description      String?
