@@ -1,11 +1,12 @@
 import { Response } from 'express';
-import { PrismaClient, UserRole, UserStatus, AvailabilityStatus } from '@prisma/client';
+import { UserRole, UserStatus, AvailabilityStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
 // import { logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
-const prisma = new PrismaClient();
+
 
 // Get all trainers with pagination and filtering
 export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {

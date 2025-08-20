@@ -1,12 +1,13 @@
 import { Response } from 'express';
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
 import AuditService from '../services/auditService';
 import EmailService from '../services/emailService';
 
-const prisma = new PrismaClient();
+
 
 // Permission name mapping - converts frontend permission names to database permission names
 const permissionNameMapping: Record<string, string> = {

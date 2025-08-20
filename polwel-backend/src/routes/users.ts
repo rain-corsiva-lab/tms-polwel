@@ -1,11 +1,11 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { authenticateToken, authorizeRoles, authorizeOwnershipOrAdmin } from '../middleware/auth';
 // import { logRoute, logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Get all users (POLWEL and TRAINING_COORDINATOR only)
 router.get('/', /* logRoute('USERS_GET_ALL'), */ authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), async (req: Request, res: Response): Promise<void> => {

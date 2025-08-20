@@ -1,10 +1,11 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { z } from 'zod';
-import { PrismaClient, CourseStatus } from '@prisma/client';
+import { CourseStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
 
-const prisma = new PrismaClient();
+
 
 // Validation schemas based on actual schema and frontend form
 const CourseCreateSchema = z.object({

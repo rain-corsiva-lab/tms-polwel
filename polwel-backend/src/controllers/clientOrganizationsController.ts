@@ -1,8 +1,9 @@
 import { Response } from 'express';
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { UserStatus } from '@prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
+
 
 // Get all client organizations with pagination and filtering
 export const getClientOrganizations = async (req: AuthenticatedRequest, res: Response) => {

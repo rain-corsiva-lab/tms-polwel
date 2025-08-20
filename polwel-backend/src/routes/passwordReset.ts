@@ -1,10 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Verify reset token
 router.get('/verify-token/:token', async (req, res) => {

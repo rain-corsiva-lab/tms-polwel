@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 
-const prisma = new PrismaClient();
+
 
 // Utility function to safely get first element from JSON array
 const getFirstFromJsonArray = (jsonField: any): string => {
