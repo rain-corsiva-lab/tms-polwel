@@ -56,7 +56,7 @@ const ResetPassword = () => {
       }
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/password-reset/verify-token/${token}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/password-reset/verify-token/${token}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ const ResetPassword = () => {
     setError("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/password-reset/reset-password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/password-reset/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

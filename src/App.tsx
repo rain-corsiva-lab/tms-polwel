@@ -45,7 +45,7 @@ const App = () => (
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             
             {/* Public route - Complete Setup */}
-            <Route path="/complete-setup/:token" element={<CompleteSetup />} />
+            <Route path="/onboarding/:token" element={<CompleteSetup />} />
             
             {/* Protected standalone routes */}
             <Route 

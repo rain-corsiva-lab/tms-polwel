@@ -202,7 +202,7 @@ export const sendPasswordResetLink = async (req: AuthenticatedRequest, res: Resp
 
     // Generate reset token
     const resetToken = EmailService.generateResetToken();
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day from now
 
     // Save reset token to database
     await prisma.user.update({
@@ -355,7 +355,8 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
 
     // Build where clause
     const where: any = {
-      role: UserRole.POLWEL
+      role: UserRole.POLWEL,
+      status: { not: UserStatus.INACTIVE } // Exclude soft-deleted users
     };
 
     if (search) {
@@ -366,6 +367,7 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
     }
 
     if (status) {
+      // If status is explicitly specified, override the default filter
       where.status = status as UserStatus;
     }
 
@@ -580,7 +582,7 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
 
     // Send setup completion email
     try {
-      const setupUrl = `${process.env.FRONTEND_URL}/complete-setup/${setupToken}`;
+      const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
       await EmailService.sendUserSetupEmail(result.user.email, result.user.name, setupUrl);
     } catch (emailError) {
       console.error('Failed to send setup email:', emailError);
@@ -602,9 +604,27 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     });
   } catch (error) {
     console.error('Create POLWEL user error:', error);
+    
+    // Handle specific Prisma errors
+    if (error instanceof Error) {
+      if (error.message.includes('Unique constraint')) {
+        return res.status(409).json({
+          success: false,
+          message: 'A user with this email address already exists'
+        });
+      }
+      
+      if (error.message.includes('email')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email address provided'
+        });
+      }
+    }
+    
     return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Failed to create user. Please try again.'
     });
   }
 };
@@ -790,6 +810,16 @@ export const deletePolwelUser = async (req: AuthenticatedRequest, res: Response)
       }
     });
 
+    // Log the deletion
+    await AuditService.logUserUpdate(
+      req.user?.userId || 'system',
+      existingUser.id,
+      { status: existingUser.status },
+      { status: UserStatus.INACTIVE },
+      'User soft deleted (status set to INACTIVE)',
+      req
+    );
+
     return res.json({
       success: true,
       message: 'POLWEL user deleted successfully'
@@ -906,6 +936,85 @@ export const togglePolwelUserMfa = async (req: AuthenticatedRequest, res: Respon
     });
   } catch (error) {
     console.error('Toggle POLWEL user MFA error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Resend setup email to POLWEL user
+export const resendPolwelUserSetup = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Check if user exists and is POLWEL with PENDING status
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL,
+        status: UserStatus.PENDING
+      }
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found or already activated'
+      });
+    }
+
+    // Generate new setup token with 24-hour expiry
+    const setupToken = EmailService.generateResetToken();
+    const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day
+
+    // Update user with new setup token
+    await prisma.user.update({
+      where: { id: id },
+      data: {
+        resetToken: setupToken,
+        resetTokenExpiry
+      }
+    });
+
+    // Send new setup email
+    const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+    const emailSent = await EmailService.sendUserSetupEmail(
+      existingUser.email,
+      existingUser.name,
+      setupUrl
+    );
+
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send setup email'
+      });
+    }
+
+    // Log the action
+    await AuditService.logUserUpdate(
+      req.user?.userId || 'system',
+      existingUser.id,
+      {},
+      { setupTokenResent: true },
+      'Setup email resent to user',
+      req
+    );
+
+    return res.json({
+      success: true,
+      message: 'Setup email sent successfully'
+    });
+  } catch (error) {
+    console.error('Resend setup email error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

@@ -63,7 +63,7 @@ const CompleteSetup = () => {
       }
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-setup/verify-token/${token}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/user-setup/verify-token/${token}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ const CompleteSetup = () => {
     setError("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-setup/complete-setup`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-setup/onboarding/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -125,9 +125,25 @@ export function AddPolwelUserDialog() {
       window.location.reload();
     } catch (error) {
       console.error('Error creating POLWEL user:', error);
+      
+      let errorMessage = "Failed to create POLWEL user";
+      
+      if (error instanceof Error) {
+        // Parse API error message
+        if (error.message.includes('already exists')) {
+          errorMessage = "A user with this email address already exists";
+        } else if (error.message.includes('email')) {
+          errorMessage = "Invalid email address provided";
+        } else if (error.message.includes('permission')) {
+          errorMessage = "Invalid permissions selected";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create POLWEL user",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

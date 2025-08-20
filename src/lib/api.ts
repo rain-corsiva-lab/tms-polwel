@@ -323,6 +323,13 @@ export const polwelUsersApi = {
       method: 'POST',
     });
   },
+
+  // Resend setup email
+  resendSetup: async (id: string | number) => {
+    return apiRequest(`/polwel-users/${id}/resend-setup`, {
+      method: 'POST',
+    });
+  },
 };
 
 // Trainers API
