@@ -66,7 +66,11 @@ const App = () => (
             />
             
             {/* Main application routes */}
-            <Route path="/" element={<Layout />}>
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
               <Route index element={<Home />} />
               
               {/* User Management */}
