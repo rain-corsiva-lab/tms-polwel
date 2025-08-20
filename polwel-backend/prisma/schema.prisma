@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -16,13 +16,13 @@ model User {
   status              UserStatus          @default(PENDING)
   emailVerified       Boolean             @default(false)
   mfaEnabled          Boolean             @default(false)
-  mfaSecret           String?
+  mfaSecret           String?             @db.Text // JWT and secrets can be long
   lastLogin           DateTime?
   passwordExpiry      DateTime?
   failedLoginAttempts Int                 @default(0)
   lockedUntil         DateTime?
-  refreshToken        String?
-  resetToken          String?
+  refreshToken        String?             @db.Text // JWT tokens can be long
+  resetToken          String?             @db.Text // Reset tokens can be long
   resetTokenExpiry    DateTime?
   permissionLevel     String?
   department          String?
@@ -32,14 +32,14 @@ model User {
   buNumberRequired    Boolean?
   paymentMode         PaymentMode?
   contactNumber       String?
-  additionalEmails    String[]
+  additionalEmails    Json?               // Changed from String[] to Json for MySQL compatibility
   availabilityStatus  AvailabilityStatus?
   partnerOrganization String?
-  bio                 String?
-  specializations     String[]
-  certifications      String[]
+  bio                 String?             @db.Text // Allow longer bios
+  specializations     Json?               // Changed from String[] to Json for MySQL compatibility
+  certifications      Json?               // Changed from String[] to Json for MySQL compatibility
   profileImage        String?
-  experience          String?
+  experience          String?             @db.Text // Allow longer experience descriptions
   rating              Float?
   employeeId          String?
   createdAt           DateTime            @default(now())
@@ -83,16 +83,16 @@ model Organization {
 model Course {
   id                  String       @id @default(cuid())
   title               String
-  description         String?
-  objectives          String[]     @default([])
+  description         String?      @db.Text // Allow longer descriptions
+  objectives          Json?        // Changed from String[] to Json for MySQL compatibility
   duration            String       // Changed to String to support both days and hours
   durationType        String       @default("days") // "days" or "hours"
   maxParticipants     Int          @default(25)
   minParticipants     Int          @default(1)
   category            String?
   level               String?
-  prerequisites       String[]     @default([])
-  materials           String[]     @default([])
+  prerequisites       Json?        // Changed from String[] to Json for MySQL compatibility
+  materials           Json?        // Changed from String[] to Json for MySQL compatibility
   status              CourseStatus @default(DRAFT)
   
   // Pricing Structure
@@ -108,17 +108,17 @@ model Course {
   
   // Additional course details
   venue               String?      // Venue name/type
-  trainers            String[]     @default([]) // Array of trainer names
+  trainers            Json?        // Changed from String[] to Json for MySQL compatibility
   certificates        String       @default("polwel") // "polwel", "partner", "no"
-  remarks             String?      // Remarks for minimum pax not met
+  remarks             String?      @db.Text // Remarks can be long
   
   // Course outline and structure
   courseOutline       Json?        // Store course modules and topics as JSON
-  targetAudience      String?
+  targetAudience      String?      @db.Text // Target audience descriptions can be long
   
   // Legacy fields to maintain compatibility
-  syllabus            String?
-  assessmentMethod    String?
+  syllabus            String?      @db.Text // Syllabus can be very long
+  assessmentMethod    String?      @db.Text // Assessment descriptions can be long
   certificationType   String?
   
   // Metadata
@@ -151,7 +151,7 @@ model CourseRun {
   trainerFee          Float        @default(0)
   venueFee            Float        @default(0)
   totalCost           Float        @default(0)
-  notes               String?
+  notes               String?      @db.Text // Notes can be long
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   bookings            Booking[]
@@ -167,13 +167,13 @@ model Venue {
   name          String
   address       String?
   capacity      String
-  description   String?
-  facilities    String[]
-  contacts      Json[]      @default([]) // Array of contact objects with {id, name, number, email}
+  description   String?      @db.Text // Allow longer descriptions
+  facilities    Json?       // Changed from String[] to Json for MySQL compatibility
+  contacts      Json?       // Changed from Json[] to Json for MySQL compatibility
   feeType       FeeType     @default(PER_VENUE)
   fee           Float       @default(0)
   status        VenueStatus @default(ACTIVE)
-  remarks       String?
+  remarks       String?     @db.Text // Remarks can be long
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   createdBy     String?
@@ -193,8 +193,8 @@ model Booking {
   venueId             String?
   participantCount    Int           @default(1)
   status              BookingStatus @default(PENDING)
-  notes               String?
-  specialRequirements String?
+  notes               String?       @db.Text // Notes can be long
+  specialRequirements String?       @db.Text // Special requirements can be long
   customStartDate     DateTime?
   customEndDate       DateTime?
   customStartTime     String?
@@ -205,7 +205,7 @@ model Booking {
   bookingReference    String        @unique
   confirmedAt         DateTime?
   cancelledAt         DateTime?
-  cancellationReason  String?
+  cancellationReason  String?       @db.Text // Cancellation reasons can be long
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   createdBy           String?
@@ -226,8 +226,8 @@ model TrainerBlockout {
   endDate          DateTime
   reason           String
   type             String
-  description      String?
-  isRecurring      Boolean  @default(false)
+  description      String?       @db.Text // Descriptions can be long
+  isRecurring      Boolean       @default(false)
   recurringPattern String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

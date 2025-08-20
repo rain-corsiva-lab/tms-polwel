@@ -16,6 +16,8 @@ dotenv.config(); // Fallback to .env
 
 console.log(`🌍 Environment: ${NODE_ENV}`);
 console.log(`📁 Config file: ${envFile}`);
+console.log(`🔧 CORS_ORIGINS env var:`, process.env.CORS_ORIGINS);
+console.log(`🔧 FRONTEND_URL env var:`, process.env.FRONTEND_URL);
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -63,25 +65,52 @@ console.log('🔐 CORS configured for origins:', allowedOrigins);
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
+    console.log('🔍 CORS check for origin:', origin);
+    console.log('📋 Current allowed origins:', allowedOrigins);
+    
     // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ Allowing request with no origin');
+      return callback(null, true);
+    }
     
     // Allow configured origins (exact match)
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ Origin found in allowed list (exact match)');
+      return callback(null, true);
+    }
     
     // Allow both HTTP and HTTPS versions of configured domains
     const originWithoutProtocol = origin.replace(/^https?:\/\//, '');
     const allowedDomains = allowedOrigins.map(o => o.replace(/^https?:\/\//, ''));
-    if (allowedDomains.includes(originWithoutProtocol)) return callback(null, true);
+    if (allowedDomains.includes(originWithoutProtocol)) {
+      console.log('✅ Origin found in allowed list (protocol flexible match)');
+      return callback(null, true);
+    }
     
-    // Allow any localhost origin in dev
+    // Allow any localhost origin in dev and staging
     if (origin.startsWith('http://localhost') || origin.startsWith('https://localhost') || 
         origin.startsWith('http://127.0.0.1') || origin.startsWith('https://127.0.0.1')) {
+      console.log('✅ Allowing localhost origin');
       return callback(null, true);
+    }
+    
+    // In staging/production, be more permissive with the main domain
+    const currentEnv = process.env.NODE_ENV || 'development';
+    if (currentEnv !== 'development') {
+      // Check if origin matches any part of allowed domains (for subdomains, etc)
+      const isAllowedDomain = allowedDomains.some(domain => 
+        originWithoutProtocol.includes(domain) || domain.includes(originWithoutProtocol)
+      );
+      if (isAllowedDomain) {
+        console.log('✅ Origin matches allowed domain pattern');
+        return callback(null, true);
+      }
     }
     
     console.error('❌ CORS blocked origin:', origin);
     console.error('📋 Allowed origins:', allowedOrigins);
+    console.error('🌐 Environment:', currentEnv);
     return callback(new Error(`CORS policy violation: Origin ${origin} not allowed`));
   },
   credentials: true,
