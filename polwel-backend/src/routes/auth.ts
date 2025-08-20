@@ -41,6 +41,10 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
   try {
     const { email, password, rememberMe = false } = req.body;
 
+    console.log(`🔐 [AUTH] Login attempt for email: ${email}`);
+    console.log(`🔐 [AUTH] NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`🔐 [AUTH] DATABASE_URL: ${process.env.DATABASE_URL?.replace(/:[^:]*@/, ':****@')}`);
+
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password are required' });
       return;

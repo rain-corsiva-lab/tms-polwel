@@ -18,6 +18,7 @@ console.log(`🌍 Environment: ${NODE_ENV}`);
 console.log(`📁 Config file: ${envFile}`);
 console.log(`🔧 CORS_ORIGINS env var:`, process.env.CORS_ORIGINS);
 console.log(`🔧 FRONTEND_URL env var:`, process.env.FRONTEND_URL);
+console.log(`🔧 DATABASE_URL env var:`, process.env.DATABASE_URL?.replace(/:[^:]*@/, ':****@')); // Hide password
 
 // Import routes
 import authRoutes from './routes/auth';
