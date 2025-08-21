@@ -162,7 +162,7 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to POLWEL!</h1>
+              <h1> Welcome to POLWEL!</h1>
               <h2>Complete Your Account Setup</h2>
             </div>
             <div class="content">
@@ -171,25 +171,25 @@ class EmailService {
               <p>Welcome to the POLWEL Training Management System! Your account has been created and you're just one step away from accessing the platform.</p>
               
               <div class="highlight">
-                <h3>📋 What's Next?</h3>
+                <h3>What's Next?</h3>
                 <p>Click the button below to complete your account setup. You'll be asked to:</p>
                 <div class="steps">
-                  <div class="step">🔐 <strong>Set Your Password:</strong> Create a secure password for your account</div>
-                  <div class="step">📋 <strong>Accept Terms:</strong> Review and accept our Terms & Conditions</div>
-                  <div class="step">🔒 <strong>Privacy Policy:</strong> Review our Privacy Policy</div>
-                  <div class="step">✅ <strong>Complete Setup:</strong> Finalize your account activation</div>
+                  <div class="step"><strong>Set Your Password:</strong> Create a secure password for your account</div>
+                  <div class="step"><strong>Accept Terms:</strong> Review and accept our Terms & Conditions</div>
+                  <div class="step"><strong>Privacy Policy:</strong> Review our Privacy Policy</div>
+                  <div class="step"><strong>Complete Setup:</strong> Finalize your account activation</div>
                 </div>
               </div>
               
               <div style="text-align: center;">
-                <a href="${setupUrl}" class="button">🚀 Complete Account Setup</a>
+                <a href="${setupUrl}" class="button">Complete Account Setup</a>
               </div>
               
               <p>Or copy and paste this link into your browser:</p>
               <p style="word-break: break-all; background-color: #f8f9fa; padding: 15px; border-radius: 4px; font-family: monospace;">${setupUrl}</p>
               
               <div class="highlight">
-                <strong>⚠️ Important Security Information:</strong>
+                <strong>Important Security Information:</strong>
                 <ul style="margin: 10px 0; padding-left: 20px;">
                   <li>This setup link will expire in <strong>24 hours</strong></li>
                   <li>For security, this link can only be used once</li>
