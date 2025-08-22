@@ -4,18 +4,14 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Load environment variables based on NODE_ENV
+// Load environment variables from .env file only (best practice)
+dotenv.config({ override: true });
+
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const envFile = `.env.${NODE_ENV}`;
-
-// Try to load environment-specific file first, then fallback to .env
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
-dotenv.config(); // Fallback to .env
 
 console.log(`🌍 Environment: ${NODE_ENV}`);
-console.log(`📁 Config file: ${envFile}`);
+console.log(`📁 Config file: .env`);
 console.log(`🔧 CORS_ORIGINS env var:`, process.env.CORS_ORIGINS);
 console.log(`🔧 FRONTEND_URL env var:`, process.env.FRONTEND_URL);
 console.log(`🔧 DATABASE_URL env var:`, process.env.DATABASE_URL?.replace(/:[^:]*@/, ':****@')); // Hide password

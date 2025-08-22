@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
 import AuditService from '../services/auditService';
 import EmailService from '../services/emailService';
+import { UserValidationService } from '../utils/userValidation';
 
 
 
@@ -214,29 +215,36 @@ export const sendPasswordResetLink = async (req: AuthenticatedRequest, res: Resp
     });
 
     // Send reset email
-    const emailSent = await EmailService.sendPasswordResetEmail(
-      user.email,
-      user.name,
-      resetToken
-    );
-
-    if (emailSent) {
-      // Log password reset request
-      await AuditService.logPasswordChange(
-        id,
-        req.user?.userId || 'system',
-        'Password reset link sent via email',
-        req
+    if (user.email) {
+      const emailSent = await EmailService.sendPasswordResetEmail(
+        user.email,
+        user.name,
+        resetToken
       );
 
-      return res.json({
-        success: true,
-        message: 'Password reset link has been sent to the user\'s email address'
-      });
+      if (emailSent) {
+        // Log password reset request
+        await AuditService.logPasswordChange(
+          id,
+          req.user?.userId || 'system',
+          'Password reset link sent via email',
+          req
+        );
+
+        return res.json({
+          success: true,
+          message: 'Password reset link has been sent to the user\'s email address'
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send password reset email'
+        });
+      }
     } else {
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
-        message: 'Failed to send password reset email'
+        message: 'User has no email address - cannot send reset link'
       });
     }
   } catch (error) {
@@ -481,31 +489,32 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       permissions = []
     } = req.body;
 
-    // Validation
-    if (!name || !email) {
+    // Prepare data for validation (simple sanitization)
+    const userData = {
+      name: name?.trim(),
+      email: email?.trim().toLowerCase()
+    };
+
+    // Validate user data
+    const validationErrors = await UserValidationService.validatePolwelUserData(userData);
+    if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Name and email are required'
+        message: 'Validation failed',
+        errors: validationErrors
       });
     }
 
-    // TEMPORARILY DISABLED - Permission requirement check disabled for now
-    // if (!Array.isArray(permissions) || permissions.length === 0) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'At least one permission must be granted'
-    //   });
-    // }
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (existingUser) {
+    // Check for email conflicts
+    const emailConflict = await UserValidationService.checkEmailConflict(userData.email);
+    if (emailConflict.isActiveConflict) {
+      const conflictMessage = UserValidationService.generateEmailConflictMessage(
+        emailConflict, 
+        userData.email
+      );
       return res.status(409).json({
         success: false,
-        message: 'User with this email already exists'
+        message: conflictMessage
       });
     }
 
@@ -582,8 +591,10 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
 
     // Send setup completion email
     try {
-      const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
-      await EmailService.sendUserSetupEmail(result.user.email, result.user.name, setupUrl);
+      if (result.user.email) {
+        const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+        await EmailService.sendUserSetupEmail(result.user.email, result.user.name, setupUrl);
+      }
     } catch (emailError) {
       console.error('Failed to send setup email:', emailError);
       // Don't fail the user creation if email fails
@@ -795,30 +806,61 @@ export const deletePolwelUser = async (req: AuthenticatedRequest, res: Response)
       }
     });
 
-    if (!existingUser) {
+    if (!existingUser || !existingUser.email) {
       return res.status(404).json({
         success: false,
-        message: 'POLWEL user not found'
+        message: 'POLWEL user not found or already deleted'
       });
     }
 
-    // Soft delete by setting status to INACTIVE
-    await prisma.user.update({
+    // Soft delete by moving email to old_email and setting email to null
+    const emailBeforeDeletion = existingUser.email;
+    const updatedUser = await prisma.user.update({
       where: { id: id },
       data: {
+        old_email: emailBeforeDeletion, // Store original email
+        email: null, // Clear email to allow reuse
         status: UserStatus.INACTIVE
+      },
+      select: {
+        id: true,
+        name: true,
+        old_email: true,
+        status: true
       }
     });
 
     // Log the deletion
-    await AuditService.logUserUpdate(
-      req.user?.userId || 'system',
-      existingUser.id,
-      { status: existingUser.status },
-      { status: UserStatus.INACTIVE },
-      'User soft deleted (status set to INACTIVE)',
-      req
-    );
+    if (emailBeforeDeletion) {
+      await AuditService.logUserUpdate(
+        req.user?.userId || 'system',
+        existingUser.id,
+        { 
+          email: emailBeforeDeletion,
+          status: existingUser.status 
+        },
+        { 
+          old_email: emailBeforeDeletion,
+          email: null,
+          status: UserStatus.INACTIVE 
+        },
+        'POLWEL user soft deleted - email moved to old_email',
+        req
+      );
+    } else {
+      await AuditService.logUserUpdate(
+        req.user?.userId || 'system',
+        existingUser.id,
+        { 
+          status: existingUser.status 
+        },
+        { 
+          status: UserStatus.INACTIVE 
+        },
+        'POLWEL user soft deleted - already had no email',
+        req
+      );
+    }
 
     return res.json({
       success: true,
@@ -985,17 +1027,24 @@ export const resendPolwelUserSetup = async (req: AuthenticatedRequest, res: Resp
     });
 
     // Send new setup email
-    const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
-    const emailSent = await EmailService.sendUserSetupEmail(
-      existingUser.email,
-      existingUser.name,
-      setupUrl
-    );
+    if (existingUser.email) {
+      const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+      const emailSent = await EmailService.sendUserSetupEmail(
+        existingUser.email,
+        existingUser.name,
+        setupUrl
+      );
 
-    if (!emailSent) {
-      return res.status(500).json({
+      if (!emailSent) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send setup email'
+        });
+      }
+    } else {
+      return res.status(400).json({
         success: false,
-        message: 'Failed to send setup email'
+        message: 'User has no email address - cannot send setup email'
       });
     }
 

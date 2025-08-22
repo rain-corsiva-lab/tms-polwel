@@ -3,16 +3,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Load environment variables
+// Load environment variables from .env file only (best practice)
+dotenv.config();
+
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const envFile = `.env.${NODE_ENV}`;
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
-dotenv.config(); // Fallback to .env
 
 console.log(`🌍 Environment: ${NODE_ENV}`);
-console.log(`📁 Config file: ${envFile}`);
+console.log(`📁 Config file: .env`);
 
 const app = express();
 const PORT = process.env.PORT || 3001;

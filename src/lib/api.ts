@@ -108,7 +108,17 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         }
         
         console.error(`API Error (${response.status}):`, errorData);
-        throw new Error(`API Error: ${errorData.message || errorData.error || response.statusText}`);
+        
+        // Format error message to include field-specific errors
+        let errorMessage = errorData.message || errorData.error || response.statusText;
+        
+        // If there are validation errors, append them to the message
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          const fieldErrors = errorData.errors.map((err: any) => err.message).join('. ');
+          errorMessage = `${errorMessage}. ${fieldErrors}`;
+        }
+        
+        throw new Error(`API Error: ${errorMessage}`);
       }
 
       const data = await response.json();
