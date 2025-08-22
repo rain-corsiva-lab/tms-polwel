@@ -140,13 +140,13 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           error.message.includes('ERR_CONNECTION_REFUSED')) {
         
         // Special handling for staging environment
-        if (import.meta.env.MODE === 'staging' || import.meta.env.VITE_NODE_ENV === 'staging') {
-          console.warn('⚠️  Staging environment detected with connection error. Please check:');
-          console.warn('1. VITE_API_URL environment variable is set correctly');
-          console.warn('2. Backend server is running and accessible');
-          console.warn('3. CORS is configured properly on the backend');
-          console.warn('Current API URL:', API_BASE_URL);
-        }
+        // if (import.meta.env.MODE === 'staging' || import.meta.env.VITE_NODE_ENV === 'staging') {
+        //   console.warn('⚠️  Staging environment detected with connection error. Please check:');
+        //   console.warn('1. VITE_API_URL environment variable is set correctly');
+        //   console.warn('2. Backend server is running and accessible');
+        //   console.warn('3. CORS is configured properly on the backend');
+        //   console.warn('Current API URL:', API_BASE_URL);
+        // }
         
         if (i < attempts.length - 1) {
           console.log(`Connection refused, trying alternative approach...`);
@@ -154,12 +154,12 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           continue;
         } else {
           // Enhanced error message for staging
-          const enhancedError = new Error(
-            import.meta.env.MODE === 'staging' || import.meta.env.VITE_NODE_ENV === 'staging'
-              ? `Network connection failed. Please check if the backend server is running at ${API_BASE_URL}. Original error: ${error.message}`
-              : error.message
-          );
-          throw enhancedError;
+          // const enhancedError = new Error(
+          //   import.meta.env.MODE === 'staging' || import.meta.env.VITE_NODE_ENV === 'staging'
+          //     ? `Network connection failed. Please check if the backend server is running at ${API_BASE_URL}. Original error: ${error.message}`
+          //     : error.message
+          // );
+          // throw enhancedError;
         }
       }
       
