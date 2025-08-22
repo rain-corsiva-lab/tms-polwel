@@ -91,6 +91,7 @@ export function EditCoordinatorDialog({
         status: formData.status,
       });
 
+      // Only show success toast if the API call succeeds
       toast({
         title: "Coordinator Updated",
         description: `Training Coordinator "${formData.name}" has been updated successfully.`,

@@ -65,6 +65,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         password: tempPassword,
       });
 
+      // Only show success toast if the API call succeeds
       toast({
         title: "Training Coordinator Created",
         description: `Training Coordinator "${formData.name}" has been created successfully.`,
