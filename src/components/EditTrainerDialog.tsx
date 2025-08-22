@@ -113,9 +113,31 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
       onTrainerUpdated();
     } catch (error) {
       console.error('Error updating trainer:', error);
+      
+      let errorMessage = "Failed to update trainer";
+      
+      if (error instanceof Error) {
+        // Parse API error message
+        if (error.message.includes('already exists') || error.message.includes('already in use')) {
+          errorMessage = "A trainer with this email address already exists";
+        } else if (error.message.includes('email')) {
+          errorMessage = "Invalid email address provided";
+        } else if (error.message.includes('validation')) {
+          errorMessage = "Invalid data provided. Please check your input and try again";
+        } else if (error.message.includes('not found')) {
+          errorMessage = "Trainer not found or no longer exists";
+        } else if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
+          errorMessage = "You don't have permission to update this trainer";
+        } else if (error.message.includes('conflict')) {
+          errorMessage = "This update conflicts with existing data. Please check and try again";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to update trainer. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

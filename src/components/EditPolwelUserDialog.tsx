@@ -151,9 +151,29 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       onUserUpdated();
     } catch (error) {
       console.error('Error updating user:', error);
+      
+      let errorMessage = "Failed to update user";
+      
+      if (error instanceof Error) {
+        // Parse API error message
+        if (error.message.includes('already exists') || error.message.includes('already in use')) {
+          errorMessage = "A user with this email address already exists";
+        } else if (error.message.includes('email')) {
+          errorMessage = "Invalid email address provided";
+        } else if (error.message.includes('permission')) {
+          errorMessage = "Invalid permissions selected";
+        } else if (error.message.includes('not found')) {
+          errorMessage = "User not found or no longer exists";
+        } else if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
+          errorMessage = "You don't have permission to update this user";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to update user. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

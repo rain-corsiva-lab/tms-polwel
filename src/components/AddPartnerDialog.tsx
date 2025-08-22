@@ -141,9 +141,29 @@ export function AddPartnerDialog({
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error saving partner:', error);
+      
+      let errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} partner`;
+      
+      if (error instanceof Error) {
+        // Parse API error message
+        if (error.message.includes('already exists') || error.message.includes('already in use')) {
+          errorMessage = "A partner with this name or details already exists";
+        } else if (error.message.includes('validation')) {
+          errorMessage = "Invalid data provided. Please check your input and try again";
+        } else if (error.message.includes('not found')) {
+          errorMessage = "Partner not found or no longer exists";
+        } else if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
+          errorMessage = `You don't have permission to ${isEditMode ? 'update' : 'create'} partners`;
+        } else if (error.message.includes('conflict')) {
+          errorMessage = "This operation conflicts with existing data. Please check and try again";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: `Failed to ${isEditMode ? 'update' : 'create'} partner. Please try again.`,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

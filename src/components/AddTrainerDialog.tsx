@@ -127,9 +127,27 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
       }
     } catch (error) {
       console.error('Error creating trainer:', error);
+      
+      let errorMessage = "Failed to create trainer";
+      
+      if (error instanceof Error) {
+        // Parse API error message
+        if (error.message.includes('already exists') || error.message.includes('already in use')) {
+          errorMessage = "A trainer with this email address already exists";
+        } else if (error.message.includes('email')) {
+          errorMessage = "Invalid email address provided";
+        } else if (error.message.includes('validation')) {
+          errorMessage = "Invalid data provided. Please check your input and try again";
+        } else if (error.message.includes('permission')) {
+          errorMessage = "You don't have permission to create trainers";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create trainer. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
