@@ -29,6 +29,7 @@ import { Plus, Building2, Edit, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { partnersApi } from "@/lib/api";
+import { errorHandlers } from "@/lib/errorHandler";
 
 // Available courses for selection
 const availableCourses = [
@@ -140,32 +141,11 @@ export function AddPartnerDialog({
       if (onPartnerCreated) onPartnerCreated();
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error saving partner:', error);
-      
-      let errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} partner`;
-      
-      if (error instanceof Error) {
-        // Parse API error message
-        if (error.message.includes('already exists') || error.message.includes('already in use')) {
-          errorMessage = "A partner with this name or details already exists";
-        } else if (error.message.includes('validation')) {
-          errorMessage = "Invalid data provided. Please check your input and try again";
-        } else if (error.message.includes('not found')) {
-          errorMessage = "Partner not found or no longer exists";
-        } else if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
-          errorMessage = `You don't have permission to ${isEditMode ? 'update' : 'create'} partners`;
-        } else if (error.message.includes('conflict')) {
-          errorMessage = "This operation conflicts with existing data. Please check and try again";
-        } else {
-          errorMessage = error.message;
-        }
+      if (isEditMode) {
+        errorHandlers.partnerUpdate(error, toast);
+      } else {
+        errorHandlers.partnerCreate(error, toast);
       }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }

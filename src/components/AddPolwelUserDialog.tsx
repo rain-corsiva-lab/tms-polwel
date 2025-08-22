@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { polwelUsersApi } from "@/lib/api";
+import { errorHandlers } from "@/lib/errorHandler";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 
 interface ModulePermissions {
@@ -124,28 +125,7 @@ export function AddPolwelUserDialog() {
       // Trigger a page refresh or parent component update
       window.location.reload();
     } catch (error) {
-      console.error('Error creating POLWEL user:', error);
-      
-      let errorMessage = "Failed to create POLWEL user";
-      
-      if (error instanceof Error) {
-        // Parse API error message
-        if (error.message.includes('already exists')) {
-          errorMessage = "A user with this email address already exists";
-        } else if (error.message.includes('email')) {
-          errorMessage = "Invalid email address provided";
-        } else if (error.message.includes('permission')) {
-          errorMessage = "Invalid permissions selected";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      errorHandlers.userCreate(error, toast);
     } finally {
       setLoading(false);
     }

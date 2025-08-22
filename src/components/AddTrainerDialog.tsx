@@ -36,6 +36,7 @@ import { Plus, GraduationCap, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi } from "@/lib/api";
+import { errorHandlers } from "@/lib/errorHandler";
 
 // Available courses for selection
 const availableCourses = [
@@ -126,30 +127,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
         onTrainerCreated();
       }
     } catch (error) {
-      console.error('Error creating trainer:', error);
-      
-      let errorMessage = "Failed to create trainer";
-      
-      if (error instanceof Error) {
-        // Parse API error message
-        if (error.message.includes('already exists') || error.message.includes('already in use')) {
-          errorMessage = "A trainer with this email address already exists";
-        } else if (error.message.includes('email')) {
-          errorMessage = "Invalid email address provided";
-        } else if (error.message.includes('validation')) {
-          errorMessage = "Invalid data provided. Please check your input and try again";
-        } else if (error.message.includes('permission')) {
-          errorMessage = "You don't have permission to create trainers";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      errorHandlers.trainerCreate(error, toast);
     } finally {
       setLoading(false);
     }

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { errorHandlers } from "@/lib/errorHandler";
 
 interface AddCoordinatorDialogProps {
   onCoordinatorAdd: (coordinatorData: {
@@ -78,32 +79,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
       });
       setOpen(false);
     } catch (error) {
-      console.error('Error creating coordinator:', error);
-      
-      let errorMessage = "Failed to create coordinator";
-      
-      if (error instanceof Error) {
-        // Parse API error message
-        if (error.message.includes('already exists') || error.message.includes('already in use')) {
-          errorMessage = "A coordinator with this email address already exists";
-        } else if (error.message.includes('email')) {
-          errorMessage = "Invalid email address provided";
-        } else if (error.message.includes('validation')) {
-          errorMessage = "Invalid data provided. Please check your input and try again";
-        } else if (error.message.includes('permission')) {
-          errorMessage = "You don't have permission to create coordinators";
-        } else if (error.message.includes('organization')) {
-          errorMessage = "Organization not found or no longer exists";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      errorHandlers.coordinatorCreate(error, toast);
     }
   };
 

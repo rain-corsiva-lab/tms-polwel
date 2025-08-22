@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Edit, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi } from "@/lib/api";
+import { errorHandlers } from "@/lib/errorHandler";
 
 interface Trainer {
   id: string;
@@ -112,34 +113,7 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
       setOpen(false);
       onTrainerUpdated();
     } catch (error) {
-      console.error('Error updating trainer:', error);
-      
-      let errorMessage = "Failed to update trainer";
-      
-      if (error instanceof Error) {
-        // Parse API error message
-        if (error.message.includes('already exists') || error.message.includes('already in use')) {
-          errorMessage = "A trainer with this email address already exists";
-        } else if (error.message.includes('email')) {
-          errorMessage = "Invalid email address provided";
-        } else if (error.message.includes('validation')) {
-          errorMessage = "Invalid data provided. Please check your input and try again";
-        } else if (error.message.includes('not found')) {
-          errorMessage = "Trainer not found or no longer exists";
-        } else if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
-          errorMessage = "You don't have permission to update this trainer";
-        } else if (error.message.includes('conflict')) {
-          errorMessage = "This update conflicts with existing data. Please check and try again";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      errorHandlers.trainerUpdate(error, toast);
     } finally {
       setLoading(false);
     }
