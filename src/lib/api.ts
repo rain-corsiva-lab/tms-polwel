@@ -133,7 +133,6 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const attempts = [
     () => fetch(`${API_BASE_URL}${endpoint}`, config),
     () => fetch(`${API_BASE_URL}${endpoint}`, { ...config, mode: 'cors' }),
-    () => fetch(`http://127.0.0.1:3001/api${endpoint}`, config),
   ];
 
   let lastError;
