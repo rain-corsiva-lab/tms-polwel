@@ -257,7 +257,7 @@ const fetchTrainer = async () => {
         </Card>
       </div>
 
-      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} trainerCourses={specializations} />
+      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} />
     </div>
   );
 };

@@ -94,13 +94,13 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
 
     const permissionGroups: Record<string, string[]> = {};
     
-    permissions.forEach(permission => {
+    permissions.forEach((permission: any) => {
       let permissionString = '';
       
       // Handle different permission formats
       if (typeof permission === 'string') {
         permissionString = permission;
-      } else if (permission?.permissionName) {
+      } else if (permission && typeof permission === 'object' && permission.permissionName) {
         // New database format: { permissionName: 'users.view' }
         const [module, action] = permission.permissionName.split('.');
         // Convert to frontend format
@@ -116,10 +116,10 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
         };
         const frontendModule = moduleMapping[module] || module;
         permissionString = `${frontendModule}:${action}`;
-      } else if (permission?.permission) {
+      } else if (permission && typeof permission === 'object' && permission.permission) {
         // Old database format: { permission: { module: 'xxx', action: 'xxx' } }
         permissionString = `${permission.permission.module}:${permission.permission.action}`;
-      } else if (permission?.module && permission?.action) {
+      } else if (permission && typeof permission === 'object' && permission.module && permission.action) {
         // Direct object format: { module: 'xxx', action: 'xxx' }
         permissionString = `${permission.module}:${permission.action}`;
       } else {
