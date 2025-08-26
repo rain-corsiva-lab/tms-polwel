@@ -5,13 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
-interface FeesRevenueTabProps {
+interface FeesExpensesTabProps {
   formData: any;
   calculations: any;
   onInputChange: (field: string, value: any) => void;
 }
 
-const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, calculations, onInputChange }) => {
+const FeesExpensesTab: React.FC<FeesExpensesTabProps> = ({ formData, calculations, onInputChange }) => {
   return (
     <div className="space-y-4">
       {/* Default Course Fee */}
@@ -119,4 +119,4 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, calculations,
   );
 };
 
-export default FeesRevenueTab;
+export default FeesExpensesTab;

@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { referencesApi, coursesApi } from "@/lib/api";
 import CourseInformationTab from "@/components/CourseFormTabs/CourseInformationTab";
-import FeesRevenueTab from "@/components/CourseFormTabs/FeesRevenueTab";
+import FeesExpensesTab from "@/components/CourseFormTabs/FeesExpensesTab";
 import DiscountsTab from "@/components/CourseFormTabs/DiscountsTab";
 
 const CourseForm = () => {
@@ -339,7 +339,7 @@ const CourseForm = () => {
         <Tabs defaultValue="information" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="information">Course Information</TabsTrigger>
-            <TabsTrigger value="fees">Fees & Revenue</TabsTrigger>
+            <TabsTrigger value="fees">Fees & Expenses</TabsTrigger>
             <TabsTrigger value="discounts">Discounts</TabsTrigger>
           </TabsList>
 
@@ -360,10 +360,10 @@ const CourseForm = () => {
           <TabsContent value="fees" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Fees & Revenue</CardTitle>
+                <CardTitle>Fees & Expenses</CardTitle>
               </CardHeader>
               <CardContent>
-                <FeesRevenueTab 
+                <FeesExpensesTab 
                   formData={formData}
                   calculations={calculations}
                   onInputChange={handleInputChange}
