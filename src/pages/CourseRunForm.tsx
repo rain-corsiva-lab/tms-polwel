@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,17 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Course {
-  id: string;
-  title: string;
-  code: string;
-  venueId: string;
-  venue?: {
-    id: string;
-    name: string;
-  };
-}
 
 interface Venue {
   id: string;
@@ -34,14 +23,14 @@ interface Trainer {
 
 export default function CourseRunForm() {
   const navigate = useNavigate();
-  const { courseId } = useParams<{ courseId: string }>();
   const [loading, setLoading] = useState(false);
-  const [course, setCourse] = useState<Course | null>(null);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
 
   const [formData, setFormData] = useState({
     serialNumber: '',
+    courseTitle: '',
+    courseCode: '',
     type: 'Open' as 'Open' | 'Dedicated' | 'Talks',
     startDate: '',
     endDate: '',
@@ -66,14 +55,6 @@ export default function CourseRunForm() {
     const fetchData = async () => {
       try {
         // Mock data - replace with actual API calls
-        const mockCourse = {
-          id: courseId || '1',
-          title: 'Introduction to Data Analytics',
-          code: 'IDA01',
-          venueId: '1',
-          venue: { id: '1', name: 'Training Room A' }
-        };
-
         const mockVenues = [
           { id: '1', name: 'Training Room A', address: '123 Main St' },
           { id: '2', name: 'Training Room B', address: '456 Oak Ave' },
@@ -84,23 +65,16 @@ export default function CourseRunForm() {
           { id: '2', name: 'Ms. Jane Smith' },
         ];
 
-        setCourse(mockCourse);
         setVenues(mockVenues);
         setTrainers(mockTrainers);
-        
-        // Pre-fill venue from course
-        setFormData(prev => ({
-          ...prev,
-          venueId: mockCourse.venueId
-        }));
       } catch (error) {
-        toast.error('Failed to load course data');
+        toast.error('Failed to load data');
         console.error('Error fetching data:', error);
       }
     };
 
     fetchData();
-  }, [courseId]);
+  }, []);
 
   const handleInputChange = (field: string, value: any) => {
     if (field.startsWith('contractFees.')) {
@@ -135,7 +109,7 @@ export default function CourseRunForm() {
 
     try {
       // Validation
-      if (!formData.serialNumber || !formData.startDate || !formData.endDate) {
+      if (!formData.serialNumber || !formData.courseTitle || !formData.courseCode || !formData.startDate || !formData.endDate) {
         toast.error('Please fill in all required fields');
         return;
       }
@@ -153,13 +127,6 @@ export default function CourseRunForm() {
     }
   };
 
-  if (!course) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -175,7 +142,7 @@ export default function CourseRunForm() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Create New Course Run</h1>
-          <p className="text-muted-foreground">{course.title} ({course.code})</p>
+          <p className="text-muted-foreground">Set up a new course run with detailed information</p>
         </div>
       </div>
 
@@ -212,6 +179,31 @@ export default function CourseRunForm() {
                     <SelectItem value="Talks">Talks</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="courseTitle">Course Title *</Label>
+                <Input
+                  id="courseTitle"
+                  placeholder="e.g., Advanced Leadership Skills"
+                  value={formData.courseTitle}
+                  onChange={(e) => handleInputChange('courseTitle', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="courseCode">Course Code *</Label>
+                <Input
+                  id="courseCode"
+                  placeholder="e.g., ALS01"
+                  maxLength={5}
+                  value={formData.courseCode}
+                  onChange={(e) => handleInputChange('courseCode', e.target.value.toUpperCase())}
+                  required
+                />
               </div>
             </div>
 

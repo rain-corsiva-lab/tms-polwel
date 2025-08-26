@@ -79,7 +79,7 @@ const App = () => (
               
               {/* Course Run Management */}
               <Route path="course-runs" element={<CourseRunsOverview />} />
-              <Route path="course-runs/new/:courseId" element={<CourseRunForm />} />
+              <Route path="course-runs/new" element={<CourseRunForm />} />
               <Route path="course-runs/:courseId" element={<CourseRunManagement />} />
               <Route path="course-runs/:courseId/:runId" element={<CourseRunManagement />} />
               
