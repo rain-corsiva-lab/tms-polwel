@@ -3,17 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ChevronsUpDown, X, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { referencesApi, coursesApi } from "@/lib/api";
+import CourseInformationTab from "@/components/CourseFormTabs/CourseInformationTab";
+import FeesRevenueTab from "@/components/CourseFormTabs/FeesRevenueTab";
+import DiscountsTab from "@/components/CourseFormTabs/DiscountsTab";
 
 const CourseForm = () => {
   const { id } = useParams();
@@ -612,414 +607,56 @@ const CourseForm = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Course Title *</Label>
-              <Input
-                id="title"
-                type="text"
-                value={formData.title}
-                onChange={(e) => handleInputChange("title", e.target.value)}
-                placeholder="Enter course title"
-                required
-              />
-            </div>
+        <Tabs defaultValue="information" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="information">Course Information</TabsTrigger>
+            <TabsTrigger value="fees">Fees & Revenue</TabsTrigger>
+            <TabsTrigger value="discounts">Discounts</TabsTrigger>
+          </TabsList>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Course Category *</Label>
-                <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={loading.categories ? "Loading..." : "Select category"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loading.categories ? (
-                      <SelectItem value="__loading__" disabled>Loading categories...</SelectItem>
-                    ) : categoryGroups.length > 0 ? (
-                      categoryGroups.map((group) => [
-                        <div 
-                          key={`header-${group.name}`}
-                          className={`px-2 py-1 text-xs font-semibold ${group.color || 'bg-gray-100 text-gray-800'} rounded mx-1 my-1 pointer-events-none`}
-                        >
-                          {group.name}
-                        </div>,
-                        ...(group.subcategories || []).map((subcategory) => (
-                          <SelectItem 
-                            key={subcategory} 
-                            value={subcategory}
-                            className="ml-2 text-sm"
-                          >
-                            {subcategory}
-                          </SelectItem>
-                        ))
-                      ]).flat()
-                    ) : (
-                      <SelectItem value="__no_categories__" disabled>No categories available</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="trainer">Trainer/Partner *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="w-full justify-between h-10"
-                    >
-                      {formData.trainer.length > 0 ? (
-                        <div className="flex gap-1">
-                          {formData.trainer.slice(0, 2).map((t) => (
-                            <Badge key={t} variant="secondary" className="text-xs">
-                              {t}
-                              <X
-                                className="ml-1 h-3 w-3 cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleInputChange("trainer", formData.trainer.filter(trainer => trainer !== t));
-                                }}
-                              />
-                            </Badge>
-                          ))}
-                          {formData.trainer.length > 2 && (
-                            <span className="text-xs text-muted-foreground">+{formData.trainer.length - 2} more</span>
-                          )}
-                        </div>
-                      ) : (
-                        "Select trainers..."
-                      )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search trainers..." />
-                      <CommandList>
-                        <CommandEmpty>No trainer found.</CommandEmpty>
-                        {loading.trainers ? (
-                          <CommandItem disabled>Loading trainers...</CommandItem>
-                        ) : (
-                          <>
-                            <CommandGroup heading="Trainers">
-          {apiData.trainers.map((trainer, index) => {
-                                const displayName = trainer.name; // Use the 'name' field from the API
-                                return (
-                                  <CommandItem
-            key={trainer.id || trainer.name || `trainer-${index}`}
-                                    value={displayName}
-                                    onSelect={() => {
-                                      if (!formData.trainer.includes(displayName)) {
-                                        handleInputChange("trainer", [...formData.trainer, displayName]);
-                                      }
-                                    }}
-                                  >
-                                    <Check
-                                      className={`mr-2 h-4 w-4 ${
-                                        formData.trainer.includes(displayName) ? "opacity-100" : "opacity-0"
-                                      }`}
-                                    />
-                                    {displayName} 
-                                    {trainer.organization && <span className="text-xs text-muted-foreground ml-2">({trainer.organization})</span>}
-                                  </CommandItem>
-                                );
-                              })}
-                            </CommandGroup>
-                            <CommandGroup heading="Partners">
-                              {apiData.partners.map((partner, index) => (
-                                <CommandItem
-                                  key={partner.id || partner.name || `partner-${index}`}
-                                  value={partner.name}
-                                  onSelect={() => {
-                                    if (!formData.trainer.includes(partner.name)) {
-                                      handleInputChange("trainer", [...formData.trainer, partner.name]);
-                                    }
-                                  }}
-                                >
-                                  <Check
-                                    className={`mr-2 h-4 w-4 ${
-                                      formData.trainer.includes(partner.name) ? "opacity-100" : "opacity-0"
-                                    }`}
-                                  />
-                                  {partner.name}
-                                  {partner.organization && <span className="text-xs text-muted-foreground ml-2">({partner.organization})</span>}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Course Description / Learning Objectives</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                placeholder="Enter course description and learning objectives"
-                rows={4}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="duration">Course Duration</Label>
-                <Input
-                  id="duration"
-                  type="text"
-                  value={formData.duration}
-                  onChange={(e) => handleInputChange("duration", e.target.value)}
-                  placeholder="e.g., 2"
+          <TabsContent value="information" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Course Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CourseInformationTab 
+                  formData={formData}
+                  onInputChange={handleInputChange}
                 />
-              </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <div className="space-y-2">
-                <Label htmlFor="durationType">Duration Type</Label>
-                <Select value={formData.durationType} onValueChange={(value) => handleInputChange("durationType", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="days">Days</SelectItem>
-                    <SelectItem value="hours">Hours</SelectItem>
-                    <SelectItem value="weeks">Weeks</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="venue">Venue</Label>
-                <Select value={formData.venue} onValueChange={(value) => handleInputChange("venue", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={loading.venues ? "Loading venues..." : "Select venue"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loading.venues ? (
-                      <SelectItem value="__loading__" disabled>Loading...</SelectItem>
-                    ) : apiData.venues.length > 0 ? (
-                      apiData.venues.map((venue) => (
-                        <SelectItem key={venue.id || venue.name} value={venue.name}>
-                          {venue.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="__no_venues__" disabled>No venues available</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Fees and Revenue */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Fees and Revenue</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="courseFee">Course Fee ($)</Label>
-                <Input
-                  id="courseFee"
-                  type="number"
-                  value={formData.courseFee}
-                  onChange={(e) => handleInputChange("courseFee", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
+          <TabsContent value="fees" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fees & Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FeesRevenueTab 
+                  formData={formData}
+                  calculations={calculations}
+                  onInputChange={handleInputChange}
                 />
-              </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <div className="space-y-2">
-                <Label htmlFor="venueFee">Venue Fee ($)</Label>
-                <Input
-                  id="venueFee"
-                  type="number"
-                  value={formData.venueFee}
-                  onChange={(e) => handleInputChange("venueFee", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
+          <TabsContent value="discounts" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Discounts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DiscountsTab 
+                  formData={formData}
+                  onInputChange={handleInputChange}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="trainerFee">Trainer Fee ($)</Label>
-                <Input
-                  id="trainerFee"
-                  type="number"
-                  value={formData.trainerFee}
-                  onChange={(e) => handleInputChange("trainerFee", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="adminFees">Admin Fees ($)</Label>
-                <Input
-                  id="adminFees"
-                  type="number"
-                  value={formData.adminFees}
-                  onChange={(e) => handleInputChange("adminFees", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contingencyFees">Contingency Fees ($)</Label>
-                <Input
-                  id="contingencyFees"
-                  type="number"
-                  value={formData.contingencyFees}
-                  onChange={(e) => handleInputChange("contingencyFees", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="serviceFees">Service Fees ($)</Label>
-                <Input
-                  id="serviceFees"
-                  type="number"
-                  value={formData.serviceFees}
-                  onChange={(e) => handleInputChange("serviceFees", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vitalFees">Vital Fees ($)</Label>
-                <Input
-                  id="vitalFees"
-                  type="number"
-                  value={formData.vitalFees}
-                  onChange={(e) => handleInputChange("vitalFees", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="discount">Discount (%)</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  value={formData.discount}
-                  onChange={(e) => handleInputChange("discount", parseFloat(e.target.value) || 0)}
-                  placeholder="0"
-                  max="100"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="minPax">Minimum Pax</Label>
-                <Input
-                  id="minPax"
-                  type="number"
-                  value={formData.minPax}
-                  onChange={(e) => handleInputChange("minPax", parseInt(e.target.value) || 1)}
-                  placeholder="1"
-                  min="1"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amountPerPax">Amount Per Pax ($)</Label>
-                <Input
-                  id="amountPerPax"
-                  type="number"
-                  value={formData.amountPerPax}
-                  onChange={(e) => handleInputChange("amountPerPax", parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Additional Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="certificates">Certificates</Label>
-              <RadioGroup
-                value={formData.certificates}
-                onValueChange={(value) => handleInputChange("certificates", value)}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="polwel" id="polwel" />
-                  <Label htmlFor="polwel">POLWEL</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="partner" id="partner" />
-                  <Label htmlFor="partner">Partner</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="remarks">Remarks</Label>
-              <Textarea
-                id="remarks"
-                value={formData.remarks}
-                onChange={(e) => handleInputChange("remarks", e.target.value)}
-                placeholder="Additional notes or remarks"
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Financial Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <Label className="text-sm text-gray-600">Total Fee</Label>
-                <p className="text-2xl font-bold text-blue-600">${calculations.totalFee.toFixed(2)}</p>
-              </div>
-              
-              <div className="p-4 bg-green-50 rounded-lg">
-                <Label className="text-sm text-gray-600">Minimum Revenue</Label>
-                <p className="text-2xl font-bold text-green-600">${calculations.minimumRevenue.toFixed(2)}</p>
-              </div>
-              
-              <div className="p-4 bg-red-50 rounded-lg">
-                <Label className="text-sm text-gray-600">Total Cost</Label>
-                <p className="text-2xl font-bold text-red-600">${calculations.totalCost.toFixed(2)}</p>
-              </div>
-              
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <Label className="text-sm text-gray-600">Profit</Label>
-                <p className={`text-2xl font-bold ${calculations.profit >= 0 ? 'text-purple-600' : 'text-red-500'}`}>
-                  ${calculations.profit.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Margin: {calculations.profitMargin.toFixed(1)}%
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Submit Button */}
         <div className="flex justify-between">
