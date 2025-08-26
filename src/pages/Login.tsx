@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserCheck, Loader2, AlertCircle } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,19 +15,21 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Mock login function
+  const login = async (email: string, password: string, rememberMe?: boolean) => {
+    return Promise.resolve();
+  };
+  
   // Redirect to intended page after login or dashboard as default
   const from = location.state?.from?.pathname || "/";
 
-  // If already authenticated, redirect
+  // Mock auth check - redirect immediately for demo
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, from]);
+    navigate(from, { replace: true });
+  }, [navigate, from]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

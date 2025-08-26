@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Lock, Building } from 'lucide-react';
 
@@ -15,8 +14,14 @@ export function ProtectedRoute({
   requiredRoles = [], 
   organizationId 
 }: ProtectedRouteProps) {
-  const { isAuthenticated, user, loading, hasRole, canAccessOrganization } = useAuth();
   const location = useLocation();
+  
+  // Mock auth data - allow access for demo
+  const isAuthenticated = true;
+  const user = { name: 'Demo User', role: 'POLWEL', organizationId: 'demo-org', status: 'ACTIVE' };
+  const loading = false;
+  const hasRole = (roles: string[]) => roles.length === 0 || roles.includes('POLWEL');
+  const canAccessOrganization = (orgId: string) => true;
 
   // Show loading state while checking authentication
   if (loading) {
@@ -107,7 +112,8 @@ interface RoleBasedProps {
 }
 
 export function RoleBased({ children, requiredRoles, fallback = null }: RoleBasedProps) {
-  const { hasRole } = useAuth();
+  // Mock role check - allow access for demo
+  const hasRole = (roles: string[]) => roles.length === 0 || roles.includes('POLWEL');
 
   if (!hasRole(requiredRoles)) {
     return <>{fallback}</>;

@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { debugAuthState, polwelUsersApi } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
 
 export function AuthDebugComponent() {
   const [testResult, setTestResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  
+  // Mock auth data
+  const user = { name: 'Demo User', role: 'POLWEL' };
+  const isAuthenticated = true;
 
   const handleDebugAuth = () => {
     const result = debugAuthState();
