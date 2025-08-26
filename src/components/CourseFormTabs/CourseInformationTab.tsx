@@ -64,7 +64,17 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, o
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="courseCode">Course Code *</Label>
+          <Input
+            id="courseCode"
+            value={formData.courseCode || ''}
+            onChange={(e) => onInputChange("courseCode", e.target.value)}
+            placeholder="e.g., TRN001"
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="title">Course Title *</Label>
           <Input
