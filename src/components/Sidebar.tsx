@@ -10,7 +10,8 @@ import {
   Shield,
   ChevronDown,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ const clientOrgsItems = [
 
 const courseManagementItems = [
   { name: 'Course Creation', href: '/course-creation', icon: BookOpen },
+  { name: 'Course Run Management', href: '/course-runs', icon: Calendar },
   { name: 'Venue Management', href: '/venue-setup', icon: Building2 },
 ];
 
