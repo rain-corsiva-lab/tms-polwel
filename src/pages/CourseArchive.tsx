@@ -75,7 +75,7 @@ const CourseArchive = () => {
           variant: "destructive"
         });
         
-        // Fallback to default categories
+        // Fallback to default categories and mock course data
         setCategories([
           {
             name: "Self-Mastery",
@@ -96,6 +96,178 @@ const CourseArchive = () => {
             name: "Leadership Skills",
             color: "bg-yellow-100 text-yellow-800 border-yellow-200",
             subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"]
+          }
+        ]);
+
+        // Mock course data
+        setCourses([
+          {
+            id: "1",
+            title: "Effective Communication in the Workplace",
+            category: "Communication",
+            duration: "2",
+            durationType: "days",
+            venue: "POLWEL Training Center",
+            amountPerPax: 450.00,
+            minParticipants: 8,
+            certificates: "polwel",
+            status: "active",
+            createdAt: "2024-01-15",
+            updatedAt: "2024-01-20"
+          },
+          {
+            id: "2", 
+            title: "Leadership Excellence Program",
+            category: "Mindful Leadership",
+            duration: "3",
+            durationType: "days",
+            venue: "Marina Bay Conference Center",
+            amountPerPax: 750.00,
+            minParticipants: 12,
+            certificates: "polwel",
+            status: "active",
+            createdAt: "2024-01-10",
+            updatedAt: "2024-01-25"
+          },
+          {
+            id: "3",
+            title: "Emotional Intelligence Masterclass",
+            category: "Emotional Intelligence",
+            duration: "1",
+            durationType: "day",
+            venue: "Online Platform",
+            amountPerPax: 250.00,
+            minParticipants: 6,
+            certificates: "partner",
+            status: "active",
+            createdAt: "2024-02-01",
+            updatedAt: "2024-02-05"
+          },
+          {
+            id: "4",
+            title: "Strategic Planning Workshop",
+            category: "Strategic Planning",
+            duration: "4",
+            durationType: "hours",
+            venue: "Client Site",
+            amountPerPax: 180.00,
+            minParticipants: 10,
+            certificates: "polwel",
+            status: "draft",
+            createdAt: "2024-02-10",
+            updatedAt: "2024-02-12"
+          },
+          {
+            id: "5",
+            title: "Growth Mindset Development",
+            category: "Growth Mindset",
+            duration: "1.5",
+            durationType: "days",
+            venue: "POLWEL Training Center",
+            amountPerPax: 320.00,
+            minParticipants: 8,
+            certificates: "polwel",
+            status: "active",
+            createdAt: "2024-01-25",
+            updatedAt: "2024-02-01"
+          },
+          {
+            id: "6",
+            title: "Team Collaboration Excellence",
+            category: "Collaboration", 
+            duration: "2",
+            durationType: "days",
+            venue: "Corporate Training Room",
+            amountPerPax: 380.00,
+            minParticipants: 15,
+            certificates: "partner",
+            status: "archived",
+            createdAt: "2023-12-15",
+            updatedAt: "2024-01-05"
+          },
+          {
+            id: "7",
+            title: "Critical Thinking & Problem Solving",
+            category: "Critical Thinking & Creative Problem-Solving",
+            duration: "3",
+            durationType: "days",
+            venue: "Innovation Hub",
+            amountPerPax: 550.00,
+            minParticipants: 12,
+            certificates: "polwel",
+            status: "active",
+            createdAt: "2024-02-05",
+            updatedAt: "2024-02-08"
+          },
+          {
+            id: "8",
+            title: "Personal Effectiveness Bootcamp",
+            category: "Personal Effectiveness",
+            duration: "1",
+            durationType: "day",
+            venue: "POLWEL Training Center",
+            amountPerPax: 280.00,
+            minParticipants: 10,
+            certificates: "polwel",
+            status: "active",
+            createdAt: "2024-01-30",
+            updatedAt: "2024-02-03"
+          },
+          {
+            id: "9",
+            title: "Agile Mindset Transformation",
+            category: "Agile Mindset",
+            duration: "2.5",
+            durationType: "days",
+            venue: "Tech Park Conference Hall",
+            amountPerPax: 480.00,
+            minParticipants: 14,
+            certificates: "partner",
+            status: "draft",
+            createdAt: "2024-02-12",
+            updatedAt: "2024-02-15"
+          },
+          {
+            id: "10",
+            title: "Executive Decision Making",
+            category: "Decision-making",
+            duration: "1",
+            durationType: "day",
+            venue: "Executive Center",
+            amountPerPax: 650.00,
+            minParticipants: 6,
+            certificates: "polwel",
+            status: "active",
+            createdAt: "2024-02-01",
+            updatedAt: "2024-02-10"
+          },
+          {
+            id: "11",
+            title: "Self-Awareness Journey",
+            category: "Self-awareness",
+            duration: "6",
+            durationType: "hours",
+            venue: "Mindfulness Center",
+            amountPerPax: 150.00,
+            minParticipants: 8,
+            certificates: "partner",
+            status: "active",
+            createdAt: "2024-01-20",
+            updatedAt: "2024-01-28"
+          },
+          {
+            id: "12",
+            title: "Empowerment Leadership Program",
+            category: "Empowerment",
+            duration: "2",
+            durationType: "days", 
+            venue: "Leadership Institute",
+            amountPerPax: 520.00,
+            minParticipants: 10,
+            certificates: "polwel",
+            status: "archived",
+            createdAt: "2023-11-15",
+            updatedAt: "2024-01-10"
           }
         ]);
       } finally {
