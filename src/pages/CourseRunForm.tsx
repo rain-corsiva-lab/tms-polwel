@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -129,8 +128,9 @@ export default function CourseRunForm() {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-4 pb-6 border-b">
         <Button 
           variant="outline" 
           size="sm" 
@@ -146,69 +146,75 @@ export default function CourseRunForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Course Run Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="serialNumber">Serial Number *</Label>
-                <Input
-                  id="serialNumber"
-                  placeholder="e.g., CR001/25"
-                  value={formData.serialNumber}
-                  onChange={(e) => handleInputChange('serialNumber', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="type">Course Run Type *</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) => handleInputChange('type', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="Dedicated">Dedicated</SelectItem>
-                    <SelectItem value="Talks">Talks</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Information */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="serialNumber">Serial Number *</Label>
+              <Input
+                id="serialNumber"
+                placeholder="e.g., CR001/25"
+                value={formData.serialNumber}
+                onChange={(e) => handleInputChange('serialNumber', e.target.value)}
+                required
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="courseTitle">Course Title *</Label>
-                <Input
-                  id="courseTitle"
-                  placeholder="e.g., Advanced Leadership Skills"
-                  value={formData.courseTitle}
-                  onChange={(e) => handleInputChange('courseTitle', e.target.value)}
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="type">Course Run Type *</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => handleInputChange('type', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Open">Open</SelectItem>
+                  <SelectItem value="Dedicated">Dedicated</SelectItem>
+                  <SelectItem value="Talks">Talks</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="courseCode">Course Code *</Label>
-                <Input
-                  id="courseCode"
-                  placeholder="e.g., ALS01"
-                  maxLength={5}
-                  value={formData.courseCode}
-                  onChange={(e) => handleInputChange('courseCode', e.target.value.toUpperCase())}
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="courseTitle">Course Title *</Label>
+              <Input
+                id="courseTitle"
+                placeholder="e.g., Advanced Leadership Skills"
+                value={formData.courseTitle}
+                onChange={(e) => handleInputChange('courseTitle', e.target.value)}
+                required
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="courseCode">Course Code *</Label>
+              <Input
+                id="courseCode"
+                placeholder="e.g., ALS01"
+                maxLength={5}
+                value={formData.courseCode}
+                onChange={(e) => handleInputChange('courseCode', e.target.value.toUpperCase())}
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Schedule */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Schedule</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date *</Label>
                   <Input
@@ -230,8 +236,10 @@ export default function CourseRunForm() {
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date *</Label>
                   <Input
@@ -254,174 +262,194 @@ export default function CourseRunForm() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Venue & Trainers */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Venue & Trainers</h2>
+          
+          <div className="space-y-2">
+            <Label htmlFor="venueId">Venue</Label>
+            <Select
+              value={formData.venueId}
+              onValueChange={(value) => handleInputChange('venueId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select venue" />
+              </SelectTrigger>
+              <SelectContent>
+                {venues.map((venue) => (
+                  <SelectItem key={venue.id} value={venue.id}>
+                    {venue.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Trainers</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {trainers.map((trainer) => (
+                <div key={trainer.id} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id={`trainer-${trainer.id}`}
+                    checked={formData.trainerIds.includes(trainer.id)}
+                    onChange={(e) => handleTrainerSelection(trainer.id, e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor={`trainer-${trainer.id}`} className="font-normal">
+                    {trainer.name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Class Size */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Class Size Requirements</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="minClassSize">Min Class Size *</Label>
+              <Input
+                id="minClassSize"
+                type="number"
+                min="0"
+                value={formData.minClassSize}
+                onChange={(e) => handleInputChange('minClassSize', parseInt(e.target.value) || 0)}
+                required
+              />
+            </div>
 
             <div className="space-y-2">
-              <Label htmlFor="venueId">Venue</Label>
-              <Select
-                value={formData.venueId}
-                onValueChange={(value) => handleInputChange('venueId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select venue" />
-                </SelectTrigger>
-                <SelectContent>
-                  {venues.map((venue) => (
-                    <SelectItem key={venue.id} value={venue.id}>
-                      {venue.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="maxClassSize">Max Class Size</Label>
+              <Input
+                id="maxClassSize"
+                type="number"
+                min="0"
+                value={formData.maxClassSize || ''}
+                onChange={(e) => handleInputChange('maxClassSize', e.target.value ? parseInt(e.target.value) : undefined)}
+              />
             </div>
 
-            <div className="space-y-3">
-              <Label>Trainers</Label>
-              <div className="space-y-2">
-                {trainers.map((trainer) => (
-                  <div key={trainer.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`trainer-${trainer.id}`}
-                      checked={formData.trainerIds.includes(trainer.id)}
-                      onChange={(e) => handleTrainerSelection(trainer.id, e.target.checked)}
-                      className="rounded border-gray-300"
-                    />
-                    <Label htmlFor={`trainer-${trainer.id}`} className="font-normal">
-                      {trainer.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="recommendedClassSize">Recommended Class Size *</Label>
+              <Input
+                id="recommendedClassSize"
+                type="number"
+                min="0"
+                value={formData.recommendedClassSize}
+                onChange={(e) => handleInputChange('recommendedClassSize', parseInt(e.target.value) || 0)}
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Contract Fees */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Contract Fees</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="baseAmount">Base Amount *</Label>
+              <Input
+                id="baseAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.contractFees.baseAmount}
+                onChange={(e) => handleInputChange('contractFees.baseAmount', parseFloat(e.target.value) || 0)}
+                required
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="minClassSize">Min Class Size *</Label>
-                <Input
-                  id="minClassSize"
-                  type="number"
-                  min="0"
-                  value={formData.minClassSize}
-                  onChange={(e) => handleInputChange('minClassSize', parseInt(e.target.value) || 0)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxClassSize">Max Class Size</Label>
-                <Input
-                  id="maxClassSize"
-                  type="number"
-                  min="0"
-                  value={formData.maxClassSize || ''}
-                  onChange={(e) => handleInputChange('maxClassSize', e.target.value ? parseInt(e.target.value) : undefined)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="recommendedClassSize">Recommended Class Size *</Label>
-                <Input
-                  id="recommendedClassSize"
-                  type="number"
-                  min="0"
-                  value={formData.recommendedClassSize}
-                  onChange={(e) => handleInputChange('recommendedClassSize', parseInt(e.target.value) || 0)}
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="additionalCosts">Additional Costs</Label>
+              <Input
+                id="additionalCosts"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.contractFees.additionalCosts}
+                onChange={(e) => handleInputChange('contractFees.additionalCosts', parseFloat(e.target.value) || 0)}
+              />
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <Label>Contract Fees</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
-                <div className="space-y-2">
-                  <Label htmlFor="baseAmount">Base Amount *</Label>
-                  <Input
-                    id="baseAmount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.contractFees.baseAmount}
-                    onChange={(e) => handleInputChange('contractFees.baseAmount', parseFloat(e.target.value) || 0)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="additionalCosts">Additional Costs</Label>
-                  <Input
-                    id="additionalCosts"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.contractFees.additionalCosts}
-                    onChange={(e) => handleInputChange('contractFees.additionalCosts', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="perRun"
-                    checked={formData.contractFees.perRun}
-                    onCheckedChange={(checked) => {
-                      handleInputChange('contractFees.perRun', checked);
-                      if (checked) handleInputChange('contractFees.perHead', false);
-                    }}
-                  />
-                  <Label htmlFor="perRun">Per Run</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="perHead"
-                    checked={formData.contractFees.perHead}
-                    onCheckedChange={(checked) => {
-                      handleInputChange('contractFees.perHead', checked);
-                      if (checked) handleInputChange('contractFees.perRun', false);
-                    }}
-                  />
-                  <Label htmlFor="perHead">Per Head</Label>
-                </div>
-              </div>
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="perRun"
+                checked={formData.contractFees.perRun}
+                onCheckedChange={(checked) => {
+                  handleInputChange('contractFees.perRun', checked);
+                  if (checked) handleInputChange('contractFees.perHead', false);
+                }}
+              />
+              <Label htmlFor="perRun">Per Run</Label>
             </div>
 
             <div className="flex items-center space-x-2">
               <Switch
-                id="individualRegistrationRequired"
-                checked={formData.individualRegistrationRequired}
-                onCheckedChange={(checked) => handleInputChange('individualRegistrationRequired', checked)}
+                id="perHead"
+                checked={formData.contractFees.perHead}
+                onCheckedChange={(checked) => {
+                  handleInputChange('contractFees.perHead', checked);
+                  if (checked) handleInputChange('contractFees.perRun', false);
+                }}
               />
-              <Label htmlFor="individualRegistrationRequired">
-                Individual Registration Required
-              </Label>
+              <Label htmlFor="perHead">Per Head</Label>
             </div>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="remarks">Remarks</Label>
-              <Textarea
-                id="remarks"
-                placeholder="Enter any additional remarks..."
-                value={formData.remarks}
-                onChange={(e) => handleInputChange('remarks', e.target.value)}
-                rows={3}
-              />
-            </div>
+        {/* Additional Settings */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Additional Settings</h2>
+          
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="individualRegistrationRequired"
+              checked={formData.individualRegistrationRequired}
+              onCheckedChange={(checked) => handleInputChange('individualRegistrationRequired', checked)}
+            />
+            <Label htmlFor="individualRegistrationRequired">
+              Individual Registration Required
+            </Label>
+          </div>
 
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/course-runs')}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Course Run
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          <div className="space-y-2">
+            <Label htmlFor="remarks">Remarks</Label>
+            <Textarea
+              id="remarks"
+              placeholder="Enter any additional remarks..."
+              value={formData.remarks}
+              onChange={(e) => handleInputChange('remarks', e.target.value)}
+              rows={4}
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-4 pt-6 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/course-runs')}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Course Run
+          </Button>
+        </div>
       </form>
     </div>
   );
