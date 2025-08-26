@@ -37,7 +37,7 @@ class AuthService {
   private refreshTokenTimer: NodeJS.Timeout | null = null;
   private sessionCheckTimer: NodeJS.Timeout | null = null;
 
-  constructor(apiUrl: string = 'http://localhost:3001/api') {
+  constructor(apiUrl: string = import.meta.env.VITE_API_URL || 'http://localhost:3001/api') {
     this.apiUrl = apiUrl;
     this.initializeSessionManagement();
   }

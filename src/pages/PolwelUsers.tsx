@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail } from "lucide-react";
+import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail, RefreshCw } from "lucide-react";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
 import { EditPolwelUserDialog } from "@/components/EditPolwelUserDialog";
@@ -228,6 +228,27 @@ export default function PolwelUsers() {
     }
   };
 
+  const handleResendSetup = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to resend the setup email to ${userName}?`)) {
+      return;
+    }
+
+    try {
+      const response = await polwelUsersApi.resendSetup(userId);
+      toast({
+        title: "Setup Email Sent",
+        description: "Setup email has been sent successfully",
+      });
+    } catch (error) {
+      console.error('Error resending setup email:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send setup email",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Compute stats from real data
   const totalUsers = users.length;
   const activeUsers = users.filter(user => user.status === 'ACTIVE').length;
@@ -397,6 +418,14 @@ export default function PolwelUsers() {
                             <Key className="h-4 w-4 mr-2" />
                             Reset Password (Legacy)
                           </DropdownMenuItem> */}
+                          {user.status === 'PENDING' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleResendSetup(user.id, user.name)}
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Resend Setup Email
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem 
                             onClick={() => handleToggleMfa(user.id, !user.mfaEnabled)}
                           >

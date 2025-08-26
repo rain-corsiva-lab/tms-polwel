@@ -36,6 +36,7 @@ import { Plus, GraduationCap, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi } from "@/lib/api";
+import { errorHandlers } from "@/lib/errorHandler";
 
 // Available courses for selection
 const availableCourses = [
@@ -126,12 +127,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
         onTrainerCreated();
       }
     } catch (error) {
-      console.error('Error creating trainer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create trainer. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.trainerCreate(error, toast);
     } finally {
       setLoading(false);
     }

@@ -1,10 +1,11 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { UserStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Verify setup token
 router.get('/verify-token/:token', async (req: Request, res: Response): Promise<void> => {
@@ -61,7 +62,7 @@ router.get('/verify-token/:token', async (req: Request, res: Response): Promise<
 });
 
 // Complete user setup
-router.post('/complete-setup', async (req: Request, res: Response): Promise<void> => {
+router.post('/onboarding/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { token, password, termsAccepted, privacyAccepted } = req.body;
 

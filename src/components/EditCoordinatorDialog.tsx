@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { errorHandlers } from "@/lib/errorHandler";
 
 interface TrainingCoordinator {
   id: string;
@@ -90,6 +91,7 @@ export function EditCoordinatorDialog({
         status: formData.status,
       });
 
+      // Only show success toast if the API call succeeds
       toast({
         title: "Coordinator Updated",
         description: `Training Coordinator "${formData.name}" has been updated successfully.`,
@@ -97,11 +99,7 @@ export function EditCoordinatorDialog({
 
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update coordinator. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.coordinatorUpdate(error, toast);
     } finally {
       setLoading(false);
     }

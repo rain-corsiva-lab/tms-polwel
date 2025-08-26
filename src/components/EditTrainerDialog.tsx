@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Edit, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi } from "@/lib/api";
+import { errorHandlers } from "@/lib/errorHandler";
 
 interface Trainer {
   id: string;
@@ -112,12 +113,7 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
       setOpen(false);
       onTrainerUpdated();
     } catch (error) {
-      console.error('Error updating trainer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update trainer. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.trainerUpdate(error, toast);
     } finally {
       setLoading(false);
     }

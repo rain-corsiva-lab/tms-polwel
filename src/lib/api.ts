@@ -1,3 +1,81 @@
+// Error classification and user-friendly message mapping
+const classifyAndFormatError = (error: any, endpoint: string): Error => {
+  const errorMessage = error.message || error.toString();
+  const lowerMessage = errorMessage.toLowerCase();
+  
+  // Network/Connection Errors
+  if (lowerMessage.includes('failed to fetch') || 
+      lowerMessage.includes('network') ||
+      lowerMessage.includes('connection') ||
+      lowerMessage.includes('cors') ||
+      lowerMessage.includes('fetch')) {
+    const networkError = new Error('Unable to connect to the server. Please check your internet connection and try again.');
+    networkError.name = 'NetworkError';
+    return networkError;
+  }
+  
+  // Authentication Errors
+  if (lowerMessage.includes('unauthorized') || 
+      lowerMessage.includes('authentication') ||
+      lowerMessage.includes('token') ||
+      lowerMessage.includes('session expired')) {
+    const authError = new Error('Your session has expired. Please log in again.');
+    authError.name = 'AuthenticationError';
+    return authError;
+  }
+  
+  // Validation Errors
+  if (lowerMessage.includes('validation') ||
+      lowerMessage.includes('invalid') ||
+      lowerMessage.includes('required') ||
+      lowerMessage.includes('missing')) {
+    const validationError = new Error(errorMessage); // Keep original message for validation errors
+    validationError.name = 'ValidationError';
+    return validationError;
+  }
+  
+  // Duplicate/Conflict Errors
+  if (lowerMessage.includes('already exists') ||
+      lowerMessage.includes('duplicate') ||
+      lowerMessage.includes('conflict') ||
+      lowerMessage.includes('unique constraint')) {
+    const conflictError = new Error(errorMessage); // Keep original message for conflict errors
+    conflictError.name = 'ConflictError';
+    return conflictError;
+  }
+  
+  // Permission Errors
+  if (lowerMessage.includes('forbidden') ||
+      lowerMessage.includes('permission') ||
+      lowerMessage.includes('access denied')) {
+    const permissionError = new Error('You do not have permission to perform this action.');
+    permissionError.name = 'PermissionError';
+    return permissionError;
+  }
+  
+  // Not Found Errors
+  if (lowerMessage.includes('not found') ||
+      lowerMessage.includes('404')) {
+    const notFoundError = new Error('The requested resource was not found.');
+    notFoundError.name = 'NotFoundError';
+    return notFoundError;
+  }
+  
+  // Server Errors
+  if (lowerMessage.includes('internal server error') ||
+      lowerMessage.includes('500') ||
+      lowerMessage.includes('server error')) {
+    const serverError = new Error('A server error occurred. Please try again later.');
+    serverError.name = 'ServerError';
+    return serverError;
+  }
+  
+  // Default: return original error but with consistent formatting
+  const formattedError = new Error(errorMessage);
+  formattedError.name = 'ApplicationError';
+  return formattedError;
+};
+
 // API Configuration - Use environment variable or fallback to localhost for development
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -55,7 +133,6 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const attempts = [
     () => fetch(`${API_BASE_URL}${endpoint}`, config),
     () => fetch(`${API_BASE_URL}${endpoint}`, { ...config, mode: 'cors' }),
-    () => fetch(`http://127.0.0.1:3001/api${endpoint}`, config),
   ];
 
   let lastError;
@@ -108,37 +185,57 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         }
         
         console.error(`API Error (${response.status}):`, errorData);
-        throw new Error(`API Error: ${errorData.message || errorData.error || response.statusText}`);
+        
+        // Format error message to include field-specific errors
+        let errorMessage = errorData.message || errorData.error || response.statusText;
+        
+        // If there are validation errors, append them to the message
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          const fieldErrors = errorData.errors.map((err: any) => err.message).join('. ');
+          errorMessage = `${errorMessage}. ${fieldErrors}`;
+        }
+        
+        throw new Error(`API Error: ${errorMessage}`);
       }
 
       const data = await response.json();
       console.log(`API Success for ${endpoint}:`, data);
       return data;
     } catch (error) {
-      lastError = error;
+      // Classify and format the error consistently across all environments
+      const classifiedError = classifyAndFormatError(error, endpoint);
+      lastError = classifiedError;
+      
       console.error(`API Request attempt ${i + 1} failed:`, {
         endpoint,
-        error: error.message,
-        token: token ? 'Present' : 'Missing'
+        errorName: classifiedError.name,
+        errorMessage: classifiedError.message,
+        originalError: error.message,
+        token: token ? 'Present' : 'Missing',
+        apiBaseUrl: API_BASE_URL,
+        environment: import.meta.env.MODE
       });
       
-      // If it's a connection refused error, try next approach
-      if (error.message.includes('Failed to fetch') || 
-          error.message.includes('CONNECTION_REFUSED') ||
-          error.message.includes('ERR_CONNECTION_REFUSED')) {
-        
+      // Handle network errors with retry logic
+      if (classifiedError.name === 'NetworkError') {
         if (i < attempts.length - 1) {
-          console.log(`Connection refused, trying alternative approach...`);
+          console.log(`Network error detected, trying alternative approach...`);
           await new Promise(resolve => setTimeout(resolve, 500));
           continue;
+        } else {
+          // Final network error - throw user-friendly message
+          throw classifiedError;
         }
       }
       
       // Don't retry on authentication errors
-      if (error.message.includes('Session expired') || 
-          error.message.includes('Authentication failed') ||
-          error.message.includes('TOKEN_EXPIRED')) {
-        throw error;
+      if (classifiedError.name === 'AuthenticationError') {
+        throw classifiedError;
+      }
+      
+      // For other errors, if this is the last attempt, throw the classified error
+      if (i === attempts.length - 1) {
+        throw classifiedError;
       }
     }
   }
@@ -320,6 +417,13 @@ export const polwelUsersApi = {
   // Send password reset link
   sendPasswordResetLink: async (id: string | number) => {
     return apiRequest(`/polwel-users/${id}/send-reset-link`, {
+      method: 'POST',
+    });
+  },
+
+  // Resend setup email
+  resendSetup: async (id: string | number) => {
+    return apiRequest(`/polwel-users/${id}/resend-setup`, {
       method: 'POST',
     });
   },

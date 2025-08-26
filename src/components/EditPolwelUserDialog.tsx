@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Edit, Shield } from "lucide-react";
 import { polwelUsersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { errorHandlers } from "@/lib/errorHandler";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 
 interface ModulePermissions {
@@ -150,12 +151,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       setOpen(false);
       onUserUpdated();
     } catch (error) {
-      console.error('Error updating user:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.userUpdate(error, toast);
     } finally {
       setLoading(false);
     }

@@ -4,18 +4,17 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Load environment variables based on NODE_ENV
+// Load environment variables from .env file only (best practice)
+dotenv.config({ override: true });
+
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const envFile = `.env.${NODE_ENV}`;
-
-// Try to load environment-specific file first, then fallback to .env
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
-dotenv.config(); // Fallback to .env
 
 console.log(`🌍 Environment: ${NODE_ENV}`);
-console.log(`📁 Config file: ${envFile}`);
+console.log(`📁 Config file: .env`);
+console.log(`🔧 CORS_ORIGINS env var:`, process.env.CORS_ORIGINS);
+console.log(`🔧 FRONTEND_URL env var:`, process.env.FRONTEND_URL);
+console.log(`🔧 DATABASE_URL env var:`, process.env.DATABASE_URL?.replace(/:[^:]*@/, ':****@')); // Hide password
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -37,6 +36,7 @@ import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { authenticate } from './middleware/auth';
+import { apiLogger, errorLogger } from './middleware/logging';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -53,36 +53,86 @@ const limiter = rateLimit({
 });
 
 // CORS configuration
-const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:8080,http://localhost:8081')
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'https://polwel-pdms.customized3.corsivalab.xyz,http://localhost:8080,http://localhost:8081')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
 
+console.log('🔐 CORS configured for origins:', allowedOrigins);
+
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl)
-    if (!origin) return callback(null, true);
-    // Allow configured origins
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Allow any localhost origin in dev to avoid port mismatch during Vite port switching
-    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+    console.log('🔍 CORS check for origin:', origin);
+    console.log('📋 Current allowed origins:', allowedOrigins);
+    
+    // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
+    if (!origin) {
+      console.log('✅ Allowing request with no origin');
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    
+    // Allow configured origins (exact match)
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ Origin found in allowed list (exact match)');
+      return callback(null, true);
+    }
+    
+    // Allow both HTTP and HTTPS versions of configured domains
+    const originWithoutProtocol = origin.replace(/^https?:\/\//, '');
+    const allowedDomains = allowedOrigins.map(o => o.replace(/^https?:\/\//, ''));
+    if (allowedDomains.includes(originWithoutProtocol)) {
+      console.log('✅ Origin found in allowed list (protocol flexible match)');
+      return callback(null, true);
+    }
+    
+    // Allow any localhost origin in dev and staging
+    if (origin.startsWith('http://localhost') || origin.startsWith('https://localhost') || 
+        origin.startsWith('http://127.0.0.1') || origin.startsWith('https://127.0.0.1')) {
+      console.log('✅ Allowing localhost origin');
+      return callback(null, true);
+    }
+    
+    // In staging/production, be more permissive with the main domain
+    const currentEnv = process.env.NODE_ENV || 'development';
+    if (currentEnv !== 'development') {
+      // Check if origin matches any part of allowed domains (for subdomains, etc)
+      const isAllowedDomain = allowedDomains.some(domain => 
+        originWithoutProtocol.includes(domain) || domain.includes(originWithoutProtocol)
+      );
+      if (isAllowedDomain) {
+        console.log('✅ Origin matches allowed domain pattern');
+        return callback(null, true);
+      }
+    }
+    
+    console.error('❌ CORS blocked origin:', origin);
+    console.error('📋 Allowed origins:', allowedOrigins);
+    console.error('🌐 Environment:', currentEnv);
+    return callback(new Error(`CORS policy violation: Origin ${origin} not allowed`));
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 204,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200, // Changed from 204 to 200 for better compatibility
 };
 
 // Middleware
 app.use(helmet());
 app.use(limiter);
 app.use(cors(corsOptions));
+app.use(apiLogger); // Add comprehensive API logging
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Handle preflight OPTIONS requests globally
+// app.options('*', (req, res) => {
+//   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+//   res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
+//   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+//   res.header('Access-Control-Allow-Credentials', 'true');
+//   res.sendStatus(200);
+// });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -111,6 +161,7 @@ app.use('/api/references', authenticate, referencesRoutes);
 app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
 
 // Error handling middleware
+app.use(errorLogger); // Add error logging before error handlers
 app.use(notFound);
 app.use(errorHandler);
 

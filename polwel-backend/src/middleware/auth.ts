@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
+
 
 // Extend Request interface to include user data
 declare global {
@@ -106,7 +106,7 @@ export const authenticateToken = async (
         // Add user data to request
         req.user = {
           userId: user.id,
-          email: user.email,
+          email: user.email || '', // Provide empty string if email is null
           role: user.role,
           ...(user.organizationId && { organizationId: user.organizationId })
         };

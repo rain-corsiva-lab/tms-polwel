@@ -271,9 +271,12 @@ async function main() {
       capacity: '70-80 pax',
       description: 'Professional conference facility with modern amenities',
       facilities: ['projector', 'whiteboard', 'wifi', 'air-conditioning', 'sound-system'],
-      contactName: 'Sarah Chen',
-      contactNumber: '+65 6734 7766',
-      contactEmail: 'sarah.chen@orchardhotel.com.sg',
+      contacts: [{
+        id: '1',
+        name: 'Sarah Chen',
+        number: '+65 6734 7766',
+        email: 'sarah.chen@orchardhotel.com.sg'
+      }],
       feeType: FeeType.PER_HEAD,
       fee: 25.0,
       status: VenueStatus.ACTIVE,
@@ -289,9 +292,12 @@ async function main() {
       capacity: '25 pax',
       description: 'Intimate learning environment perfect for small group training',
       facilities: ['projector', 'whiteboard', 'wifi', 'flip-charts'],
-      contactName: 'Training Center Admin',
-      contactNumber: '+65 6123 4567',
-      contactEmail: 'bookings@polwel.org.sg',
+      contacts: [{
+        id: '1',
+        name: 'Training Center Admin',
+        number: '+65 6123 4567',
+        email: 'bookings@polwel.org.sg'
+      }],
       feeType: FeeType.PER_VENUE,
       fee: 300.0,
       status: VenueStatus.ACTIVE,
@@ -307,9 +313,12 @@ async function main() {
       capacity: '150 pax',
       description: 'Premium conference facility with harbor views',
       facilities: ['projector', 'sound-system', 'wifi', 'air-conditioning', 'catering'],
-      contactName: 'Events Manager',
-      contactNumber: '+65 6555 1234',
-      contactEmail: 'events@mbcc.com.sg',
+      contacts: [{
+        id: '1',
+        name: 'Events Manager',
+        number: '+65 6555 1234',
+        email: 'events@mbcc.com.sg'
+      }],
       feeType: FeeType.PER_VENUE,
       fee: 800.0,
       status: VenueStatus.INACTIVE,
@@ -627,7 +636,8 @@ async function main() {
   await prisma.trainerBlockout.create({
     data: {
       trainerId: davidChen.id,
-      date: new Date('2024-01-25'),
+      startDate: new Date('2024-01-25'),
+      endDate: new Date('2024-01-25'),
       reason: 'Conference Attendance',
       type: 'unavailable',
       description: 'Speaking at Leadership Excellence Conference 2024',
@@ -637,7 +647,8 @@ async function main() {
   await prisma.trainerBlockout.create({
     data: {
       trainerId: jenniferLee.id,
-      date: new Date('2024-02-05'),
+      startDate: new Date('2024-02-05'),
+      endDate: new Date('2024-02-05'),
       reason: 'Personal Leave',
       type: 'personal',
       description: 'Family commitment',

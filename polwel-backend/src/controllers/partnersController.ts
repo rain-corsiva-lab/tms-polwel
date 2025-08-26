@@ -1,8 +1,17 @@
 import { Request, Response } from 'express';
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 
-const prisma = new PrismaClient();
+
+
+// Utility function to safely get first element from JSON array
+const getFirstFromJsonArray = (jsonField: any): string => {
+  if (Array.isArray(jsonField) && jsonField.length > 0) {
+    return jsonField[0] || '';
+  }
+  return '';
+};
 
 // Interface for partner data (no email/password since it's not a user account)
 interface PartnerData {
@@ -76,7 +85,7 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
       coursesAssigned: partner.specializations || [],
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
+      contactDesignation: getFirstFromJsonArray(partner.certifications),
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     }));
@@ -145,7 +154,7 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
       coursesAssigned: partner.specializations || [],
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
+      contactDesignation: getFirstFromJsonArray(partner.certifications),
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     };
@@ -219,7 +228,7 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
       coursesAssigned: partner.specializations || [],
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
+      contactDesignation: getFirstFromJsonArray(partner.certifications),
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     };
@@ -299,7 +308,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
       coursesAssigned: partner.specializations || [],
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
+      contactDesignation: getFirstFromJsonArray(partner.certifications),
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     };
@@ -410,3 +419,4 @@ export const getPartnerStatistics = async (req: AuthenticatedRequest, res: Respo
     });
   }
 };
+

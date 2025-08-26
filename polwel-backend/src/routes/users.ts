@@ -1,13 +1,17 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { authenticateToken, authorizeRoles, authorizeOwnershipOrAdmin } from '../middleware/auth';
+// import { logRoute, logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Get all users (POLWEL and TRAINING_COORDINATOR only)
-router.get('/', authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), async (req: Request, res: Response): Promise<void> => {
+router.get('/', /* logRoute('USERS_GET_ALL'), */ authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  console.log(`👥 [USERS] Get all users request started`);
+  
   try {
     const { role, status, organizationId } = req.query;
     const currentUser = req.user!;
@@ -32,6 +36,7 @@ router.get('/', authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATO
       whereClause.organizationId = organizationId;
     }
 
+    // logDatabaseQuery('User', 'findMany', whereClause);
     const users = await prisma.user.findMany({
       where: whereClause,
       select: {
@@ -55,19 +60,26 @@ router.get('/', authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATO
       }
     });
 
+    const duration = Date.now() - startTime;
+    console.log(`✅ [USERS] Get all users successful - Found ${users.length} users - Duration: ${duration}ms`);
+
     res.json({
       success: true,
       data: users,
       total: users.length
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [USERS] Get all users error - Duration: ${duration}ms`, error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Get user by ID (users can access their own profile, admins can access any)
-router.get('/:id', authenticateToken, authorizeOwnershipOrAdmin('id'), async (req: Request, res: Response): Promise<void> => {
+router.get('/:id', /* logRoute('USERS_GET_BY_ID'), */ authenticateToken, authorizeOwnershipOrAdmin('id'), async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  console.log(`👤 [USERS] Get user by ID request started`);
+  
   try {
     const { id } = req.params;
 
@@ -76,6 +88,7 @@ router.get('/:id', authenticateToken, authorizeOwnershipOrAdmin('id'), async (re
       return;
     }
 
+    // logDatabaseQuery('User', 'findUnique', { id });
     const user = await prisma.user.findUnique({
       where: { id },
       select: {

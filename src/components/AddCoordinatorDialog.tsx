@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { errorHandlers } from "@/lib/errorHandler";
 
 interface AddCoordinatorDialogProps {
   onCoordinatorAdd: (coordinatorData: {
@@ -64,6 +65,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         password: tempPassword,
       });
 
+      // Only show success toast if the API call succeeds
       toast({
         title: "Training Coordinator Created",
         description: `Training Coordinator "${formData.name}" has been created successfully.`,
@@ -78,11 +80,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
       });
       setOpen(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create coordinator. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.coordinatorCreate(error, toast);
     }
   };
 

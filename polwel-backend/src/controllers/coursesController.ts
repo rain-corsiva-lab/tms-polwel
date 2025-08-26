@@ -1,20 +1,21 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { z } from 'zod';
-import { PrismaClient, CourseStatus } from '@prisma/client';
+import { CourseStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
 
-const prisma = new PrismaClient();
+
 
 // Validation schemas based on actual schema and frontend form
 const CourseCreateSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
-  objectives: z.array(z.string()).default([]),
+  objectives: z.union([z.array(z.string()), z.any()]).default([]),
   targetAudience: z.string().optional(),
-  prerequisites: z.array(z.string()).default([]),
-  materials: z.array(z.string()).default([]),
+  prerequisites: z.union([z.array(z.string()), z.any()]).default([]),
+  materials: z.union([z.array(z.string()), z.any()]).default([]),
   duration: z.string().optional(),
   durationType: z.string().default("days"),
   maxParticipants: z.number().int().positive().default(25),
@@ -23,7 +24,7 @@ const CourseCreateSchema = z.object({
   certificationType: z.string().optional(),
   level: z.string().optional(),
   venue: z.string().optional(),
-  trainers: z.array(z.string()).default([]),
+  trainers: z.union([z.array(z.string()), z.any()]).default([]),
   remarks: z.string().optional(),
   courseOutline: z.any().optional(), // JSON
   syllabus: z.string().optional(),

@@ -29,6 +29,7 @@ import { Plus, Building2, Edit, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { partnersApi } from "@/lib/api";
+import { errorHandlers } from "@/lib/errorHandler";
 
 // Available courses for selection
 const availableCourses = [
@@ -140,12 +141,11 @@ export function AddPartnerDialog({
       if (onPartnerCreated) onPartnerCreated();
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error saving partner:', error);
-      toast({
-        title: "Error",
-        description: `Failed to ${isEditMode ? 'update' : 'create'} partner. Please try again.`,
-        variant: "destructive",
-      });
+      if (isEditMode) {
+        errorHandlers.partnerUpdate(error, toast);
+      } else {
+        errorHandlers.partnerCreate(error, toast);
+      }
     } finally {
       setLoading(false);
     }

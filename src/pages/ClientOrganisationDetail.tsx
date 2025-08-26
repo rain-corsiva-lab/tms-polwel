@@ -283,17 +283,11 @@ const ClientOrganisationDetail = () => {
     try {
       const newCoordinator = await clientOrganizationsApi.createCoordinator(id, coordinatorData);
       setCoordinators(prev => [newCoordinator, ...prev]);
-      toast({
-        title: "Success",
-        description: "Training coordinator has been added successfully.",
-      });
+      // Success toast will be handled by AddCoordinatorDialog
     } catch (error: any) {
       console.error('Error creating coordinator:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create coordinator. Please try again.",
-        variant: "destructive",
-      });
+      // Re-throw the error so the AddCoordinatorDialog can handle it properly
+      throw error;
     }
   };
 
@@ -305,17 +299,11 @@ const ClientOrganisationDetail = () => {
       setCoordinators(prev => prev.map(coord => 
         coord.id === coordinatorId ? updatedCoordinator : coord
       ));
-      toast({
-        title: "Success",
-        description: "Training coordinator has been updated successfully.",
-      });
+      // Success toast will be handled by EditCoordinatorDialog
     } catch (error: any) {
       console.error('Error updating coordinator:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update coordinator. Please try again.",
-        variant: "destructive",
-      });
+      // Re-throw the error so the EditCoordinatorDialog can handle it properly
+      throw error;
     }
   };
 

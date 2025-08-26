@@ -63,7 +63,7 @@ const CompleteSetup = () => {
       }
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-setup/verify-token/${token}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/user-setup/verify-token/${token}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ const CompleteSetup = () => {
     setError("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-setup/complete-setup`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-setup/onboarding/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -402,81 +402,108 @@ const CompleteSetup = () => {
           </CardContent>
         </Card>
       </div>
-
       {/* Terms & Conditions Dialog */}
       <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Terms & Conditions
-            </DialogTitle>
+        <DialogTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Terms of Use
+        </DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-[60vh] pr-4">
-            <div className="space-y-4 text-sm">
-              <h3 className="font-semibold text-lg">POLWEL Training Management System - Terms & Conditions</h3>
-              
-              <div>
-                <h4 className="font-semibold mb-2">1. Acceptance of Terms</h4>
-                <p>By accessing and using the POLWEL Training Management System ("the System"), you agree to be bound by these Terms & Conditions. If you do not agree to these terms, please do not use the System.</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">2. System Usage</h4>
-                <p>The POLWEL Training Management System is designed for authorized users to manage training programs, courses, venues, and related administrative functions. Users must:</p>
-                <ul className="list-disc pl-5 mt-2 space-y-1">
-                  <li>Use the system only for legitimate business purposes</li>
-                  <li>Maintain the confidentiality of login credentials</li>
-                  <li>Not attempt to gain unauthorized access to system functions</li>
-                  <li>Report security incidents immediately</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">3. User Responsibilities</h4>
-                <p>Users are responsible for:</p>
-                <ul className="list-disc pl-5 mt-2 space-y-1">
-                  <li>Ensuring accuracy of data entered into the system</li>
-                  <li>Protecting sensitive information in accordance with privacy policies</li>
-                  <li>Using the system in compliance with applicable laws and regulations</li>
-                  <li>Immediately notifying administrators of any suspected unauthorized access</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">4. Data Protection</h4>
-                <p>POLWEL is committed to protecting user data. All personal and training information is handled in accordance with applicable data protection laws and our Privacy Policy.</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">5. System Availability</h4>
-                <p>While we strive to maintain system availability, POLWEL does not guarantee uninterrupted access. Scheduled maintenance may occur with prior notice when possible.</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">6. Intellectual Property</h4>
-                <p>The POLWEL Training Management System, including its design, functionality, and content, is the property of POLWEL. Users may not reproduce, distribute, or create derivative works without written permission.</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">7. Limitation of Liability</h4>
-                <p>POLWEL shall not be liable for any indirect, incidental, or consequential damages arising from the use or inability to use the system.</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">8. Modifications</h4>
-                <p>POLWEL reserves the right to modify these terms at any time. Users will be notified of significant changes and continued use constitutes acceptance of modified terms.</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">9. Contact Information</h4>
-                <p>For questions regarding these Terms & Conditions, please contact the POLWEL system administrators.</p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t">
-                <p className="text-xs text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
+        <div className="space-y-4 text-sm">
+          <h3 className="font-semibold text-lg">Terms of Use</h3>
+          <p>
+            Please read the following terms of use carefully (the “Terms”). By accessing and/or using the website, you agree to be bound by the Terms in the manner described in the Terms. If you do not agree to the Terms, you must not access and/or use the website.
+          </p>
+          <p>
+            If you are accessing and/or using the website on behalf of a company or other legal entity, you represent that you have the authority to bind such entity and its affiliates to these Terms, in which case the terms “you” or “your” shall refer to you, the individual, or the entity you represent and its affiliates (and, as applicable, your users). If you do not have such authority or if you do not agree with the Terms, you must not access and/or use the website on behalf of such other entity.
+          </p>
+          <div>
+            <h4 className="font-semibold mb-2">1. Your Use of the website</h4>
+            <ol className="list-decimal pl-5 space-y-2">
+          <li>
+            <span className="font-semibold">1.1.</span> You shall access and/or use the website in accordance with the Terms and all applicable laws / regulations.
+          </li>
+          <li>
+            <span className="font-semibold">1.2.</span> You undertake not to (and shall not, knowingly or otherwise, authorise, allow or assist any third party to):
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>reproduce, transfer, duplicate, copy, sell, resell or exploit any portion of the website, use of the website or access to the website;</li>
+              <li>modify or adapt the whole or any part of the website, or permit the website or any part of it to be combined with, or become incorporated in, any other application, programs or other websites /platforms created by you;</li>
+              <li>decompile, reverse engineer or otherwise attempt to discover the source code of our website or any components thereof, except under any specific circumstances expressly permitted by us in writing;</li>
+              <li>communicate, republish, upload, post, transmit, edit, re-use, rent, lease, loan, sell, assign, transfer, distribute, make available, license, sublicense or create derivative works or adaptations based on the whole or any part of the website;</li>
+              <li>use the website in any unlawful manner, for any unlawful purpose, or in any manner inconsistent with the Terms, or in contravention of any applicable law, including in any way that infringes our intellectual property rights or those of any third party in relation to the website;</li>
+              <li>use the website in a way that could damage, disable, impair or compromise the website (or the systems or security of the website or any other computer systems or devices used in connection therewith) or interfere with other users or affect the reputation of POLWEL;</li>
+              <li>provide, distribute or share, or enable the provision, distribution or sharing of, the website (or any data associated therewith) with any third party;</li>
+              <li>reproduce, adapt, republish, translate, publish, display, communicate, hyperlink, post, transmit, broadcast, podcast, webcast, distribute, sell, trade or exploit the whole or any part of the website in any manner or by any means or stored in an information retrieval system except to the extent permitted with our prior written permission and/or that of the relevant rights owner;</li>
+              <li>reproduce, display or otherwise provide access to the website on another website or server, for example through framing, mirroring, linking, spidering, scraping or any other technological means (including any technology available in the future), without our prior written permission;</li>
+              <li>transmit or introduce any viruses, corrupted files, harmful elements, or any materials during the course of your use of the website that: (i) is unlawful, harmful, threatening, defamatory, obscene, infringing, harassing or racially or ethnically offensive; (ii) facilitates illegal activity; (iii) promotes unlawful violence; or (iv) is otherwise illegal or causes damage or injury to any person or property, and we reserve the right, without liability to or prejudice to our other rights against you, to disable your access to any material that breaches the provisions of this sub-clause, or to terminate or suspend your access to the website;</li>
+              <li>establish a link to any page on the website without our prior written permission (which we reserve the right to withdraw without notice), and even if consent is provided, you may only establish a link in a way that is fair and legal and does not damage POLWEL’s reputation or take advantage of it (e.g. by suggesting any association, approval or endorsement on our part where none exists).</li>
+            </ul>
+          </li>
+          <li>
+            <span className="font-semibold">1.3.</span> You acknowledge and agree that:
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>
+            When using and/or accessing the website, you shall be subject to additional terms and conditions, guidelines and/or rules which are in addition to these Terms and may be posted from time to time on the website. You are required to comply with any such additional terms and conditions in addition to these Terms, and all such guidelines or rules are hereby incorporated by reference into these Terms.
+              </li>
+              <li>
+            Any content or information that you upload to the website will be considered non-proprietary. You hereby grant us a licence to use, store and copy that content and to distribute and make it available to third parties. POLWEL also has the right to disclose your identity to any third party who is claiming any content you posted or uploaded on the website constitutes a violation of their intellectual property rights.
+              </li>
+              <li>
+            POLWEL may establish general practices and limits concerning use of the website. Without prejudice to the generality of Clause 1.5, POLWEL shall not be responsible or liable for the deletion of or failure to store any messages and other communications or other content maintained or transmitted by the website. POLWEL reserves the right to change these general practices and limits at any time, in its sole discretion, with or without notice;
+              </li>
+              <li>
+            POLWEL shall have the right (but not the obligation) to remove or disable access to any content which we deem to be potentially defamatory of any person, unlawful, objectionable in any way, in violation of any third-party rights, or for any reason whatsoever. Any editing or removal of any such content from the website shall be without prejudice to our other rights and remedies available at law;
+              </li>
+              <li>
+            POLWEL shall have the right to at any time and from time to time:
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>(a) switch to another data centre hosting any of the underlying infrastructure, middleware, application software, and application data as determined by POLWEL in its sole and absolute discretion, without ascribing any reasons whatsoever;</li>
+              <li>(b) modify and/or update the website and its components from time to time, including to add or remove functionalities, features or services (collectively, “Website Functions”); and</li>
+              <li>(c) deny, suspend, withdraw, block and/or restrict access to the website or any Website Functions whether to any user or generally, at any time, including in the event (i) of a violation or alleged violation of these Terms, or (ii) any act or omission by you may cause harm to POLWEL or its affiliates’ brand, reputation or business, as determined by its sole and absolute discretion, without ascribing any reasons whatsoever,</li>
+            </ul>
+            Unless explicitly stated otherwise, any new features that augment or enhance the website, shall be subject to the Terms.
+              </li>
+            </ul>
+          </li>
+          <li>
+            <span className="font-semibold">1.4.</span> The website is provided on an “as is” basis without any representation or warranty from POLWEL of any kind. To the fullest extent permitted by law, and without prejudice to the generality of the foregoing, POLWEL hereby disclaims any warranty:
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>as to the website’s accuracy, correctness, completeness, reliability, timeliness, non-infringement and/or fitness for purpose;</li>
+              <li>that the website or any website’s Functions will be uninterrupted or error-free, or that defects will be corrected or that the website will be free of viruses and/or other harmful elements.</li>
+            </ul>
+          </li>
+          <li>
+            <span className="font-semibold">1.5.</span> To the fullest extent permitted by law, POLWEL (and its affiliates, employees, agents and/or services providers) shall not be liable for any damages or loss of any kind, howsoever caused as a result (whether directly or indirectly) of your use and/or access of the website, including but not limited to any damage or loss suffered as a result of reliance on the services, contents and/or resources contained or made available on the website.
+          </li>
+          <li>
+            <span className="font-semibold">1.6.</span> Where the website contains links to other websites and resources provided by third parties (e.g. advertisements; applications posted by third parties), these links are provided for your information only. Such links should not be interpreted as approval or endorsement by us of those linked websites or information you may obtain from them. We have no control over the contents of those websites or resources. You agree that we shall not be responsible or liable for any third party content on the website, and your access and/or use of any third party content on the website.
+          </li>
+            </ol>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">2. Data Protection</h4>
+            <ol className="list-decimal pl-5 space-y-2">
+          <li>
+            <span className="font-semibold">2.1.</span> It is a continuing condition of your use of the website that you agree and consent to POLWEL, as well as our representatives and/or agents, collecting, using and disclosing and sharing amongst ourselves personal data, and disclosing such personal data to our authorised service providers and relevant third parties in accordance with the terms of our privacy policy as amended from time to time, available at{" "}
+            <a
+              href="https://polwel.org.sg/privacy-policy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-orange-600 underline"
+            >
+              https://polwel.org.sg/privacy-policy/
+            </a>{" "}
+            (the “Privacy Policy”), the terms of which also apply to your use of the website.
+          </li>
+            </ol>
+          </div>
+          <div className="mt-6 pt-4 border-t">
+            <p className="text-xs text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
