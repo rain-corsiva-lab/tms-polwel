@@ -49,11 +49,7 @@ const App = () => (
             <Route path="/org" element={<OrganizationDashboard />} />
             
             {/* Main application routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }>
+            <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               
               {/* User Management */}
