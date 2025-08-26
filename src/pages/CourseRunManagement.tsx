@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -102,29 +101,27 @@ const CourseRunManagement = () => {
 
   if (!courseRun) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <h2 className="text-xl font-semibold mb-2">Course Run Not Found</h2>
-            <p className="text-muted-foreground mb-4">The requested course run could not be found.</p>
-            <Button onClick={() => navigate('/courses')}>
-              Back to Courses
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold mb-2">Course Run Not Found</h2>
+          <p className="text-muted-foreground mb-4">The requested course run could not be found.</p>
+          <Button onClick={() => navigate('/course-runs')}>
+            Back to Course Runs
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between pb-6 border-b">
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/courses')}
+            onClick={() => navigate('/course-runs')}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -150,51 +147,51 @@ const CourseRunManagement = () => {
         </div>
       </div>
 
+      {/* Course Title */}
+      <div>
+        <h2 className="text-xl font-semibold text-foreground">
+          {courseRun.courseTitle} ({courseRun.courseCode})
+        </h2>
+      </div>
+
       {/* Course Run Tabs */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {courseRun.courseTitle} ({courseRun.courseCode})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="information">Course Run Information</TabsTrigger>
-              <TabsTrigger value="learners">
-                Learner Particulars ({learners.length})
-              </TabsTrigger>
-              <TabsTrigger value="trainers">
-                Trainer Assignment ({trainerAssignments.length})
-              </TabsTrigger>
-            </TabsList>
+      <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="information">Course Run Information</TabsTrigger>
+            <TabsTrigger value="learners">
+              Learner Particulars ({learners.length})
+            </TabsTrigger>
+            <TabsTrigger value="trainers">
+              Trainer Assignment ({trainerAssignments.length})
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="information" className="space-y-6">
-              <CourseRunInformationTab
-                courseRun={courseRun}
-                onUpdate={handleCourseRunUpdate}
-              />
-            </TabsContent>
+          <TabsContent value="information" className="space-y-6 mt-6">
+            <CourseRunInformationTab
+              courseRun={courseRun}
+              onUpdate={handleCourseRunUpdate}
+            />
+          </TabsContent>
 
-            <TabsContent value="learners" className="space-y-6">
-              <LearnerParticularsTab
-                courseRunId={courseRun.id}
-                learners={learners}
-                onAddLearner={handleAddLearner}
-                onUpdateLearner={handleUpdateLearner}
-              />
-            </TabsContent>
+          <TabsContent value="learners" className="space-y-6 mt-6">
+            <LearnerParticularsTab
+              courseRunId={courseRun.id}
+              learners={learners}
+              onAddLearner={handleAddLearner}
+              onUpdateLearner={handleUpdateLearner}
+            />
+          </TabsContent>
 
-            <TabsContent value="trainers" className="space-y-6">
-              <TrainerAssignmentTab
-                courseRunId={courseRun.id}
-                assignments={trainerAssignments}
-                onAssignTrainer={handleTrainerAssignment}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+          <TabsContent value="trainers" className="space-y-6 mt-6">
+            <TrainerAssignmentTab
+              courseRunId={courseRun.id}
+              assignments={trainerAssignments}
+              onAssignTrainer={handleTrainerAssignment}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
