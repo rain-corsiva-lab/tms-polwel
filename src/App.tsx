@@ -17,6 +17,7 @@ import OrganizationDashboard from "./pages/OrganizationDashboard";
 import CourseArchive from "./pages/CourseArchive";
 import CourseForm from "./pages/CourseForm";
 import CourseDetail from "./pages/CourseDetail";
+import CourseRunManagement from "./pages/CourseRunManagement";
 import VenueArchive from "./pages/VenueArchive";
 import VenueForm from "./pages/VenueForm";
 import VenueDetail from "./pages/VenueDetail";
@@ -73,6 +74,10 @@ const App = () => (
               <Route path="course-creation/view/:id" element={<CourseForm />} />
               <Route path="course-creation/detail/:id" element={<CourseDetail />} />
               <Route path="course-detail/:id" element={<CourseDetail />} />
+              
+              {/* Course Run Management */}
+              <Route path="course-runs/:courseId" element={<CourseRunManagement />} />
+              <Route path="course-runs/:courseId/:runId" element={<CourseRunManagement />} />
               
               {/* Venue Management */}
               <Route path="venue-setup" element={<VenueArchive />} />
