@@ -115,41 +115,6 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, calculations,
         />
       </div>
 
-      {/* Financial Summary */}
-      <div className="space-y-4">
-        <Separator />
-        <h3 className="text-lg font-semibold">Financial Summary</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Total Fee</Label>
-            <p className="text-2xl font-bold text-foreground">${calculations.totalFee.toFixed(2)}</p>
-          </div>
-          
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Minimum Revenue</Label>
-            <p className="text-2xl font-bold text-foreground">${calculations.minimumRevenue.toFixed(2)}</p>
-          </div>
-          
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Total Cost</Label>
-            <p className="text-2xl font-bold text-foreground">${calculations.totalCost.toFixed(2)}</p>
-          </div>
-          
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Profit</Label>
-            <p className={`text-2xl font-bold ${calculations.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${calculations.profit.toFixed(2)}
-            </p>
-          </div>
-        </div>
-        
-        <div className="p-4 bg-muted rounded-lg">
-          <Label className="text-sm text-muted-foreground">Profit Margin</Label>
-          <p className={`text-3xl font-bold ${calculations.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {calculations.profitMargin.toFixed(2)}%
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
