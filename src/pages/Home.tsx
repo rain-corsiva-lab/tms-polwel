@@ -1,32 +1,14 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import StatsCard from '@/components/StatsCard';
 import { Users, GraduationCap, Building2, BookOpen } from 'lucide-react';
 
 const Home = () => {
-  const { user, hasRole } = useAuth();
   const navigate = useNavigate();
-
-  // Auto-redirect based on user role for better UX
-  useEffect(() => {
-    if (user) {
-      // For trainers, redirect to their dedicated page
-      if (user.role === 'TRAINER') {
-        navigate('/trainerpartner', { replace: true });
-        return;
-      }
-      
-      // For training coordinators from specific organizations
-      if (user.role === 'TRAINING_COORDINATOR' && user.organizationId) {
-        navigate('/org', { replace: true });
-        return;
-      }
-    }
-  }, [user, navigate]);
-
-  if (!user) return null;
+  
+  // Mock user data for demo purposes
+  const user = { name: 'Demo User', role: 'POLWEL' };
+  const hasRole = (roles: string[]) => roles.includes('POLWEL');
 
   // Dashboard for POLWEL users and general overview
   return (

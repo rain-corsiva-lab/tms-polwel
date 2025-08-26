@@ -14,7 +14,6 @@ import { ViewDetailsDialog } from "@/components/ViewDetailsDialog";
 import { PasswordResetDialog } from "@/components/PasswordResetDialog";
 import { polwelUsersApi, debugAuthState } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 
 // Enhanced user data structure for POLWEL users
 interface PolwelUser {
@@ -46,13 +45,6 @@ export default function PolwelUsers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const { toast } = useToast();
-  const { isAuthenticated, user } = useAuth();
-
-  // Debug authentication state
-  useEffect(() => {
-    console.log('PolwelUsers - Auth State:', { isAuthenticated, user });
-    debugAuthState();
-  }, [isAuthenticated, user]);
 
   // Dummy data for POLWEL users
   const dummyUsers: PolwelUser[] = [
