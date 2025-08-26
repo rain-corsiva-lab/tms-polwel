@@ -44,23 +44,9 @@ const App = () => (
             {/* Public route - Complete Setup */}
             <Route path="/onboarding/:token" element={<CompleteSetup />} />
             
-            {/* Protected standalone routes */}
-            <Route 
-              path="/trainerpartner" 
-              element={
-                <ProtectedRoute requiredRoles={['TRAINER']}>
-                  <TrainerPartner />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/org" 
-              element={
-                <ProtectedRoute requiredRoles={['TRAINING_COORDINATOR', 'POLWEL']}>
-                  <OrganizationDashboard />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Standalone routes */}
+            <Route path="/trainerpartner" element={<TrainerPartner />} />
+            <Route path="/org" element={<OrganizationDashboard />} />
             
             {/* Main application routes */}
             <Route path="/" element={
