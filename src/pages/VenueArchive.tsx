@@ -15,6 +15,130 @@ const VenueArchive = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Dummy venue data
+  const dummyVenues: Venue[] = [
+    {
+      id: "1",
+      name: "POLWEL Training Center - Main Hall",
+      capacity: "120",
+      feeType: "per_venue",
+      fee: 800,
+      status: "ACTIVE",
+      address: "123 Training Avenue, Singapore 138588",
+      contacts: [{ id: "1", name: "John Manager", number: "+65 6234 5678", email: "john@polwel.com" }],
+      facilities: ["Air conditioning", "Projector", "Whiteboard", "WiFi"],
+      remarks: "Main training facility with full amenities"
+    },
+    {
+      id: "2", 
+      name: "Marina Bay Conference Center",
+      capacity: "200",
+      feeType: "per_venue",
+      fee: 1200,
+      status: "ACTIVE",
+      address: "10 Marina Boulevard, Singapore 018983",
+      contacts: [{ id: "2", name: "Sarah Lee", number: "+65 6688 8826", email: "sarah@marinabay.com" }],
+      facilities: ["Premium AV equipment", "Catering available", "Breakout rooms"],
+      remarks: "Premium conference venue with full service"
+    },
+    {
+      id: "3",
+      name: "Corporate Training Room A",
+      capacity: "40",
+      feeType: "per_head", 
+      fee: 25,
+      status: "ACTIVE",
+      address: "50 Raffles Place, Singapore 048623",
+      contacts: [{ id: "3", name: "Mike Tan", number: "+65 6533 8899", email: "mike@corporate.com" }],
+      facilities: ["Smart board", "Video conferencing", "Coffee station"],
+      remarks: "Intimate corporate setting ideal for workshops"
+    },
+    {
+      id: "4",
+      name: "Innovation Hub - Workshop Space",
+      capacity: "60",
+      feeType: "per_venue",
+      fee: 600,
+      status: "ACTIVE", 
+      address: "1 Fusionopolis Place, Singapore 138522",
+      contacts: [{ id: "4", name: "Lisa Wong", number: "+65 6602 3188", email: "lisa@innohub.sg" }],
+      facilities: ["Modular furniture", "High-speed internet", "Collaborative tools"],
+      remarks: "Modern workspace perfect for innovation workshops"
+    },
+    {
+      id: "5",
+      name: "Executive Meeting Room",
+      capacity: "16",
+      feeType: "per_head",
+      fee: 35,
+      status: "ACTIVE",
+      address: "2 Shenton Way, Singapore 068804", 
+      contacts: [{ id: "5", name: "David Lim", number: "+65 6224 1900", email: "david@executive.sg" }],
+      facilities: ["Premium furnishing", "Executive amenities", "Private dining"],
+      remarks: "Exclusive boardroom for executive training"
+    },
+    {
+      id: "6",
+      name: "Community Center Hall B", 
+      capacity: "80",
+      feeType: "per_venue",
+      fee: 300,
+      status: "MAINTENANCE",
+      address: "15 Community Street, Singapore 169846",
+      contacts: [{ id: "6", name: "Amy Chen", number: "+65 6270 7788", email: "amy@community.sg" }],
+      facilities: ["Basic AV", "Parking available", "Wheelchair accessible"],
+      remarks: "Currently under maintenance - available from next month"
+    },
+    {
+      id: "7",
+      name: "Hotel Seminar Room",
+      capacity: "30",
+      feeType: "per_head",
+      fee: 45,
+      status: "ACTIVE",
+      address: "2 Stamford Road, Singapore 178882",
+      contacts: [{ id: "7", name: "Robert Kim", number: "+65 6338 8585", email: "robert@hotel.com" }], 
+      facilities: ["Hotel amenities", "Catering services", "Concierge support"],
+      remarks: "Luxury hotel environment with full hospitality service"
+    },
+    {
+      id: "8",
+      name: "Online Virtual Platform",
+      capacity: "500",
+      feeType: "per_head",
+      fee: 5,
+      status: "ACTIVE",
+      address: "Virtual - Cloud Based",
+      contacts: [{ id: "8", name: "Tech Support", number: "+65 6789 0123", email: "support@virtual.com" }],
+      facilities: ["HD video", "Screen sharing", "Breakout rooms", "Recording"],
+      remarks: "Scalable virtual training platform"
+    },
+    {
+      id: "9",
+      name: "University Lecture Theatre",
+      capacity: "150",
+      feeType: "per_venue", 
+      fee: 750,
+      status: "INACTIVE",
+      address: "21 Lower Kent Ridge Road, Singapore 119077",
+      contacts: [{ id: "9", name: "Prof. Williams", number: "+65 6516 6666", email: "williams@university.edu" }],
+      facilities: ["Tiered seating", "Advanced AV", "Academic atmosphere"],
+      remarks: "Academic venue - currently not available for external bookings"
+    },
+    {
+      id: "10",
+      name: "Client Site - Flexible",
+      capacity: "Variable",
+      feeType: "per_head",
+      fee: 50,
+      status: "ACTIVE",
+      address: "Various client locations",
+      contacts: [{ id: "10", name: "Mobile Team Lead", number: "+65 6234 5678", email: "mobile@polwel.com" }],
+      facilities: ["Customizable setup", "On-site support", "Equipment rental"],
+      remarks: "Flexible on-site training at client premises"
+    }
+  ];
+
   useEffect(() => {
     loadVenues();
   }, []);
@@ -24,22 +148,16 @@ const VenueArchive = () => {
       setLoading(true);
       const response = await venuesApi.getAll();
       
-      if (response.success) {
-        setVenues(response.data || []);
+      if (response.success && response.data && response.data.length > 0) {
+        setVenues(response.data);
       } else {
-        toast({
-          title: "Error",
-          description: response.error || "Failed to load venues",
-          variant: "destructive",
-        });
+        // Load dummy data when no venues from API
+        setVenues(dummyVenues);
       }
     } catch (error) {
       console.error('Error loading venues:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load venues",
-        variant: "destructive",
-      });
+      // Fallback to dummy data on error
+      setVenues(dummyVenues);
     } finally {
       setLoading(false);
     }
