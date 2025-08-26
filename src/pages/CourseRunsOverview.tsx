@@ -6,19 +6,35 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar, Search, Plus, Users, MapPin, Clock, Filter } from "lucide-react";
 import type { CourseRun } from "@/types/courseRun";
+
+interface Course {
+  id: string;
+  title: string;
+  code: string;
+}
 
 const CourseRunsOverview = () => {
   const navigate = useNavigate();
   const [courseRuns, setCourseRuns] = useState<CourseRun[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [filteredRuns, setFilteredRuns] = useState<CourseRun[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Mock data - replace with API call
   useEffect(() => {
+    const mockCourses: Course[] = [
+      { id: 'course-1', title: 'Advanced Leadership Skills', code: 'ALS01' },
+      { id: 'course-2', title: 'Digital Marketing Fundamentals', code: 'DMF01' },
+      { id: 'course-3', title: 'Project Management Essentials', code: 'PME01' },
+    ];
+
     const mockCourseRuns: CourseRun[] = [
       {
         id: 'run-1',
@@ -124,10 +140,19 @@ const CourseRunsOverview = () => {
       }
     ];
 
+    setCourses(mockCourses);
     setCourseRuns(mockCourseRuns);
     setFilteredRuns(mockCourseRuns);
     setLoading(false);
   }, []);
+
+  const handleCreateCourseRun = () => {
+    if (selectedCourse) {
+      navigate(`/course-runs/new/${selectedCourse}`);
+      setShowCreateDialog(false);
+      setSelectedCourse('');
+    }
+  };
 
   // Filter course runs based on search term and status
   useEffect(() => {
@@ -187,10 +212,44 @@ const CourseRunsOverview = () => {
             Manage and monitor all course runs across the system
           </p>
         </div>
-        <Button onClick={() => navigate('/course-creation')}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create New Course Run
-        </Button>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Create New Course Run
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Course Run</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Select Course</label>
+                <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a course..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title} ({course.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateCourseRun} disabled={!selectedCourse}>
+                  Continue
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
