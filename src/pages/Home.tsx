@@ -18,9 +18,10 @@ const Home = () => {
         return;
       }
       
-      // For training coordinators from specific organizations
+      // Training coordinators are now handled at login and don't reach this page
+      // if they access home directly, redirect them to their organization
       if (user.role === 'TRAINING_COORDINATOR' && user.organizationId) {
-        navigate('/org', { replace: true });
+        navigate(`/client-organisations/${user.organizationId}`, { replace: true });
         return;
       }
     }

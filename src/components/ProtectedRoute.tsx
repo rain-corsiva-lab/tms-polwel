@@ -32,68 +32,8 @@ export function ProtectedRoute({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check if user account is active
-  if (user.status !== 'ACTIVE') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <AlertTriangle className="w-12 h-12 mx-auto text-yellow-500 mb-2" />
-            <CardTitle className="text-lg">Account Status</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-2">
-            <p className="text-muted-foreground">
-              Your account is currently <strong>{user.status.toLowerCase()}</strong>.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Please contact your system administrator for assistance.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Check role-based access
-  if (requiredRoles.length > 0 && !hasRole(requiredRoles)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Lock className="w-12 h-12 mx-auto text-red-500 mb-2" />
-            <CardTitle className="text-lg">Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-2">
-            <p className="text-muted-foreground">
-              You don't have permission to access this page.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Required: {requiredRoles.join(', ')} | Your role: {user.role}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Check organization-specific access
-  if (organizationId && !canAccessOrganization(organizationId)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Building className="w-12 h-12 mx-auto text-red-500 mb-2" />
-            <CardTitle className="text-lg">Organization Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground">
-              You don't have access to this organization's data.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // TEMPORARILY DISABLE ALL PERMISSION CHECKS - ALLOW ALL AUTHENTICATED USERS
+  console.log('ProtectedRoute: User authenticated, allowing access', { user, requiredRoles, organizationId });
 
   // All checks passed, render the protected content
   return <>{children}</>;

@@ -33,6 +33,8 @@ const TrainerDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDateEvents, setSelectedDateEvents] = useState<{ courseRuns: any[], blockouts: any[] }>({ courseRuns: [], blockouts: [] });
 
   // State for editable profile data
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -210,59 +212,134 @@ const fetchTrainer = async () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">{trainer.email}</span>
-            </div>
-            {trainer.partnerOrganization && (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Contact & Profile */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{trainer.partnerOrganization}</span>
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{trainer.email}</span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {trainer.partnerOrganization && (
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{trainer.partnerOrganization}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Profile Information</CardTitle>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => setShowEditProfile(true)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Profile
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium mb-2">Specializations</h4>
-              <div className="flex flex-wrap gap-2">
-                {specializations.map((spec, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {spec}
-                  </Badge>
-                ))}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Profile Information</CardTitle>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setShowEditProfile(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium mb-2">Specializations</h4>
+                <div className="flex flex-wrap gap-2">
+                  {specializations.map((spec, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {spec}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium mb-2">Professional Write-up</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {writeUp || trainer.bio || "No bio available"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <div>
+                <h4 className="text-sm font-medium mb-2">Professional Write-up</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {writeUp || trainer.bio || "No bio available"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Center Column - Calendar */}
+        <div className="lg:col-span-1">
+          <TrainerCalendar 
+            trainerId={trainer.id} 
+            trainerName={trainer.name}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            onEventsChange={setSelectedDateEvents}
+          />
+        </div>
+
+        {/* Right Column - Selected Date Events */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {selectedDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </CardTitle>
+              <CardDescription>Events and blockouts for selected date</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(selectedDateEvents.courseRuns.length > 0 || selectedDateEvents.blockouts.length > 0) ? (
+                <div className="space-y-3">
+                  {selectedDateEvents.courseRuns.map((run: any) => (
+                    <div key={run.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span className="font-medium">{run.courseName}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{run.startTime} - {run.endTime}</span>
+                        </div>
+                        {run.venue && (
+                          <div className="flex items-center space-x-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{run.venue.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {selectedDateEvents.blockouts.map((blockout: any) => (
+                    <div key={blockout.id} className="p-3 border rounded-lg bg-red-50">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Calendar className="h-4 w-4 text-red-500" />
+                        <span className="font-medium text-red-700">{blockout.reason}</span>
+                      </div>
+                      <div className="text-sm text-red-600">
+                        <div>Unavailable</div>
+                        {blockout.description && (
+                          <div className="mt-1">{blockout.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No events scheduled for this date</p>
+                  <p className="text-sm text-muted-foreground">Click "Add Blockout Date Range" to block this date</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} />
 
       {/* Edit Profile Dialog */}
       <EditProfileDialog

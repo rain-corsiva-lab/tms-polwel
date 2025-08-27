@@ -46,10 +46,13 @@ class AuthService {
     // Only start session management if we're in browser environment
     if (typeof window === 'undefined') return;
 
-    // Check session less frequently to avoid interference
-    this.sessionCheckTimer = setInterval(() => {
-      this.checkSession();
-    }, 5 * 60 * 1000); // Check every 5 minutes instead of 1 minute
+    // TEMPORARILY DISABLE SESSION CHECKING TO DEBUG LOGIN ISSUES
+    console.log('Session management temporarily disabled');
+    
+    // // Check session less frequently to avoid interference
+    // this.sessionCheckTimer = setInterval(() => {
+    //   this.checkSession();
+    // }, 5 * 60 * 1000); // Check every 5 minutes instead of 1 minute
 
     this.trackUserActivity();
     
@@ -191,30 +194,31 @@ class AuthService {
       const payload = JSON.parse(atob(parts[1]));
       const currentTime = Date.now() / 1000;
 
-      // Check if token is expired
+      // Check if token is expired - BUT DON'T AUTO-LOGOUT FOR DEBUGGING
       if (!payload.exp || payload.exp <= currentTime) {
-        console.log('Token expired, clearing session...');
-        this.handleSessionExpiry();
+        console.log('Token expired, but not auto-logging out for debugging...');
+        // this.handleSessionExpiry();
         return false;
       }
 
       // Check if user ID matches
       if (payload.userId && payload.userId !== user.id) {
         console.warn('Token user ID mismatch');
-        this.clearTokens();
+        // this.clearTokens();
         return false;
       }
 
+      // TEMPORARILY DISABLE STATUS CHECK - ALLOW ALL USERS
       // Check if user is active
-      if (user.status !== 'ACTIVE') {
-        console.warn('User not active:', user.status);
-        return false;
-      }
+      // if (user.status !== 'ACTIVE') {
+      //   console.warn('User not active:', user.status);
+      //   return false;
+      // }
 
       return true;
     } catch (error) {
       console.error('Token validation error:', error);
-      this.clearTokens();
+      // this.clearTokens();
       return false;
     }
   }

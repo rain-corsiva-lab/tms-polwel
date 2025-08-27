@@ -273,7 +273,7 @@ export default function TrainerDashboard() {
           {/* Right Column - Today's Schedule */}
           <div className="lg:col-span-1 space-y-6">
             {/* Statistics */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-2 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-primary">{statistics.totalSessionsCompleted}</div>
@@ -298,7 +298,8 @@ export default function TrainerDashboard() {
                   <div className="text-sm text-muted-foreground">Blockouts</div>
                 </CardContent>
               </Card>
-            </div>
+            </div> */}
+            <div className="h-14"></div>
 
             {/* Selected Date Events */}
             <Card>

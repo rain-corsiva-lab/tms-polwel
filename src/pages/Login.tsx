@@ -42,7 +42,15 @@ const Login = () => {
     setError("");
 
     try {
-      await login(email, password, rememberMe);
+      const response = await login(email, password, rememberMe);
+      
+      // Check if user is a training coordinator and redirect to their organization detail
+      if (response?.user?.role === 'TRAINING_COORDINATOR' && response?.user?.organizationId) {
+        navigate(`/client-organisations/${response.user.organizationId}`, { replace: true });
+        return;
+      }
+      
+      // For other users, use default navigation
       // Navigation will be handled by the useEffect above
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";

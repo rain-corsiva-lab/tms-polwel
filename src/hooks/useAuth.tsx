@@ -1,10 +1,10 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { authService, User } from '@/lib/auth';
+import { authService, User, AuthResponse } from '@/lib/auth';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   loading: boolean;
   hasRole: (roles: string[]) => boolean;
@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authService.login(email, password, rememberMe);
       setIsAuthenticated(true);
       setUser(response.user);
+      return response; // Return the response so Login component can access user data
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);

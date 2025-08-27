@@ -329,10 +329,10 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
             Manage unavailable dates and blockouts for this trainer
           </p>
         </div>
-        <Button onClick={() => setShowAddBlockoutDialog(true)} className="gap-2">
+        {/* <Button onClick={() => setShowAddBlockoutDialog(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           Add Blockout Date Range
-        </Button>
+        </Button> */}
       </div>
 
       {/* Simple Calendar Card */}
@@ -343,10 +343,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
               <CalendarIcon className="h-5 w-5" />
               <CardTitle>{trainerName || 'Trainer'} Calendar</CardTitle>
             </div>
-            <Button onClick={() => setShowAddBlockoutDialog(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              Add Blockout Date Range
-            </Button>
+            
           </div>
           <CardDescription>Manage unavailable dates and blockouts for this trainer</CardDescription>
         </CardHeader>
@@ -374,6 +371,10 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
           </div>
         </CardContent>
       </Card>
+      <Button className="mt-3" onClick={() => setShowAddBlockoutDialog(true)} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Blockout Date Range
+            </Button>
 
       {/* Add Blockout Dialog */}
       <AddTrainerBlockoutDialog
