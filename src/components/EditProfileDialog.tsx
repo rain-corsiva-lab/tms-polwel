@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,20 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronsUpDown, Edit, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { trainerDashboardApi } from "@/lib/api";
 
 interface EditProfileDialogProps {
-  specializations: string[];
-  writeUp: string;
-  onSave: (data: { specializations: string[]; writeUp: string }) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  profile: {
+    id: string;
+    name: string;
+    email: string;
+    bio?: string;
+    specializations?: string[];
+    experience?: string;
+  };
+  onProfileUpdated: () => void;
 }
 
 const availableSpecializations = [
@@ -36,14 +45,19 @@ const availableSpecializations = [
   "Compliance Training"
 ];
 
-export function EditProfileDialog({ specializations, writeUp, onSave }: EditProfileDialogProps) {
-  const [open, setOpen] = useState(false);
+export function EditProfileDialog({ isOpen, onClose, profile, onProfileUpdated }: EditProfileDialogProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>(specializations);
-  const [profileWriteUp, setProfileWriteUp] = useState(writeUp);
+  const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>(profile.specializations || []);
+  const [profileWriteUp, setProfileWriteUp] = useState(profile.bio || "");
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Sync local state when profile prop changes
+  useEffect(() => {
+    setSelectedSpecializations(profile.specializations || []);
+    setProfileWriteUp(profile.bio || "");
+  }, [profile]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (selectedSpecializations.length === 0) {
@@ -64,17 +78,28 @@ export function EditProfileDialog({ specializations, writeUp, onSave }: EditProf
       return;
     }
 
-    onSave({
-      specializations: selectedSpecializations,
-      writeUp: profileWriteUp.trim()
-    });
+    try {
+      // Call API to update profile
+      await trainerDashboardApi.updateProfile({
+        bio: profileWriteUp.trim(),
+        specializations: selectedSpecializations
+      });
 
-    toast({
-      title: "Success",
-      description: "Profile updated successfully!",
-    });
+      onProfileUpdated();
 
-    setOpen(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const addSpecialization = (specialization: string) => {
@@ -89,13 +114,7 @@ export function EditProfileDialog({ specializations, writeUp, onSave }: EditProf
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Profile
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -187,7 +206,7 @@ export function EditProfileDialog({ specializations, writeUp, onSave }: EditProf
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit">

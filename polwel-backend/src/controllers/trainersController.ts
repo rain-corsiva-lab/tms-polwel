@@ -4,6 +4,7 @@ import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
+import EmailService from '../services/emailService';
 // import { logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 
@@ -172,9 +173,10 @@ export const createTrainer = async (req: AuthenticatedRequest, res: Response) =>
       });
     }
 
-    // Generate temporary password
+    // Generate temporary password and setup token
     const tempPassword = crypto.randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    const setupToken = crypto.randomBytes(32).toString('hex');
 
     const trainer = await prisma.user.create({
       data: {
@@ -182,13 +184,15 @@ export const createTrainer = async (req: AuthenticatedRequest, res: Response) =>
         email,
         password: hashedPassword,
         role: UserRole.TRAINER,
-        status,
+        status: UserStatus.PENDING, // Set as PENDING for onboarding
         availabilityStatus,
         partnerOrganization: partnerOrganization || null,
         bio: bio || null,
         specializations: specializations || [],
         certifications: certifications || [],
         experience: experience || null,
+        resetToken: setupToken, // Use resetToken for account completion
+        resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         ...(req.user?.userId && { createdBy: req.user.userId })
       },
       select: {
@@ -207,9 +211,21 @@ export const createTrainer = async (req: AuthenticatedRequest, res: Response) =>
       }
     });
 
+    // Send setup completion email
+    try {
+      if (trainer.email) {
+        const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+        await EmailService.sendTrainerSetupEmail(trainer.email, trainer.name, setupUrl);
+      }
+    } catch (emailError) {
+      console.error('Failed to send trainer setup email:', emailError);
+      // Don't fail the trainer creation if email fails
+    }
+
     return res.status(201).json({
       trainer,
-      tempPassword
+      tempPassword,
+      setupToken
     });
   } catch (error) {
     console.error('Create trainer error:', error);
@@ -640,6 +656,91 @@ export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Respo
 
   } catch (error) {
     console.error('Get trainer course runs error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Resend setup email for trainer
+export const resendTrainerSetup = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trainer ID is required'
+      });
+    }
+
+    // Find the trainer
+    const trainer = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.TRAINER,
+        status: UserStatus.PENDING
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        resetToken: true
+      }
+    });
+
+    if (!trainer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trainer not found or account already active'
+      });
+    }
+
+    if (!trainer.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trainer email not found'
+      });
+    }
+
+    // Generate new setup token
+    const setupToken = EmailService.generateResetToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Update trainer with new token
+    await prisma.user.update({
+      where: { id: trainer.id },
+      data: {
+        resetToken: setupToken,
+        resetTokenExpiry: expiresAt
+      }
+    });
+
+    // Send setup email
+    try {
+      const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+      await EmailService.sendTrainerSetupEmail(trainer.email, trainer.name, setupUrl);
+      
+      console.log(`🔄 Trainer setup email resent to: ${trainer.email}`);
+      
+      return res.json({
+        success: true,
+        message: 'Setup email has been resent successfully',
+        setupTokenResent: true
+      });
+
+    } catch (emailError) {
+      console.error('Failed to resend trainer setup email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send setup email. Please try again.'
+      });
+    }
+
+  } catch (error) {
+    console.error('Resend trainer setup error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

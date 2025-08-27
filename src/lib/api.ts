@@ -549,6 +549,36 @@ export const trainersApi = {
     
     return apiRequest(`/trainers/partner-organizations?${queryParams}`);
   },
+
+  // Resend setup email for trainer onboarding
+  resendSetup: async (id: string) => {
+    return apiRequest(`/trainers/${id}/resend-setup`, {
+      method: 'POST',
+    });
+  },
+};
+
+// Trainer Dashboard API (for authenticated trainers)
+export const trainerDashboardApi = {
+  // Get trainer dashboard data
+  getDashboard: async () => {
+    return apiRequest('/trainer/dashboard');
+  },
+
+  // Update trainer profile
+  updateProfile: async (profileData: {
+    name?: string;
+    contactNumber?: string;
+    bio?: string;
+    specializations?: string[];
+    certifications?: string[];
+    experience?: string;
+  }) => {
+    return apiRequest('/trainer/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  },
 };
 
 // Partners API
@@ -745,6 +775,13 @@ export const clientOrganizationsApi = {
   deleteCoordinator: async (organizationId: string, coordinatorId: string) => {
     return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {
       method: 'DELETE',
+    });
+  },
+
+  // Resend setup email for coordinator onboarding
+  resendCoordinatorSetup: async (organizationId: string, coordinatorId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}/resend-setup`, {
+      method: 'POST',
     });
   },
 
@@ -1073,4 +1110,5 @@ export default {
   coursesApi,
   venuesApi,
   referencesApi,
+  trainerDashboardApi,
 };

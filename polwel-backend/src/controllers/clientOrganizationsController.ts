@@ -2,6 +2,9 @@ import { Response } from 'express';
 import { UserStatus } from '@prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import EmailService from '../services/emailService';
 
 
 
@@ -513,9 +516,10 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
       });
     }
 
-    // Hash password
-    const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate temporary password and setup token
+    const tempPassword = crypto.randomBytes(8).toString('hex');
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    const setupToken = crypto.randomBytes(32).toString('hex');
 
     const coordinator = await prisma.user.create({
       data: {
@@ -525,8 +529,10 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
         role: 'TRAINING_COORDINATOR',
         organizationId,
         department: department || null,
-        status: 'ACTIVE',
-        emailVerified: true,
+        status: 'PENDING', // Set as PENDING for onboarding
+        resetToken: setupToken, // Use resetToken for account completion
+        resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        emailVerified: false, // Will be verified during onboarding
         createdBy: req.user?.userId || null
       },
       select: {
@@ -540,8 +546,21 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
       }
     });
 
+    // Send setup completion email
+    try {
+      if (coordinator.email) {
+        const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+        await EmailService.sendCoordinatorSetupEmail(coordinator.email, coordinator.name, setupUrl, organization.name);
+      }
+    } catch (emailError) {
+      console.error('Failed to send coordinator setup email:', emailError);
+      // Don't fail the coordinator creation if email fails
+    }
+
     return res.status(201).json({
       ...coordinator,
+      tempPassword,
+      setupToken,
       schedulesCount: 0,
       lastActive: 'Never'
     });
@@ -783,6 +802,105 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
     });
   } catch (error) {
     console.error('Get organization learners error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Resend setup email for training coordinator
+export const resendCoordinatorSetup = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { organizationId, coordinatorId } = req.params;
+
+    if (!organizationId || !coordinatorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organization ID and Coordinator ID are required'
+      });
+    }
+
+    // Find the coordinator and organization
+    const [coordinator, organization] = await Promise.all([
+      prisma.user.findFirst({
+        where: {
+          id: coordinatorId,
+          organizationId: organizationId,
+          role: 'TRAINING_COORDINATOR',
+          status: 'PENDING'
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          status: true,
+          resetToken: true
+        }
+      }),
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { name: true }
+      })
+    ]);
+
+    if (!coordinator) {
+      return res.status(404).json({
+        success: false,
+        message: 'Coordinator not found or account already active'
+      });
+    }
+
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organization not found'
+      });
+    }
+
+    if (!coordinator.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Coordinator email not found'
+      });
+    }
+
+    // Generate new setup token
+    const setupToken = EmailService.generateResetToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Update coordinator with new token
+    await prisma.user.update({
+      where: { id: coordinator.id },
+      data: {
+        resetToken: setupToken,
+        resetTokenExpiry: expiresAt
+      }
+    });
+
+    // Send setup email
+    try {
+      const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+      await EmailService.sendCoordinatorSetupEmail(coordinator.email, coordinator.name, setupUrl, organization.name);
+      
+      console.log(`🔄 Coordinator setup email resent to: ${coordinator.email}`);
+      
+      return res.json({
+        success: true,
+        message: 'Setup email has been resent successfully',
+        setupTokenResent: true
+      });
+
+    } catch (emailError) {
+      console.error('Failed to resend coordinator setup email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send setup email. Please try again.'
+      });
+    }
+
+  } catch (error) {
+    console.error('Resend coordinator setup error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

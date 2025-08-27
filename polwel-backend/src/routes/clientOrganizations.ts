@@ -12,7 +12,8 @@ import {
   createOrganizationCoordinator,
   updateOrganizationCoordinator,
   deleteOrganizationCoordinator,
-  getOrganizationLearners
+  getOrganizationLearners,
+  resendCoordinatorSetup
 } from '../controllers/clientOrganizationsController';
 
 const router = express.Router();
@@ -36,6 +37,7 @@ router.get('/:organizationId/coordinators', authorizeRoles('POLWEL', 'TRAINING_C
 router.post('/:organizationId/coordinators', authorizeRoles('POLWEL'), createOrganizationCoordinator);
 router.put('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), updateOrganizationCoordinator);
 router.delete('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), deleteOrganizationCoordinator);
+router.post('/:organizationId/coordinators/:coordinatorId/resend-setup', authorizeRoles('POLWEL'), resendCoordinatorSetup);
 
 // Learners routes
 router.get('/:organizationId/learners', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getOrganizationLearners);

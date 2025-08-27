@@ -10,7 +10,8 @@ import {
   createTrainerBlockout,
   deleteTrainerBlockout,
   getPartnerOrganizations,
-  getTrainerCourseRuns
+  getTrainerCourseRuns,
+  resendTrainerSetup
 } from '../controllers/trainersController';
 
 const router = express.Router();
@@ -35,5 +36,8 @@ router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_C
 
 // Trainer course runs
 router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getTrainerCourseRuns);
+
+// Trainer onboarding
+router.post('/:id/resend-setup', authorizeRoles('POLWEL'), resendTrainerSetup);
 
 export default router;

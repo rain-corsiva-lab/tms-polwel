@@ -32,6 +32,7 @@ const TrainerDetail = () => {
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   // State for editable profile data
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -133,9 +134,10 @@ const fetchTrainer = async () => {
     }
   };
 
-  const handleProfileSave = (data: { specializations: string[]; writeUp: string }) => {
-    setSpecializations(data.specializations);
-    setWriteUp(data.writeUp);
+  const handleProfileSave = () => {
+    // Refresh trainer data after profile update
+    fetchTrainer();
+    setShowEditProfile(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -230,11 +232,14 @@ const fetchTrainer = async () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Profile Information</CardTitle>
-            <EditProfileDialog 
-              specializations={specializations}
-              writeUp={writeUp}
-              onSave={handleProfileSave}
-            />
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => setShowEditProfile(true)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -257,7 +262,22 @@ const fetchTrainer = async () => {
         </Card>
       </div>
 
-      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} trainerCourses={specializations} />
+      <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} />
+
+      {/* Edit Profile Dialog */}
+      <EditProfileDialog
+        isOpen={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+        profile={{
+          id: trainer.id,
+          name: trainer.name,
+          email: trainer.email,
+          bio: trainer.bio,
+          specializations: trainer.specializations,
+          experience: trainer.experience
+        }}
+        onProfileUpdated={handleProfileSave}
+      />
     </div>
   );
 };

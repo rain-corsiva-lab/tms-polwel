@@ -205,10 +205,14 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
                 <SelectValue placeholder="Select payment mode" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="COMPANY_BILLING">Company Billing</SelectItem>
+                <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
+                <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
                 <SelectItem value="ULTF">ULTF</SelectItem>
-                <SelectItem value="Transition Dollars">Transition Dollars</SelectItem>
-                <SelectItem value="Self Sponsored">Self Sponsored</SelectItem>
-                <SelectItem value="Not Applicable">Not Applicable</SelectItem>
+                <SelectItem value="TRANSITION_DOLLARS">Transition Dollars</SelectItem>
+                <SelectItem value="SELF_SPONSORED">Self Sponsored</SelectItem>
+                <SelectItem value="GOVERNMENT_FUNDING">Government Funding</SelectItem>
+                <SelectItem value="NOT_APPLICABLE">Not Applicable</SelectItem>
               </SelectContent>
             </Select>
           </div>

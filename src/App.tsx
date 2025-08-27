@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute, RoleBased } from "@/components/ProtectedRoute";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
+import TrainerDashboard from "./pages/TrainerDashboard";
 
 import UserManagement from "./pages/UserManagement";
 import PolwelUsers from "./pages/PolwelUsers";
@@ -72,6 +73,12 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<Home />} />
+              
+              {/* Trainer Dashboard */}
+              <Route 
+                path="trainer-dashboard" 
+                element={<TrainerDashboard />}
+              />
               
               {/* User Management */}
               <Route path="users" element={<UserManagement />} />

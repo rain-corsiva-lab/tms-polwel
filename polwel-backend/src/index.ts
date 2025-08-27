@@ -31,6 +31,7 @@ import passwordResetRoutes from './routes/passwordReset';
 import userSetupRoutes from './routes/userSetup';
 import referencesRoutes from './routes/references';
 import trainerBlockoutsRoutes from './routes/trainerBlockouts';
+import trainerDashboardRoutes from './routes/trainerDashboard';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -159,6 +160,7 @@ app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/user-setup', userSetupRoutes);
 app.use('/api/references', authenticate, referencesRoutes);
 app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
+app.use('/api/trainer', trainerDashboardRoutes);
 
 // Error handling middleware
 app.use(errorLogger); // Add error logging before error handlers

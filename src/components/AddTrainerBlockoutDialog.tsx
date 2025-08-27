@@ -7,7 +7,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,16 +27,16 @@ import { Ban, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { TrainerBlockout } from "@/types/trainer";
+import { trainerBlockoutsApi } from "@/lib/api";
 
 interface AddTrainerBlockoutDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
   trainerId: string;
-  trainerName: string;
-  onBlockoutAdd: (blockout: Omit<TrainerBlockout, 'id'>) => void;
+  onBlockoutAdded: () => void;
 }
 
-export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd }: AddTrainerBlockoutDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddTrainerBlockoutDialog({ isOpen, onClose, trainerId, onBlockoutAdded }: AddTrainerBlockoutDialogProps) {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [formData, setFormData] = useState({
@@ -48,7 +47,7 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
 
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!startDate || !endDate || !formData.reason) {
@@ -69,56 +68,64 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
       return;
     }
 
-    const blockout: Omit<TrainerBlockout, 'id'> = {
-      trainerId,
-      trainerName,
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      reason: formData.reason,
-      type: formData.type,
-      description: formData.description,
-      isRecurring: false,
-      recurringPattern: undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      // Call API to create blockout
+      const blockoutData = {
+        trainerId,
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd"),
+        reason: formData.reason,
+        type: formData.type,
+        description: formData.description,
+        isRecurring: false,
+        recurringPattern: undefined
+      };
+      
+      await trainerBlockoutsApi.create(blockoutData);
 
-    onBlockoutAdd(blockout);
+      toast({
+        title: "Success",
+        description: "Blockout dates added successfully!",
+      });
 
-    // Reset form and close dialog
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setFormData({
-      reason: "",
-      type: "personal",
-      description: "",
-    });
-    setOpen(false);
+      // Reset form and refresh data
+      setStartDate(undefined);
+      setEndDate(undefined);
+      setFormData({
+        reason: "",
+        type: "personal",
+        description: "",
+      });
+      
+      onBlockoutAdded(); // Refresh dashboard data
+      onClose(); // Close dialog
+    } catch (error) {
+      console.error('Error creating blockout:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add blockout dates. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Ban className="h-4 w-4 mr-1" />
-          Block Out Dates
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ban className="h-5 w-5" />
-            Block Out Dates - {trainerName}
+            Block Out Dates
           </DialogTitle>
           <DialogDescription>
             Select dates when this trainer will be unavailable.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="startDate">Start Date *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="start-date">Start Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -129,30 +136,22 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "MMM dd") : <span>Start</span>}
+                    {startDate ? format(startDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={startDate}
-                    onSelect={(date) => {
-                      setStartDate(date);
-                      // If end date is before start date, reset it
-                      if (date && endDate && endDate < date) {
-                        setEndDate(undefined);
-                      }
-                    }}
+                    onSelect={setStartDate}
                     initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                    disabled={(date) => date < new Date()}
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
-            <div>
-              <Label htmlFor="endDate">End Date *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="end-date">End Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -163,7 +162,7 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "MMM dd") : <span>End</span>}
+                    {endDate ? format(endDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -172,53 +171,55 @@ export function AddTrainerBlockoutDialog({ trainerId, trainerName, onBlockoutAdd
                     selected={endDate}
                     onSelect={setEndDate}
                     initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                    disabled={(date) => date < new Date() || (startDate && date < startDate)}
                   />
                 </PopoverContent>
               </Popover>
             </div>
           </div>
-          
-          <div>
+
+          <div className="space-y-2">
             <Label htmlFor="reason">Reason *</Label>
             <Input
               id="reason"
+              placeholder="Family Matters"
               value={formData.reason}
-              onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-              placeholder="Enter reason for blockout"
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
             />
           </div>
-          
-          <div>
+
+          <div className="space-y-2">
             <Label htmlFor="type">Type</Label>
-            <Select onValueChange={(value: any) => setFormData(prev => ({ ...prev, type: value }))}>
+            <Select 
+              value={formData.type} 
+              onValueChange={(value: "personal" | "medical" | "training" | "vacation") => 
+                setFormData({ ...formData, type: value })
+              }
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select blockout type" />
+                <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="personal">Personal Leave</SelectItem>
-                <SelectItem value="holiday">Holiday</SelectItem>
-                <SelectItem value="unavailable">Unavailable</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="personal">Personal</SelectItem>
+                <SelectItem value="medical">Medical</SelectItem>
+                <SelectItem value="training">Training</SelectItem>
+                <SelectItem value="vacation">Vacation</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          
-          <div>
+
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Input
               id="description"
+              placeholder="Additional details (optional)"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Optional additional details"
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
         </form>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" onClick={handleSubmit}>

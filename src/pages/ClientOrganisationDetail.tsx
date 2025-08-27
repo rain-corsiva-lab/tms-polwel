@@ -619,6 +619,28 @@ const ClientOrganisationDetail = () => {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit User
                               </DropdownMenuItem>
+                              {coordinator.status === 'PENDING' && (
+                                <DropdownMenuItem 
+                                  onClick={async () => {
+                                    try {
+                                      await clientOrganizationsApi.resendCoordinatorSetup(id, coordinator.id);
+                                      toast({
+                                        title: "Setup Email Sent",
+                                        description: `Onboarding email has been resent to ${coordinator.name}`,
+                                      });
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Failed to Send Email",
+                                        description: error.message || "Could not resend setup email. Please try again.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Resend Setup Email
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem 
                                 onClick={() => {
                                   toast({

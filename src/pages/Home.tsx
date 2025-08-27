@@ -12,9 +12,9 @@ const Home = () => {
   // Auto-redirect based on user role for better UX
   useEffect(() => {
     if (user) {
-      // For trainers, redirect to their dedicated page
+      // For trainers, redirect to their new dashboard
       if (user.role === 'TRAINER') {
-        navigate('/trainerpartner', { replace: true });
+        navigate('/trainer-dashboard', { replace: true });
         return;
       }
       

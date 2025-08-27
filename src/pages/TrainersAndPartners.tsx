@@ -12,7 +12,6 @@ import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, M
 import UserTable from "@/components/UserTable";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
 import { AddPartnerDialog } from "@/components/AddPartnerDialog";
-import { AddTrainerBlockoutDialog } from "@/components/AddTrainerBlockoutDialog";
 import { EditTrainerDialog } from "@/components/EditTrainerDialog";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import StatsCard from "@/components/StatsCard";
@@ -373,9 +372,33 @@ const TrainersAndPartners = () => {
                             <p className="text-sm text-muted-foreground">{trainer.email}</p>
                             <p className="text-xs text-muted-foreground">Created: {new Date(trainer.createdAt).toLocaleDateString()}</p>
                           </div>
-                          <Badge variant="outline" className="text-warning border-warning">
-                            Pending
-                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-warning border-warning">
+                              Pending
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  await trainersApi.resendSetup(trainer.id);
+                                  toast({
+                                    title: "Setup Email Sent",
+                                    description: `Onboarding email has been resent to ${trainer.name}`,
+                                  });
+                                } catch (error: any) {
+                                  toast({
+                                    title: "Failed to Send Email",
+                                    description: error.message || "Could not resend setup email. Please try again.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              <Mail className="h-4 w-4 mr-1" />
+                              Resend
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -437,6 +460,28 @@ const TrainersAndPartners = () => {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  {trainer.status === 'PENDING' && (
+                                    <DropdownMenuItem 
+                                      onClick={async () => {
+                                        try {
+                                          await trainersApi.resendSetup(trainer.id);
+                                          toast({
+                                            title: "Setup Email Sent",
+                                            description: `Onboarding email has been resent to ${trainer.name}`,
+                                          });
+                                        } catch (error: any) {
+                                          toast({
+                                            title: "Failed to Send Email",
+                                            description: error.message || "Could not resend setup email. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <Mail className="h-4 w-4 mr-2" />
+                                      Resend Setup Email
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuItem 
                                     onClick={() => {
                                       // TODO: Implement password reset for trainers

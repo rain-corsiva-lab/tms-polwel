@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -14,16 +14,48 @@ import { TrainerBlockout, CourseRun } from "@/types/trainer"
 interface TrainerCalendarProps {
   trainerId: string
   trainerName?: string
+  selectedDate?: Date
+  onDateSelect?: (date: Date) => void
+  onEventsChange?: (events: { courseRuns: CourseRun[], blockouts: TrainerBlockout[] }) => void
 }
 
-const TrainerCalendar: React.FC<TrainerCalendarProps> = ({ trainerId, trainerName }) => {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+const TrainerCalendar: React.FC<TrainerCalendarProps> = ({ 
+  trainerId, 
+  trainerName, 
+  selectedDate: propSelectedDate = new Date(),
+  onDateSelect,
+  onEventsChange
+}) => {
+  const [selectedDate, setSelectedDate] = useState<Date>(propSelectedDate)
   const [blockouts, setBlockouts] = useState<TrainerBlockout[]>([])
   const [courseRuns, setCourseRuns] = useState<CourseRun[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddBlockoutDialog, setShowAddBlockoutDialog] = useState(false)
   const [editingBlockout, setEditingBlockout] = useState<TrainerBlockout | null>(null)
   const { toast } = useToast()
+
+  // Update local selected date when prop changes
+  useEffect(() => {
+    setSelectedDate(propSelectedDate)
+  }, [propSelectedDate])
+
+  // Handle date selection
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date)
+      onDateSelect?.(date)
+      
+      // Update events for the selected date
+      const events = getEventsForDate(date)
+      onEventsChange?.(events)
+    }
+  }
+
+  // Update events when blockouts or courseRuns change
+  useEffect(() => {
+    const events = getEventsForDate(selectedDate)
+    onEventsChange?.(events)
+  }, [blockouts, courseRuns, selectedDate])
 
   // Load data
   useEffect(() => {
@@ -79,6 +111,28 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({ trainerId, trainerNam
       setCourseRuns([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Get events for selected date
+  const getEventsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0]
+    
+    // Filter course runs for the date
+    const courseRunsForDate = courseRuns.filter(run => 
+      run.startDate.startsWith(dateStr)
+    )
+    
+    // Filter blockouts for the date
+    const blockoutsForDate = blockouts.filter(blockout => {
+      const blockoutStart = new Date(blockout.startDate)
+      const blockoutEnd = new Date(blockout.endDate)
+      return date >= blockoutStart && date <= blockoutEnd
+    })
+
+    return {
+      courseRuns: courseRunsForDate,
+      blockouts: blockoutsForDate
     }
   }
 
@@ -275,139 +329,62 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({ trainerId, trainerNam
             Manage unavailable dates and blockouts for this trainer
           </p>
         </div>
-        {/* <Button onClick={() => setShowAddBlockoutDialog(true)} className="gap-2">
+        <Button onClick={() => setShowAddBlockoutDialog(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           Add Blockout Date Range
-        </Button> */}
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left side - Calendar */}
-        <Card>
-          <CardContent className="p-6">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              modifiers={calendarModifiers}
-              modifiersClassNames={calendarModifiersClassNames}
-              className="rounded-md border"
-            />
-            
-            <div className="mt-4 space-y-2">
-              <p className="text-sm font-medium">Click a date to block out trainer</p>
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-100 rounded border"></div>
-                  <span>Scheduled Course</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-100 rounded border"></div>
-                  <span>Unavailable</span>
-                </div>
+      {/* Simple Calendar Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CalendarIcon className="h-5 w-5" />
+              <CardTitle>{trainerName || 'Trainer'} Calendar</CardTitle>
+            </div>
+            <Button onClick={() => setShowAddBlockoutDialog(true)} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Blockout Date Range
+            </Button>
+          </div>
+          <CardDescription>Manage unavailable dates and blockouts for this trainer</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            modifiers={calendarModifiers}
+            modifiersClassNames={calendarModifiersClassNames}
+            className="rounded-md border"
+          />
+          <div className="text-sm space-y-2">
+            <p className="font-medium">Click a date to block out trainer</p>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                <span>Scheduled Course</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded"></div>
+                <span>Unavailable</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Right side - Event Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{format(selectedDate, 'MMMM do, yyyy')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Scheduled Courses */}
-            {selectedDateEvents.courseRuns.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-blue-600 mb-2">Scheduled Courses</h4>
-                {selectedDateEvents.courseRuns.map((run) => (
-                  <Card key={run.id} className="mb-2">
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h5 className="font-medium">{run.course.title}</h5>
-                          <Badge>Course</Badge>
-                        </div>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            <span>{run.startTime} - {run.endTime}</span>
-                          </div>
-                          {run.venue && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-3 w-3" />
-                              <span>{run.venue.name}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Users className="h-3 w-3" />
-                            <span>{run.currentParticipants} / {run.maxParticipants} participants</span>
-                          </div>
-                          {run.organization && (
-                            <div className="flex items-center gap-2">
-                              <Building className="h-3 w-3" />
-                              <span>{run.organization.name}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Blockouts */}
-            {selectedDateEvents.blockouts.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-red-600 mb-2">Blockouts</h4>
-                {selectedDateEvents.blockouts.map((blockout) => (
-                  <Card key={blockout.id} className="mb-2 cursor-pointer hover:bg-muted/50"
-                        onClick={() => setEditingBlockout({...blockout, trainerName: trainerName || 'Trainer'})}>
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h5 className="font-medium">{blockout.reason}</h5>
-                          <Badge variant="destructive">Unavailable</Badge>
-                        </div>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <CalendarIcon className="h-3 w-3" />
-                            <span>
-                              {blockout.startDate === blockout.endDate 
-                                ? format(parseISO(blockout.startDate), 'MMM do, yyyy')
-                                : `${format(parseISO(blockout.startDate), 'MMM do')} - ${format(parseISO(blockout.endDate), 'MMM do, yyyy')}`
-                              }
-                            </span>
-                          </div>
-                          {blockout.description && (
-                            <p className="text-xs">{blockout.description}</p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* No events */}
-            {selectedDateEvents.courseRuns.length === 0 && selectedDateEvents.blockouts.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No events scheduled for this date</p>
-                <p className="text-sm">Click "Add Blockout Date Range" to block this date</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Add Blockout Dialog */}
       <AddTrainerBlockoutDialog
+        isOpen={showAddBlockoutDialog}
+        onClose={() => setShowAddBlockoutDialog(false)}
         trainerId={trainerId}
-        trainerName={trainerName || 'Trainer'}
-        onBlockoutAdd={handleBlockoutAdd}
+        onBlockoutAdded={async () => {
+          // Refresh the blockouts data from API
+          await loadData();
+          setShowAddBlockoutDialog(false);
+        }}
       />
 
       {/* Edit Blockout Dialog */}

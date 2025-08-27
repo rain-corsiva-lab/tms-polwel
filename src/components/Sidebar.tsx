@@ -10,9 +10,11 @@ import {
   Shield,
   ChevronDown,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   className?: string;
@@ -41,6 +43,7 @@ const Sidebar = ({ className }: SidebarProps) => {
   const [userManagementOpen, setUserManagementOpen] = useState(false);
   const [clientOrgsOpen, setClientOrgsOpen] = useState(false);
   const [courseManagementOpen, setCourseManagementOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <aside className={cn("bg-card border-r border-border w-64 h-screen flex flex-col", className)}>
@@ -54,6 +57,24 @@ const Sidebar = ({ className }: SidebarProps) => {
       </div>
       
       <nav className="flex-1 px-4 space-y-1">
+        {/* Trainer Dashboard - Only show for trainers */}
+        {user?.role === 'TRAINER' && (
+          <NavLink
+            to="/trainer-dashboard"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )
+            }
+          >
+            <Calendar className="mr-3 h-5 w-5" />
+            Dashboard
+          </NavLink>
+        )}
+
         {/* User Management Dropdown */}
         <div className="space-y-1">
           <button
