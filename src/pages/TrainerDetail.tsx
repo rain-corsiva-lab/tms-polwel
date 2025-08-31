@@ -9,6 +9,11 @@ import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { trainersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus } from "lucide-react";
 
 interface Trainer {
   id: string;
@@ -26,6 +31,13 @@ interface Trainer {
   updatedAt: string;
 }
 
+interface TrainingFee {
+  id: string;
+  courseCode: string;
+  feesPerRun: string;
+  remarks: string;
+}
+
 const TrainerDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
@@ -37,6 +49,22 @@ const TrainerDetail = () => {
   // State for editable profile data
   const [specializations, setSpecializations] = useState<string[]>([]);
   const [writeUp, setWriteUp] = useState("");
+
+  // State for training fees
+  const [trainingFees, setTrainingFees] = useState<TrainingFee[]>([
+    { id: "1", courseCode: "LD-001", feesPerRun: "$2,500", remarks: "Standard leadership development course" },
+    { id: "2", courseCode: "CS-002", feesPerRun: "$1,800", remarks: "Communication skills workshop" },
+    { id: "3", courseCode: "TB-003", feesPerRun: "$2,200", remarks: "Team building intensive program" },
+    { id: "4", courseCode: "PM-004", feesPerRun: "$3,000", remarks: "Advanced project management certification" }
+  ]);
+  
+  // State for add training fee form
+  const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    courseCode: "",
+    feesPerRun: "",
+    remarks: ""
+  });
 
   useEffect(() => {
     if (id) {
@@ -152,6 +180,30 @@ const fetchTrainer = async () => {
     return <Badge variant={variants[status as keyof typeof variants] || "secondary"}>{status}</Badge>;
   };
 
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddTrainingFee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.courseCode || !formData.feesPerRun) {
+      toast({ title: "Error", description: "Course code and fees are required", variant: "destructive" });
+      return;
+    }
+
+    const newFee: TrainingFee = {
+      id: Date.now().toString(),
+      courseCode: formData.courseCode,
+      feesPerRun: formData.feesPerRun,
+      remarks: formData.remarks
+    };
+
+    setTrainingFees(prev => [...prev, newFee]);
+    setFormData({ courseCode: "", feesPerRun: "", remarks: "" });
+    setIsAddFeeDialogOpen(false);
+    toast({ title: "Success", description: "Training fee added successfully" });
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -260,7 +312,60 @@ const fetchTrainer = async () => {
 
       {/* Training Fee Section */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground">Training Fee</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-foreground">Training Fee</h2>
+          <Dialog open={isAddFeeDialogOpen} onOpenChange={setIsAddFeeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Training Fee
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-background border z-50">
+              <DialogHeader>
+                <DialogTitle>Add Training Fee</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddTrainingFee} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="courseCode">Course Code *</Label>
+                  <Input
+                    id="courseCode"
+                    value={formData.courseCode}
+                    onChange={(e) => handleFormChange("courseCode", e.target.value)}
+                    placeholder="e.g., LD-001"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="feesPerRun">Fees (per run) *</Label>
+                  <Input
+                    id="feesPerRun"
+                    value={formData.feesPerRun}
+                    onChange={(e) => handleFormChange("feesPerRun", e.target.value)}
+                    placeholder="e.g., $2,500"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="remarks">Remarks</Label>
+                  <Textarea
+                    id="remarks"
+                    value={formData.remarks}
+                    onChange={(e) => handleFormChange("remarks", e.target.value)}
+                    placeholder="Additional notes or comments"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setIsAddFeeDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Add Fee</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -271,26 +376,21 @@ const fetchTrainer = async () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">LD-001</TableCell>
-                <TableCell>$2,500</TableCell>
-                <TableCell>Standard leadership development course</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">CS-002</TableCell>
-                <TableCell>$1,800</TableCell>
-                <TableCell>Communication skills workshop</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">TB-003</TableCell>
-                <TableCell>$2,200</TableCell>
-                <TableCell>Team building intensive program</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">PM-004</TableCell>
-                <TableCell>$3,000</TableCell>
-                <TableCell>Advanced project management certification</TableCell>
-              </TableRow>
+              {trainingFees.length > 0 ? (
+                trainingFees.map((fee) => (
+                  <TableRow key={fee.id}>
+                    <TableCell className="font-medium">{fee.courseCode}</TableCell>
+                    <TableCell>{fee.feesPerRun}</TableCell>
+                    <TableCell>{fee.remarks}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                    No training fees added yet
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
