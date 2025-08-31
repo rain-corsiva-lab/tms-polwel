@@ -27,6 +27,9 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
   onEventsChange
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(propSelectedDate)
+  const [visibleMonth, setVisibleMonth] = useState<Date>(
+    new Date(propSelectedDate.getFullYear(), propSelectedDate.getMonth(), 1)
+  )
   const [blockouts, setBlockouts] = useState<TrainerBlockout[]>([])
   const [courseRuns, setCourseRuns] = useState<CourseRun[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,6 +40,8 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
   // Update local selected date when prop changes
   useEffect(() => {
     setSelectedDate(propSelectedDate)
+  // keep visible month in sync with selected date prop
+  setVisibleMonth(new Date(propSelectedDate.getFullYear(), propSelectedDate.getMonth(), 1))
   }, [propSelectedDate])
 
   // Handle date selection
@@ -60,20 +65,21 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
   // Load data
   useEffect(() => {
     loadData()
-  }, [trainerId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trainerId, visibleMonth])
 
   const loadData = async () => {
     try {
       setLoading(true)
       
-      // Get current month's date range
-      const now = new Date()
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  // Get visible month's date range (responds to calendar month navigation)
+  const monthRef = visibleMonth || propSelectedDate || new Date()
+  const startOfMonth = new Date(monthRef.getFullYear(), monthRef.getMonth(), 1)
+  const endOfMonth = new Date(monthRef.getFullYear(), monthRef.getMonth() + 1, 0)
       
       // Load blockouts and course runs
       const [blockoutsResponse, courseRunsResponse] = await Promise.all([
-        getTrainerBlockouts(trainerId, startOfMonth.toISOString().split('T')[0], endOfMonth.toISOString().split('T')[0]),
+  getTrainerBlockouts(trainerId, startOfMonth.toISOString().split('T')[0], endOfMonth.toISOString().split('T')[0]),
         getTrainerCourseRuns(trainerId)
       ])
 
@@ -117,17 +123,25 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
   // Get events for selected date
   const getEventsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0]
-    
+
+    // Helper: parse YYYY-MM-DD into local Date at midnight to avoid timezone shifts
+    const parseYMD = (s: string) => {
+      const [y, m, d] = s.split('-').map(Number)
+      return new Date(y, m - 1, d)
+    }
+
     // Filter course runs for the date
-    const courseRunsForDate = courseRuns.filter(run => 
+    const courseRunsForDate = courseRuns.filter(run =>
       run.startDate.startsWith(dateStr)
     )
-    
-    // Filter blockouts for the date
+
+    // Filter blockouts for the date (inclusive)
     const blockoutsForDate = blockouts.filter(blockout => {
-      const blockoutStart = new Date(blockout.startDate)
-      const blockoutEnd = new Date(blockout.endDate)
-      return date >= blockoutStart && date <= blockoutEnd
+      const blockoutStart = parseYMD(blockout.startDate)
+      const blockoutEnd = parseYMD(blockout.endDate)
+      // Compare only YMD (strip time)
+      const dY = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      return dY >= blockoutStart && dY <= blockoutEnd
     })
 
     return {
@@ -262,10 +276,16 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
     const events = []
     
     // Add blockouts for selected date
+    const parseYMD = (s: string) => {
+      const [y, m, d] = s.split('-').map(Number)
+      return new Date(y, m - 1, d)
+    }
+
     const dayBlockouts = blockouts.filter(blockout => {
-      const start = parseISO(blockout.startDate)
-      const end = parseISO(blockout.endDate)
-      return selectedDate >= start && selectedDate <= end
+      const start = parseYMD(blockout.startDate)
+      const end = parseYMD(blockout.endDate)
+      const dY = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
+      return dY >= start && dY <= end
     })
     
     // Add course runs for selected date
@@ -283,10 +303,16 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
     const scheduledDates: Date[] = []
 
     blockouts.forEach(blockout => {
-      const start = parseISO(blockout.startDate)
-      const end = parseISO(blockout.endDate)
+      // Use safe YMD parsing to avoid timezone shifts
+      const parseYMD = (s: string) => {
+        const [y, m, d] = s.split('-').map(Number)
+        return new Date(y, m - 1, d)
+      }
+
+      const start = parseYMD(blockout.startDate)
+      const end = parseYMD(blockout.endDate)
       const currentDate = new Date(start)
-      
+
       while (currentDate <= end) {
         blockedDates.push(new Date(currentDate))
         currentDate.setDate(currentDate.getDate() + 1)
@@ -350,8 +376,10 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
         <CardContent className="space-y-4">
           <Calendar
             mode="single"
+            month={visibleMonth}
             selected={selectedDate}
             onSelect={handleDateSelect}
+            onMonthChange={(month) => setVisibleMonth(month)}
             modifiers={calendarModifiers}
             modifiersClassNames={calendarModifiersClassNames}
             className="rounded-md border"
