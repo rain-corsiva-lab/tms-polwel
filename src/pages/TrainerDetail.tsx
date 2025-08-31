@@ -8,6 +8,7 @@ import TrainerCalendar from "@/components/TrainerCalendar";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { trainersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Trainer {
   id: string;
@@ -255,6 +256,44 @@ const fetchTrainer = async () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Training Fee Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Training Fee</h2>
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Course Code</TableHead>
+                <TableHead>Fees (per run)</TableHead>
+                <TableHead>Remarks</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">LD-001</TableCell>
+                <TableCell>$2,500</TableCell>
+                <TableCell>Standard leadership development course</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">CS-002</TableCell>
+                <TableCell>$1,800</TableCell>
+                <TableCell>Communication skills workshop</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">TB-003</TableCell>
+                <TableCell>$2,200</TableCell>
+                <TableCell>Team building intensive program</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">PM-004</TableCell>
+                <TableCell>$3,000</TableCell>
+                <TableCell>Advanced project management certification</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <TrainerCalendar trainerId={trainer.id} trainerName={trainer.name} />
