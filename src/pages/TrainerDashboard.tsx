@@ -188,7 +188,7 @@ export default function TrainerDashboard() {
                 <CardTitle>{profile.name}</CardTitle>
                 <Badge 
                   variant={profile.status === 'ACTIVE' ? 'default' : 'secondary'}
-                  className="mb-2"
+                  className="mb-2 w-fit self-center"
                 >
                   {profile.status}
                 </Badge>

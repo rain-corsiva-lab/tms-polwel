@@ -152,7 +152,7 @@ const fetchTrainer = async () => {
       LIMITED: "outline"
     } as const;
     
-    return <Badge variant={variants[status as keyof typeof variants] || "secondary"}>{status}</Badge>;
+    return <Badge className=" w-fit self-center" variant={variants[status as keyof typeof variants] || "secondary"}>{status}</Badge>;
   };
 
   if (loading) {

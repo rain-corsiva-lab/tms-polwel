@@ -75,27 +75,45 @@ const Sidebar = ({ className }: SidebarProps) => {
           </NavLink>
         )}
 
-        {/* User Management Dropdown */}
-        <div className="space-y-1">
-          <button
-            onClick={() => setUserManagementOpen(!userManagementOpen)}
-            className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-          >
-            <Users className="mr-3 h-5 w-5" />
-            User Management
-            {userManagementOpen ? (
-              <ChevronDown className="ml-auto h-4 w-4" />
-            ) : (
-              <ChevronRight className="ml-auto h-4 w-4" />
-            )}
-          </button>
+        {/* User Management Dropdown - hidden for trainers */}
+        {user?.role !== 'TRAINER' && (
+          <div className="space-y-1">
+            <button
+              onClick={() => setUserManagementOpen(!userManagementOpen)}
+              className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            >
+              <Users className="mr-3 h-5 w-5" />
+              User Management
+              {userManagementOpen ? (
+                <ChevronDown className="ml-auto h-4 w-4" />
+              ) : (
+                <ChevronRight className="ml-auto h-4 w-4" />
+              )}
+            </button>
 
-          {userManagementOpen && (
-            <div className="ml-6 space-y-1">
-              {userManagementItems.map((item) => (
+            {userManagementOpen && (
+              <div className="ml-6 space-y-1">
+                {userManagementItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                        isActive
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      )
+                    }
+                  >
+                    <item.icon className="mr-3 h-4 w-4" />
+                    {item.name}
+                  </NavLink>
+                ))}
+
+                {/* Client Organisations as direct link */}
                 <NavLink
-                  key={item.name}
-                  to={item.href}
+                  to="/client-organisations"
                   className={({ isActive }) =>
                     cn(
                       "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
@@ -105,29 +123,13 @@ const Sidebar = ({ className }: SidebarProps) => {
                     )
                   }
                 >
-                  <item.icon className="mr-3 h-4 w-4" />
-                  {item.name}
+                  <Building2 className="mr-3 h-4 w-4" />
+                  Clients
                 </NavLink>
-              ))}
-
-              {/* Client Organisations as direct link */}
-              <NavLink
-                to="/client-organisations"
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                  )
-                }
-              >
-                <Building2 className="mr-3 h-4 w-4" />
-                Clients
-              </NavLink>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Course Management Dropdown */}
         {/* <div className="space-y-1">
