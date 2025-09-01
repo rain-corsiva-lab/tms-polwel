@@ -60,10 +60,10 @@ const TrainerDetail = () => {
 
   // State for training fees
   const [trainingFees, setTrainingFees] = useState<TrainingFee[]>([
-    { id: "1", courseTitle: "Leadership Development Program", courseCode: "LD-001", feesPerRun: "$2,500", remarks: "Standard leadership development course" },
-    { id: "2", courseTitle: "Communication Skills Workshop", courseCode: "CS-002", feesPerRun: "$1,800", remarks: "Communication skills workshop" },
-    { id: "3", courseTitle: "Team Building Intensive", courseCode: "TB-003", feesPerRun: "$2,200", remarks: "Team building intensive program" },
-    { id: "4", courseTitle: "Project Management Certification", courseCode: "PM-004", feesPerRun: "$3,000", remarks: "Advanced project management certification" }
+    { id: "1", courseTitle: "Leadership Development Program", courseCode: "LD-001", feesPerRun: "$2,500", remarks: "$50/pax capped at 20 pax" },
+    { id: "2", courseTitle: "Communication Skills Workshop", courseCode: "CS-002", feesPerRun: "$1,800", remarks: "$45/pax capped at 20 pax" },
+    { id: "3", courseTitle: "Team Building Intensive", courseCode: "TB-003", feesPerRun: "$2,200", remarks: "$55/pax capped at 20 pax" },
+    { id: "4", courseTitle: "Project Management Certification", courseCode: "PM-004", feesPerRun: "$3,000", remarks: "$60/pax capped at 20 pax" }
   ]);
   
   // Available courses data
