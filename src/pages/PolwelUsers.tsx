@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail, RefreshCw } from "lucide-react";
+import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail, RefreshCw, X } from "lucide-react";
+import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
 import { EditPolwelUserDialog } from "@/components/EditPolwelUserDialog";
@@ -21,8 +22,8 @@ interface PolwelUser {
   id: string;
   name: string;
   email: string;
-  role: 'POLWEL';
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  role: "POLWEL";
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   lastLogin: string | null;
   mfaEnabled: boolean;
   passwordExpiry?: string;
@@ -45,12 +46,13 @@ export default function PolwelUsers() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
 
   // Debug authentication state
   useEffect(() => {
-    console.log('PolwelUsers - Auth State:', { isAuthenticated, user });
+    console.log("PolwelUsers - Auth State:", { isAuthenticated, user });
     debugAuthState();
   }, [isAuthenticated, user]);
 
@@ -69,10 +71,10 @@ export default function PolwelUsers() {
       permissionLevel: "Administrator",
       department: "Training Management",
       createdAt: "2023-06-01T00:00:00Z",
-      updatedAt: "2024-08-12T10:30:00Z"
+      updatedAt: "2024-08-12T10:30:00Z",
     },
     {
-      id: "2", 
+      id: "2",
       name: "Robert Chen",
       email: "robert.chen@polwel.com",
       role: "POLWEL",
@@ -84,12 +86,12 @@ export default function PolwelUsers() {
       permissionLevel: "Training Coordinator",
       department: "Course Development",
       createdAt: "2023-07-15T00:00:00Z",
-      updatedAt: "2024-08-11T14:15:00Z"
+      updatedAt: "2024-08-11T14:15:00Z",
     },
     {
       id: "3",
       name: "Maria Garcia",
-      email: "maria.garcia@polwel.com", 
+      email: "maria.garcia@polwel.com",
       role: "POLWEL",
       status: "PENDING",
       lastLogin: null,
@@ -99,13 +101,13 @@ export default function PolwelUsers() {
       permissionLevel: "Staff",
       department: "Administration",
       createdAt: "2024-08-01T00:00:00Z",
-      updatedAt: "2024-08-01T00:00:00Z"
+      updatedAt: "2024-08-01T00:00:00Z",
     },
     {
       id: "4",
       name: "David Kim",
       email: "david.kim@polwel.com",
-      role: "POLWEL", 
+      role: "POLWEL",
       status: "ACTIVE",
       lastLogin: "2024-08-10T09:45:00Z",
       mfaEnabled: true,
@@ -114,8 +116,8 @@ export default function PolwelUsers() {
       permissionLevel: "Training Coordinator",
       department: "Quality Assurance",
       createdAt: "2023-08-20T00:00:00Z",
-      updatedAt: "2024-08-10T09:45:00Z"
-    }
+      updatedAt: "2024-08-10T09:45:00Z",
+    },
   ];
 
   // Fetch users from API
@@ -131,34 +133,32 @@ export default function PolwelUsers() {
 
       setUsers(response.users || []);
       setPagination(response.pagination || pagination);
-      
+
       // Debug: Log the first user to see the data structure
       if (response.users && response.users.length > 0) {
-        console.log('PolwelUsers: Sample user data:', response.users[0]);
-        console.log('PolwelUsers: User ID type:', typeof response.users[0].id, 'Value:', response.users[0].id);
+        console.log("PolwelUsers: Sample user data:", response.users[0]);
+        console.log("PolwelUsers: User ID type:", typeof response.users[0].id, "Value:", response.users[0].id);
       }
     } catch (error) {
-      console.error('Error fetching POLWEL users:', error);
-      
+      console.error("Error fetching POLWEL users:", error);
+
       // Check if it's an authentication error
       if (error instanceof Error) {
-        if (error.message.includes('Session expired') || 
-            error.message.includes('Authentication') ||
-            error.message.includes('TOKEN_EXPIRED')) {
-          console.log('Authentication error detected, user will be redirected to login');
+        if (error.message.includes("Session expired") || error.message.includes("Authentication") || error.message.includes("TOKEN_EXPIRED")) {
+          console.log("Authentication error detected, user will be redirected to login");
           // Don't set dummy data for auth errors - let auth service handle redirect
           setLoading(false);
           return;
         }
       }
-      
+
       // Use dummy data only for non-authentication errors
       setUsers(dummyUsers);
       setPagination({
         page: 1,
         limit: 10,
         total: dummyUsers.length,
-        totalPages: 1
+        totalPages: 1,
       });
     } finally {
       setLoading(false);
@@ -184,7 +184,7 @@ export default function PolwelUsers() {
       });
       fetchUsers(); // Refresh the list
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
         description: "Failed to delete user",
@@ -201,7 +201,7 @@ export default function PolwelUsers() {
         description: `New temporary password: ${response.tempPassword}`,
       });
     } catch (error) {
-      console.error('Error resetting password:', error);
+      console.error("Error resetting password:", error);
       toast({
         title: "Error",
         description: "Failed to reset password",
@@ -215,11 +215,11 @@ export default function PolwelUsers() {
       await polwelUsersApi.toggleMfa(userId, enabled);
       toast({
         title: "MFA Updated",
-        description: `MFA ${enabled ? 'enabled' : 'disabled'} successfully`,
+        description: `MFA ${enabled ? "enabled" : "disabled"} successfully`,
       });
       fetchUsers(); // Refresh the list
     } catch (error) {
-      console.error('Error toggling MFA:', error);
+      console.error("Error toggling MFA:", error);
       toast({
         title: "Error",
         description: "Failed to update MFA settings",
@@ -240,7 +240,7 @@ export default function PolwelUsers() {
         description: "Setup email has been sent successfully",
       });
     } catch (error) {
-      console.error('Error resending setup email:', error);
+      console.error("Error resending setup email:", error);
       toast({
         title: "Error",
         description: "Failed to send setup email",
@@ -251,8 +251,8 @@ export default function PolwelUsers() {
 
   // Compute stats from real data
   const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.status === 'ACTIVE').length;
-  const pendingUsers = users.filter(user => user.status === 'PENDING').length;
+  const activeUsers = users.filter((user) => user.status === "ACTIVE").length;
+  const pendingUsers = users.filter((user) => user.status === "PENDING").length;
 
   if (loading) {
     return (
@@ -272,22 +272,72 @@ export default function PolwelUsers() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">POLWEL Staff Management</h1>
-          <p className="text-muted-foreground">
-            Manage POLWEL staff accounts, permissions, and access controls
-          </p>
+          <p className="text-muted-foreground">Manage POLWEL staff accounts, permissions, and access controls</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Build worksheet
+              const rows = users.map((u) => ({
+                Name: u.name,
+                Email: u.email,
+                Department: u.department || "",
+                PermissionLevel: u.permissionLevel || "",
+                Status: u.status,
+                MFA: u.mfaEnabled ? "Enabled" : "Disabled",
+                LastLogin: u.lastLogin ? new Date(u.lastLogin).toISOString() : "Never",
+                CreatedAt: new Date(u.createdAt).toISOString(),
+                UpdatedAt: new Date(u.updatedAt).toISOString(),
+              }));
+              const ws = XLSX.utils.json_to_sheet(rows);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "POLWEL_Users");
+              XLSX.writeFile(wb, "polwel_users.xlsx");
+              toast({ title: "Exported", description: "POLWEL users exported to polwel_users.xlsx" });
+            }}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setFilterOpen((o) => !o)}>
             <Filter className="h-4 w-4 mr-2" />
-            Filter
+            {filterOpen ? "Hide Filters" : "Filter"}
           </Button>
           <AddPolwelUserDialog />
         </div>
       </div>
+      {filterOpen && (
+        <Card className="border-dashed">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPagination((p) => ({ ...p, page: 1 }));
+                  }}
+                  className="h-9 rounded-md border bg-background px-3 py-1 text-sm"
+                >
+                  <option value="">All</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="LOCKED">Locked</option>
+                </select>
+              </div>
+              {statusFilter && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setStatusFilter("")} className="text-xs">
+                  <X className="h-3 w-3 mr-1" /> Clear
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -298,12 +348,10 @@ export default function PolwelUsers() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Active staff members with system access
-            </p>
+            <p className="text-xs text-muted-foreground">Active staff members with system access</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Users</CardTitle>
@@ -311,12 +359,10 @@ export default function PolwelUsers() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently active and authorized
-            </p>
+            <p className="text-xs text-muted-foreground">Currently active and authorized</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Accounts</CardTitle>
@@ -324,9 +370,7 @@ export default function PolwelUsers() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting activation or verification
-            </p>
+            <p className="text-xs text-muted-foreground">Awaiting activation or verification</p>
           </CardContent>
         </Card>
       </div>
@@ -355,24 +399,15 @@ export default function PolwelUsers() {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.department || 'Not Set'}</TableCell>
-                  <TableCell>{user.permissionLevel || 'Not Set'}</TableCell>
+                  <TableCell>{user.department || "Not Set"}</TableCell>
+                  <TableCell>{user.permissionLevel || "Not Set"}</TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={user.status === 'ACTIVE' ? 'default' : 
-                               user.status === 'PENDING' ? 'outline' : 'secondary'}
-                    >
-                      {user.status}
-                    </Badge>
+                    <Badge variant={user.status === "ACTIVE" ? "default" : user.status === "PENDING" ? "outline" : "secondary"}>{user.status}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.mfaEnabled ? "default" : "outline"}>
-                      {user.mfaEnabled ? "Enabled" : "Disabled"}
-                    </Badge>
+                    <Badge variant={user.mfaEnabled ? "default" : "outline"}>{user.mfaEnabled ? "Enabled" : "Disabled"}</Badge>
                   </TableCell>
-                  <TableCell>
-                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                  </TableCell>
+                  <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <EditPolwelUserDialog user={user} onUserUpdated={fetchUsers} />
@@ -383,8 +418,8 @@ export default function PolwelUsers() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <ViewDetailsDialog 
-                            userId={user.id} 
+                          <ViewDetailsDialog
+                            userId={user.id}
                             userName={user.name}
                             trigger={
                               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -393,19 +428,15 @@ export default function PolwelUsers() {
                               </DropdownMenuItem>
                             }
                           />
-                          <AuditTrailDialog 
-                            userId={user.id} 
-                            userName={user.name} 
-                            userEmail={user.email}
-                          >
+                          <AuditTrailDialog userId={user.id} userName={user.name} userEmail={user.email}>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               <History className="h-4 w-4 mr-2" />
                               View Audit Trail
                             </DropdownMenuItem>
                           </AuditTrailDialog>
-                          <PasswordResetDialog 
-                            userId={user.id} 
-                            userName={user.name} 
+                          <PasswordResetDialog
+                            userId={user.id}
+                            userName={user.name}
                             userEmail={user.email}
                             trigger={
                               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -418,24 +449,17 @@ export default function PolwelUsers() {
                             <Key className="h-4 w-4 mr-2" />
                             Reset Password (Legacy)
                           </DropdownMenuItem> */}
-                          {user.status === 'PENDING' && (
-                            <DropdownMenuItem 
-                              onClick={() => handleResendSetup(user.id, user.name)}
-                            >
+                          {user.status === "PENDING" && (
+                            <DropdownMenuItem onClick={() => handleResendSetup(user.id, user.name)}>
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Resend Setup Email
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem 
-                            onClick={() => handleToggleMfa(user.id, !user.mfaEnabled)}
-                          >
+                          <DropdownMenuItem onClick={() => handleToggleMfa(user.id, !user.mfaEnabled)}>
                             <Shield className="h-4 w-4 mr-2" />
-                            {user.mfaEnabled ? 'Disable' : 'Enable'} MFA
+                            {user.mfaEnabled ? "Disable" : "Enable"} MFA
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-destructive"
-                          >
+                          <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete User
                           </DropdownMenuItem>

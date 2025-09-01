@@ -8,7 +8,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight, X } from "lucide-react";
+import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
 import { AddPartnerDialog } from "@/components/AddPartnerDialog";
@@ -23,13 +24,13 @@ interface Trainer {
   id: string;
   name: string;
   email: string;
-  role: 'TRAINER';
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  role: "TRAINER";
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   lastLogin: string | null;
   mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
-  availabilityStatus: 'Available' | 'Unavailable' | 'Limited';
+  availabilityStatus: "Available" | "Unavailable" | "Limited";
   courses: string[];
   partnerOrganization: string | null;
   createdAt: string;
@@ -41,7 +42,7 @@ interface Trainer {
 interface Partner {
   id: string;
   partnerName: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   coursesAssigned: string[];
   pointOfContact: string;
   contactNumber: string;
@@ -80,80 +81,81 @@ const TrainersAndPartners = () => {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [trainerBlockouts, setTrainerBlockouts] = useState<TrainerBlockout[]>([]);
   const [isPendingOpen, setIsPendingOpen] = useState(false);
   const { toast } = useToast();
 
-// Dummy data for trainers
+  // Dummy data for trainers
   const dummyTrainers: Trainer[] = [
     {
       id: "1",
       name: "David Chen",
       email: "david.chen@training.com",
-      role: 'TRAINER',
-      status: 'ACTIVE',
+      role: "TRAINER",
+      status: "ACTIVE",
       lastLogin: "2024-08-12T10:30:00Z",
       mfaEnabled: true,
-      availabilityStatus: 'Available',
+      availabilityStatus: "Available",
       courses: ["Leadership Development", "Team Building"],
       partnerOrganization: "Excellence Training Partners",
       createdAt: "2023-09-01T00:00:00Z",
       updatedAt: "2024-08-12T10:30:00Z",
-      specializations: ["Leadership Development", "Team Building", "Communication Skills"]
+      specializations: ["Leadership Development", "Team Building", "Communication Skills"],
     },
     {
-      id: "2", 
+      id: "2",
       name: "Jennifer Lee",
       email: "jennifer.lee@skillsacademy.com",
-      role: 'TRAINER',
-      status: 'ACTIVE',
+      role: "TRAINER",
+      status: "ACTIVE",
       lastLogin: "2024-08-11T14:15:00Z",
       mfaEnabled: false,
-      availabilityStatus: 'Available',
+      availabilityStatus: "Available",
       courses: ["Communication Skills", "Presentation Skills"],
       partnerOrganization: "Skills Academy",
       createdAt: "2023-10-15T00:00:00Z",
       updatedAt: "2024-08-11T14:15:00Z",
-      specializations: ["Communication Skills", "Presentation Skills", "Public Speaking"]
+      specializations: ["Communication Skills", "Presentation Skills", "Public Speaking"],
     },
     {
       id: "3",
       name: "Michael Wong",
-      email: "michael.wong@techtraining.com", 
-      role: 'TRAINER',
-      status: 'PENDING',
+      email: "michael.wong@techtraining.com",
+      role: "TRAINER",
+      status: "PENDING",
       lastLogin: null,
       mfaEnabled: false,
-      availabilityStatus: 'Unavailable',
+      availabilityStatus: "Unavailable",
       courses: ["Technical Skills", "Project Management"],
       partnerOrganization: "Tech Training Solutions",
       createdAt: "2024-08-01T00:00:00Z",
       updatedAt: "2024-08-01T00:00:00Z",
-      specializations: ["Technical Skills", "Project Management", "Agile Methodology"]
+      specializations: ["Technical Skills", "Project Management", "Agile Methodology"],
     },
     {
       id: "4",
       name: "Sarah Kim",
       email: "sarah.kim@professionaldevelopment.com",
-      role: 'TRAINER', 
-      status: 'ACTIVE',
+      role: "TRAINER",
+      status: "ACTIVE",
       lastLogin: "2024-08-10T09:00:00Z",
       mfaEnabled: true,
-      availabilityStatus: 'Limited',
+      availabilityStatus: "Limited",
       courses: ["Professional Development", "Career Coaching"],
       partnerOrganization: "Professional Development Center",
       createdAt: "2023-11-20T00:00:00Z",
       updatedAt: "2024-08-10T09:00:00Z",
-      specializations: ["Professional Development", "Career Coaching", "Leadership Mentoring"]
-    }
+      specializations: ["Professional Development", "Career Coaching", "Leadership Mentoring"],
+    },
   ];
 
-// Dummy data for partners (data-only entities, no login credentials)
+  // Dummy data for partners (data-only entities, no login credentials)
   const dummyPartners: Partner[] = [
     {
       id: "p1",
       partnerName: "Excellence Training Partners",
-      status: 'ACTIVE',
+      status: "ACTIVE",
       coursesAssigned: ["Leadership Development", "Team Building", "Management Training"],
       pointOfContact: "John Smith",
       contactNumber: "+65 9123 4567",
@@ -164,7 +166,7 @@ const TrainersAndPartners = () => {
     {
       id: "p2",
       partnerName: "Skills Academy",
-      status: 'ACTIVE',
+      status: "ACTIVE",
       coursesAssigned: ["Communication Skills", "Presentation Skills", "Customer Service"],
       pointOfContact: "Sarah Lee",
       contactNumber: "+65 8765 4321",
@@ -175,14 +177,14 @@ const TrainersAndPartners = () => {
     {
       id: "p3",
       partnerName: "Tech Training Solutions",
-      status: 'PENDING',
+      status: "PENDING",
       coursesAssigned: ["Technical Skills", "Digital Literacy", "Software Training"],
       pointOfContact: "Michael Wong",
       contactNumber: "+65 6543 2109",
       contactDesignation: "Business Development Manager",
       createdAt: "2024-08-01T00:00:00Z",
       updatedAt: "2024-08-01T00:00:00Z",
-    }
+    },
   ];
 
   // Fetch trainers from API or use dummy data
@@ -197,18 +199,19 @@ const TrainersAndPartners = () => {
       });
 
       // Map backend data to frontend interface
-      const mappedTrainers = response.trainers?.map(trainer => ({
-        ...trainer,
-        role: 'TRAINER' as const,
-        courses: trainer.specializations || [],
-        availabilityStatus: 'Available' as const,
-        specializations: trainer.specializations || [],
-      })) || [];
+      const mappedTrainers =
+        response.trainers?.map((trainer) => ({
+          ...trainer,
+          role: "TRAINER" as const,
+          courses: trainer.specializations || [],
+          availabilityStatus: "Available" as const,
+          specializations: trainer.specializations || [],
+        })) || [];
 
       setTrainers(mappedTrainers);
       setPagination(response.pagination || pagination);
     } catch (error) {
-      console.error('Error fetching trainers:', error);
+      console.error("Error fetching trainers:", error);
       // Use dummy data when API fails
       setTrainers(dummyTrainers);
       setPagination({
@@ -234,15 +237,16 @@ const TrainersAndPartners = () => {
       });
 
       // Map backend data to frontend interface
-      const mappedPartners = response.partners?.map(partner => ({
-        ...partner,
-        role: 'PARTNER' as const,
-      })) || [];
+      const mappedPartners =
+        response.partners?.map((partner) => ({
+          ...partner,
+          role: "PARTNER" as const,
+        })) || [];
 
       setPartners(mappedPartners);
       setPartnersPagination(response.pagination || partnersPagination);
     } catch (error) {
-      console.error('Error fetching partners:', error);
+      console.error("Error fetching partners:", error);
       // Use dummy data when API fails
       setPartners(dummyPartners);
       setPartnersPagination({
@@ -268,16 +272,16 @@ const TrainersAndPartners = () => {
 
   // Calculate stats from real data
   const totalTrainers = trainers.length;
-  const pendingTrainers = trainers.filter(trainer => trainer.status === 'PENDING');
+  const pendingTrainers = trainers.filter((trainer) => trainer.status === "PENDING");
   const totalPartners = partners.length;
-  const pendingPartners = partners.filter(partner => partner.status === 'PENDING');
+  const pendingPartners = partners.filter((partner) => partner.status === "PENDING");
 
-  const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, 'id'>) => {
+  const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, "id">) => {
     const newBlockout = {
       ...blockout,
-      id: Date.now().toString()
+      id: Date.now().toString(),
     };
-    setTrainerBlockouts(prev => [...prev, newBlockout]);
+    setTrainerBlockouts((prev) => [...prev, newBlockout]);
     toast({
       title: "Trainer Blocked Out",
       description: `${blockout.trainerName} has been blocked out for ${blockout.date}`,
@@ -285,13 +289,13 @@ const TrainersAndPartners = () => {
   };
 
   const handleTrainerBlockoutRemove = (blockoutId: string) => {
-    setTrainerBlockouts(prev => prev.filter(b => b.id !== blockoutId));
+    setTrainerBlockouts((prev) => prev.filter((b) => b.id !== blockoutId));
     toast({
       title: "Trainer Blockout Removed",
       description: "The trainer blockout has been removed",
     });
   };
-      return (
+  return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
@@ -302,11 +306,40 @@ const TrainersAndPartners = () => {
           <p className="text-muted-foreground">Manage training partners and their availability</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setFilterOpen((o) => !o)}>
             <Filter className="h-4 w-4 mr-2" />
-            Filter
+            {filterOpen ? "Hide Filters" : "Filter"}
           </Button>
-          <Button variant="outline">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const trainerRows = trainers.map((t) => ({
+                Name: t.name,
+                Email: t.email,
+                Status: t.status,
+                Courses: t.courses.join("; "),
+                PartnerOrganization: t.partnerOrganization || "",
+                CreatedAt: new Date(t.createdAt).toISOString(),
+                UpdatedAt: new Date(t.updatedAt).toISOString(),
+              }));
+              const partnerRows = partners.map((p) => ({
+                PartnerName: p.partnerName,
+                Status: p.status,
+                PointOfContact: p.pointOfContact,
+                ContactNumber: p.contactNumber,
+                ContactDesignation: p.contactDesignation,
+                CoursesAssigned: p.coursesAssigned.join("; "),
+                CreatedAt: new Date(p.createdAt).toISOString(),
+                UpdatedAt: new Date(p.updatedAt).toISOString(),
+              }));
+              const wb = XLSX.utils.book_new();
+              const trainerSheet = XLSX.utils.json_to_sheet(trainerRows);
+              const partnerSheet = XLSX.utils.json_to_sheet(partnerRows);
+              XLSX.utils.book_append_sheet(wb, trainerSheet, "Trainers");
+              XLSX.utils.book_append_sheet(wb, partnerSheet, "Partners");
+              XLSX.writeFile(wb, "trainers_partners.xlsx");
+            }}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -314,6 +347,37 @@ const TrainersAndPartners = () => {
           <AddTrainerDialog onTrainerCreated={fetchTrainers} />
         </div>
       </div>
+      {filterOpen && (
+        <Card className="border-dashed mb-4">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPagination((p) => ({ ...p, page: 1 }));
+                    setPartnersPagination((p) => ({ ...p, page: 1 }));
+                  }}
+                  className="h-9 rounded-md border bg-background px-3 py-1 text-sm"
+                >
+                  <option value="">All</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="LOCKED">Locked</option>
+                </select>
+              </div>
+              {statusFilter && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setStatusFilter("")} className="text-xs">
+                  <X className="h-3 w-3 mr-1" /> Clear
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -358,9 +422,7 @@ const TrainersAndPartners = () => {
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Pending Trainers</DialogTitle>
-                  <DialogDescription>
-                    Trainers who haven't clicked their secure onboarding link
-                  </DialogDescription>
+                  <DialogDescription>Trainers who haven't clicked their secure onboarding link</DialogDescription>
                 </DialogHeader>
                 <div className="mt-4">
                   {pendingTrainers.length > 0 ? (
@@ -443,11 +505,7 @@ const TrainersAndPartners = () => {
                           </TableCell>
                           <TableCell>{trainer.email}</TableCell>
                           <TableCell>
-                            <Badge 
-                              variant={trainer.status === 'ACTIVE' ? 'default' : 'secondary'}
-                            >
-                              {trainer.status}
-                            </Badge>
+                            <Badge variant={trainer.status === "ACTIVE" ? "default" : "secondary"}>{trainer.status}</Badge>
                           </TableCell>
                           <TableCell>{trainer.courses.join(", ")}</TableCell>
                           <TableCell>
@@ -460,8 +518,8 @@ const TrainersAndPartners = () => {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  {trainer.status === 'PENDING' && (
-                                    <DropdownMenuItem 
+                                  {trainer.status === "PENDING" && (
+                                    <DropdownMenuItem
                                       onClick={async () => {
                                         try {
                                           await trainersApi.resendSetup(trainer.id);
@@ -482,7 +540,7 @@ const TrainersAndPartners = () => {
                                       Resend Setup Email
                                     </DropdownMenuItem>
                                   )}
-                                  <DropdownMenuItem 
+                                  <DropdownMenuItem
                                     onClick={() => {
                                       // TODO: Implement password reset for trainers
                                       toast({
@@ -546,12 +604,15 @@ const TrainersAndPartners = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge 
+                              <Badge
                                 variant={
-                                  partner.status === 'ACTIVE' ? 'default' :
-                                  partner.status === 'PENDING' ? 'secondary' :
-                                  partner.status === 'INACTIVE' ? 'destructive' :
-                                  'outline'
+                                  partner.status === "ACTIVE"
+                                    ? "default"
+                                    : partner.status === "PENDING"
+                                    ? "secondary"
+                                    : partner.status === "INACTIVE"
+                                    ? "destructive"
+                                    : "outline"
                                 }
                               >
                                 {partner.status}
@@ -579,7 +640,7 @@ const TrainersAndPartners = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <AddPartnerDialog 
+                                <AddPartnerDialog
                                   mode="edit"
                                   partner={partner}
                                   onSuccess={() => {
@@ -599,7 +660,7 @@ const TrainersAndPartners = () => {
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem
                                       onClick={() => {
-                                        if (confirm('Are you sure you want to delete this partner?')) {
+                                        if (confirm("Are you sure you want to delete this partner?")) {
                                           partnersApi.delete(partner.id).then(() => {
                                             fetchPartners();
                                             toast({
