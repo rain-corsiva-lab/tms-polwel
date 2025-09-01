@@ -40,6 +40,9 @@ const CourseRunManagement = () => {
         name: 'POLWEL Training Center',
         address: '123 Training Street, Singapore 123456'
       },
+      venueType: 'Hotel',
+      venueHotel: 'POLWEL Training Center - Main Hall',
+      specifiedLocation: 'Level 3, Conference Room A',
       trainerIds: ['trainer-1'],
       trainers: [
         { id: 'trainer-1', name: 'Mr. John Trainer' }
@@ -50,6 +53,15 @@ const CourseRunManagement = () => {
         perHead: false,
         additionalCosts: 0
       },
+      // Fees & Expenses
+      courseFee: 850,
+      feeType: 'per-head',
+      venueFee: 1200,
+      otherFees: 150,
+      adminFees: 75,
+      contingencyFees: 100,
+      minParticipants: 12,
+      feeRemarks: 'If minimum 12 participants not met, course may be cancelled or postponed. Participants will be notified 7 days in advance.',
       minClassSize: 10,
       maxClassSize: 25,
       recommendedClassSize: 20,
