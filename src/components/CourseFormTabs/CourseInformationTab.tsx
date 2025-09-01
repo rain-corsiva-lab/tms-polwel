@@ -55,11 +55,9 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, o
   ];
 
   const venues = [
-    "Main Training Room",
-    "Conference Hall A",
-    "Conference Hall B",
-    "Online Platform",
-    "External Venue"
+    "Hotel",
+    "On Premise", 
+    "Client's Facility"
   ];
 
   return (
@@ -234,7 +232,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, o
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
         <div className="space-y-2">
           <Label htmlFor="venue">Venue</Label>
           <Select value={formData.venue} onValueChange={(value) => onInputChange("venue", value)}>
@@ -249,16 +247,6 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, o
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="specifiedLocation">Specified Location (Optional)</Label>
-          <Input
-            id="specifiedLocation"
-            value={formData.specifiedLocation || ''}
-            onChange={(e) => onInputChange("specifiedLocation", e.target.value)}
-            placeholder="Enter specific location details"
-          />
         </div>
       </div>
 
