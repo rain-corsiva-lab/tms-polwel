@@ -8,6 +8,7 @@ import { ProtectedRoute, RoleBased } from "@/components/ProtectedRoute";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 import TrainerDashboard from "./pages/TrainerDashboard";
+import Profile from "./pages/Profile";
 
 import UserManagement from "./pages/UserManagement";
 import PolwelUsers from "./pages/PolwelUsers";
@@ -41,120 +42,121 @@ const App = () => (
           <Routes>
             {/* Public route - Login page */}
             <Route path="/login" element={<Login />} />
-            
+
             {/* Public route - Password Reset */}
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-            
+
             {/* Public route - Complete Setup */}
             <Route path="/onboarding/:token" element={<CompleteSetup />} />
-            
+
             {/* Protected standalone routes */}
-            <Route 
-              path="/trainerpartner" 
+            <Route
+              path="/trainerpartner"
               element={
-                <ProtectedRoute requiredRoles={['TRAINER']}>
+                <ProtectedRoute requiredRoles={["TRAINER"]}>
                   <TrainerPartner />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/org" 
+            <Route
+              path="/org"
               element={
-                <ProtectedRoute requiredRoles={['TRAINING_COORDINATOR', 'POLWEL']}>
+                <ProtectedRoute requiredRoles={["TRAINING_COORDINATOR", "POLWEL"]}>
                   <OrganizationDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            
+
             {/* Main application routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }>
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="profile" element={<Profile />} />
               <Route index element={<Home />} />
-              
+
               {/* Trainer Dashboard */}
-              <Route 
-                path="trainer-dashboard" 
-                element={<TrainerDashboard />}
-              />
-              
+              <Route path="trainer-dashboard" element={<TrainerDashboard />} />
+
               {/* User Management */}
               <Route path="users" element={<UserManagement />} />
               <Route path="polwel-users" element={<PolwelUsers />} />
               <Route path="clients" element={<UserManagement />} />
-              
+
               {/* Trainer Management */}
               <Route path="trainers" element={<TrainersAndPartners />} />
               <Route path="trainers/:id" element={<TrainerDetail />} />
               <Route path="learners" element={<UserManagement />} />
-              
+
               {/* Organization Management */}
               <Route path="client-organisations" element={<ClientOrganisations />} />
               <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
-              
+
               {/* Course Management */}
-              <Route 
-                path="course-creation" 
+              <Route
+                path="course-creation"
                 element={
-                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]}>
                     <CourseArchive />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="course-creation/new" 
+              <Route
+                path="course-creation/new"
                 element={
-                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]}>
                     <CourseForm />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="course-creation/edit/:id" 
+              <Route
+                path="course-creation/edit/:id"
                 element={
-                  <ProtectedRoute requiredRoles={['POLWEL', 'TRAINING_COORDINATOR']}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]}>
                     <CourseForm />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="course-creation/view/:id" 
+              <Route
+                path="course-creation/view/:id"
                 element={
                   <ProtectedRoute>
                     <CourseForm />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="course-creation/detail/:id" 
-                element={
-                  <ProtectedRoute>
-                    <CourseDetail />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="course-detail/:id" 
+              <Route
+                path="course-creation/detail/:id"
                 element={
                   <ProtectedRoute>
                     <CourseDetail />
                   </ProtectedRoute>
-                } 
+                }
               />
-              
+              <Route
+                path="course-detail/:id"
+                element={
+                  <ProtectedRoute>
+                    <CourseDetail />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Venue Management */}
               <Route path="venue-setup" element={<VenueArchive />} />
               <Route path="venue-setup/new" element={<VenueForm />} />
               <Route path="venue-setup/edit/:id" element={<VenueForm />} />
               <Route path="venue-setup/view/:id" element={<VenueForm />} />
               <Route path="venue-detail/:id" element={<VenueDetail />} />
-              
+
               {/* Settings */}
               <Route path="settings" element={<UserManagement />} />
             </Route>
-            
+
             {/* 404 page */}
             <Route path="*" element={<NotFound />} />
           </Routes>

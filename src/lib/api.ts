@@ -585,6 +585,30 @@ export const trainerDashboardApi = {
   },
 };
 
+// Profile API for authenticated user (generic account profile)
+export const profileApi = {
+  get: async () => {
+    return apiRequest('/profile');
+  },
+  update: async (profileData: {
+    name?: string;
+    contactNumber?: string;
+    bio?: string;
+  }) => {
+    return apiRequest('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+  ,
+  changePassword: async (payload: { currentPassword: string; newPassword: string }) => {
+    return apiRequest('/profile/change-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+};
+
 // Partners API
 export const partnersApi = {
   // Get all partners with pagination and filtering
