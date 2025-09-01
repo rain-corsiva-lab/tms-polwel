@@ -15,6 +15,9 @@ export interface CourseRun {
     name: string;
     address: string;
   };
+  venueType?: string;
+  venueHotel?: string;
+  specifiedLocation?: string;
   trainerIds: string[];
   trainers?: Array<{
     id: string;

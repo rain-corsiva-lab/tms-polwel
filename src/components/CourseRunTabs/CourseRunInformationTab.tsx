@@ -276,14 +276,58 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="venue">Venue</Label>
-          <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
+        {/* Venue Selection */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="font-medium">{formData.venue?.name}</p>
-              <p className="text-sm text-muted-foreground">{formData.venue?.address}</p>
+              <Label htmlFor="venueType">Venue</Label>
+              <Select
+                value={formData.venueType || 'Hotel'}
+                onValueChange={(value) => handleInputChange('venueType', value)}
+                disabled={!isEditing}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hotel">Hotel</SelectItem>
+                  <SelectItem value="On-premise">On-premise</SelectItem>
+                  <SelectItem value="Client's facility">Client's facility</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            <div>
+              <Label htmlFor="venueHotel">Venue (Hotel)</Label>
+              <Select
+                value={formData.venueHotel || ''}
+                onValueChange={(value) => handleInputChange('venueHotel', value)}
+                disabled={!isEditing}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select hotel venue" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="POLWEL Training Center - Main Hall">POLWEL Training Center - Main Hall</SelectItem>
+                  <SelectItem value="Marina Bay Conference Center">Marina Bay Conference Center</SelectItem>
+                  <SelectItem value="Corporate Training Room A">Corporate Training Room A</SelectItem>
+                  <SelectItem value="Innovation Hub - Workshop Space">Innovation Hub - Workshop Space</SelectItem>
+                  <SelectItem value="Executive Meeting Room">Executive Meeting Room</SelectItem>
+                  <SelectItem value="Hotel Seminar Room">Hotel Seminar Room</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="specifiedLocation">Specified Location</Label>
+            <Input
+              id="specifiedLocation"
+              placeholder="Enter specific location details (optional)"
+              value={formData.specifiedLocation || ''}
+              onChange={(e) => handleInputChange('specifiedLocation', e.target.value)}
+              disabled={!isEditing}
+            />
           </div>
         </div>
       </div>
