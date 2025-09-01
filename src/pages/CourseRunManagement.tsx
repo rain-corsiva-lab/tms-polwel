@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import CourseRunInformationTab from "@/components/CourseRunTabs/CourseRunInformationTab";
 import LearnerParticularsTab from "@/components/CourseRunTabs/LearnerParticularsTab";
 import TrainerAssignmentTab from "@/components/CourseRunTabs/TrainerAssignmentTab";
+import CourseRunFeesExpensesTab from "@/components/CourseRunTabs/CourseRunFeesExpensesTab";
 import type { CourseRun, Learner, TrainerAssignment } from "@/types/courseRun";
 
 const CourseRunManagement = () => {
@@ -157,7 +158,7 @@ const CourseRunManagement = () => {
       {/* Course Run Tabs */}
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="information">Course Run Information</TabsTrigger>
             <TabsTrigger value="learners">
               Learner Particulars ({learners.length})
@@ -165,6 +166,7 @@ const CourseRunManagement = () => {
             <TabsTrigger value="trainers">
               Trainer Assignment ({trainerAssignments.length})
             </TabsTrigger>
+            <TabsTrigger value="fees">Fees & Expenses</TabsTrigger>
           </TabsList>
 
           <TabsContent value="information" className="space-y-6 mt-6">
@@ -185,6 +187,13 @@ const CourseRunManagement = () => {
 
           <TabsContent value="trainers" className="space-y-6 mt-6">
             <TrainerAssignmentTab
+              courseRun={courseRun}
+              onUpdate={handleCourseRunUpdate}
+            />
+          </TabsContent>
+
+          <TabsContent value="fees" className="space-y-6 mt-6">
+            <CourseRunFeesExpensesTab
               courseRun={courseRun}
               onUpdate={handleCourseRunUpdate}
             />

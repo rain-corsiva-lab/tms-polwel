@@ -33,6 +33,15 @@ export interface CourseRun {
       amount: number;
     }>;
   };
+  // Fees & Expenses fields
+  courseFee?: number;
+  feeType?: 'per-run' | 'per-head';
+  venueFee?: number;
+  otherFees?: number;
+  adminFees?: number;
+  contingencyFees?: number;
+  minParticipants?: number;
+  feeRemarks?: string;
   minClassSize: number;
   maxClassSize?: number;
   recommendedClassSize: number;
