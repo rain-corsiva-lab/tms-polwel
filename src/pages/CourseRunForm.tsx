@@ -46,7 +46,7 @@ export default function CourseRunForm() {
     courseId: '',
     courseTitle: '',
     courseCode: '',
-    type: 'Open' as 'Open' | 'Dedicated' | 'Talks',
+    type: 'Open' as 'Open' | 'Dedicated' | 'Talks' | 'Customized',
     startDate: '',
     endDate: '',
     startTime: '',
@@ -249,6 +249,7 @@ export default function CourseRunForm() {
                       <SelectItem value="Open">Open</SelectItem>
                       <SelectItem value="Dedicated">Dedicated</SelectItem>
                       <SelectItem value="Talks">Talks</SelectItem>
+                      <SelectItem value="Customized">Customized</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
