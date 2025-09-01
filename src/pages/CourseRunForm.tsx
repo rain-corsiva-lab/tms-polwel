@@ -155,6 +155,11 @@ export default function CourseRunForm() {
         ? [...prev.trainerIds, trainerId]
         : prev.trainerIds.filter(id => id !== trainerId)
     }));
+
+    // Prefill base amount when Mr. John Doe is selected
+    if (selected && trainerId === '1') {
+      handleInputChange('contractFees.baseAmount', 1200);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -462,9 +467,9 @@ export default function CourseRunForm() {
               </div>
             </div>
 
-            {/* Contract Fees */}
+            {/* Trainer Fees */}
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-foreground">Contract Fees</h2>
+              <h2 className="text-lg font-semibold text-foreground">Trainer Fees</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -490,32 +495,6 @@ export default function CourseRunForm() {
                     value={formData.contractFees.additionalCosts}
                     onChange={(e) => handleInputChange('contractFees.additionalCosts', parseFloat(e.target.value) || 0)}
                   />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-6">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="perRun"
-                    checked={formData.contractFees.perRun}
-                    onCheckedChange={(checked) => {
-                      handleInputChange('contractFees.perRun', checked);
-                      if (checked) handleInputChange('contractFees.perHead', false);
-                    }}
-                  />
-                  <Label htmlFor="perRun">Per Run</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="perHead"
-                    checked={formData.contractFees.perHead}
-                    onCheckedChange={(checked) => {
-                      handleInputChange('contractFees.perHead', checked);
-                      if (checked) handleInputChange('contractFees.perRun', false);
-                    }}
-                  />
-                  <Label htmlFor="perHead">Per Head</Label>
                 </div>
               </div>
             </div>
