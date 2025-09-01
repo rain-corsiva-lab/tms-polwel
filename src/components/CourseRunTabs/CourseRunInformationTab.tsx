@@ -7,9 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Users, UserCheck, DollarSign } from "lucide-react";
+import { Calendar, Clock, Users } from "lucide-react";
 import type { CourseRun } from "@/types/courseRun";
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface CourseRunInformationTabProps {
   courseRun: CourseRun;
@@ -22,53 +21,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(courseRun);
-  
-  // Dummy trainer data (from course creation)
-  const availableTrainers = [
-    {
-      id: 'trainer-1',
-      name: 'John Smith',
-      organization: 'ABC Training Partners',
-      baseFee: 1200,
-      additionalCosts: 50,
-      remarks: 'Preferred for technical courses'
-    },
-    {
-      id: 'trainer-2',
-      name: 'Sarah Johnson',
-      organization: 'XYZ Consulting',
-      baseFee: 800,
-      additionalCosts: 0,
-      remarks: 'Excellent for leadership training'
-    },
-    {
-      id: 'trainer-3',
-      name: 'Michael Chen',
-      organization: 'TechEd Solutions',
-      baseFee: 1000,
-      additionalCosts: 100,
-      remarks: 'Specialist in digital transformation'
-    }
-  ];
-
-  // State for assigned trainers
-  const [assignedTrainers, setAssignedTrainers] = useState<{[key: string]: {
-    selected: boolean;
-    baseFee: number;
-    additionalCosts: number;
-    remarks: string;
-  }}>(() => {
-    const initial: any = {};
-    availableTrainers.forEach(trainer => {
-      initial[trainer.id] = {
-        selected: courseRun.trainerIds?.includes(trainer.id) || false,
-        baseFee: trainer.baseFee,
-        additionalCosts: trainer.additionalCosts,
-        remarks: trainer.remarks
-      };
-    });
-    return initial;
-  });
 
   const handleSave = () => {
     onUpdate(formData);
@@ -82,39 +34,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // Trainer assignment handlers
-  const handleTrainerSelection = (trainerId: string, checked: boolean) => {
-    setAssignedTrainers(prev => ({
-      ...prev,
-      [trainerId]: {
-        ...prev[trainerId],
-        selected: checked
-      }
-    }));
-  };
-
-  const handleTrainerFeeChange = (trainerId: string, field: string, value: any) => {
-    setAssignedTrainers(prev => ({
-      ...prev,
-      [trainerId]: {
-        ...prev[trainerId],
-        [field]: value
-      }
-    }));
-  };
-
-  const getSelectedTrainersCount = () => {
-    return Object.values(assignedTrainers).filter(t => t.selected).length;
-  };
-
-  const getTotalFees = () => {
-    return Object.entries(assignedTrainers)
-      .filter(([_, assignment]) => assignment.selected)
-      .reduce((total, [_, assignment]) => {
-        return total + assignment.baseFee + assignment.additionalCosts;
-      }, 0);
   };
 
   return (
@@ -420,131 +339,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
             </p>
           </div>
         </div>
-      </div>
-
-
-      <Separator />
-
-      {/* Trainer Assignment */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4" />
-            <h4 className="text-base font-medium">Trainer Assignment</h4>
-          </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="outline">
-              {getSelectedTrainersCount()} trainer(s) selected
-            </Badge>
-            <Badge variant="secondary">
-              Total Fees: ${getTotalFees()}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {availableTrainers.map((trainer) => {
-            const assignment = assignedTrainers[trainer.id];
-            return (
-              <div key={trainer.id} className="border rounded-lg p-4 space-y-4">
-                {/* Trainer Selection Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Checkbox
-                      id={`trainer-${trainer.id}`}
-                      checked={assignment.selected}
-                      onCheckedChange={(checked) => 
-                        handleTrainerSelection(trainer.id, checked as boolean)
-                      }
-                      disabled={!isEditing}
-                    />
-                    <div>
-                      <Label htmlFor={`trainer-${trainer.id}`} className="font-medium">
-                        {trainer.name}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {trainer.organization}
-                      </p>
-                    </div>
-                  </div>
-                  {assignment.selected && (
-                    <Badge variant="default">Selected</Badge>
-                  )}
-                </div>
-
-                {/* Fee Details - Show when selected */}
-                {assignment.selected && (
-                  <div className="ml-6 space-y-4 border-l-2 border-muted pl-4">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4" />
-                      <h5 className="text-sm font-medium">Trainer Fees</h5>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`baseFee-${trainer.id}`}>Base Fee</Label>
-                        <Input
-                          id={`baseFee-${trainer.id}`}
-                          type="number"
-                          value={assignment.baseFee}
-                          onChange={(e) => 
-                            handleTrainerFeeChange(trainer.id, 'baseFee', parseFloat(e.target.value))
-                          }
-                          disabled={!isEditing}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`additionalCosts-${trainer.id}`}>Additional Costs</Label>
-                        <Input
-                          id={`additionalCosts-${trainer.id}`}
-                          type="number"
-                          value={assignment.additionalCosts}
-                          onChange={(e) => 
-                            handleTrainerFeeChange(trainer.id, 'additionalCosts', parseFloat(e.target.value))
-                          }
-                          disabled={!isEditing}
-                        />
-                      </div>
-                    </div>
-
-
-                    <div>
-                      <Label htmlFor={`remarks-${trainer.id}`}>Remarks</Label>
-                      <Textarea
-                        id={`remarks-${trainer.id}`}
-                        placeholder="Add remarks for this trainer..."
-                        value={assignment.remarks}
-                        onChange={(e) => 
-                          handleTrainerFeeChange(trainer.id, 'remarks', e.target.value)
-                        }
-                        disabled={!isEditing}
-                        rows={2}
-                      />
-                    </div>
-
-                    {/* Fee Summary */}
-                    <div className="bg-muted/50 p-3 rounded-md">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">Total for this trainer:</span>
-                        <Badge variant="secondary">
-                          ${assignment.baseFee + assignment.additionalCosts}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {getSelectedTrainersCount() === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <UserCheck className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>No trainers selected</p>
-            <p className="text-sm">Select trainers from the list above to assign them to this course run</p>
-          </div>
-        )}
       </div>
 
       <Separator />

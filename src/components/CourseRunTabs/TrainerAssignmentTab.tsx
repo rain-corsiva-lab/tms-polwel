@@ -1,314 +1,271 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Send, Calendar, User, Mail, CheckCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import type { TrainerAssignment } from "@/types/courseRun";
+import { Badge } from "@/components/ui/badge";
+import { UserCheck, DollarSign } from "lucide-react";
+import type { CourseRun } from "@/types/courseRun";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TrainerAssignmentTabProps {
-  courseRunId: string;
-  assignments: TrainerAssignment[];
-  onAssignTrainer: (assignment: TrainerAssignment) => void;
+  courseRun: CourseRun;
+  onUpdate: (data: Partial<CourseRun>) => void;
 }
 
 const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
-  courseRunId,
-  assignments,
-  onAssignTrainer
+  courseRun,
+  onUpdate
 }) => {
-  const { toast } = useToast();
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [availableTrainers, setAvailableTrainers] = useState<Array<{id: string, name: string}>>([]);
-  const [newAssignment, setNewAssignment] = useState<Partial<TrainerAssignment>>({
-    courseRunId,
-    confirmationSent: false
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState(courseRun);
+  
+  // Dummy trainer data (from course creation)
+  const availableTrainers = [
+    {
+      id: 'trainer-1',
+      name: 'John Smith',
+      organization: 'ABC Training Partners',
+      baseFee: 1200,
+      additionalCosts: 50,
+      remarks: 'Preferred for technical courses'
+    },
+    {
+      id: 'trainer-2',
+      name: 'Sarah Johnson',
+      organization: 'XYZ Consulting',
+      baseFee: 800,
+      additionalCosts: 0,
+      remarks: 'Excellent for leadership training'
+    },
+    {
+      id: 'trainer-3',
+      name: 'Michael Chen',
+      organization: 'TechEd Solutions',
+      baseFee: 1000,
+      additionalCosts: 100,
+      remarks: 'Specialist in digital transformation'
+    }
+  ];
+
+  // State for assigned trainers
+  const [assignedTrainers, setAssignedTrainers] = useState<{[key: string]: {
+    selected: boolean;
+    baseFee: number;
+    additionalCosts: number;
+    remarks: string;
+  }}>(() => {
+    const initial: any = {};
+    availableTrainers.forEach(trainer => {
+      initial[trainer.id] = {
+        selected: courseRun.trainerIds?.includes(trainer.id) || false,
+        baseFee: trainer.baseFee,
+        additionalCosts: trainer.additionalCosts,
+        remarks: trainer.remarks
+      };
+    });
+    return initial;
   });
 
-  // Mock trainers data - replace with API call
-  useEffect(() => {
-    const mockTrainers = [
-      { id: 'trainer-1', name: 'Mr. John Trainer' },
-      { id: 'trainer-2', name: 'Ms. Sarah Smith' },
-      { id: 'trainer-3', name: 'Dr. Michael Chen' },
-      { id: 'trainer-4', name: 'Ms. Emily Johnson' },
-      { id: 'trainer-5', name: 'Mr. David Brown' }
-    ];
-    setAvailableTrainers(mockTrainers);
-  }, []);
-
-  const handleAssignTrainer = () => {
-    if (!newAssignment.trainerId || !newAssignment.trainerName) {
-      toast({
-        title: "Error",
-        description: "Please select a trainer",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const assignment: TrainerAssignment = {
-      id: `assignment-${Date.now()}`,
-      courseRunId,
-      trainerId: newAssignment.trainerId || '',
-      trainerName: newAssignment.trainerName || '',
-      dayAssigned: newAssignment.dayAssigned,
-      confirmationSent: false,
-      assignmentDate: new Date().toISOString(),
-      remarks: newAssignment.remarks
-    };
-
-    onAssignTrainer(assignment);
-    setNewAssignment({
-      courseRunId,
-      confirmationSent: false
-    });
-    setIsAssignDialogOpen(false);
+  const handleSave = () => {
+    onUpdate(formData);
+    setIsEditing(false);
   };
 
-  const handleSendConfirmation = (assignmentId: string) => {
-    // Update assignment to mark confirmation as sent
-    toast({
-      title: "Confirmation Sent",
-      description: "Training assignment confirmation has been sent to the trainer",
-    });
+  const handleCancel = () => {
+    setFormData(courseRun);
+    setIsEditing(false);
   };
 
-  const handleTrainerSelect = (trainerId: string) => {
-    const trainer = availableTrainers.find(t => t.id === trainerId);
-    setNewAssignment({
-      ...newAssignment,
-      trainerId,
-      trainerName: trainer?.name || ''
-    });
+  // Trainer assignment handlers
+  const handleTrainerSelection = (trainerId: string, checked: boolean) => {
+    setAssignedTrainers(prev => ({
+      ...prev,
+      [trainerId]: {
+        ...prev[trainerId],
+        selected: checked
+      }
+    }));
+  };
+
+  const handleTrainerFeeChange = (trainerId: string, field: string, value: any) => {
+    setAssignedTrainers(prev => ({
+      ...prev,
+      [trainerId]: {
+        ...prev[trainerId],
+        [field]: value
+      }
+    }));
+  };
+
+  const getSelectedTrainersCount = () => {
+    return Object.values(assignedTrainers).filter(t => t.selected).length;
+  };
+
+  const getTotalFees = () => {
+    return Object.entries(assignedTrainers)
+      .filter(([_, assignment]) => assignment.selected)
+      .reduce((total, [_, assignment]) => {
+        return total + assignment.baseFee + assignment.additionalCosts;
+      }, 0);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Action Buttons */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Trainer Assignment</h3>
-        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Assign Trainer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Assign Trainer to Course Run</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="trainer">Select Trainer *</Label>
-                <Select
-                  value={newAssignment.trainerId}
-                  onValueChange={handleTrainerSelect}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a trainer..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTrainers.map(trainer => (
-                      <SelectItem key={trainer.id} value={trainer.id}>
-                        {trainer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="dayAssigned">Day Assigned (Optional)</Label>
-                <Input
-                  id="dayAssigned"
-                  type="date"
-                  value={newAssignment.dayAssigned || ''}
-                  onChange={(e) => setNewAssignment({...newAssignment, dayAssigned: e.target.value})}
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Specify if trainer is assigned to specific days only
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="remarks">Assignment Remarks</Label>
-                <Textarea
-                  id="remarks"
-                  value={newAssignment.remarks || ''}
-                  onChange={(e) => setNewAssignment({...newAssignment, remarks: e.target.value})}
-                  placeholder="Add any special instructions or notes for the trainer..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+        <div className="space-x-2">
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button onClick={handleAssignTrainer}>
-                Assign Trainer
+              <Button onClick={handleSave}>
+                Save Changes
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </>
+          ) : (
+            <Button onClick={() => setIsEditing(true)}>
+              Edit Trainer Assignment
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Trainer Assignments */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-4 h-4" />
-            Assigned Trainers ({assignments.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {assignments.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
-                <User className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground mb-4">No trainers assigned yet</p>
-              <Button onClick={() => setIsAssignDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Assign First Trainer
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Trainer</TableHead>
-                      <TableHead>Assignment Date</TableHead>
-                      <TableHead>Day Assigned</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignments.map((assignment) => (
-                      <TableRow key={assignment.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{assignment.trainerName}</p>
-                              <p className="text-sm text-muted-foreground">ID: {assignment.trainerId}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            {new Date(assignment.assignmentDate).toLocaleDateString()}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {assignment.dayAssigned ? (
-                            <Badge variant="outline">
-                              {new Date(assignment.dayAssigned).toLocaleDateString()}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">All days</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={assignment.confirmationSent ? "default" : "secondary"}>
-                            {assignment.confirmationSent ? (
-                              <div className="flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                Confirmed
-                              </div>
-                            ) : (
-                              'Pending Confirmation'
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-1">
-                            {!assignment.confirmationSent && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSendConfirmation(assignment.id)}
-                              >
-                                <Send className="w-4 h-4 mr-1" />
-                                Send Confirmation
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+      {/* Trainer Assignment */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-4 h-4" />
+            <h4 className="text-base font-medium">Trainer Assignment</h4>
+          </div>
+          <div className="flex items-center gap-4">
+            <Badge variant="outline">
+              {getSelectedTrainersCount()} trainer(s) selected
+            </Badge>
+            <Badge variant="secondary">
+              Total Fees: ${getTotalFees()}
+            </Badge>
+          </div>
+        </div>
 
-              {/* Assignment Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assignment Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{assignments.length}</div>
-                      <div className="text-sm text-muted-foreground">Total Assigned</div>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {assignments.filter(a => a.confirmationSent).length}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Confirmed</div>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
-                      <div className="text-2xl font-bold text-yellow-600">
-                        {assignments.filter(a => !a.confirmationSent).length}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Pending</div>
+        <div className="space-y-4">
+          {availableTrainers.map((trainer) => {
+            const assignment = assignedTrainers[trainer.id];
+            return (
+              <div key={trainer.id} className="border rounded-lg p-4 space-y-4">
+                {/* Trainer Selection Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id={`trainer-${trainer.id}`}
+                      checked={assignment.selected}
+                      onCheckedChange={(checked) => 
+                        handleTrainerSelection(trainer.id, checked as boolean)
+                      }
+                      disabled={!isEditing}
+                    />
+                    <div>
+                      <Label htmlFor={`trainer-${trainer.id}`} className="font-medium">
+                        {trainer.name}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {trainer.organization}
+                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  {assignment.selected && (
+                    <Badge variant="default">Selected</Badge>
+                  )}
+                </div>
 
-      {/* Quick Actions */}
-      {assignments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm">
-                <Mail className="w-4 h-4 mr-2" />
-                Send All Confirmations
-              </Button>
-              <Button variant="outline" size="sm">
-                <Calendar className="w-4 h-4 mr-2" />
-                Update Trainer Calendar
-              </Button>
-              <Button variant="outline" size="sm">
-                Generate Assignment Report
-              </Button>
+                {/* Fee Details - Show when selected */}
+                {assignment.selected && (
+                  <div className="ml-6 space-y-4 border-l-2 border-muted pl-4">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      <h5 className="text-sm font-medium">Trainer Fees</h5>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor={`baseFee-${trainer.id}`}>Base Fee</Label>
+                        <Input
+                          id={`baseFee-${trainer.id}`}
+                          type="number"
+                          value={assignment.baseFee}
+                          onChange={(e) => 
+                            handleTrainerFeeChange(trainer.id, 'baseFee', parseFloat(e.target.value))
+                          }
+                          disabled={!isEditing}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`additionalCosts-${trainer.id}`}>Additional Costs</Label>
+                        <Input
+                          id={`additionalCosts-${trainer.id}`}
+                          type="number"
+                          value={assignment.additionalCosts}
+                          onChange={(e) => 
+                            handleTrainerFeeChange(trainer.id, 'additionalCosts', parseFloat(e.target.value))
+                          }
+                          disabled={!isEditing}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor={`remarks-${trainer.id}`}>Remarks</Label>
+                      <Textarea
+                        id={`remarks-${trainer.id}`}
+                        placeholder="Add remarks for this trainer..."
+                        value={assignment.remarks}
+                        onChange={(e) => 
+                          handleTrainerFeeChange(trainer.id, 'remarks', e.target.value)
+                        }
+                        disabled={!isEditing}
+                        rows={2}
+                      />
+                    </div>
+
+                    {/* Fee Summary */}
+                    <div className="bg-muted/50 p-3 rounded-md">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Total for this trainer:</span>
+                        <Badge variant="secondary">
+                          ${assignment.baseFee + assignment.additionalCosts}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Overall Summary */}
+        {getSelectedTrainersCount() > 0 && (
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h5 className="font-medium">Assignment Summary</h5>
+                <p className="text-sm text-muted-foreground">
+                  {getSelectedTrainersCount()} trainer(s) assigned
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-primary">
+                  ${getTotalFees()}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Trainer Fees</div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

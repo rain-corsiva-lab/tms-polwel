@@ -185,9 +185,8 @@ const CourseRunManagement = () => {
 
           <TabsContent value="trainers" className="space-y-6 mt-6">
             <TrainerAssignmentTab
-              courseRunId={courseRun.id}
-              assignments={trainerAssignments}
-              onAssignTrainer={handleTrainerAssignment}
+              courseRun={courseRun}
+              onUpdate={handleCourseRunUpdate}
             />
           </TabsContent>
         </Tabs>
