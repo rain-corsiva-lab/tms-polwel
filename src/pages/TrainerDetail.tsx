@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 
 interface Trainer {
@@ -38,6 +39,12 @@ interface TrainingFee {
   remarks: string;
 }
 
+interface Course {
+  id: string;
+  title: string;
+  code: string;
+}
+
 const TrainerDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
@@ -58,9 +65,22 @@ const TrainerDetail = () => {
     { id: "4", courseCode: "PM-004", feesPerRun: "$3,000", remarks: "Advanced project management certification" }
   ]);
   
+  // Available courses data
+  const availableCourses: Course[] = [
+    { id: "1", title: "Leadership Development Program", code: "LD-001" },
+    { id: "2", title: "Communication Skills Workshop", code: "CS-002" },
+    { id: "3", title: "Team Building Intensive", code: "TB-003" },
+    { id: "4", title: "Project Management Certification", code: "PM-004" },
+    { id: "5", title: "Customer Service Excellence", code: "CSE-005" },
+    { id: "6", title: "Digital Marketing Fundamentals", code: "DM-006" },
+    { id: "7", title: "Financial Planning & Analysis", code: "FPA-007" },
+    { id: "8", title: "Human Resources Management", code: "HRM-008" }
+  ];
+
   // State for add training fee form
   const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
+    courseTitle: "",
     courseCode: "",
     feesPerRun: "",
     remarks: ""
@@ -184,10 +204,21 @@ const fetchTrainer = async () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleCourseSelect = (courseId: string) => {
+    const selectedCourse = availableCourses.find(course => course.id === courseId);
+    if (selectedCourse) {
+      setFormData(prev => ({
+        ...prev,
+        courseTitle: selectedCourse.title,
+        courseCode: selectedCourse.code
+      }));
+    }
+  };
+
   const handleAddTrainingFee = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.courseCode || !formData.feesPerRun) {
-      toast({ title: "Error", description: "Course code and fees are required", variant: "destructive" });
+    if (!formData.courseTitle || !formData.feesPerRun) {
+      toast({ title: "Error", description: "Course title and fees are required", variant: "destructive" });
       return;
     }
 
@@ -199,7 +230,7 @@ const fetchTrainer = async () => {
     };
 
     setTrainingFees(prev => [...prev, newFee]);
-    setFormData({ courseCode: "", feesPerRun: "", remarks: "" });
+    setFormData({ courseTitle: "", courseCode: "", feesPerRun: "", remarks: "" });
     setIsAddFeeDialogOpen(false);
     toast({ title: "Success", description: "Training fee added successfully" });
   };
@@ -327,13 +358,28 @@ const fetchTrainer = async () => {
               </DialogHeader>
               <form onSubmit={handleAddTrainingFee} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="courseCode">Course Code *</Label>
+                  <Label htmlFor="courseTitle">Course Title *</Label>
+                  <Select onValueChange={handleCourseSelect} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a course" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50">
+                      {availableCourses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="courseCode">Course Code</Label>
                   <Input
                     id="courseCode"
                     value={formData.courseCode}
-                    onChange={(e) => handleFormChange("courseCode", e.target.value)}
-                    placeholder="e.g., LD-001"
-                    required
+                    readOnly
+                    placeholder="Auto-filled based on course selection"
+                    className="bg-muted"
                   />
                 </div>
                 <div className="space-y-2">
