@@ -1,18 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
-import { 
-  Users, 
-  UserCheck, 
-  GraduationCap, 
-  Building2, 
-  BarChart3, 
-  Settings,
-  Shield,
-  ChevronDown,
-  ChevronRight,
-  BookOpen,
-  Calendar
-} from "lucide-react";
+import { Users, UserCheck, GraduationCap, Building2, BarChart3, Settings, Shield, ChevronDown, ChevronRight, BookOpen, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -25,18 +13,18 @@ const navigation = [
 ];
 
 const userManagementItems = [
-  { name: 'POLWEL Users', href: '/polwel-users', icon: Shield },
-  { name: 'Trainers & Partners', href: '/trainers', icon: GraduationCap },
+  { name: "POLWEL Users", href: "/polwel-users", icon: Shield },
+  { name: "Trainers & Partners", href: "/trainers", icon: GraduationCap },
 ];
 
 const clientOrgsItems = [
-  { name: 'Training Coordinators', href: '/training-coordinators', icon: UserCheck },
-  { name: 'Learners', href: '/learners', icon: Users },
+  { name: "Training Coordinators", href: "/training-coordinators", icon: UserCheck },
+  { name: "Learners", href: "/learners", icon: Users },
 ];
 
 const courseManagementItems = [
-  { name: 'Course Creation', href: '/course-creation', icon: BookOpen },
-  { name: 'Venue Management', href: '/venue-setup', icon: Building2 },
+  { name: "Course Creation", href: "/course-creation", icon: BookOpen },
+  { name: "Venue Management", href: "/venue-setup", icon: Building2 },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {
@@ -55,18 +43,16 @@ const Sidebar = ({ className }: SidebarProps) => {
           <span className="font-semibold text-foreground">Training MS</span>
         </div>
       </div>
-      
+
       <nav className="flex-1 px-4 space-y-1">
         {/* Trainer Dashboard - Only show for trainers */}
-        {user?.role === 'TRAINER' && (
+        {user?.role === "TRAINER" && (
           <NavLink
             to="/trainer-dashboard"
             className={({ isActive }) =>
               cn(
                 "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
               )
             }
           >
@@ -76,7 +62,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* User Management Dropdown - hidden for trainers */}
-        {user?.role !== 'TRAINER' && (
+        {user?.role !== "TRAINER" && (
           <div className="space-y-1">
             <button
               onClick={() => setUserManagementOpen(!userManagementOpen)}
@@ -84,11 +70,7 @@ const Sidebar = ({ className }: SidebarProps) => {
             >
               <Users className="mr-3 h-5 w-5" />
               User Management
-              {userManagementOpen ? (
-                <ChevronDown className="ml-auto h-4 w-4" />
-              ) : (
-                <ChevronRight className="ml-auto h-4 w-4" />
-              )}
+              {userManagementOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
             </button>
 
             {userManagementOpen && (
@@ -100,9 +82,7 @@ const Sidebar = ({ className }: SidebarProps) => {
                     className={({ isActive }) =>
                       cn(
                         "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                        isActive
-                          ? "bg-accent text-accent-foreground"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                        isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
                       )
                     }
                   >
@@ -117,9 +97,7 @@ const Sidebar = ({ className }: SidebarProps) => {
                   className={({ isActive }) =>
                     cn(
                       "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                      isActive
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
                     )
                   }
                 >
@@ -132,18 +110,14 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* Course Management Dropdown */}
-        {/* <div className="space-y-1">
+        <div className="space-y-1">
           <button
             onClick={() => setCourseManagementOpen(!courseManagementOpen)}
             className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
           >
             <BookOpen className="mr-3 h-5 w-5" />
             Course Management
-            {courseManagementOpen ? (
-              <ChevronDown className="ml-auto h-4 w-4" />
-            ) : (
-              <ChevronRight className="ml-auto h-4 w-4" />
-            )}
+            {courseManagementOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
           </button>
 
           {courseManagementOpen && (
@@ -155,9 +129,7 @@ const Sidebar = ({ className }: SidebarProps) => {
                   className={({ isActive }) =>
                     cn(
                       "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                      isActive
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
                     )
                   }
                 >
@@ -167,7 +139,7 @@ const Sidebar = ({ className }: SidebarProps) => {
               ))}
             </div>
           )}
-        </div> */}
+        </div>
       </nav>
     </aside>
   );

@@ -1,14 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -20,7 +13,7 @@ interface PolwelUserDetails {
   id: number;
   name: string;
   email: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   lastLogin: string | null;
   passwordExpiry: string | null;
   failedLoginAttempts: number;
@@ -45,17 +38,17 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
   const fetchUserDetails = async () => {
     setLoading(true);
     try {
-      console.log('ViewDetailsDialog: Fetching details for userId:', userId, 'type:', typeof userId);
-      
-      if (!userId || userId === 'undefined' || userId === 'null') {
-        throw new Error('Invalid user ID');
+      console.log("ViewDetailsDialog: Fetching details for userId:", userId, "type:", typeof userId);
+
+      if (!userId || userId === "undefined" || userId === "null") {
+        throw new Error("Invalid user ID");
       }
-      
+
       const response = await polwelUsersApi.getDetails(userId);
-      console.log('ViewDetailsDialog: Response received:', response);
+      console.log("ViewDetailsDialog: Response received:", response);
       setUserDetails(response);
     } catch (error) {
-      console.error('Error fetching user details:', error);
+      console.error("Error fetching user details:", error);
       toast({
         title: "Error",
         description: "Failed to load user details",
@@ -74,14 +67,21 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
   }, [open, userId]);
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleString();
+    if (!dateString) return "Never";
+    try {
+      const d = new Date(dateString);
+      if (Number.isNaN(d.getTime())) return "Invalid date";
+      return format(d, "dd/MM/yyyy");
+    } catch (e) {
+      console.warn("formatDate: invalid dateString", dateString, e);
+      return "Invalid date";
+    }
   };
 
   const getStatusBadge = (status: string) => {
-    const variant = status === 'active' ? 'default' : 'secondary';
+    const variant = status === "active" ? "default" : "secondary";
     return (
-      <Badge variant={variant} className={status === 'active' ? 'bg-green-500' : ''}>
+      <Badge variant={variant} className={status === "active" ? "bg-green-500" : ""}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
@@ -93,26 +93,26 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
     }
 
     const permissionGroups: Record<string, string[]> = {};
-    
-    permissions.forEach(permission => {
-      let permissionString = '';
-      
+
+    permissions.forEach((permission) => {
+      let permissionString = "";
+
       // Handle different permission formats
-      if (typeof permission === 'string') {
+      if (typeof permission === "string") {
         permissionString = permission;
       } else if (permission?.permissionName) {
         // New database format: { permissionName: 'users.view' }
-        const [module, action] = permission.permissionName.split('.');
+        const [module, action] = permission.permissionName.split(".");
         // Convert to frontend format
         const moduleMapping: Record<string, string> = {
-          'users': 'user-management-polwel',
-          'trainers': 'user-management-trainers',
-          'clients': 'user-management-client-orgs',
-          'courses': 'course-management',
-          'venues': 'course-venue-setup',
-          'bookings': 'booking-management',
-          'calendar': 'training-calendar',
-          'reports': 'reports-analytics'
+          users: "user-management-polwel",
+          trainers: "user-management-trainers",
+          clients: "user-management-client-orgs",
+          courses: "course-management",
+          venues: "course-venue-setup",
+          bookings: "booking-management",
+          calendar: "training-calendar",
+          reports: "reports-analytics",
         };
         const frontendModule = moduleMapping[module] || module;
         permissionString = `${frontendModule}:${action}`;
@@ -123,16 +123,16 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
         // Direct object format: { module: 'xxx', action: 'xxx' }
         permissionString = `${permission.module}:${permission.action}`;
       } else {
-        console.warn('Unknown permission format:', permission);
+        console.warn("Unknown permission format:", permission);
         return;
       }
-      
-      const parts = permissionString.split(':');
+
+      const parts = permissionString.split(":");
       if (parts.length !== 2) {
-        console.warn('Invalid permission format:', permissionString);
+        console.warn("Invalid permission format:", permissionString);
         return;
       }
-      
+
       const [module, action] = parts;
       if (!permissionGroups[module]) {
         permissionGroups[module] = [];
@@ -141,18 +141,18 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
     });
 
     const moduleDisplayNames: Record<string, string> = {
-      'user-management-polwel': 'POLWEL Users',
-      'user-management-trainers': 'Trainers & Partners',
-      'user-management-client-orgs': 'Client Organisations',
-      'course-venue-setup': 'Course & Venue Setup',
-      'course-runs-operations': 'Course Runs & Operations',
-      'email-reporting-library': 'Email & Reporting',
-      'finance-activity': 'Finance & Activity'
+      "user-management-polwel": "POLWEL Users",
+      "user-management-trainers": "Trainers & Partners",
+      "user-management-client-orgs": "Client Organisations",
+      "course-venue-setup": "Course & Venue Setup",
+      "course-runs-operations": "Course Runs & Operations",
+      "email-reporting-library": "Email & Reporting",
+      "finance-activity": "Finance & Activity",
     };
 
     return Object.entries(permissionGroups).map(([module, actions]) => ({
       module: moduleDisplayNames[module] || module,
-      actions: actions.map(action => action.charAt(0).toUpperCase() + action.slice(1))
+      actions: actions.map((action) => action.charAt(0).toUpperCase() + action.slice(1)),
     }));
   };
 
@@ -172,11 +172,9 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
             <User className="h-5 w-5" />
             User Details - {userName}
           </DialogTitle>
-          <DialogDescription>
-            Detailed information about this POLWEL user account.
-          </DialogDescription>
+          <DialogDescription>Detailed information about this POLWEL user account.</DialogDescription>
         </DialogHeader>
-        
+
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -206,9 +204,7 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Status</label>
-                    <div className="mt-1">
-                      {getStatusBadge(userDetails.status)}
-                    </div>
+                    <div className="mt-1">{getStatusBadge(userDetails.status)}</div>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">User ID</label>
@@ -245,9 +241,7 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Failed Login Attempts</label>
                     <p className="text-sm">
-                      <Badge variant={userDetails.failedLoginAttempts > 0 ? "destructive" : "secondary"}>
-                        {userDetails.failedLoginAttempts}
-                      </Badge>
+                      <Badge variant={userDetails.failedLoginAttempts > 0 ? "destructive" : "secondary"}>{userDetails.failedLoginAttempts}</Badge>
                     </p>
                   </div>
                   <div>
@@ -317,9 +311,7 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
             </Card>
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            Failed to load user details
-          </div>
+          <div className="text-center py-8 text-muted-foreground">Failed to load user details</div>
         )}
 
         <DialogFooter>

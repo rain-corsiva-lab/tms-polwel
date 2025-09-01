@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { CourseStatus } from '@prisma/client';
 import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
+import sanitizeHtml from 'sanitize-html';
 
 
 
@@ -257,7 +258,19 @@ export const coursesController = {
       };
 
       // Add optional fields only if they exist - matching actual schema
-      if (data.description !== undefined) courseData.description = data.description;
+      if (data.description !== undefined) {
+        courseData.description = sanitizeHtml(data.description, {
+          allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+          allowedAttributes: {
+            a: ['href','name','target','rel'],
+            img: ['src','alt','title'],
+            span: ['style'],
+            p: ['style'],
+            div: ['style']
+          },
+          allowedSchemes: ['data','http','https']
+        });
+      }
       if (data.category !== undefined) courseData.category = data.category;
       if (data.objectives !== undefined) courseData.objectives = data.objectives;
       if (data.targetAudience !== undefined) courseData.targetAudience = data.targetAudience;
@@ -370,7 +383,21 @@ export const coursesController = {
       Object.keys(data).forEach(key => {
         const value = data[key as keyof typeof data];
         if (value !== undefined) {
-          updateData[key] = value;
+          if (key === 'description' && typeof value === 'string') {
+            updateData.description = sanitizeHtml(value, {
+              allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+              allowedAttributes: {
+                a: ['href','name','target','rel'],
+                img: ['src','alt','title'],
+                span: ['style'],
+                p: ['style'],
+                div: ['style']
+              },
+              allowedSchemes: ['data','http','https']
+            });
+          } else {
+            updateData[key] = value;
+          }
         }
       });
 

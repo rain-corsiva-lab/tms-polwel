@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Clock, Users, MapPin, DollarSign, Award, Calendar } from "lucide-react";
 import { coursesApi } from "@/lib/api";
+import DOMPurify from "dompurify";
 import { useToast } from "@/hooks/use-toast";
 
 const CourseDetail = () => {
@@ -17,40 +18,40 @@ const CourseDetail = () => {
   useEffect(() => {
     const fetchCourse = async () => {
       if (!id) return;
-      
+
       try {
         setLoading(true);
-        console.log('Fetching course with ID:', id);
+        console.log("Fetching course with ID:", id);
         const response = await coursesApi.getById(id);
-        console.log('Course API response:', response);
-        
+        console.log("Course API response:", response);
+
         // FIXED DATA EXTRACTION - Handle real API structure
         let courseData = null;
         if (response?.success && response?.data?.course) {
           courseData = response.data.course;
-          console.log('Using response.data.course (correct API structure)');
+          console.log("Using response.data.course (correct API structure)");
         } else if (response?.success && response?.data) {
           courseData = response.data;
-          console.log('Using response.data');
+          console.log("Using response.data");
         } else if (response?.data?.course) {
           courseData = response.data.course;
-          console.log('Using response.data.course');
+          console.log("Using response.data.course");
         } else if (response?.data) {
           courseData = response.data;
-          console.log('Using response.data');
+          console.log("Using response.data");
         } else if (response && response.title) {
           courseData = response;
-          console.log('Using response directly');
+          console.log("Using response directly");
         }
-        
-        console.log('Extracted course data:', courseData);
+
+        console.log("Extracted course data:", courseData);
         setCourse(courseData);
       } catch (error) {
-        console.error('Error fetching course:', error);
+        console.error("Error fetching course:", error);
         toast({
           title: "Error",
           description: "Failed to load course details",
-          variant: "destructive"
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -76,9 +77,7 @@ const CourseDetail = () => {
       <div className="container mx-auto py-6 px-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Course Not Found</h1>
-          <Button onClick={() => navigate('/course-creation')}>
-            Back to Courses
-          </Button>
+          <Button onClick={() => navigate("/course-creation")}>Back to Courses</Button>
         </div>
       </div>
     );
@@ -89,22 +88,16 @@ const CourseDetail = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/course-creation')}>
+          <Button variant="outline" onClick={() => navigate("/course-creation")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Courses
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{course.title}</h1>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                {course.category || 'Mindful Leadership'}
-              </Badge>
-              <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                Active
-              </Badge>
-              <Badge className="bg-blue-600 text-white">
-                {course.certificates === 'polwel' ? 'POLWEL' : 'PARTNER'}
-              </Badge>
+              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{course.category || "Mindful Leadership"}</Badge>
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200">Active</Badge>
+              <Badge className="bg-blue-600 text-white">{course.certificates === "polwel" ? "POLWEL" : "PARTNER"}</Badge>
             </div>
           </div>
         </div>
@@ -123,9 +116,11 @@ const CourseDetail = () => {
               <CardTitle>Course Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600 leading-relaxed">
-                {course.description || "No description available."}
-              </p>
+              {course.description ? (
+                <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
+              ) : (
+                <p className="text-gray-500 italic">No description available.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -156,7 +151,7 @@ const CourseDetail = () => {
               <CardTitle>Course Outline</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {course.courseOutline && typeof course.courseOutline === 'object' && Object.keys(course.courseOutline).length > 0 ? (
+              {course.courseOutline && typeof course.courseOutline === "object" && Object.keys(course.courseOutline).length > 0 ? (
                 // Display real course outline from database
                 (() => {
                   const outline = course.courseOutline;
@@ -174,9 +169,7 @@ const CourseDetail = () => {
                             ))}
                           </ul>
                         )}
-                        {module.description && (
-                          <p className="text-sm text-gray-600 mt-2">{module.description}</p>
-                        )}
+                        {module.description && <p className="text-sm text-gray-600 mt-2">{module.description}</p>}
                       </div>
                     ));
                   } else {
@@ -187,9 +180,7 @@ const CourseDetail = () => {
                           <h4 className="font-semibold">{(value as any)?.title || key}</h4>
                           <span className="text-sm text-gray-500">{(value as any)?.day || `Day ${index + 1}`}</span>
                         </div>
-                        {(value as any)?.description && (
-                          <p className="text-sm text-gray-600">{(value as any).description}</p>
-                        )}
+                        {(value as any)?.description && <p className="text-sm text-gray-600">{(value as any).description}</p>}
                       </div>
                     ));
                   }
@@ -224,7 +215,7 @@ const CourseDetail = () => {
                     <p className="text-sm text-gray-500 italic">No specific prerequisites for this course.</p>
                   )}
                 </div>
-                
+
                 {course.materials && Array.isArray(course.materials) && course.materials.length > 0 && (
                   <div>
                     <h4 className="font-semibold text-sm mb-1">Materials</h4>
@@ -242,7 +233,7 @@ const CourseDetail = () => {
                     <p className="text-sm text-gray-600">{course.targetAudience}</p>
                   </div>
                 )}
-                
+
                 {course.remarks && (
                   <div>
                     <h4 className="font-semibold text-sm mb-1">Remarks</h4>
@@ -266,7 +257,9 @@ const CourseDetail = () => {
                 <Clock className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Duration</div>
-                  <div className="font-semibold">{course.duration || '3'} {course.durationType || 'days'}</div>
+                  <div className="font-semibold">
+                    {course.duration || "3"} {course.durationType || "days"}
+                  </div>
                 </div>
               </div>
 
@@ -274,7 +267,9 @@ const CourseDetail = () => {
                 <Users className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Capacity</div>
-                  <div className="font-semibold">{course.minParticipants || course.minPax || '15'} - {course.maxParticipants || '25'} pax</div>
+                  <div className="font-semibold">
+                    {course.minParticipants || course.minPax || "15"} - {course.maxParticipants || "25"} pax
+                  </div>
                 </div>
               </div>
 
@@ -290,7 +285,7 @@ const CourseDetail = () => {
                 <MapPin className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Venue</div>
-                  <div className="font-semibold">{course.venue || 'Main Training Room'}</div>
+                  <div className="font-semibold">{course.venue || "Main Training Room"}</div>
                 </div>
               </div>
 
@@ -298,9 +293,7 @@ const CourseDetail = () => {
                 <Award className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Certificate</div>
-                  <Badge className="bg-blue-600 text-white text-xs">
-                    {course.certificates === 'polwel' ? 'POLWEL' : 'PARTNER'}
-                  </Badge>
+                  <Badge className="bg-blue-600 text-white text-xs">{course.certificates === "polwel" ? "POLWEL" : "PARTNER"}</Badge>
                 </div>
               </div>
             </CardContent>
@@ -316,25 +309,19 @@ const CourseDetail = () => {
                 course.trainers.map((trainer, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
-                      {typeof trainer === 'string' ? trainer.charAt(0) : (trainer.name || 'T').charAt(0)}
+                      {typeof trainer === "string" ? trainer.charAt(0) : (trainer.name || "T").charAt(0)}
                     </div>
-                    <div className="font-medium">
-                      {typeof trainer === 'string' ? trainer : trainer.name || 'Unknown Trainer'}
-                    </div>
+                    <div className="font-medium">{typeof trainer === "string" ? trainer : trainer.name || "Unknown Trainer"}</div>
                   </div>
                 ))
               ) : (
                 <>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
-                      JS
-                    </div>
+                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">JS</div>
                     <div className="font-medium">John Smith</div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">
-                      SJ
-                    </div>
+                    <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">SJ</div>
                     <div className="font-medium">Sarah Johnson</div>
                   </div>
                 </>
@@ -350,15 +337,15 @@ const CourseDetail = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Created:</span>
-                <span className="text-sm font-medium">{course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '2024-01-15'}</span>
+                <span className="text-sm font-medium">{course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "2024-01-15"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Last Updated:</span>
-                <span className="text-sm font-medium">{course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : '2024-03-10'}</span>
+                <span className="text-sm font-medium">{course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : "2024-03-10"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Course ID:</span>
-                <span className="text-sm font-medium">{course.id?.slice(-8) || '1'}</span>
+                <span className="text-sm font-medium">{course.id?.slice(-8) || "1"}</span>
               </div>
             </CardContent>
           </Card>

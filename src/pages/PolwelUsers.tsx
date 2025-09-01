@@ -14,6 +14,7 @@ import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog
 import { ViewDetailsDialog } from "@/components/ViewDetailsDialog";
 import { PasswordResetDialog } from "@/components/PasswordResetDialog";
 import { polwelUsersApi, debugAuthState } from "@/lib/api";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -288,8 +289,9 @@ export default function PolwelUsers() {
                 Status: u.status,
                 MFA: u.mfaEnabled ? "Enabled" : "Disabled",
                 LastLogin: u.lastLogin ? new Date(u.lastLogin).toISOString() : "Never",
-                CreatedAt: new Date(u.createdAt).toISOString(),
-                UpdatedAt: new Date(u.updatedAt).toISOString(),
+                LastLogin: u.lastLogin ? format(new Date(u.lastLogin), "dd/MM/yyyy") : "Never",
+                CreatedAt: format(new Date(u.createdAt), "dd/MM/yyyy"),
+                UpdatedAt: format(new Date(u.updatedAt), "dd/MM/yyyy"),
               }));
               const ws = XLSX.utils.json_to_sheet(rows);
               const wb = XLSX.utils.book_new();
@@ -318,7 +320,9 @@ export default function PolwelUsers() {
                   value={statusFilter}
                   onChange={(e) => {
                     setStatusFilter(e.target.value);
-                    setPagination((p) => ({ ...p, page: 1 }));
+                    {
+                      user.lastLogin ? format(new Date(user.lastLogin), "dd/MM/yyyy") : "Never";
+                    }
                   }}
                   className="h-9 rounded-md border bg-background px-3 py-1 text-sm"
                 >
