@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Users, DollarSign } from "lucide-react";
+import { Calendar, Clock, MapPin, Users } from "lucide-react";
 import type { CourseRun } from "@/types/courseRun";
 
 interface CourseRunInformationTabProps {
@@ -297,72 +297,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
         </div>
       </div>
 
-      <Separator />
-
-      {/* Contract Fees */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <DollarSign className="w-4 h-4" />
-          <h4 className="text-base font-medium">Contract Fees</h4>
-        </div>
-        
-        <div>
-          <Label htmlFor="baseAmount">Base Contract Fee</Label>
-          <Input
-            id="baseAmount"
-            type="number"
-            value={formData.contractFees.baseAmount}
-            onChange={(e) => handleInputChange('contractFees', {
-              ...formData.contractFees,
-              baseAmount: parseFloat(e.target.value)
-            })}
-            disabled={!isEditing}
-          />
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="perRun"
-              checked={formData.contractFees.perRun}
-              onCheckedChange={(checked) => handleInputChange('contractFees', {
-                ...formData.contractFees,
-                perRun: checked,
-                perHead: checked ? false : formData.contractFees.perHead
-              })}
-              disabled={!isEditing}
-            />
-            <Label htmlFor="perRun">Per Run</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="perHead"
-              checked={formData.contractFees.perHead}
-              onCheckedChange={(checked) => handleInputChange('contractFees', {
-                ...formData.contractFees,
-                perHead: checked,
-                perRun: checked ? false : formData.contractFees.perRun
-              })}
-              disabled={!isEditing}
-            />
-            <Label htmlFor="perHead">Per Head</Label>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="additionalCosts">Additional Costs</Label>
-          <Input
-            id="additionalCosts"
-            type="number"
-            value={formData.contractFees.additionalCosts}
-            onChange={(e) => handleInputChange('contractFees', {
-              ...formData.contractFees,
-              additionalCosts: parseFloat(e.target.value)
-            })}
-            disabled={!isEditing}
-          />
-        </div>
-      </div>
 
       <Separator />
 
