@@ -84,10 +84,10 @@ router.post('/onboarding/', async (req: Request, res: Response): Promise<void> =
     }
 
     // Password validation
-    if (password.length < 8) {
+    if (password.length < 12) {
       res.status(400).json({
         success: false,
-        message: 'Password must be at least 8 characters long'
+        message: 'Password must be at least 12 characters long'
       });
       return;
     }
