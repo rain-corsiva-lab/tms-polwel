@@ -20,7 +20,6 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
     if (search) {
       where.OR = [
         { name: { contains: search as string, mode: 'insensitive' } },
-        { displayName: { contains: search as string, mode: 'insensitive' } },
         { industry: { contains: search as string, mode: 'insensitive' } }
       ];
     }
@@ -56,7 +55,6 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
       organizations: organizations.map(org => ({
         id: org.id,
         name: org.name,
-        displayName: org.displayName,
         industry: org.industry,
         status: org.status,
         address: org.address,
@@ -149,7 +147,7 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
   try {
     const {
       name,
-      displayName,
+      
       industry,
       status = UserStatus.ACTIVE,
       address,
@@ -171,8 +169,7 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
     const existingOrganization = await prisma.organization.findFirst({
       where: { 
         OR: [
-          { name: name },
-          { displayName: displayName || name }
+          { name: name }
         ]
       }
     });
@@ -186,8 +183,7 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
 
     const organization = await prisma.organization.create({
       data: {
-        name,
-        displayName: displayName || name,
+  name,
         industry: industry || null,
         status,
         address: address || null,
@@ -214,7 +210,6 @@ export const updateClientOrganization = async (req: AuthenticatedRequest, res: R
     const { id } = req.params;
     const {
       name,
-      displayName,
       industry,
       status,
       address,
@@ -248,7 +243,7 @@ export const updateClientOrganization = async (req: AuthenticatedRequest, res: R
       where: { id },
       data: {
         ...(name && { name }),
-        ...(displayName !== undefined && { displayName }),
+        
         ...(industry !== undefined && { industry }),
         ...(status && { status }),
         ...(address !== undefined && { address }),

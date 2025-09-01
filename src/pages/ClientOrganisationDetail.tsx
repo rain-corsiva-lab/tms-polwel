@@ -238,7 +238,6 @@ const ClientOrganisationDetail = () => {
       setSaving(true);
       await clientOrganizationsApi.update(id, {
         name: formData.name,
-        displayName: formData.name,
         industry: formData.industry,
         address: formData.address,
         contactEmail: formData.contactEmail,

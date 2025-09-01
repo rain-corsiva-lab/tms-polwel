@@ -80,9 +80,26 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
       }
     } catch (error) {
       console.error('Error creating organisation:', error);
+      // Prefer showing a clear server-provided validation message when available
+      const errMsg = (error as any)?.message || '';
+
+      // If server indicates a duplicate/conflict, show the precise message we want the user to see
+      let userMessage = 'Failed to create organisation. Please try again.';
+
+      if (errMsg) {
+        const lower = errMsg.toLowerCase();
+        if (lower.includes('already exists') || lower.includes('organization with this name')) {
+          // Use the specific, user-friendly duplicate name message requested
+          userMessage = 'Organization with this name already exists';
+        } else if (!lower.includes('network') && !lower.includes('internal server error')) {
+          // For other non-network/server errors, surface server message to the user
+          userMessage = errMsg;
+        }
+      }
+
       toast({
         title: "Error",
-        description: "Failed to create organisation. Please try again.",
+        description: userMessage,
         variant: "destructive",
       });
     } finally {

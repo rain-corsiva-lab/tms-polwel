@@ -430,7 +430,6 @@ export const clientOrganizationsApi = {
   // Create new organization
   create: async (orgData: {
     name: string;
-    displayName?: string;
     industry?: string;
     status?: string;
     address?: string;
@@ -448,7 +447,6 @@ export const clientOrganizationsApi = {
   // Update organization
   update: async (id: string, orgData: {
     name?: string;
-    displayName?: string;
     industry?: string;
     status?: string;
     address?: string;

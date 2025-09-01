@@ -24,8 +24,7 @@ async function main() {
   // Create Organizations
   const spfOrg = await prisma.organization.create({
     data: {
-      name: 'Singapore Police Force',
-      displayName: 'SPF',
+  name: 'Singapore Police Force',
       industry: 'Government',
       address: 'Police Cantonment Complex, 391 New Bridge Road, Singapore 188762',
       contactEmail: 'contact@spf.gov.sg',
@@ -37,8 +36,7 @@ async function main() {
 
   const angMoKioDiv = await prisma.organization.create({
     data: {
-      name: 'Singapore Police Force - Ang Mo Kio Division',
-      displayName: 'Ang Mo Kio',
+  name: 'Singapore Police Force - Ang Mo Kio Division',
       industry: 'Government',
       address: 'Ang Mo Kio Police Division HQ, Singapore',
       contactEmail: 'contact@spf.gov.sg',
@@ -51,8 +49,7 @@ async function main() {
 
   const choaChuKangDiv = await prisma.organization.create({
     data: {
-      name: 'Singapore Police Force - Choa Chu Kang Division',
-      displayName: 'Choa Chu Kang',
+  name: 'Singapore Police Force - Choa Chu Kang Division',
       industry: 'Government',
       address: 'Choa Chu Kang Police Division HQ, Singapore',
       contactEmail: 'contact@spf.gov.sg',
