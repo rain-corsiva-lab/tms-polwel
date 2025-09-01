@@ -57,6 +57,8 @@ model User {
   usersCreated        User[]              @relation("UserCreatedBy")
   organization        Organization?       @relation(fields: [organizationId], references: [id])
   venuesCreated       Venue[]
+  trainerFeesCreated  TrainerFee[]        @relation("TrainerFeeCreatedBy")
+  trainerFees         TrainerFee[]
 
   @@index([createdBy], map: "users_createdBy_fkey")
   @@index([organizationId], map: "users_organizationId_fkey")
@@ -85,6 +87,7 @@ model Organization {
 model Course {
   id                String       @id @default(cuid())
   title             String
+  courseCode        String?      @unique @db.VarChar(50) // New unique human-readable code (auto-uppercased in controller)
   description       String?      @db.Text
   objectives        Json?
   duration          String
@@ -96,16 +99,9 @@ model Course {
   prerequisites     Json?
   materials         Json?
   status            CourseStatus @default(DRAFT)
-  courseFee         Float        @default(0)
-  venueFee          Float        @default(0)
-  trainerFee        Float        @default(0)
-  amountPerPax      Float        @default(0)
-  discount          Float        @default(0)
-  adminFees         Float        @default(0)
-  contingencyFees   Float        @default(0)
-  serviceFees       Float        @default(0)
-  vitalFees         Float        @default(0)
+  venueFee          Float        @default(0) // Renamed in UI as "Venue Expenses"
   venue             String?
+  specifiedLocation String?      // Free-text location override when venue not sufficient
   trainers          Json?
   certificates      String       @default("polwel")
   remarks           String?      @db.Text
@@ -114,12 +110,17 @@ model Course {
   syllabus          String?      @db.Text
   assessmentMethod  String?      @db.Text
   certificationType String?
+  defaultCourseFee  Float        @default(0) // Base template fee
+  discounts         Json?        // Structured discounts array [{ id, name, percentage }]
+  billingRate       Float        @default(0) // Optional billing rate
+  contractsFeePayout Float       @default(0) // Contracts fee payout
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   createdBy         String?
   bookings          Booking[]
   runs              CourseRun[]
   creator           User?        @relation("CourseCreator", fields: [createdBy], references: [id])
+  trainerFees       TrainerFee[]
 
   @@index([createdBy], map: "courses_createdBy_fkey")
   @@map("courses")
@@ -290,6 +291,26 @@ model SystemSetting {
   updatedAt   DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+// Trainer specific per-course fee (template) records
+model TrainerFee {
+  id         String   @id @default(cuid())
+  trainerId  String
+  courseId   String
+  feePerRun  Float    @default(0)
+  remarks    String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdBy  String?
+  trainer    User     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator    User?    @relation("TrainerFeeCreatedBy", fields: [createdBy], references: [id])
+
+  @@unique([trainerId, courseId])
+  @@index([trainerId])
+  @@index([courseId])
+  @@map("trainer_fees")
 }
 
 enum UserRole {

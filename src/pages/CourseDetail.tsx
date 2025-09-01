@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Clock, Users, MapPin, DollarSign, Award, Calendar } from "lucide-react";
+import { ArrowLeft, Edit, Clock, Users, MapPin, Award, Percent, GraduationCap, ClipboardCheck, User as UserIcon, Layers } from "lucide-react";
 import { coursesApi } from "@/lib/api";
 import DOMPurify from "dompurify";
 import { useToast } from "@/hooks/use-toast";
@@ -93,10 +93,18 @@ const CourseDetail = () => {
             Back to Courses
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{course.title}</h1>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              {course.title}
+              {course.courseCode && (
+                <Badge variant="secondary" className="text-xs font-mono tracking-wide">
+                  {course.courseCode}
+                </Badge>
+              )}
+            </h1>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{course.category || "Mindful Leadership"}</Badge>
-              <Badge className="bg-blue-100 text-blue-800 border-blue-200">Active</Badge>
+              {course.category && <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{course.category}</Badge>}
+              {course.level && <Badge className="bg-purple-100 text-purple-800 border-purple-200">Lvl: {course.level}</Badge>}
+              {course.status && <Badge className="bg-blue-100 text-blue-800 border-blue-200">{course.status}</Badge>}
               <Badge className="bg-blue-600 text-white">{course.certificates === "polwel" ? "POLWEL" : "PARTNER"}</Badge>
             </div>
           </div>
@@ -124,7 +132,7 @@ const CourseDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Learning Objectives - USE REAL DATABASE DATA */}
+          {/* Learning Objectives */}
           <Card>
             <CardHeader>
               <CardTitle>Learning Objectives</CardTitle>
@@ -145,7 +153,7 @@ const CourseDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Course Outline - USE REAL DATABASE DATA */}
+          {/* Course Outline */}
           <Card>
             <CardHeader>
               <CardTitle>Course Outline</CardTitle>
@@ -196,7 +204,56 @@ const CourseDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Additional Information - USE REAL DATABASE DATA */}
+          {/* Discounts & Pricing */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Discounts & Pricing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {course.discounts && Array.isArray(course.discounts) && course.discounts.length > 0 ? (
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {course.discounts.map((d: any, idx: number) => (
+                      <div key={d.id || idx} className="flex items-center justify-between rounded border p-2 bg-slate-50">
+                        <span className="text-sm font-medium flex items-center gap-2">
+                          <Percent className="h-3 w-3 text-slate-500" /> {d.name || `Discount ${idx + 1}`}
+                        </span>
+                        <span className="text-sm font-semibold">{d.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">No structured discounts configured.</p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div className="space-y-1">
+                  <div className="text-gray-500">Default Course Fee</div>
+                  <div className="font-semibold">${(course.defaultCourseFee || 0).toFixed(2)}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-gray-500">Billing Rate</div>
+                  <div className="font-semibold">${(course.billingRate || 0).toFixed(2)}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-gray-500">Venue Expenses</div>
+                  <div className="font-semibold">${(course.venueFee || 0).toFixed(2)}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-gray-500">Contracts Fee Payout</div>
+                  <div className="font-semibold">${(course.contractsFeePayout || 0).toFixed(2)}</div>
+                </div>
+              </div>
+              {course.remarks && (
+                <div className="pt-2 border-t text-sm">
+                  <div className="text-gray-500 mb-1">Remarks</div>
+                  <p className="text-gray-700 whitespace-pre-wrap">{course.remarks}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Additional Information */}
           <Card>
             <CardHeader>
               <CardTitle>Additional Information</CardTitle>
@@ -233,11 +290,20 @@ const CourseDetail = () => {
                     <p className="text-sm text-gray-600">{course.targetAudience}</p>
                   </div>
                 )}
-
-                {course.remarks && (
+                {course.assessmentMethod && (
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Remarks</h4>
-                    <p className="text-sm text-gray-600">{course.remarks}</p>
+                    <h4 className="font-semibold text-sm mb-1 flex items-center gap-1">
+                      <ClipboardCheck className="h-3 w-3" /> Assessment Method
+                    </h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{course.assessmentMethod}</p>
+                  </div>
+                )}
+                {course.certificationType && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1 flex items-center gap-1">
+                      <GraduationCap className="h-3 w-3" /> Certification Type
+                    </h4>
+                    <p className="text-sm text-gray-600">{course.certificationType}</p>
                   </div>
                 )}
               </div>
@@ -268,24 +334,19 @@ const CourseDetail = () => {
                 <div>
                   <div className="text-sm text-gray-500">Capacity</div>
                   <div className="font-semibold">
-                    {course.minParticipants || course.minPax || "15"} - {course.maxParticipants || "25"} pax
+                    {course.minParticipants ?? "-"} – {course.maxParticipants ?? "-"} pax
                   </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <DollarSign className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Price per Pax</div>
-                  <div className="font-semibold">${(course.amountPerPax || 0).toFixed(2)}</div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <MapPin className="h-4 w-4 text-gray-500" />
                 <div>
-                  <div className="text-sm text-gray-500">Venue</div>
-                  <div className="font-semibold">{course.venue || "Main Training Room"}</div>
+                  <div className="text-sm text-gray-500">Venue / Location</div>
+                  <div className="font-semibold">
+                    {course.venue || "Main Training Room"}
+                    {course.specifiedLocation && <span className="text-xs text-gray-500 ml-1">({course.specifiedLocation})</span>}
+                  </div>
                 </div>
               </div>
 
@@ -337,18 +398,49 @@ const CourseDetail = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Created:</span>
-                <span className="text-sm font-medium">{course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "2024-01-15"}</span>
+                <span className="text-sm font-medium">{course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Last Updated:</span>
-                <span className="text-sm font-medium">{course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : "2024-03-10"}</span>
+                <span className="text-sm font-medium">{course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Course ID:</span>
-                <span className="text-sm font-medium">{course.id?.slice(-8) || "1"}</span>
+                <span className="text-sm font-medium">{course.id?.slice(-8) || "-"}</span>
               </div>
+              {course.creator && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500 flex items-center gap-1">
+                    <UserIcon className="h-3 w-3" /> Creator
+                  </span>
+                  <span className="text-sm font-medium">{course.creator.name || course.creator.email || "—"}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
+          {(course.level || course.certificationType) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Classification</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {course.level && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <Layers className="h-3 w-3" /> Level
+                    </span>
+                    <span className="text-sm font-medium">{course.level}</span>
+                  </div>
+                )}
+                {course.certificationType && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Certification</span>
+                    <span className="text-sm font-medium">{course.certificationType}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

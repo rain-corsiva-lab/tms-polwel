@@ -560,6 +560,31 @@ export const trainersApi = {
       method: 'POST',
     });
   },
+
+  // List trainer fees
+  getFees: async (trainerId: string) => {
+    return apiRequest(`/trainers/${trainerId}/fees`);
+  },
+  // Create trainer fee
+  createFee: async (trainerId: string, data: { courseId: string; feePerRun: number; remarks?: string }) => {
+    return apiRequest(`/trainers/${trainerId}/fees`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  // Update trainer fee
+  updateFee: async (trainerId: string, feeId: string, data: { feePerRun?: number; remarks?: string }) => {
+    return apiRequest(`/trainers/${trainerId}/fees/${feeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  // Delete trainer fee
+  deleteFee: async (trainerId: string, feeId: string) => {
+    return apiRequest(`/trainers/${trainerId}/fees/${feeId}`, {
+      method: 'DELETE'
+    });
+  },
 };
 
 // Trainer Dashboard API (for authenticated trainers)
@@ -831,6 +856,45 @@ export const clientOrganizationsApi = {
   },
 };
 
+// Course related types
+export interface CourseDiscount { id?: string; name: string; percentage: number; }
+export interface Course {
+  id?: string;
+  courseCode?: string;
+  title: string;
+  description?: string;
+  objectives?: string[];
+  duration: string;
+  durationType?: string;
+  maxParticipants?: number;
+  minParticipants?: number;
+  category?: string;
+  level?: string;
+  prerequisites?: string[];
+  materials?: string[];
+  status?: string;
+  venueFee?: number; // Venue expenses
+  venue?: string;
+  specifiedLocation?: string;
+  trainers?: string[];
+  certificates?: string;
+  remarks?: string;
+  courseOutline?: any;
+  targetAudience?: string;
+  syllabus?: string;
+  assessmentMethod?: string;
+  certificationType?: string;
+  defaultCourseFee?: number;
+  discounts?: CourseDiscount[];
+  billingRate?: number;
+  contractsFeePayout?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type CourseCreatePayload = Omit<Course, 'id' | 'createdAt' | 'updatedAt'>;
+export type CourseUpdatePayload = Partial<CourseCreatePayload>;
+
 // Courses API
 export const coursesApi = {
   // Get all courses with filtering and pagination
@@ -864,38 +928,7 @@ export const coursesApi = {
   },
 
   // Create new course
-  create: async (courseData: {
-    title: string;
-    description?: string;
-    objectives?: string[];
-    duration: string;
-    durationType?: string;
-    maxParticipants?: number;
-    minParticipants?: number;
-    category?: string;
-    level?: string;
-    prerequisites?: string[];
-    materials?: string[];
-    status?: string;
-    courseFee?: number;
-    venueFee?: number;
-    trainerFee?: number;
-    amountPerPax?: number;
-    discount?: number;
-    adminFees?: number;
-    contingencyFees?: number;
-    serviceFees?: number;
-    vitalFees?: number;
-    venue?: string;
-    trainers?: string[];
-    certificates?: string;
-    remarks?: string;
-    courseOutline?: any;
-    targetAudience?: string;
-    syllabus?: string;
-    assessmentMethod?: string;
-    certificationType?: string;
-  }) => {
+  create: async (courseData: CourseCreatePayload) => {
     return apiRequest('/courses', {
       method: 'POST',
       body: JSON.stringify(courseData),
@@ -903,7 +936,7 @@ export const coursesApi = {
   },
 
   // Update course
-  update: async (id: string | number, courseData: any) => {
+  update: async (id: string | number, courseData: CourseUpdatePayload) => {
     return apiRequest(`/courses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(courseData),

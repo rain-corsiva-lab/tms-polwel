@@ -11,6 +11,7 @@ import sanitizeHtml from 'sanitize-html';
 // Validation schemas based on actual schema and frontend form
 const CourseCreateSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  courseCode: z.string().trim().min(3, "Course code must be at least 3 chars").max(50).optional(),
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   objectives: z.union([z.array(z.string()), z.any()]).default([]),
@@ -25,22 +26,19 @@ const CourseCreateSchema = z.object({
   certificationType: z.string().optional(),
   level: z.string().optional(),
   venue: z.string().optional(),
+  specifiedLocation: z.string().optional(),
   trainers: z.union([z.array(z.string()), z.any()]).default([]),
   remarks: z.string().optional(),
   courseOutline: z.any().optional(), // JSON
   syllabus: z.string().optional(),
   assessmentMethod: z.string().optional(),
   
-  // Financial fields matching frontend
-  courseFee: z.number().default(0),
-  venueFee: z.number().default(0),
-  trainerFee: z.number().default(0),
-  amountPerPax: z.number().default(0),
-  discount: z.number().default(0),
-  adminFees: z.number().default(0),
-  contingencyFees: z.number().default(0),
-  serviceFees: z.number().default(0),
-  vitalFees: z.number().default(0),
+  // Simplified financial fields
+  defaultCourseFee: z.number().default(0),
+  billingRate: z.number().default(0),
+  venueFee: z.number().default(0), // used as Venue Expenses
+  contractsFeePayout: z.number().default(0),
+  discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional(),
   
   status: z.nativeEnum(CourseStatus).default('DRAFT' as CourseStatus)
 });
@@ -115,26 +113,7 @@ export const coursesController = {
       // Get total count for pagination
       const totalCourses = await prisma.course.count({ where });
 
-      // Calculate financial metrics for each course using actual schema fields
-      const coursesWithMetrics = courses.map((course: any) => {
-        const totalFeesPerPax = course.amountPerPax || 0;
-        const totalCostPerPax = (course.courseFee + course.venueFee + course.trainerFee + course.adminFees + course.contingencyFees + course.serviceFees + course.vitalFees) / (course.maxParticipants || 1);
-        
-        const totalRevenue = totalFeesPerPax * (course.maxParticipants || 0);
-        const totalCost = totalCostPerPax * (course.maxParticipants || 0);
-        const totalProfit = totalRevenue - totalCost;
-        const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-        return {
-          ...course,
-          calculatedMetrics: {
-            totalRevenue: totalRevenue,
-            totalCost: totalCost,
-            totalProfit: totalProfit,
-            profitMargin: profitMargin
-          }
-        };
-      });
+  const coursesWithMetrics = courses; // Metrics removed per new simplified model
 
       const totalPages = Math.ceil(totalCourses / limitNum);
 
@@ -193,28 +172,9 @@ export const coursesController = {
         });
       }
 
-      // Calculate financial metrics using actual schema fields
-      const totalFeesPerPax = course.amountPerPax || 0;
-      const totalCostPerPax = (course.courseFee + course.venueFee + course.trainerFee + course.adminFees + course.contingencyFees + course.serviceFees + course.vitalFees) / (course.maxParticipants || 1);
-      
-      const totalRevenue = totalFeesPerPax * (course.maxParticipants || 0);
-      const totalCost = totalCostPerPax * (course.maxParticipants || 0);
-      const totalProfit = totalRevenue - totalCost;
-      const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-      const courseWithMetrics = {
-        ...course,
-        calculatedMetrics: {
-          totalRevenue: totalRevenue,
-          totalCost: totalCost,
-          totalProfit: totalProfit,
-          profitMargin: profitMargin
-        }
-      };
-
       return res.json({
         success: true,
-        data: { course: courseWithMetrics }
+        data: { course }
       });
     } catch (error) {
       console.error('Error fetching course:', error);
@@ -254,8 +214,12 @@ export const coursesController = {
         title: data.title,
         status: data.status,
         certificates: data.certificates,
-        createdBy: userId
+        creator: { connect: { id: userId } }
       };
+
+      if (data.courseCode) {
+        courseData.courseCode = data.courseCode.toUpperCase();
+      }
 
       // Add optional fields only if they exist - matching actual schema
       if (data.description !== undefined) {
@@ -283,22 +247,19 @@ export const coursesController = {
       if (data.certificationType !== undefined) courseData.certificationType = data.certificationType;
       if (data.level !== undefined) courseData.level = data.level;
       if (data.venue !== undefined) courseData.venue = data.venue;
+  if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
       if (data.trainers !== undefined) courseData.trainers = data.trainers;
       if (data.remarks !== undefined) courseData.remarks = data.remarks;
       if (data.courseOutline !== undefined) courseData.courseOutline = data.courseOutline;
       if (data.syllabus !== undefined) courseData.syllabus = data.syllabus;
       if (data.assessmentMethod !== undefined) courseData.assessmentMethod = data.assessmentMethod;
       
-      // Financial fields
-      if (data.courseFee !== undefined) courseData.courseFee = data.courseFee;
-      if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
-      if (data.trainerFee !== undefined) courseData.trainerFee = data.trainerFee;
-      if (data.amountPerPax !== undefined) courseData.amountPerPax = data.amountPerPax;
-      if (data.discount !== undefined) courseData.discount = data.discount;
-      if (data.adminFees !== undefined) courseData.adminFees = data.adminFees;
-      if (data.contingencyFees !== undefined) courseData.contingencyFees = data.contingencyFees;
-      if (data.serviceFees !== undefined) courseData.serviceFees = data.serviceFees;
-      if (data.vitalFees !== undefined) courseData.vitalFees = data.vitalFees;
+  // Simplified financial fields
+  if (data.defaultCourseFee !== undefined) courseData.defaultCourseFee = data.defaultCourseFee;
+  if (data.billingRate !== undefined) courseData.billingRate = data.billingRate;
+  if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
+  if (data.contractsFeePayout !== undefined) courseData.contractsFeePayout = data.contractsFeePayout;
+  if (data.discounts !== undefined) courseData.discounts = data.discounts;
 
       const course = await prisma.course.create({
         data: courseData,
@@ -381,6 +342,7 @@ export const coursesController = {
       // Create update data object, only including defined fields
       const updateData: any = {};
       Object.keys(data).forEach(key => {
+        if (key === 'createdBy' || key === 'creator') return; // prevent manual creator change
         const value = data[key as keyof typeof data];
         if (value !== undefined) {
           if (key === 'description' && typeof value === 'string') {
@@ -396,7 +358,11 @@ export const coursesController = {
               allowedSchemes: ['data','http','https']
             });
           } else {
-            updateData[key] = value;
+            if (key === 'courseCode' && typeof value === 'string') {
+              updateData.courseCode = value.toUpperCase();
+            } else {
+              updateData[key] = value;
+            }
           }
         }
       });
@@ -633,29 +599,6 @@ export const coursesController = {
         }
       });
 
-      // Calculate financial statistics using actual schema fields
-      const financialStats = await prisma.course.aggregate({
-        _avg: {
-          courseFee: true,
-          venueFee: true,
-          trainerFee: true,
-          amountPerPax: true,
-          adminFees: true,
-          contingencyFees: true,
-          serviceFees: true,
-          vitalFees: true
-        },
-        _sum: {
-          courseFee: true,
-          venueFee: true,
-          trainerFee: true,
-          amountPerPax: true
-        },
-        _count: {
-          id: true
-        }
-      });
-
       return res.json({
         success: true,
         data: {
@@ -664,23 +607,11 @@ export const coursesController = {
             acc[curr.status] = curr._count.id;
             return acc;
           }, {}),
-          categoryBreakdown: categoryCounts.reduce((acc: Record<string, number>, curr: any) => {
-            if (curr.category) {
-              acc[curr.category] = curr._count.id;
-            }
-            return acc;
-          }, {}),
-          recentCourses,
-          financialStats: {
-            averageCourseFee: financialStats._avg?.courseFee || 0,
-            averageVenueFee: financialStats._avg?.venueFee || 0,
-            averageTrainerFee: financialStats._avg?.trainerFee || 0,
-            averageAmountPerPax: financialStats._avg?.amountPerPax || 0,
-            averageAdminFees: financialStats._avg?.adminFees || 0,
-            totalCourseFees: financialStats._sum?.courseFee || 0,
-            totalVenueFees: financialStats._sum?.venueFee || 0,
-            totalTrainerFees: financialStats._sum?.trainerFee || 0
-          }
+            categoryBreakdown: categoryCounts.reduce((acc: Record<string, number>, curr: any) => {
+              if (curr.category) acc[curr.category] = curr._count.id;
+              return acc;
+            }, {}),
+          recentCourses
         }
       });
     } catch (error) {

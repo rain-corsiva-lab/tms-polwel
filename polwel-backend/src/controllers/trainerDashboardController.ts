@@ -125,6 +125,12 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
     });
 
     // Format the response
+  const fees = await (prisma as any).trainerFee.findMany({
+      where: { trainerId },
+      include: { course: { select: { id:true, courseCode:true, title:true } } },
+      orderBy: { updatedAt: 'desc' }
+    });
+
     const dashboardData = {
       profile: trainerProfile,
       statistics: {
@@ -157,7 +163,8 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
         type: blockout.type,
         description: blockout.description,
         isRecurring: blockout.isRecurring
-      }))
+  })),
+  fees: fees.map((f: any) => ({ id: f.id, feePerRun: f.feePerRun, remarks: f.remarks, course: f.course }))
     };
 
     return res.json({

@@ -12,18 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { AddTrainerBlockoutDialog } from "@/components/AddTrainerBlockoutDialog";
 import TrainerCalendar from "@/components/TrainerCalendar";
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  MapPin, 
-  Mail, 
-  Phone, 
-  Building2, 
-  User, 
-  Edit,
-  Plus,
-  Ban
-} from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Mail, Phone, Building2, User, Edit, Plus, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trainerDashboardApi } from "@/lib/api";
 
@@ -81,6 +70,7 @@ interface DashboardData {
   statistics: TrainerStatistics;
   upcomingCourseRuns: CourseRun[];
   blockoutDates: BlockoutDate[];
+  fees?: { id: string; feePerRun: number; remarks?: string; course: { id: string; courseCode?: string; title: string } }[];
 }
 
 export default function TrainerDashboard() {
@@ -88,7 +78,7 @@ export default function TrainerDashboard() {
   const [loading, setLoading] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedDateEvents, setSelectedDateEvents] = useState<{ courseRuns: any[], blockouts: any[] }>({ courseRuns: [], blockouts: [] });
+  const [selectedDateEvents, setSelectedDateEvents] = useState<{ courseRuns: any[]; blockouts: any[] }>({ courseRuns: [], blockouts: [] });
   const { toast } = useToast();
 
   // Fetch dashboard data
@@ -115,18 +105,16 @@ export default function TrainerDashboard() {
   // Get events for selected date
   const getEventsForDate = (date: Date) => {
     if (!dashboardData) return [];
-    
-    const dateStr = date.toISOString().split('T')[0];
+
+    const dateStr = date.toISOString().split("T")[0];
     const events = [];
 
     // Check for course runs
-    const courseRuns = dashboardData.upcomingCourseRuns.filter(run => 
-      run.startDate.startsWith(dateStr)
-    );
-    
+    const courseRuns = dashboardData.upcomingCourseRuns.filter((run) => run.startDate.startsWith(dateStr));
+
     // Check for blockouts
-    const blockouts = dashboardData.blockoutDates.filter(blockout => {
-      const blockoutDate = new Date(blockout.startDate).toISOString().split('T')[0];
+    const blockouts = dashboardData.blockoutDates.filter((blockout) => {
+      const blockoutDate = new Date(blockout.startDate).toISOString().split("T")[0];
       return blockoutDate === dateStr;
     });
 
@@ -157,7 +145,7 @@ export default function TrainerDashboard() {
     );
   }
 
-  const { profile, statistics, upcomingCourseRuns, blockoutDates } = dashboardData;
+  const { profile, statistics, upcomingCourseRuns, blockoutDates, fees = [] } = dashboardData;
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -182,14 +170,15 @@ export default function TrainerDashboard() {
               <CardHeader className="text-center">
                 <Avatar className="w-20 h-20 mx-auto mb-4">
                   <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                    {profile.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {profile.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle>{profile.name}</CardTitle>
-                <Badge 
-                  variant={profile.status === 'ACTIVE' ? 'default' : 'secondary'}
-                  className="mb-2 w-fit self-center"
-                >
+                <Badge variant={profile.status === "ACTIVE" ? "default" : "secondary"} className="mb-2 w-fit self-center">
                   {profile.status}
                 </Badge>
               </CardHeader>
@@ -241,17 +230,11 @@ export default function TrainerDashboard() {
                 {profile.bio && (
                   <div>
                     <h4 className="font-semibold text-sm mb-2">Professional Write-up</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {profile.bio}
-                    </p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
                   </div>
                 )}
 
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setShowEditProfile(true)}
-                >
+                <Button variant="outline" className="w-full" onClick={() => setShowEditProfile(true)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Profile
                 </Button>
@@ -261,13 +244,46 @@ export default function TrainerDashboard() {
 
           {/* Center Column - Calendar */}
           <div className="lg:col-span-1 space-y-6">
-            <TrainerCalendar 
-              trainerId={profile?.id || "1"} 
-              trainerName={profile?.name || "David Chen"} 
+            <TrainerCalendar
+              trainerId={profile?.id || "1"}
+              trainerName={profile?.name || "David Chen"}
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
               onEventsChange={setSelectedDateEvents}
             />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Training Fee</CardTitle>
+                <CardDescription>Your configured per-course fees</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40">
+                    <tr>
+                      <th className="text-left p-2">Course Code</th>
+                      <th className="text-left p-2">Fee</th>
+                      <th className="text-left p-2">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fees.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center text-muted-foreground">
+                          No fees
+                        </td>
+                      </tr>
+                    )}
+                    {fees.map((f) => (
+                      <tr key={f.id} className="border-t">
+                        <td className="p-2">{f.course.courseCode || "N/A"}</td>
+                        <td className="p-2">${`$${f.feePerRun.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
+                        <td className="p-2">{f.remarks || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column - Today's Schedule */}
@@ -305,16 +321,16 @@ export default function TrainerDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {selectedDate.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {selectedDate.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {(selectedDateEvents.courseRuns.length > 0 || selectedDateEvents.blockouts.length > 0) ? (
+                {selectedDateEvents.courseRuns.length > 0 || selectedDateEvents.blockouts.length > 0 ? (
                   <div className="space-y-3">
                     {selectedDateEvents.courseRuns.map((run: any) => (
                       <div key={run.id} className="p-3 border rounded-lg">
@@ -323,7 +339,9 @@ export default function TrainerDashboard() {
                           <span className="font-medium">{run.courseName}</span>
                         </div>
                         <div className="text-sm text-muted-foreground space-y-1">
-                          <div>{run.startTime} - {run.endTime}</div>
+                          <div>
+                            {run.startTime} - {run.endTime}
+                          </div>
                           <div>{run.venue?.name}</div>
                         </div>
                       </div>
@@ -334,9 +352,7 @@ export default function TrainerDashboard() {
                           <CalendarIcon className="h-4 w-4 text-red-500" />
                           <span className="font-medium text-red-700">{blockout.reason}</span>
                         </div>
-                        <div className="text-sm text-red-600">
-                          Unavailable
-                        </div>
+                        <div className="text-sm text-red-600">Unavailable</div>
                       </div>
                     ))}
                   </div>
@@ -410,12 +426,7 @@ export default function TrainerDashboard() {
       </div>
 
       {/* Edit Profile Dialog */}
-      <EditProfileDialog
-        isOpen={showEditProfile}
-        onClose={() => setShowEditProfile(false)}
-        profile={profile}
-        onProfileUpdated={fetchDashboardData}
-      />
+      <EditProfileDialog isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} profile={profile} onProfileUpdated={fetchDashboardData} />
     </div>
   );
 }
