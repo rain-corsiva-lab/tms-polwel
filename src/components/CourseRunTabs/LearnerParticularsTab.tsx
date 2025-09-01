@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Upload, Mail, Phone, Edit, Trash2 } from "lucide-react";
+import { Plus, Upload, Mail, Phone, Edit, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import type { Learner } from "@/types/courseRun";
 
 interface LearnerParticularsTabProps {
@@ -99,7 +101,31 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
   const handleSendConfirmationEmail = (learner: Learner) => {
     toast({
       title: "Email Sent",
-      description: `Confirmation email sent to ${learner.name}`,
+      description: `Training confirmation email sent to ${learner.name}`,
+    });
+  };
+
+  const handleMarkAsCancelled = (learner: Learner) => {
+    onUpdateLearner(learner.id, { 
+      enrolmentStatus: 'Cancelled',
+      updatedAt: new Date().toISOString()
+    });
+    toast({
+      title: "Status Updated",
+      description: `${learner.name} has been marked as cancelled`,
+      variant: "destructive"
+    });
+  };
+
+  const handleAttendanceChange = (learner: Learner, checked: boolean) => {
+    const newAttendance = checked ? 'Present' : 'Absent';
+    onUpdateLearner(learner.id, { 
+      attendance: newAttendance,
+      updatedAt: new Date().toISOString()
+    });
+    toast({
+      title: "Attendance Updated",
+      description: `${learner.name} marked as ${newAttendance.toLowerCase()}`,
     });
   };
 
@@ -279,11 +305,11 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Attendance</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Designation</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Payment Mode</TableHead>
-                    <TableHead>Attendance</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -291,6 +317,12 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                 <TableBody>
                   {learners.map((learner) => (
                     <TableRow key={learner.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={learner.attendance === 'Present'}
+                          onCheckedChange={(checked) => handleAttendanceChange(learner, checked as boolean)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{learner.name}</p>
@@ -318,29 +350,70 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getAttendanceBadgeVariant(learner.attendance)}>
-                          {learner.attendance}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
+                        <Badge variant={learner.enrolmentStatus === 'Cancelled' ? 'destructive' : 'secondary'}>
                           {learner.enrolmentStatus}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleSendConfirmationEmail(learner)}
-                          >
-                            <Mail className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Send Training Confirmation Email"
+                              >
+                                <Mail className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Send Training Confirmation Email</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to send a training confirmation email to {learner.name} at {learner.email}?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleSendConfirmationEmail(learner)}>
+                                  Send Email
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Mark as Cancelled"
+                                disabled={learner.enrolmentStatus === 'Cancelled'}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Mark as Cancelled</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to mark {learner.name}'s enrollment as cancelled? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleMarkAsCancelled(learner)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Mark as Cancelled
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <Button variant="ghost" size="icon" title="Edit Learner">
                             <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </TableCell>
