@@ -1,14 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,21 +19,21 @@ interface ModulePermissions {
 }
 
 interface UserPermissions {
-  'user-management-polwel': ModulePermissions;
-  'user-management-trainers': ModulePermissions;
-  'user-management-client-orgs': ModulePermissions;
-  'course-venue-setup': ModulePermissions;
-  'course-runs-operations': ModulePermissions;
-  'email-reporting-library': ModulePermissions;
-  'finance-activity': ModulePermissions;
+  "user-management-polwel": ModulePermissions;
+  "user-management-trainers": ModulePermissions;
+  "user-management-client-orgs": ModulePermissions;
+  "course-venue-setup": ModulePermissions;
+  "course-runs-operations": ModulePermissions;
+  "email-reporting-library": ModulePermissions;
+  "finance-activity": ModulePermissions;
 }
 
 interface PolwelUser {
   id: string;
   name: string;
   email: string;
-  role: 'POLWEL';
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  role: "POLWEL";
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   lastLogin: string | null;
   mfaEnabled: boolean;
   createdAt: string;
@@ -67,16 +59,18 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
+    department: (user as any).department || "",
+    permissionLevel: (user as any).permissionLevel || "",
   });
 
   const [permissions, setPermissions] = useState<UserPermissions>({
-    'user-management-polwel': { view: false, create: false, edit: false, delete: false },
-    'user-management-trainers': { view: false, create: false, edit: false, delete: false },
-    'user-management-client-orgs': { view: false, create: false, edit: false, delete: false },
-    'course-venue-setup': { view: false, create: false, edit: false, delete: false },
-    'course-runs-operations': { view: false, create: false, edit: false, delete: false },
-    'email-reporting-library': { view: false, create: false, edit: false, delete: false },
-    'finance-activity': { view: false, create: false, edit: false, delete: false },
+    "user-management-polwel": { view: false, create: false, edit: false, delete: false },
+    "user-management-trainers": { view: false, create: false, edit: false, delete: false },
+    "user-management-client-orgs": { view: false, create: false, edit: false, delete: false },
+    "course-venue-setup": { view: false, create: false, edit: false, delete: false },
+    "course-runs-operations": { view: false, create: false, edit: false, delete: false },
+    "email-reporting-library": { view: false, create: false, edit: false, delete: false },
+    "finance-activity": { view: false, create: false, edit: false, delete: false },
   });
 
   const { toast } = useToast();
@@ -85,39 +79,39 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
   useEffect(() => {
     if (open && user.permissions) {
       const updatedPermissions = { ...permissions };
-      
+
       user.permissions.forEach((userPermission) => {
         // Extract module and action from permission name (e.g., "users.view" -> module: "users", action: "view")
         const permissionName = userPermission.permissionName;
-        const [permissionModule, permissionAction] = permissionName.split('.');
-        
+        const [permissionModule, permissionAction] = permissionName.split(".");
+
         // Map database permission names to frontend module names
         const moduleMapping: Record<string, keyof UserPermissions> = {
-          'users': 'user-management-polwel',
-          'trainers': 'user-management-trainers',
-          'clients': 'user-management-client-orgs',
-          'courses': 'course-management',
-          'venues': 'course-venue-setup',
-          'bookings': 'booking-management',
-          'calendar': 'training-calendar',
-          'reports': 'reports-analytics'
+          users: "user-management-polwel",
+          trainers: "user-management-trainers",
+          clients: "user-management-client-orgs",
+          courses: "course-management",
+          venues: "course-venue-setup",
+          bookings: "booking-management",
+          calendar: "training-calendar",
+          reports: "reports-analytics",
         };
-        
+
         const frontendModule = moduleMapping[permissionModule];
         const actionMapping: Record<string, keyof ModulePermissions> = {
-          'view': 'view',
-          'create': 'create',
-          'edit': 'edit',
-          'delete': 'delete'
+          view: "view",
+          create: "create",
+          edit: "edit",
+          delete: "delete",
         };
-        
+
         const frontendAction = actionMapping[permissionAction];
-        
+
         if (frontendModule && frontendAction && updatedPermissions[frontendModule] && updatedPermissions[frontendModule][frontendAction] !== undefined) {
           updatedPermissions[frontendModule][frontendAction] = true;
         }
       });
-      
+
       setPermissions(updatedPermissions);
     }
   }, [open, user.permissions]);
@@ -140,6 +134,8 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       await polwelUsersApi.update(user.id, {
         name: formData.name,
         email: formData.email,
+        department: formData.department || null,
+        permissionLevel: formData.permissionLevel || null,
         permissions: permissionNames,
       });
 
@@ -158,12 +154,12 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
   };
 
   const handlePermissionChange = (module: keyof UserPermissions, permission: keyof ModulePermissions, checked: CheckedState) => {
-    setPermissions(prev => ({
+    setPermissions((prev) => ({
       ...prev,
       [module]: {
         ...prev[module],
-        [permission]: checked === true
-      }
+        [permission]: checked === true,
+      },
     }));
   };
 
@@ -180,41 +176,57 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
             <Shield className="h-5 w-5" />
             Edit POLWEL User
           </DialogTitle>
-          <DialogDescription>
-            Update user information and permissions for {user.name}.
-          </DialogDescription>
+          <DialogDescription>Update user information and permissions for {user.name}.</DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Full Name *</Label>
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Enter full name"
               required
             />
           </div>
-          
+
           <div>
             <Label htmlFor="email">Email Address * (Must be unique)</Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="Enter @polwel.org email address"
               required
             />
           </div>
 
           <div>
+            <Label htmlFor="department">Department</Label>
+            <Input
+              id="department"
+              value={formData.department}
+              onChange={(e) => setFormData((prev) => ({ ...prev, department: e.target.value }))}
+              placeholder="Enter department (e.g. Training Management)"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="permissionLevel">Permission Level</Label>
+            <Input
+              id="permissionLevel"
+              value={formData.permissionLevel}
+              onChange={(e) => setFormData((prev) => ({ ...prev, permissionLevel: e.target.value }))}
+              placeholder="Enter permission level (e.g. Administrator)"
+            />
+          </div>
+
+          <div>
             <Label>Access Level *</Label>
-            <p className="text-sm text-muted-foreground mb-4">
-              Please define the access level for this staff member.
-            </p>
-            
+            <p className="text-sm text-muted-foreground mb-4">Please define the access level for this staff member.</p>
+
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -229,39 +241,33 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
                       </tr>
                     </thead>
                     <tbody>
-                       {Object.entries(permissions).map(([module, modulePermissions]) => {
-                         const moduleDisplayNames: Record<string, string> = {
-                           'user-management-polwel': 'User Management - POLWEL Users',
-                           'user-management-trainers': 'User Management - Trainers & Partners',
-                           'user-management-client-orgs': 'User Management - Client Organisations',
-                           'course-venue-setup': 'Course & Venue Setup',
-                           'course-runs-operations': 'Course Runs & Operations',
-                           'email-reporting-library': 'Email, Reporting and Resource Library',
-                           'finance-activity': 'Finance and Activity'
-                         };
-                         
-                          return (
-                         <tr key={module} className="border-b hover:bg-muted/30">
-                           <td className="p-3 font-medium text-foreground">
-                             {moduleDisplayNames[module] || module}
-                           </td>
-                          {Object.entries(modulePermissions).map(([permission, checked]) => (
-                            <td key={permission} className="p-3 text-center">
-                              <Checkbox
-                                checked={checked as CheckedState}
-                                onCheckedChange={(checkedState) => 
-                                  handlePermissionChange(
-                                    module as keyof UserPermissions, 
-                                    permission as keyof ModulePermissions, 
-                                    checkedState
-                                  )
-                                }
-                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                      );
+                      {Object.entries(permissions).map(([module, modulePermissions]) => {
+                        const moduleDisplayNames: Record<string, string> = {
+                          "user-management-polwel": "User Management - POLWEL Users",
+                          "user-management-trainers": "User Management - Trainers & Partners",
+                          "user-management-client-orgs": "User Management - Client Organisations",
+                          "course-venue-setup": "Course & Venue Setup",
+                          "course-runs-operations": "Course Runs & Operations",
+                          "email-reporting-library": "Email, Reporting and Resource Library",
+                          "finance-activity": "Finance and Activity",
+                        };
+
+                        return (
+                          <tr key={module} className="border-b hover:bg-muted/30">
+                            <td className="p-3 font-medium text-foreground">{moduleDisplayNames[module] || module}</td>
+                            {Object.entries(modulePermissions).map(([permission, checked]) => (
+                              <td key={permission} className="p-3 text-center">
+                                <Checkbox
+                                  checked={checked as CheckedState}
+                                  onCheckedChange={(checkedState) =>
+                                    handlePermissionChange(module as keyof UserPermissions, permission as keyof ModulePermissions, checkedState)
+                                  }
+                                  className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        );
                       })}
                     </tbody>
                   </table>

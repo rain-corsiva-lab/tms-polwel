@@ -381,12 +381,14 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
 
     // Get users with pagination
     const [users, total] = await Promise.all([
-      prisma.user.findMany({
+    prisma.user.findMany({
         where,
         select: {
           id: true,
           email: true,
           name: true,
+      department: true,
+      permissionLevel: true,
           role: true,
           status: true,
           lastLogin: true,
@@ -438,7 +440,7 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
       });
     }
 
-    const user = await prisma.user.findFirst({
+  const user = await prisma.user.findFirst({
       where: {
         id: id,
         role: UserRole.POLWEL
@@ -447,6 +449,8 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
         id: true,
         email: true,
         name: true,
+    department: true,
+    permissionLevel: true,
         role: true,
         status: true,
         lastLogin: true,
@@ -486,6 +490,8 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     const {
       name,
       email,
+      department,
+      permissionLevel,
       permissions = []
     } = req.body;
 
@@ -547,10 +553,12 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     // Create user with permissions in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create user with PENDING status
-      const user = await tx.user.create({
+    const user = await tx.user.create({
         data: {
-          name,
-          email,
+      name,
+      email,
+      department: department || null,
+      permissionLevel: permissionLevel || null,
           password: hashedPassword,
           role: UserRole.POLWEL,
           status: UserStatus.PENDING, // Set as PENDING instead of ACTIVE
@@ -562,6 +570,8 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
           id: true,
           name: true,
           email: true,
+      department: true,
+      permissionLevel: true,
           role: true,
           status: true,
           createdAt: true
@@ -610,6 +620,8 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
 
     return res.status(201).json({
       user: result.user,
+      tempPassword: result.tempPassword,
+      setupToken: result.setupToken,
       message: 'User created successfully. Setup email has been sent.',
       setupEmailSent: true
     });
@@ -644,7 +656,7 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
 export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, email, permissions = [] } = req.body;
+  const { name, email, department, permissionLevel, permissions = [] } = req.body;
 
     if (!id) {
       return res.status(400).json({
@@ -710,12 +722,16 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
         where: { id: id },
         data: {
           ...(name && { name }),
-          ...(email && { email })
+          ...(email && { email }),
+          ...(department !== undefined && { department }),
+          ...(permissionLevel !== undefined && { permissionLevel })
         },
         select: {
           id: true,
           name: true,
           email: true,
+          department: true,
+          permissionLevel: true,
           role: true,
           status: true,
           updatedAt: true
