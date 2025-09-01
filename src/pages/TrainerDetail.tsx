@@ -34,6 +34,7 @@ interface Trainer {
 
 interface TrainingFee {
   id: string;
+  courseTitle: string;
   courseCode: string;
   feesPerRun: string;
   remarks: string;
@@ -59,10 +60,10 @@ const TrainerDetail = () => {
 
   // State for training fees
   const [trainingFees, setTrainingFees] = useState<TrainingFee[]>([
-    { id: "1", courseCode: "LD-001", feesPerRun: "$2,500", remarks: "Standard leadership development course" },
-    { id: "2", courseCode: "CS-002", feesPerRun: "$1,800", remarks: "Communication skills workshop" },
-    { id: "3", courseCode: "TB-003", feesPerRun: "$2,200", remarks: "Team building intensive program" },
-    { id: "4", courseCode: "PM-004", feesPerRun: "$3,000", remarks: "Advanced project management certification" }
+    { id: "1", courseTitle: "Leadership Development Program", courseCode: "LD-001", feesPerRun: "$2,500", remarks: "Standard leadership development course" },
+    { id: "2", courseTitle: "Communication Skills Workshop", courseCode: "CS-002", feesPerRun: "$1,800", remarks: "Communication skills workshop" },
+    { id: "3", courseTitle: "Team Building Intensive", courseCode: "TB-003", feesPerRun: "$2,200", remarks: "Team building intensive program" },
+    { id: "4", courseTitle: "Project Management Certification", courseCode: "PM-004", feesPerRun: "$3,000", remarks: "Advanced project management certification" }
   ]);
   
   // Available courses data
@@ -224,6 +225,7 @@ const fetchTrainer = async () => {
 
     const newFee: TrainingFee = {
       id: Date.now().toString(),
+      courseTitle: formData.courseTitle,
       courseCode: formData.courseCode,
       feesPerRun: formData.feesPerRun,
       remarks: formData.remarks
@@ -416,6 +418,7 @@ const fetchTrainer = async () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Course Title</TableHead>
                 <TableHead>Course Code</TableHead>
                 <TableHead>Fees (per run)</TableHead>
                 <TableHead>Remarks</TableHead>
@@ -425,14 +428,15 @@ const fetchTrainer = async () => {
               {trainingFees.length > 0 ? (
                 trainingFees.map((fee) => (
                   <TableRow key={fee.id}>
-                    <TableCell className="font-medium">{fee.courseCode}</TableCell>
+                    <TableCell className="font-medium">{fee.courseTitle}</TableCell>
+                    <TableCell>{fee.courseCode}</TableCell>
                     <TableCell>{fee.feesPerRun}</TableCell>
                     <TableCell>{fee.remarks}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
                     No training fees added yet
                   </TableCell>
                 </TableRow>
