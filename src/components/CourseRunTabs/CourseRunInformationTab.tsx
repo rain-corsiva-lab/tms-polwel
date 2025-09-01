@@ -29,9 +29,7 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
       id: 'trainer-1',
       name: 'John Smith',
       organization: 'ABC Training Partners',
-      baseFee: 800,
-      perRunFee: true,
-      perHeadFee: false,
+      baseFee: 1200,
       additionalCosts: 50,
       remarks: 'Preferred for technical courses'
     },
@@ -39,9 +37,7 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
       id: 'trainer-2',
       name: 'Sarah Johnson',
       organization: 'XYZ Consulting',
-      baseFee: 150,
-      perRunFee: false,
-      perHeadFee: true,
+      baseFee: 800,
       additionalCosts: 0,
       remarks: 'Excellent for leadership training'
     },
@@ -50,8 +46,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
       name: 'Michael Chen',
       organization: 'TechEd Solutions',
       baseFee: 1000,
-      perRunFee: true,
-      perHeadFee: false,
       additionalCosts: 100,
       remarks: 'Specialist in digital transformation'
     }
@@ -61,8 +55,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
   const [assignedTrainers, setAssignedTrainers] = useState<{[key: string]: {
     selected: boolean;
     baseFee: number;
-    perRunFee: boolean;
-    perHeadFee: boolean;
     additionalCosts: number;
     remarks: string;
   }}>(() => {
@@ -71,8 +63,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
       initial[trainer.id] = {
         selected: courseRun.trainerIds?.includes(trainer.id) || false,
         baseFee: trainer.baseFee,
-        perRunFee: trainer.perRunFee,
-        perHeadFee: trainer.perHeadFee,
         additionalCosts: trainer.additionalCosts,
         remarks: trainer.remarks
       };
@@ -443,7 +433,7 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
                   <div className="ml-6 space-y-4 border-l-2 border-muted pl-4">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4" />
-                      <h5 className="text-sm font-medium">Fee Configuration</h5>
+                      <h5 className="text-sm font-medium">Trainer Fees</h5>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -473,30 +463,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={`perRun-${trainer.id}`}
-                          checked={assignment.perRunFee}
-                          onCheckedChange={(checked) => 
-                            handleTrainerFeeChange(trainer.id, 'perRunFee', checked)
-                          }
-                          disabled={!isEditing}
-                        />
-                        <Label htmlFor={`perRun-${trainer.id}`}>Per Run</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={`perHead-${trainer.id}`}
-                          checked={assignment.perHeadFee}
-                          onCheckedChange={(checked) => 
-                            handleTrainerFeeChange(trainer.id, 'perHeadFee', checked)
-                          }
-                          disabled={!isEditing}
-                        />
-                        <Label htmlFor={`perHead-${trainer.id}`}>Per Head</Label>
-                      </div>
-                    </div>
 
                     <div>
                       <Label htmlFor={`remarks-${trainer.id}`}>Remarks</Label>
@@ -518,8 +484,6 @@ const CourseRunInformationTab: React.FC<CourseRunInformationTabProps> = ({
                         <span className="font-medium">Total for this trainer:</span>
                         <Badge variant="secondary">
                           ${assignment.baseFee + assignment.additionalCosts}
-                          {assignment.perHeadFee && ' (per participant)'}
-                          {assignment.perRunFee && ' (per run)'}
                         </Badge>
                       </div>
                     </div>
