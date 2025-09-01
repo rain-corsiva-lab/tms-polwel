@@ -36,7 +36,7 @@ export default function CourseRunForm() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [venues, setVenues] = useState<Venue[]>([]);
+  const [venues, setVenues] = useState<string[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState('course-run-info');
@@ -51,7 +51,9 @@ export default function CourseRunForm() {
     endDate: '',
     startTime: '',
     endTime: '',
-    venueId: '',
+    venue: '',
+    hotel: '',
+    specifiedLocation: '',
     trainerIds: [] as string[],
     contractFees: {
       baseAmount: 0,
@@ -94,9 +96,12 @@ export default function CourseRunForm() {
           },
         ];
 
-        const mockVenues = [
-          { id: '1', name: 'Training Room A', address: '123 Main St' },
-          { id: '2', name: 'Training Room B', address: '456 Oak Ave' },
+        const mockHotels = [
+          'Marriott Hotel',
+          'Hilton Hotel', 
+          'Grand Hyatt',
+          'Shangri-La Hotel',
+          'Marina Bay Sands'
         ];
 
         const mockTrainers = [
@@ -105,7 +110,7 @@ export default function CourseRunForm() {
         ];
 
         setCourses(mockCourses);
-        setVenues(mockVenues);
+        setVenues(mockHotels);
         setTrainers(mockTrainers);
       } catch (error) {
         toast.error('Failed to load data');
@@ -124,8 +129,7 @@ export default function CourseRunForm() {
         ...prev,
         courseId: course.id,
         courseTitle: course.title,
-        courseCode: course.code,
-        venueId: course.venueId
+        courseCode: course.code
       }));
     }
   };
@@ -343,23 +347,54 @@ export default function CourseRunForm() {
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-foreground">Venue & Settings</h2>
               
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="venue">Venue</Label>
+                  <Select
+                    value={formData.venue}
+                    onValueChange={(value) => handleInputChange('venue', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select venue type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Hotel">Hotel</SelectItem>
+                      <SelectItem value="On-premise">On-premise</SelectItem>
+                      <SelectItem value="Client's facility">Client's facility</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.venue === 'Hotel' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="hotel">Hotel</Label>
+                    <Select
+                      value={formData.hotel}
+                      onValueChange={(value) => handleInputChange('hotel', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select hotel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {venues.map((hotel, index) => (
+                          <SelectItem key={index} value={hotel}>
+                            {hotel}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="venueId">Venue</Label>
-                <Select
-                  value={formData.venueId}
-                  onValueChange={(value) => handleInputChange('venueId', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select venue" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {venues.map((venue) => (
-                      <SelectItem key={venue.id} value={venue.id}>
-                        {venue.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="specifiedLocation">Specified Location</Label>
+                <Input
+                  id="specifiedLocation"
+                  placeholder="Enter specific location details"
+                  value={formData.specifiedLocation}
+                  onChange={(e) => handleInputChange('specifiedLocation', e.target.value)}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
