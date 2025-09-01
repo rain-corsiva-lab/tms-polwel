@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Upload, Mail, Phone, Edit, Trash2, X } from "lucide-react";
+import { Plus, Upload, Mail, Phone, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -102,18 +102,6 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
     toast({
       title: "Email Sent",
       description: `Training confirmation email sent to ${learner.name}`,
-    });
-  };
-
-  const handleMarkAsCancelled = (learner: Learner) => {
-    onUpdateLearner(learner.id, { 
-      enrolmentStatus: 'Cancelled',
-      updatedAt: new Date().toISOString()
-    });
-    toast({
-      title: "Status Updated",
-      description: `${learner.name} has been marked as cancelled`,
-      variant: "destructive"
     });
   };
 
@@ -377,36 +365,6 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleSendConfirmationEmail(learner)}>
                                   Send Email
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Mark as Cancelled"
-                                disabled={learner.enrolmentStatus === 'Cancelled'}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Mark as Cancelled</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to mark {learner.name}'s enrollment as cancelled? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleMarkAsCancelled(learner)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Mark as Cancelled
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
