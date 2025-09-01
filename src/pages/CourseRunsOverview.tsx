@@ -6,11 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Search, Plus, Users, MapPin, Clock, Filter } from "lucide-react";
+import { Calendar, Search, Plus, Users, MapPin, Clock, Filter, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import type { CourseRun } from "@/types/courseRun";
 
 const CourseRunsOverview = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [courseRuns, setCourseRuns] = useState<CourseRun[]>([]);
   const [filteredRuns, setFilteredRuns] = useState<CourseRun[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -169,6 +172,21 @@ const CourseRunsOverview = () => {
     navigate(`/course-runs/${courseRun.courseId}/${courseRun.id}`);
   };
 
+  const handleMarkAsCancelled = (courseRun: CourseRun) => {
+    const updatedRuns = courseRuns.map(run => 
+      run.id === courseRun.id 
+        ? { ...run, status: 'Cancelled' as const, updatedAt: new Date().toISOString() }
+        : run
+    );
+    setCourseRuns(updatedRuns);
+    
+    toast({
+      title: "Course Run Cancelled",
+      description: `${courseRun.serialNumber} - ${courseRun.courseTitle} has been marked as cancelled`,
+      variant: "destructive"
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -319,13 +337,45 @@ const CourseRunsOverview = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewCourseRun(run)}
-                        >
-                          Manage
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewCourseRun(run)}
+                          >
+                            Manage
+                          </Button>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Mark as Cancelled"
+                                disabled={run.status === 'Cancelled'}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel Course Run</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to cancel "{run.serialNumber} - {run.courseTitle}"? This action cannot be undone and will notify all participants.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleMarkAsCancelled(run)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Mark as Cancelled
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
