@@ -107,4 +107,17 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Fixed header/sidebar layout vars */
+  :root {
+    --header-height: 4rem; /* matches h-16 */
+    --sidebar-width: 16rem; /* matches w-64 */
+  }
+
+  /* Reserve space so page content is not overlapped by fixed header/sidebar */
+  body {
+    padding-top: var(--header-height);
+  }
+
+  /* sidebar left padding is applied per-layout to avoid portal positioning issues */
 }

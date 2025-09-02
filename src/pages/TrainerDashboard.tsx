@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { trainersApi, coursesApi } from "@/lib/api";
+import Swal from "sweetalert2";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -75,7 +77,14 @@ interface DashboardData {
 
 export default function TrainerDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [feesState, setFeesState] = useState<DashboardData["fees"]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFeeDialog, setShowFeeDialog] = useState(false);
+  const [editingFee, setEditingFee] = useState<any | null>(null);
+  const [courseOptions, setCourseOptions] = useState<{ id: string; courseCode?: string; title: string }[]>([]);
+  const [courseId, setCourseId] = useState("");
+  const [feePerRun, setFeePerRun] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedDateEvents, setSelectedDateEvents] = useState<{ courseRuns: any[]; blockouts: any[] }>({ courseRuns: [], blockouts: [] });
@@ -87,6 +96,8 @@ export default function TrainerDashboard() {
       setLoading(true);
       const response = await trainerDashboardApi.getDashboard();
       setDashboardData(response.data);
+      // initialize local fees state
+      setFeesState(response.data?.fees || []);
     } catch (error: any) {
       toast({
         title: "Error Loading Dashboard",
@@ -100,7 +111,102 @@ export default function TrainerDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+    loadCourses();
   }, []);
+
+  const loadCourses = async () => {
+    try {
+      const resp = await coursesApi.getAll({ limit: 200 });
+      let list: any[] = [];
+      if (resp && resp.success && resp.data && Array.isArray(resp.data.courses)) {
+        list = resp.data.courses;
+      } else if (resp && Array.isArray((resp as any).data)) {
+        list = (resp as any).data;
+      } else if (Array.isArray(resp)) {
+        list = resp;
+      }
+      if (Array.isArray(list)) setCourseOptions(list.map((c: any) => ({ id: c.id, courseCode: c.courseCode, title: c.title })));
+    } catch (err) {
+      console.error("Error loading courses", err);
+    }
+  };
+
+  // Open add dialog
+  const openAddDialog = () => {
+    setEditingFee(null);
+    setCourseId("");
+    setFeePerRun("");
+    setRemarks("");
+    // ensure courseOptions are loaded when opening
+    loadCourses();
+    setShowFeeDialog(true);
+  };
+
+  const sanitizeMoneyInput = (v: string) => {
+    let s = v.replace(/[^0-9.]/g, "");
+    const parts = s.split(".");
+    if (parts.length > 2) s = parts[0] + "." + parts.slice(1).join("");
+    if (s.includes(".")) {
+      const [intPart, decPart] = s.split(".");
+      s = intPart + "." + (decPart || "").slice(0, 2);
+    }
+    return s;
+  };
+
+  const openEditDialog = (f: any) => {
+    setEditingFee(f);
+    setCourseId(f.course?.id || "");
+    setFeePerRun(String(f.feePerRun || ""));
+    setRemarks(f.remarks || "");
+    setShowFeeDialog(true);
+  };
+
+  const submitFee = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    try {
+      if (!editingFee) {
+        if (!courseId) throw new Error("Course required");
+        const sanitized = feePerRun.replace(/[^0-9.]/g, "");
+        const parsed = parseFloat(sanitized);
+        if (isNaN(parsed)) throw new Error("Fee must be a number");
+        const trainerId = dashboardData?.profile?.id;
+        if (!trainerId) throw new Error("Trainer id not available");
+        const resp = await trainersApi.createFee(trainerId, { courseId, feePerRun: parsed, remarks: remarks || undefined });
+        const newFee = resp.fee;
+        setFeesState((prev) => [newFee, ...(prev || [])]);
+      } else {
+        const sanitized = feePerRun.replace(/[^0-9.]/g, "");
+        const parsed = parseFloat(sanitized);
+        if (isNaN(parsed)) throw new Error("Fee must be a number");
+        const trainerId = dashboardData?.profile?.id;
+        if (!trainerId) throw new Error("Trainer id not available");
+        const resp = await trainersApi.updateFee(trainerId, editingFee.id, { feePerRun: parsed, remarks: remarks || undefined });
+        const updated = resp.fee;
+        setFeesState((prev) => (prev || []).map((x: any) => (x.id === updated.id ? updated : x)));
+      }
+      setShowFeeDialog(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed", variant: "destructive" });
+    }
+  };
+
+  const removeFee = async (f: any) => {
+    const r = await Swal.fire({
+      title: "Delete fee?",
+      text: `Delete fee for ${(f.course.courseCode || "") + " - " + f.course.title}?`,
+      icon: "warning",
+      showCancelButton: true,
+    });
+    if (!r.isConfirmed) return;
+    try {
+      const trainerId = dashboardData?.profile?.id;
+      if (!trainerId) throw new Error("Trainer id not available");
+      await trainersApi.deleteFee(trainerId, f.id);
+      setFeesState((prev) => (prev || []).filter((x: any) => x.id !== f.id));
+    } catch (err: any) {
+      Swal.fire({ title: "Error", text: err.message || "Failed", icon: "error" });
+    }
+  };
 
   // Get events for selected date
   const getEventsForDate = (date: Date) => {
@@ -156,10 +262,15 @@ export default function TrainerDashboard() {
             <h1 className="text-3xl font-bold text-foreground">Trainer Dashboard</h1>
             <p className="text-muted-foreground">Manage your profile and training schedule</p>
           </div>
-          <Button onClick={() => setShowEditProfile(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Profile
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button size="sm" variant="ghost" onClick={() => (window.location.href = "/trainers/new")}>
+              Add Trainer
+            </Button>
+            <Button onClick={() => setShowEditProfile(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -251,39 +362,7 @@ export default function TrainerDashboard() {
               onDateSelect={setSelectedDate}
               onEventsChange={setSelectedDateEvents}
             />
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Training Fee</CardTitle>
-                <CardDescription>Your configured per-course fees</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40">
-                    <tr>
-                      <th className="text-left p-2">Course Code</th>
-                      <th className="text-left p-2">Fee</th>
-                      <th className="text-left p-2">Remarks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fees.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="p-4 text-center text-muted-foreground">
-                          No fees
-                        </td>
-                      </tr>
-                    )}
-                    {fees.map((f) => (
-                      <tr key={f.id} className="border-t">
-                        <td className="p-2">{f.course.courseCode || "N/A"}</td>
-                        <td className="p-2">${`$${f.feePerRun.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
-                        <td className="p-2">{f.remarks || ""}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+            {/* calendar continues - fees moved to full-width below */}
           </div>
 
           {/* Right Column - Today's Schedule */}
@@ -315,7 +394,6 @@ export default function TrainerDashboard() {
                 </CardContent>
               </Card>
             </div> */}
-            <div className="h-14"></div>
 
             {/* Selected Date Events */}
             <Card>
@@ -367,6 +445,120 @@ export default function TrainerDashboard() {
             </Card>
           </div>
         </div>
+        {/* Full width Training Fee section */}
+        <div className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-medium">Training Fee</CardTitle>
+                <CardDescription>Your configured per-course fees</CardDescription>
+              </div>
+              <div>
+                <Button size="sm" onClick={() => openAddDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Training Fee
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40">
+                    <tr>
+                      <th className="text-left p-2">Course Code</th>
+                      <th className="text-left p-2">Course</th>
+                      <th className="text-left p-2">Fee</th>
+                      <th className="text-left p-2">Remarks</th>
+                      <th className="text-right p-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(!feesState || feesState.length === 0) && (
+                      <tr>
+                        <td colSpan={4} className="p-4 text-center text-muted-foreground">
+                          No fees
+                        </td>
+                      </tr>
+                    )}
+                    {(feesState || []).map((f) => (
+                      <tr key={f.id} className="border-t">
+                        <td className="p-2 whitespace-nowrap">{f.course.courseCode || "N/A"}</td>
+                        <td className="p-2">{f.course.title}</td>
+                        <td className="p-2">{f.feePerRun.toLocaleString(undefined, { style: "currency", currency: "SGD" })}</td>
+                        <td className="p-2">{f.remarks || ""}</td>
+                        <td className="p-2 justify-items-end">
+                          <div className="flex items-center space-x-2">
+                            <Button size="sm" variant="ghost" onClick={() => openAddDialog()} type="button">
+                              Add Fee
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => openEditDialog(f)} type="button">
+                              Edit
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => removeFee(f)} type="button">
+                              Remove
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Fee Dialog (Dialog component) */}
+        <Dialog open={showFeeDialog} onOpenChange={(open) => setShowFeeDialog(open)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingFee ? "Edit" : "Add"} Training Fee</DialogTitle>
+              <DialogDescription>{editingFee ? "Update the fee details" : "Add a fee for a course"}</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={submitFee} className="space-y-4">
+              {!editingFee && (
+                <div>
+                  <Label>Course *</Label>
+                  <Select onValueChange={(v) => setCourseId(v)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courseOptions.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {(c.courseCode || "N/A") + " - " + c.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <Label>Fees (per run) *</Label>
+                <Input
+                  value={feePerRun}
+                  onChange={(e) => {
+                    // allow only digits and dot
+                    const v = e.target.value;
+                    const sanitized = v.replace(/[^0-9.]/g, "");
+                    setFeePerRun(sanitized);
+                  }}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Remarks</Label>
+                <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={3} />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setShowFeeDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">{editingFee ? "Update Fee" : "Add Fee"}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Upcoming Sessions Table
         <Card>

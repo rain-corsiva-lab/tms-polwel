@@ -53,7 +53,11 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-card border-b border-border h-16 flex items-center justify-between px-6">
+    <div
+      role="banner"
+      className="fixed top-0 left-0 right-0 bg-card border-b border-border h-16 flex items-center justify-between px-6 z-40"
+      style={{ height: "var(--header-height)" }}
+    >
       <div className="flex items-center space-x-4">
         <h1 className="text-xl font-semibold text-foreground">Training Management System</h1>
         {user && (
@@ -129,7 +133,7 @@ const Header = () => {
           </DropdownMenu>
         )}
       </div>
-    </header>
+    </div>
   );
 };
 

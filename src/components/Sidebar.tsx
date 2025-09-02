@@ -34,7 +34,10 @@ const Sidebar = ({ className }: SidebarProps) => {
   const { user } = useAuth();
 
   return (
-    <aside className={cn("bg-card border-r border-border w-64 h-screen flex flex-col", className)}>
+    <aside
+      className={cn("fixed top-0 left-0 bg-card border-r border-border h-screen flex flex-col overflow-auto", className)}
+      style={{ width: "var(--sidebar-width)", paddingTop: "var(--header-height)" }}
+    >
       <div className="p-6">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -110,7 +113,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* Course Management Dropdown */}
-        <div className="space-y-1">
+        {/* <div className="space-y-1">
           <button
             onClick={() => setCourseManagementOpen(!courseManagementOpen)}
             className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
@@ -139,7 +142,7 @@ const Sidebar = ({ className }: SidebarProps) => {
               ))}
             </div>
           )}
-        </div>
+        </div> */}
       </nav>
     </aside>
   );
