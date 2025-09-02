@@ -59,8 +59,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
-    department: (user as any).department || "",
-    permissionLevel: (user as any).permissionLevel || "",
+    // department and permissionLevel removed
   });
 
   const [permissions, setPermissions] = useState<UserPermissions>({
@@ -134,8 +133,6 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       await polwelUsersApi.update(user.id, {
         name: formData.name,
         email: formData.email,
-        department: formData.department || null,
-        permissionLevel: formData.permissionLevel || null,
         permissions: permissionNames,
       });
 
@@ -203,25 +200,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
             />
           </div>
 
-          <div>
-            <Label htmlFor="department">Department</Label>
-            <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) => setFormData((prev) => ({ ...prev, department: e.target.value }))}
-              placeholder="Enter department (e.g. Training Management)"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="permissionLevel">Permission Level</Label>
-            <Input
-              id="permissionLevel"
-              value={formData.permissionLevel}
-              onChange={(e) => setFormData((prev) => ({ ...prev, permissionLevel: e.target.value }))}
-              placeholder="Enter permission level (e.g. Administrator)"
-            />
-          </div>
+          {/* department and permissionLevel fields removed */}
 
           <div>
             <Label>Access Level *</Label>

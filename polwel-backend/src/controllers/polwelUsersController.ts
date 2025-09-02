@@ -387,8 +387,6 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
           id: true,
           email: true,
           name: true,
-      department: true,
-      permissionLevel: true,
           role: true,
           status: true,
           lastLogin: true,
@@ -446,25 +444,23 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
         role: UserRole.POLWEL
       },
       select: {
-        id: true,
-        email: true,
-        name: true,
-    department: true,
-    permissionLevel: true,
-        role: true,
-        status: true,
-        lastLogin: true,
-        mfaEnabled: true,
-        createdAt: true,
-        updatedAt: true,
-        permissions: {
-          select: {
-            id: true,
-            permissionName: true,
-            granted: true
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          lastLogin: true,
+          mfaEnabled: true,
+          createdAt: true,
+          updatedAt: true,
+          permissions: {
+            select: {
+              id: true,
+              permissionName: true,
+              granted: true
+            }
           }
         }
-      }
     });
 
     if (!user) {
@@ -490,8 +486,6 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     const {
       name,
       email,
-      department,
-      permissionLevel,
       permissions = []
     } = req.body;
 
@@ -557,8 +551,6 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
         data: {
       name,
       email,
-      department: department || null,
-      permissionLevel: permissionLevel || null,
           password: hashedPassword,
           role: UserRole.POLWEL,
           status: UserStatus.PENDING, // Set as PENDING instead of ACTIVE
@@ -570,8 +562,6 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
           id: true,
           name: true,
           email: true,
-      department: true,
-      permissionLevel: true,
           role: true,
           status: true,
           createdAt: true
@@ -656,7 +646,7 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
 export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-  const { name, email, department, permissionLevel, permissions = [] } = req.body;
+  const { name, email, permissions = [] } = req.body;
 
     if (!id) {
       return res.status(400).json({
@@ -722,16 +712,12 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
         where: { id: id },
         data: {
           ...(name && { name }),
-          ...(email && { email }),
-          ...(department !== undefined && { department }),
-          ...(permissionLevel !== undefined && { permissionLevel })
+          ...(email && { email })
         },
         select: {
           id: true,
           name: true,
           email: true,
-          department: true,
-          permissionLevel: true,
           role: true,
           status: true,
           updatedAt: true
@@ -834,8 +820,8 @@ export const deletePolwelUser = async (req: AuthenticatedRequest, res: Response)
     const updatedUser = await prisma.user.update({
       where: { id: id },
       data: {
-        old_email: emailBeforeDeletion, // Store original email
-        email: null, // Clear email to allow reuse
+        old_email: emailBeforeDeletion,
+        email: null,
         status: UserStatus.INACTIVE
       },
       select: {
@@ -851,14 +837,14 @@ export const deletePolwelUser = async (req: AuthenticatedRequest, res: Response)
       await AuditService.logUserUpdate(
         req.user?.userId || 'system',
         existingUser.id,
-        { 
+        {
           email: emailBeforeDeletion,
-          status: existingUser.status 
+          status: existingUser.status
         },
-        { 
+        {
           old_email: emailBeforeDeletion,
           email: null,
-          status: UserStatus.INACTIVE 
+          status: UserStatus.INACTIVE
         },
         'POLWEL user soft deleted - email moved to old_email',
         req
@@ -867,11 +853,11 @@ export const deletePolwelUser = async (req: AuthenticatedRequest, res: Response)
       await AuditService.logUserUpdate(
         req.user?.userId || 'system',
         existingUser.id,
-        { 
-          status: existingUser.status 
+        {
+          status: existingUser.status
         },
-        { 
-          status: UserStatus.INACTIVE 
+        {
+          status: UserStatus.INACTIVE
         },
         'POLWEL user soft deleted - already had no email',
         req

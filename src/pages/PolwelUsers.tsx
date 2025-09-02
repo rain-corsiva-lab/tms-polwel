@@ -29,8 +29,7 @@ interface PolwelUser {
   mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
-  permissionLevel: string | null;
-  department: string | null;
+  // permissionLevel and department removed
   createdAt: string;
   updatedAt: string;
   auditTrail?: AuditTrailEntry[];
@@ -69,8 +68,6 @@ export default function PolwelUsers() {
       mfaEnabled: true,
       passwordExpiry: "2024-12-31T23:59:59Z",
       failedLoginAttempts: 0,
-      permissionLevel: "Administrator",
-      department: "Training Management",
       createdAt: "2023-06-01T00:00:00Z",
       updatedAt: "2024-08-12T10:30:00Z",
     },
@@ -84,8 +81,6 @@ export default function PolwelUsers() {
       mfaEnabled: false,
       passwordExpiry: "2024-11-30T23:59:59Z",
       failedLoginAttempts: 0,
-      permissionLevel: "Training Coordinator",
-      department: "Course Development",
       createdAt: "2023-07-15T00:00:00Z",
       updatedAt: "2024-08-11T14:15:00Z",
     },
@@ -99,8 +94,6 @@ export default function PolwelUsers() {
       mfaEnabled: false,
       passwordExpiry: "2024-09-30T23:59:59Z",
       failedLoginAttempts: 0,
-      permissionLevel: "Staff",
-      department: "Administration",
       createdAt: "2024-08-01T00:00:00Z",
       updatedAt: "2024-08-01T00:00:00Z",
     },
@@ -114,8 +107,6 @@ export default function PolwelUsers() {
       mfaEnabled: true,
       passwordExpiry: "2024-10-31T23:59:59Z",
       failedLoginAttempts: 0,
-      permissionLevel: "Training Coordinator",
-      department: "Quality Assurance",
       createdAt: "2023-08-20T00:00:00Z",
       updatedAt: "2024-08-10T09:45:00Z",
     },
@@ -284,11 +275,8 @@ export default function PolwelUsers() {
               const rows = users.map((u) => ({
                 Name: u.name,
                 Email: u.email,
-                Department: u.department || "",
-                PermissionLevel: u.permissionLevel || "",
                 Status: u.status,
                 MFA: u.mfaEnabled ? "Enabled" : "Disabled",
-                LastLogin: u.lastLogin ? new Date(u.lastLogin).toISOString() : "Never",
                 LastLogin: u.lastLogin ? format(new Date(u.lastLogin), "dd/MM/yyyy") : "Never",
                 CreatedAt: format(new Date(u.createdAt), "dd/MM/yyyy"),
                 UpdatedAt: format(new Date(u.updatedAt), "dd/MM/yyyy"),
@@ -318,12 +306,7 @@ export default function PolwelUsers() {
                 <label className="block text-xs font-medium mb-1">Status</label>
                 <select
                   value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    {
-                      user.lastLogin ? format(new Date(user.lastLogin), "dd/MM/yyyy") : "Never";
-                    }
-                  }}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                   className="h-9 rounded-md border bg-background px-3 py-1 text-sm"
                 >
                   <option value="">All</option>
@@ -390,8 +373,7 @@ export default function PolwelUsers() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Permission Level</TableHead>
+                {/* department and permission level removed */}
                 <TableHead>Status</TableHead>
                 <TableHead>MFA</TableHead>
                 <TableHead>Last Login</TableHead>
@@ -403,8 +385,7 @@ export default function PolwelUsers() {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.department || "Not Set"}</TableCell>
-                  <TableCell>{user.permissionLevel || "Not Set"}</TableCell>
+                  {/* department and permission level removed */}
                   <TableCell>
                     <Badge variant={user.status === "ACTIVE" ? "default" : user.status === "PENDING" ? "outline" : "secondary"}>{user.status}</Badge>
                   </TableCell>

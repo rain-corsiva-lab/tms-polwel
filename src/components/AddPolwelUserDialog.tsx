@@ -34,8 +34,7 @@ export function AddPolwelUserDialog() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    department: "",
-    permissionLevel: "",
+    // department and permissionLevel removed
   });
 
   const [permissions, setPermissions] = useState<UserPermissions>({
@@ -90,8 +89,6 @@ export function AddPolwelUserDialog() {
       const response = await polwelUsersApi.create({
         name: formData.name,
         email: formData.email,
-        department: formData.department || undefined,
-        permissionLevel: formData.permissionLevel || undefined,
         permissions: permissionNames,
       });
 
@@ -101,12 +98,7 @@ export function AddPolwelUserDialog() {
       });
 
       // Reset form and close dialog
-      setFormData({
-        name: "",
-        email: "",
-        department: "",
-        permissionLevel: "",
-      });
+      setFormData({ name: "", email: "" });
       setPermissions({
         "user-management-polwel": { view: false, create: false, edit: false, delete: false },
         "user-management-trainers": { view: false, create: false, edit: false, delete: false },
@@ -171,25 +163,7 @@ export function AddPolwelUserDialog() {
             />
           </div>
 
-          <div>
-            <Label htmlFor="department">Department</Label>
-            <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) => setFormData((prev) => ({ ...prev, department: e.target.value }))}
-              placeholder="Enter department (e.g. Training Management)"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="permissionLevel">Permission Level</Label>
-            <Input
-              id="permissionLevel"
-              value={formData.permissionLevel}
-              onChange={(e) => setFormData((prev) => ({ ...prev, permissionLevel: e.target.value }))}
-              placeholder="Enter permission level (e.g. Administrator)"
-            />
-          </div>
+          {/* department and permissionLevel fields removed */}
 
           <div>
             <Label>Access Level *</Label>
