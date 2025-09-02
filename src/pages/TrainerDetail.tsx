@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Mail, Phone, Calendar, Edit, Loader2 } from "lucide-react";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 import TrainerCalendar from "@/components/TrainerCalendar";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { trainersApi, coursesApi } from "@/lib/api";
@@ -16,7 +17,8 @@ interface Trainer {
   email: string;
   role: string;
   status: string;
-  availabilityStatus?: string;
+  contactNumber?: string;
+  onboardingDate?: string | null;
   partnerOrganization?: string;
   bio?: string;
   specializations?: string[];
@@ -76,7 +78,7 @@ const TrainerDetail = () => {
         email: "david.chen@training.com",
         role: "TRAINER",
         status: "ACTIVE",
-        availabilityStatus: "Available",
+        contactNumber: "+65 9123 4567",
         partnerOrganization: "Excellence Training Partners",
         bio: "Experienced trainer with over 5 years in corporate development. Passionate about empowering teams and individuals to reach their full potential through innovative training methodologies.",
         specializations: ["Leadership Development", "Team Building", "Communication Skills"],
@@ -91,7 +93,7 @@ const TrainerDetail = () => {
         email: "jennifer.lee@skillsacademy.com",
         role: "TRAINER",
         status: "ACTIVE",
-        availabilityStatus: "Available",
+        contactNumber: "+65 8765 4321",
         partnerOrganization: "Skills Academy",
         bio: "Certified communication specialist with expertise in presentation skills and public speaking. Helps professionals develop confidence and clarity in their communication.",
         specializations: ["Communication Skills", "Presentation Skills", "Public Speaking"],
@@ -105,7 +107,7 @@ const TrainerDetail = () => {
         email: "michael.wong@techtraining.com",
         role: "TRAINER",
         status: "PENDING",
-        availabilityStatus: "Unavailable",
+        contactNumber: "+65 6543 2109",
         partnerOrganization: "Tech Training Solutions",
         bio: "Technical trainer specializing in project management and agile methodologies. Brings practical industry experience to training programs.",
         specializations: ["Technical Skills", "Project Management", "Agile Methodology"],
@@ -120,7 +122,7 @@ const TrainerDetail = () => {
         email: "sarah.kim@professionaldevelopment.com",
         role: "TRAINER",
         status: "ACTIVE",
-        availabilityStatus: "Limited",
+        contactNumber: "+65 6555 1234",
         partnerOrganization: "Professional Development Center",
         bio: "Career development specialist focused on helping professionals advance their careers through strategic planning and skill development.",
         specializations: ["Professional Development", "Career Coaching", "Leadership Mentoring"],
@@ -256,12 +258,9 @@ const TrainerDetail = () => {
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      Available: "default",
-      AVAILABLE: "default",
-      Unavailable: "secondary",
-      UNAVAILABLE: "secondary",
-      Limited: "outline",
-      LIMITED: "outline",
+      ACTIVE: "default",
+      INACTIVE: "destructive",
+      PENDING: "outline",
     } as const;
 
     return (
@@ -343,6 +342,18 @@ const TrainerDetail = () => {
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">{trainer.partnerOrganization}</span>
+              </div>
+            )}
+            {trainer.contactNumber && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{trainer.contactNumber}</span>
+              </div>
+            )}
+            {trainer.onboardingDate && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{formatDateDDMMYYYY(trainer.onboardingDate)}</span>
               </div>
             )}
           </CardContent>

@@ -34,6 +34,7 @@ model User {
   contactNumber       String?
   additionalEmails    Json?
   availabilityStatus  AvailabilityStatus?
+  onboardingDate      DateTime?
   partnerOrganization String?
   bio                 String?             @db.Text
   specializations     Json?

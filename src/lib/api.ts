@@ -441,7 +441,7 @@ export const trainersApi = {
     limit?: number;
     search?: string;
     status?: string;
-    availabilityStatus?: string;
+  // availabilityStatus deprecated; do not provide
   } = {}) => {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -463,7 +463,8 @@ export const trainersApi = {
     name: string;
     email: string;
     status?: string;
-    availabilityStatus?: string;
+    contactNumber?: string;
+    onboardingDate?: string;
     partnerOrganization?: string;
     bio?: string;
     specializations?: string[];
@@ -481,7 +482,8 @@ export const trainersApi = {
     name?: string;
     email?: string;
     status?: string;
-    availabilityStatus?: string;
+    contactNumber?: string;
+    onboardingDate?: string;
     partnerOrganization?: string;
     bio?: string;
     specializations?: string[];

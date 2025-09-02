@@ -30,7 +30,7 @@ interface Trainer {
   mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
-  availabilityStatus: "Available" | "Unavailable" | "Limited";
+  contactNumber?: string;
   courses: string[];
   partnerOrganization: string | null;
   createdAt: string;
@@ -96,7 +96,7 @@ const TrainersAndPartners = () => {
       status: "ACTIVE",
       lastLogin: "2024-08-12T10:30:00Z",
       mfaEnabled: true,
-      availabilityStatus: "Available",
+      contactNumber: "+65 9123 4567",
       courses: ["Leadership Development", "Team Building"],
       partnerOrganization: "Excellence Training Partners",
       createdAt: "2023-09-01T00:00:00Z",
@@ -111,7 +111,7 @@ const TrainersAndPartners = () => {
       status: "ACTIVE",
       lastLogin: "2024-08-11T14:15:00Z",
       mfaEnabled: false,
-      availabilityStatus: "Available",
+      contactNumber: "+65 8765 4321",
       courses: ["Communication Skills", "Presentation Skills"],
       partnerOrganization: "Skills Academy",
       createdAt: "2023-10-15T00:00:00Z",
@@ -126,7 +126,7 @@ const TrainersAndPartners = () => {
       status: "PENDING",
       lastLogin: null,
       mfaEnabled: false,
-      availabilityStatus: "Unavailable",
+      contactNumber: "+65 6543 2109",
       courses: ["Technical Skills", "Project Management"],
       partnerOrganization: "Tech Training Solutions",
       createdAt: "2024-08-01T00:00:00Z",
@@ -141,7 +141,7 @@ const TrainersAndPartners = () => {
       status: "ACTIVE",
       lastLogin: "2024-08-10T09:00:00Z",
       mfaEnabled: true,
-      availabilityStatus: "Limited",
+      contactNumber: "+65 6555 1234",
       courses: ["Professional Development", "Career Coaching"],
       partnerOrganization: "Professional Development Center",
       createdAt: "2023-11-20T00:00:00Z",
@@ -204,7 +204,7 @@ const TrainersAndPartners = () => {
           ...trainer,
           role: "TRAINER" as const,
           courses: trainer.specializations || [],
-          availabilityStatus: "Available" as const,
+          contactNumber: trainer.contactNumber || undefined,
           specializations: trainer.specializations || [],
         })) || [];
 

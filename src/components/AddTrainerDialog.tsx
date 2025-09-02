@@ -1,36 +1,12 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import DateInput from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Plus, GraduationCap, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,7 +35,7 @@ const availableCourses = [
   "Marketing Fundamentals",
   "Financial Management",
   "Strategic Planning",
-  "Change Management"
+  "Change Management",
 ];
 
 export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () => void }) {
@@ -70,6 +46,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
     name: "",
     email: "",
     contactNumber: "",
+    onboardingDate: "",
     courses: [] as string[],
     status: "ACTIVE",
     partnerOrganization: "",
@@ -81,7 +58,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email) {
       toast({
         title: "Validation Error",
@@ -97,11 +74,12 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
         name: formData.name,
         email: formData.email,
         status: formData.status,
-        availabilityStatus: "AVAILABLE",
         partnerOrganization: formData.partnerOrganization || undefined,
         bio: formData.bio || undefined,
         specializations: formData.courses,
         experience: formData.experience || undefined,
+        contactNumber: formData.contactNumber || undefined,
+        onboardingDate: (formData as any).onboardingDate ? new Date((formData as any).onboardingDate).toISOString() : undefined,
       });
 
       toast({
@@ -114,6 +92,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
         name: "",
         email: "",
         contactNumber: "",
+        onboardingDate: "",
         courses: [],
         status: "ACTIVE",
         partnerOrganization: "",
@@ -121,7 +100,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
         experience: "",
       });
       setOpen(false);
-      
+
       // Call the callback to refresh the parent component
       if (onTrainerCreated) {
         onTrainerCreated();
@@ -135,18 +114,18 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
 
   const addCourse = (course: string) => {
     if (!formData.courses.includes(course)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        courses: [...prev.courses, course]
+        courses: [...prev.courses, course],
       }));
     }
     setCourseSearchOpen(false);
   };
 
   const removeCourse = (courseToRemove: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      courses: prev.courses.filter(course => course !== courseToRemove)
+      courses: prev.courses.filter((course) => course !== courseToRemove),
     }));
   };
 
@@ -164,29 +143,27 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
             <GraduationCap className="h-5 w-5" />
             Add New Trainer
           </DialogTitle>
-          <DialogDescription>
-            Create a new standalone trainer account. User will set password in onboarding flow.
-          </DialogDescription>
+          <DialogDescription>Create a new standalone trainer account. User will set password in onboarding flow.</DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Trainer Name *</Label>
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Enter trainer's full name"
             />
           </div>
-          
+
           <div>
             <Label htmlFor="email">Email Address * (Must be unique)</Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="Enter trainer's email address"
             />
           </div>
@@ -196,19 +173,27 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
             <Input
               id="partnerOrganization"
               value={formData.partnerOrganization}
-              onChange={(e) => setFormData(prev => ({ ...prev, partnerOrganization: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, partnerOrganization: e.target.value }))}
               placeholder="Enter partner organization name"
             />
           </div>
-          
 
           <div>
             <Label htmlFor="contactNumber">Contact Number</Label>
             <Input
               id="contactNumber"
               value={formData.contactNumber}
-              onChange={(e) => setFormData(prev => ({ ...prev, contactNumber: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
               placeholder="Trainer contact number"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="onboardingDate">Onboarding Date</Label>
+            <DateInput
+              id="onboardingDate"
+              value={(formData as any).onboardingDate || ""}
+              onChange={(v) => setFormData((prev) => ({ ...prev, onboardingDate: v }))}
             />
           </div>
 
@@ -217,12 +202,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
             <div className="space-y-2">
               <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={courseSearchOpen}
-                    className="w-full justify-between"
-                  >
+                  <Button variant="outline" role="combobox" aria-expanded={courseSearchOpen} className="w-full justify-between">
                     Search and select courses...
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -234,19 +214,10 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
                       <CommandEmpty>No courses found.</CommandEmpty>
                       <CommandGroup>
                         {availableCourses
-                          .filter(course => !formData.courses.includes(course))
+                          .filter((course) => !formData.courses.includes(course))
                           .map((course) => (
-                            <CommandItem
-                              key={course}
-                              value={course}
-                              onSelect={() => addCourse(course)}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.courses.includes(course) ? "opacity-100" : "opacity-0"
-                                )}
-                              />
+                            <CommandItem key={course} value={course} onSelect={() => addCourse(course)}>
+                              <Check className={cn("mr-2 h-4 w-4", formData.courses.includes(course) ? "opacity-100" : "opacity-0")} />
                               {course}
                             </CommandItem>
                           ))}
@@ -255,17 +226,14 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
                   </Command>
                 </PopoverContent>
               </Popover>
-              
+
               {/* Selected courses display */}
               {formData.courses.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {formData.courses.map((course) => (
                     <Badge key={course} variant="secondary" className="flex items-center gap-1">
                       {course}
-                      <X
-                        className="h-3 w-3 cursor-pointer hover:text-destructive"
-                        onClick={() => removeCourse(course)}
-                      />
+                      <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => removeCourse(course)} />
                     </Badge>
                   ))}
                 </div>
@@ -275,19 +243,10 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
         </form>
 
         <DialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => setOpen(false)}
-            disabled={loading}
-          >
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            disabled={loading}
-          >
+          <Button type="submit" onClick={handleSubmit} disabled={loading}>
             {loading ? "Creating..." : "Create Trainer"}
           </Button>
         </DialogFooter>

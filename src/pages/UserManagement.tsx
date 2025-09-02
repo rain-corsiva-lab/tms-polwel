@@ -5,23 +5,21 @@ import UserTable from "@/components/UserTable";
 import { AddUserDialog } from "@/components/AddUserDialog";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
 
-
 // Enhanced user data structure matching system requirements
 interface User {
   id: string;
   name: string;
   email: string;
-  role: 'POLWEL' | 'TrainingCoordinator' | 'Trainer' | 'Learner';
-  status: 'Active' | 'Inactive' | 'Pending' | 'Locked';
+  role: "POLWEL" | "TrainingCoordinator" | "Trainer" | "Learner";
+  status: "Active" | "Inactive" | "Pending" | "Locked";
   lastLogin: string;
   mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
-  
+
   // POLWEL specific
-  permissionLevel?: string;
-  department?: string;
-  
+  // permissionLevel and department removed
+
   // Training Coordinator specific
   organization?: string;
   division?: string;
@@ -30,16 +28,16 @@ interface User {
   paymentMode?: string;
   contactNumber?: string;
   additionalEmails?: string[];
-  
+
   // Trainer specific
-  availabilityStatus?: 'Available' | 'Unavailable' | 'Limited';
+  contactNumber?: string;
   courses?: string[];
   partnerOrganization?: string;
-  
+
   // Learner specific
   enrolledCourses?: string[];
   completedCourses?: string[];
-  
+
   // Audit fields
   createdAt: string;
   createdBy: string;
@@ -49,156 +47,154 @@ interface User {
 
 const allUsers: User[] = [
   {
-    id: '1',
-    name: 'John Tan',
-    email: 'john.tan@polwel.org',
-    role: 'POLWEL',
-    status: 'Active',
-    lastLogin: '2024-01-15 09:30',
+    id: "1",
+    name: "John Tan",
+    email: "john.tan@polwel.org",
+    role: "POLWEL",
+    status: "Active",
+    lastLogin: "2024-01-15 09:30",
     mfaEnabled: true,
-    passwordExpiry: '2024-04-15',
+    passwordExpiry: "2024-04-15",
     failedLoginAttempts: 0,
-    permissionLevel: 'Administrator',
-    department: 'System Administration',
-    createdAt: '2023-06-01',
-    createdBy: 'System',
-    lastModified: '2024-01-15',
-    modifiedBy: 'john.tan@polwel.org'
+    // permissionLevel & department removed
+    createdAt: "2023-06-01",
+    createdBy: "System",
+    lastModified: "2024-01-15",
+    modifiedBy: "john.tan@polwel.org",
   },
   {
-    id: '2',
-    name: 'Mary Lim',
-    email: 'mary.lim@spf.gov.sg',
-    role: 'TrainingCoordinator',
-    status: 'Active',
-    lastLogin: '2024-01-14 16:45',
+    id: "2",
+    name: "Mary Lim",
+    email: "mary.lim@spf.gov.sg",
+    role: "TrainingCoordinator",
+    status: "Active",
+    lastLogin: "2024-01-14 16:45",
     mfaEnabled: true,
-    passwordExpiry: '2024-04-14',
+    passwordExpiry: "2024-04-14",
     failedLoginAttempts: 0,
-    organization: 'Singapore Police Force',
-    division: 'Ang Mo Kio Division',
-    buCostCentre: 'AMK001',
+    organization: "Singapore Police Force",
+    division: "Ang Mo Kio Division",
+    buCostCentre: "AMK001",
     buNumberRequired: true,
-    paymentMode: 'ULTF',
-    contactNumber: '+65 6555 0001',
-    additionalEmails: ['mary.lim.backup@spf.gov.sg'],
-    createdAt: '2023-08-15',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-14',
-    modifiedBy: 'mary.lim@spf.gov.sg'
+    paymentMode: "ULTF",
+    contactNumber: "+65 6555 0001",
+    additionalEmails: ["mary.lim.backup@spf.gov.sg"],
+    createdAt: "2023-08-15",
+    createdBy: "john.tan@polwel.org",
+    lastModified: "2024-01-14",
+    modifiedBy: "mary.lim@spf.gov.sg",
   },
   {
-    id: '3',
-    name: 'David Chen',
-    email: 'david.chen@training.com',
-    role: 'Trainer',
-    status: 'Active',
-    lastLogin: '2024-01-13 14:20',
+    id: "3",
+    name: "David Chen",
+    email: "david.chen@training.com",
+    role: "Trainer",
+    status: "Active",
+    lastLogin: "2024-01-13 14:20",
     mfaEnabled: true,
-    passwordExpiry: '2024-04-13',
+    passwordExpiry: "2024-04-13",
     failedLoginAttempts: 0,
-    availabilityStatus: 'Available',
-    courses: ['Leadership Development', 'Team Building'],
-    partnerOrganization: 'Excellence Training Partners',
-    createdAt: '2023-09-01',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-13',
-    modifiedBy: 'david.chen@training.com'
+    contactNumber: "+65 9123 4567",
+    courses: ["Leadership Development", "Team Building"],
+    partnerOrganization: "Excellence Training Partners",
+    createdAt: "2023-09-01",
+    createdBy: "john.tan@polwel.org",
+    lastModified: "2024-01-13",
+    modifiedBy: "david.chen@training.com",
   },
   {
-    id: '4',
-    name: 'Sarah Wong',
-    email: 'sarah.wong@polwel.org',
-    role: 'POLWEL',
-    status: 'Inactive',
-    lastLogin: '2024-01-10 11:15',
+    id: "4",
+    name: "Sarah Wong",
+    email: "sarah.wong@polwel.org",
+    role: "POLWEL",
+    status: "Inactive",
+    lastLogin: "2024-01-10 11:15",
     mfaEnabled: true,
-    passwordExpiry: '2024-04-10',
+    passwordExpiry: "2024-04-10",
     failedLoginAttempts: 0,
-    permissionLevel: 'Manager',
-    department: 'Course Management',
-    createdAt: '2023-07-01',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-10',
-    modifiedBy: 'john.tan@polwel.org'
+    // permissionLevel & department removed
+    createdAt: "2023-07-01",
+    createdBy: "john.tan@polwel.org",
+    lastModified: "2024-01-10",
+    modifiedBy: "john.tan@polwel.org",
   },
   {
-    id: '5',
-    name: 'Ahmad Rahman',
-    email: 'ahmad.rahman@spf.gov.sg',
-    role: 'TrainingCoordinator',
-    status: 'Active',
-    lastLogin: '2024-01-15 08:45',
+    id: "5",
+    name: "Ahmad Rahman",
+    email: "ahmad.rahman@spf.gov.sg",
+    role: "TrainingCoordinator",
+    status: "Active",
+    lastLogin: "2024-01-15 08:45",
     mfaEnabled: true,
-    passwordExpiry: '2024-04-15',
+    passwordExpiry: "2024-04-15",
     failedLoginAttempts: 0,
-    organization: 'Singapore Police Force',
-    division: 'Jurong Police Division',
-    buCostCentre: 'JPD002',
+    organization: "Singapore Police Force",
+    division: "Jurong Police Division",
+    buCostCentre: "JPD002",
     buNumberRequired: true,
-    paymentMode: 'Transition Dollars',
-    contactNumber: '+65 6555 0002',
-    createdAt: '2023-09-15',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-15',
-    modifiedBy: 'ahmad.rahman@spf.gov.sg'
+    paymentMode: "Transition Dollars",
+    contactNumber: "+65 6555 0002",
+    createdAt: "2023-09-15",
+    createdBy: "john.tan@polwel.org",
+    lastModified: "2024-01-15",
+    modifiedBy: "ahmad.rahman@spf.gov.sg",
   },
   {
-    id: '6',
-    name: 'Jennifer Lee',
-    email: 'jennifer.lee@partners.com',
-    role: 'Trainer',
-    status: 'Active',
-    lastLogin: '2024-01-12 15:30',
+    id: "6",
+    name: "Jennifer Lee",
+    email: "jennifer.lee@partners.com",
+    role: "Trainer",
+    status: "Active",
+    lastLogin: "2024-01-12 15:30",
     mfaEnabled: true,
-    passwordExpiry: '2024-04-12',
+    passwordExpiry: "2024-04-12",
     failedLoginAttempts: 0,
-    availabilityStatus: 'Limited',
-    courses: ['Communication Skills', 'Customer Service'],
-    partnerOrganization: 'Professional Development Corp',
-    createdAt: '2023-10-01',
-    createdBy: 'john.tan@polwel.org',
-    lastModified: '2024-01-12',
-    modifiedBy: 'jennifer.lee@partners.com'
+    contactNumber: "+65 8765 4321",
+    courses: ["Communication Skills", "Customer Service"],
+    partnerOrganization: "Professional Development Corp",
+    createdAt: "2023-10-01",
+    createdBy: "john.tan@polwel.org",
+    lastModified: "2024-01-12",
+    modifiedBy: "jennifer.lee@partners.com",
   },
   {
-    id: '7',
-    name: 'Raj Kumar',
-    email: 'raj.kumar@spf.gov.sg',
-    role: 'Learner',
-    status: 'Active',
-    lastLogin: '2024-01-14 10:20',
+    id: "7",
+    name: "Raj Kumar",
+    email: "raj.kumar@spf.gov.sg",
+    role: "Learner",
+    status: "Active",
+    lastLogin: "2024-01-14 10:20",
     mfaEnabled: false,
-    passwordExpiry: '2024-04-14',
+    passwordExpiry: "2024-04-14",
     failedLoginAttempts: 0,
-    enrolledCourses: ['Leadership Development', 'Communication Skills'],
-    completedCourses: ['Basic Training'],
-    organization: 'Singapore Police Force',
-    division: 'Ang Mo Kio Division',
-    createdAt: '2023-11-01',
-    createdBy: 'mary.lim@spf.gov.sg',
-    lastModified: '2024-01-14',
-    modifiedBy: 'raj.kumar@spf.gov.sg'
+    enrolledCourses: ["Leadership Development", "Communication Skills"],
+    completedCourses: ["Basic Training"],
+    organization: "Singapore Police Force",
+    division: "Ang Mo Kio Division",
+    createdAt: "2023-11-01",
+    createdBy: "mary.lim@spf.gov.sg",
+    lastModified: "2024-01-14",
+    modifiedBy: "raj.kumar@spf.gov.sg",
   },
   {
-    id: '8',
-    name: 'Lisa Teo',
-    email: 'lisa.teo@spf.gov.sg',
-    role: 'Learner',
-    status: 'Locked',
-    lastLogin: '2024-01-05 14:30',
+    id: "8",
+    name: "Lisa Teo",
+    email: "lisa.teo@spf.gov.sg",
+    role: "Learner",
+    status: "Locked",
+    lastLogin: "2024-01-05 14:30",
     mfaEnabled: false,
-    passwordExpiry: '2024-04-05',
+    passwordExpiry: "2024-04-05",
     failedLoginAttempts: 5,
-    enrolledCourses: ['Team Building'],
+    enrolledCourses: ["Team Building"],
     completedCourses: [],
-    organization: 'Singapore Police Force',
-    division: 'Jurong Police Division',
-    createdAt: '2023-11-15',
-    createdBy: 'ahmad.rahman@spf.gov.sg',
-    lastModified: '2024-01-05',
-    modifiedBy: 'System'
-  }
+    organization: "Singapore Police Force",
+    division: "Jurong Police Division",
+    createdAt: "2023-11-15",
+    createdBy: "ahmad.rahman@spf.gov.sg",
+    lastModified: "2024-01-05",
+    modifiedBy: "System",
+  },
 ];
 
 const UserManagement = () => {

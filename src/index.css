@@ -121,3 +121,20 @@
 
   /* sidebar left padding is applied per-layout to avoid portal positioning issues */
 }
+
+/* Hide native datepicker icon for inputs we control so we show only our custom icon */
+.date-input-no-native::-webkit-calendar-picker-indicator {
+  display: none;
+}
+.date-input-no-native::-webkit-clear-button {
+  display: none;
+}
+/* Firefox */
+.date-input-no-native::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* Ensure the wrapper has cursor pointer to indicate clickability */
+.relative > .date-input-no-native {
+  cursor: pointer;
+}

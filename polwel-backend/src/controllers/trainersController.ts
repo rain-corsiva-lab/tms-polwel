@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { UserRole, UserStatus, AvailabilityStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
@@ -15,7 +15,7 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
   console.log(`👨‍🏫 [TRAINERS] Get trainers request started`);
   
   try {
-    const { page = 1, limit = 10, search, status, availabilityStatus } = req.query;
+  const { page = 1, limit = 10, search, status } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
     // Build where clause
@@ -35,9 +35,7 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
       where.status = status as UserStatus;
     }
 
-    if (availabilityStatus) {
-      where.availabilityStatus = availabilityStatus as AvailabilityStatus;
-    }
+  // availabilityStatus has been deprecated from API responses/UI; ignore if provided.
 
     // Get trainers with pagination
     // logDatabaseQuery('User', 'findMany', { where, skip, limit });
@@ -50,12 +48,14 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
           name: true,
           role: true,
           status: true,
-          availabilityStatus: true,
+          // availabilityStatus intentionally omitted (deprecated)
           partnerOrganization: true,
           bio: true,
           specializations: true,
           certifications: true,
           experience: true,
+          contactNumber: true,
+          onboardingDate: true,
           rating: true,
           createdAt: true,
           updatedAt: true
@@ -108,13 +108,15 @@ export const getTrainerById = async (req: AuthenticatedRequest, res: Response) =
         name: true,
         role: true,
         status: true,
-        availabilityStatus: true,
+    // availabilityStatus intentionally omitted (deprecated)
         partnerOrganization: true,
         bio: true,
         specializations: true,
         certifications: true,
         profileImage: true,
         experience: true,
+    contactNumber: true,
+    onboardingDate: true,
         rating: true,
         createdAt: true,
         updatedAt: true
@@ -145,12 +147,13 @@ export const createTrainer = async (req: AuthenticatedRequest, res: Response) =>
       name,
       email,
       status = UserStatus.ACTIVE,
-      availabilityStatus = AvailabilityStatus.AVAILABLE,
       partnerOrganization,
       bio,
       specializations,
       certifications,
-      experience
+      experience,
+      contactNumber,
+      onboardingDate,
     } = req.body;
 
     // Validation
@@ -185,12 +188,14 @@ export const createTrainer = async (req: AuthenticatedRequest, res: Response) =>
         password: hashedPassword,
         role: UserRole.TRAINER,
         status: UserStatus.PENDING, // Set as PENDING for onboarding
-        availabilityStatus,
+  // availabilityStatus removed from create payload; kept in DB for now but not set here
         partnerOrganization: partnerOrganization || null,
         bio: bio || null,
         specializations: specializations || [],
         certifications: certifications || [],
         experience: experience || null,
+  ...(contactNumber !== undefined && { contactNumber }),
+  ...(onboardingDate ? { onboardingDate: new Date(onboardingDate) } : {}),
         resetToken: setupToken, // Use resetToken for account completion
         resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         ...(req.user?.userId && { createdBy: req.user.userId })
@@ -201,12 +206,14 @@ export const createTrainer = async (req: AuthenticatedRequest, res: Response) =>
         email: true,
         role: true,
         status: true,
-        availabilityStatus: true,
+  // availabilityStatus intentionally omitted (deprecated)
         partnerOrganization: true,
         bio: true,
         specializations: true,
         certifications: true,
         experience: true,
+  contactNumber: true,
+  onboardingDate: true,
         createdAt: true
       }
     });

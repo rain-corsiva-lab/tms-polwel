@@ -1,23 +1,9 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,11 +17,9 @@ export function AddUserDialog() {
     password: "",
     additionalEmails: "",
     mfaRequired: true,
-    
-    // POLWEL specific
-    permissionLevel: "",
-    department: "",
-    
+
+    // POLWEL specific (removed permissionLevel & department)
+
     // Training Coordinator specific
     organizationName: "",
     division: "",
@@ -44,15 +28,14 @@ export function AddUserDialog() {
     buNumberRequired: false,
     paymentMode: "",
     contactNumber: "",
-    
+
     // Trainer specific
     courses: "",
-    availabilityStatus: "Available",
     partnerOrganization: "",
-    
+
     // Learner specific
     enrolledCourses: "",
-    
+
     status: "Active",
   });
 
@@ -60,7 +43,7 @@ export function AddUserDialog() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Enhanced validation based on requirements
     if (!userType || !formData.name || !formData.email) {
       toast({
@@ -81,7 +64,7 @@ export function AddUserDialog() {
         });
         return;
       }
-      
+
       // BU Cost Centre mandatory for SPF/POLWEL organizations
       if ((formData.organizationName.includes("SPF") || formData.organizationName.includes("POLWEL")) && !formData.buCostCentre) {
         toast({
@@ -93,11 +76,12 @@ export function AddUserDialog() {
       }
     }
 
-
     // Here you would typically send the data to your backend
     toast({
       title: "User Created",
-      description: `${userType === "TrainingCoordinator" ? "Training Coordinator" : userType} "${formData.name}" has been created successfully. Onboarding email sent.`,
+      description: `${userType === "TrainingCoordinator" ? "Training Coordinator" : userType} "${
+        formData.name
+      }" has been created successfully. Onboarding email sent.`,
     });
 
     // Reset form and close dialog
@@ -107,8 +91,7 @@ export function AddUserDialog() {
       password: "",
       additionalEmails: "",
       mfaRequired: true,
-      permissionLevel: "",
-      department: "",
+      // permissionLevel & department removed
       organizationName: "",
       division: "",
       divisionAddress: "",
@@ -117,7 +100,6 @@ export function AddUserDialog() {
       paymentMode: "",
       contactNumber: "",
       courses: "",
-      availabilityStatus: "Available",
       partnerOrganization: "",
       enrolledCourses: "",
       status: "Active",
@@ -132,27 +114,7 @@ export function AddUserDialog() {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="permissionLevel">Permission Level *</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, permissionLevel: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select permission level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Administrator">Administrator</SelectItem>
-                  <SelectItem value="Manager">Manager</SelectItem>
-                  <SelectItem value="Coordinator">Coordinator</SelectItem>
-                  <SelectItem value="Viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="department">Department</Label>
-              <Input
-                id="department"
-                value={formData.department}
-                onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                placeholder="e.g. System Administration, Course Management"
-              />
+              <p className="text-sm text-muted-foreground">POLWEL users will be managed via role and permissions. No additional fields required here.</p>
             </div>
           </div>
         );
@@ -162,7 +124,7 @@ export function AddUserDialog() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="organizationName">Organization Name *</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, organizationName: value }))}>
+              <Select onValueChange={(value) => setFormData((prev) => ({ ...prev, organizationName: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select organization" />
                 </SelectTrigger>
@@ -178,7 +140,7 @@ export function AddUserDialog() {
               <Input
                 id="division"
                 value={formData.division}
-                onChange={(e) => setFormData(prev => ({ ...prev, division: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, division: e.target.value }))}
                 placeholder="e.g. Ang Mo Kio Division, Airport Police Division"
               />
             </div>
@@ -187,18 +149,18 @@ export function AddUserDialog() {
               <Input
                 id="divisionAddress"
                 value={formData.divisionAddress}
-                onChange={(e) => setFormData(prev => ({ ...prev, divisionAddress: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, divisionAddress: e.target.value }))}
                 placeholder="Enter division address"
               />
             </div>
             <div>
               <Label htmlFor="buCostCentre">
-                BU Cost Centre {(formData.organizationName.includes("SPF") || formData.organizationName.includes("POLWEL")) ? "*" : ""}
+                BU Cost Centre {formData.organizationName.includes("SPF") || formData.organizationName.includes("POLWEL") ? "*" : ""}
               </Label>
               <Input
                 id="buCostCentre"
                 value={formData.buCostCentre}
-                onChange={(e) => setFormData(prev => ({ ...prev, buCostCentre: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, buCostCentre: e.target.value }))}
                 placeholder="Mandatory for SPF/POLWEL organizations"
               />
             </div>
@@ -207,13 +169,13 @@ export function AddUserDialog() {
                 type="checkbox"
                 id="buNumberRequired"
                 checked={formData.buNumberRequired}
-                onChange={(e) => setFormData(prev => ({ ...prev, buNumberRequired: e.target.checked }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, buNumberRequired: e.target.checked }))}
               />
               <Label htmlFor="buNumberRequired">Require BU Number for learner enrollment</Label>
             </div>
             <div>
               <Label htmlFor="paymentMode">Payment Mode</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
+              <Select onValueChange={(value) => setFormData((prev) => ({ ...prev, paymentMode: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select payment mode" />
                 </SelectTrigger>
@@ -234,7 +196,7 @@ export function AddUserDialog() {
               <Input
                 id="contactNumber"
                 value={formData.contactNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactNumber: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
                 placeholder="Training coordinator contact number"
               />
             </div>
@@ -243,7 +205,7 @@ export function AddUserDialog() {
               <Input
                 id="additionalEmails"
                 value={formData.additionalEmails}
-                onChange={(e) => setFormData(prev => ({ ...prev, additionalEmails: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, additionalEmails: e.target.value }))}
                 placeholder="Comma-separated emails for multiple contacts"
               />
             </div>
@@ -258,7 +220,7 @@ export function AddUserDialog() {
               <Input
                 id="partnerOrganization"
                 value={formData.partnerOrganization}
-                onChange={(e) => setFormData(prev => ({ ...prev, partnerOrganization: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, partnerOrganization: e.target.value }))}
                 placeholder="Training partner organization"
               />
             </div>
@@ -267,7 +229,7 @@ export function AddUserDialog() {
               <Input
                 id="contactNumber"
                 value={formData.contactNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactNumber: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
                 placeholder="Trainer contact number"
               />
             </div>
@@ -276,23 +238,11 @@ export function AddUserDialog() {
               <Input
                 id="courses"
                 value={formData.courses}
-                onChange={(e) => setFormData(prev => ({ ...prev, courses: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, courses: e.target.value }))}
                 placeholder="Assigned courses (comma separated)"
               />
             </div>
-            <div>
-              <Label htmlFor="availabilityStatus">Availability Status</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, availabilityStatus: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select availability" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Available">Available</SelectItem>
-                  <SelectItem value="Unavailable">Unavailable</SelectItem>
-                  <SelectItem value="Limited">Limited Availability</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Availability status removed from trainer creation UI */}
           </div>
         );
 
@@ -301,7 +251,7 @@ export function AddUserDialog() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="organizationName">Organization Name *</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, organizationName: value }))}>
+              <Select onValueChange={(value) => setFormData((prev) => ({ ...prev, organizationName: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select organization" />
                 </SelectTrigger>
@@ -317,7 +267,7 @@ export function AddUserDialog() {
               <Input
                 id="division"
                 value={formData.division}
-                onChange={(e) => setFormData(prev => ({ ...prev, division: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, division: e.target.value }))}
                 placeholder="e.g. Ang Mo Kio Division"
               />
             </div>
@@ -326,7 +276,7 @@ export function AddUserDialog() {
               <Input
                 id="enrolledCourses"
                 value={formData.enrolledCourses}
-                onChange={(e) => setFormData(prev => ({ ...prev, enrolledCourses: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, enrolledCourses: e.target.value }))}
                 placeholder="Initial course enrollment (comma separated)"
               />
             </div>
@@ -349,11 +299,9 @@ export function AddUserDialog() {
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>
-            Create a new user account in the Training Management System.
-          </DialogDescription>
+          <DialogDescription>Create a new user account in the Training Management System.</DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* User Type Selection */}
           <div>
@@ -362,12 +310,12 @@ export function AddUserDialog() {
               <SelectTrigger>
                 <SelectValue placeholder="Select user type" />
               </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="POLWEL">POLWEL User</SelectItem>
-                  <SelectItem value="TrainingCoordinator">Training Coordinator</SelectItem>
-                  <SelectItem value="Trainer">Trainer & Partner</SelectItem>
-                  <SelectItem value="Learner">Learner</SelectItem>
-                </SelectContent>
+              <SelectContent>
+                <SelectItem value="POLWEL">POLWEL User</SelectItem>
+                <SelectItem value="TrainingCoordinator">Training Coordinator</SelectItem>
+                <SelectItem value="Trainer">Trainer & Partner</SelectItem>
+                <SelectItem value="Learner">Learner</SelectItem>
+              </SelectContent>
             </Select>
           </div>
 
@@ -375,28 +323,25 @@ export function AddUserDialog() {
           {userType && (
             <>
               <div>
-                <Label htmlFor="name">
-                  {userType === "TrainingCoordinator" ? "Training Coordinator Name" : "Name"} *
-                </Label>
+                <Label htmlFor="name">{userType === "TrainingCoordinator" ? "Training Coordinator Name" : "Name"} *</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter full name"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="email">Email Address * (Must be unique)</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                   placeholder="Enter unique email address"
                 />
               </div>
-              
 
               {/* User Type Specific Fields */}
               {renderUserTypeFields()}

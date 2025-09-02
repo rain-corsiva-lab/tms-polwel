@@ -24,7 +24,7 @@ interface TrainerProfile {
   email: string;
   contactNumber?: string;
   status: string;
-  availabilityStatus: string;
+  onboardingDate?: string | null;
   partnerOrganization?: string;
   bio?: string;
   specializations?: string[];

@@ -38,14 +38,14 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
         name: true,
         email: true,
         status: true,
-        availabilityStatus: true,
         partnerOrganization: true,
         bio: true,
         specializations: true,
         certifications: true,
         experience: true,
         createdAt: true,
-        contactNumber: true
+        contactNumber: true,
+        onboardingDate: true,
       }
     });
 
