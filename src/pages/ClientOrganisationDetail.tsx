@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,38 +80,63 @@ const mockTrainers: Trainer[] = [
 
 // Mock trainer blockout dates data
 const mockTrainerBlockouts: TrainerBlockout[] = [
-  {
-    id: "1",
-    trainerId: "1",
-    trainerName: "Dr. Sarah Johnson",
-    date: "2024-01-15",
-    remarks: "Personal Leave",
-    type: "personal",
-    description: "Family commitment",
-  },
-  {
-    id: "2",
-    trainerId: "2",
-    trainerName: "Mike Chen",
-    date: "2024-01-25",
-    remarks: "Conference Attendance",
-    type: "unavailable",
-    description: "Speaking at Tech Conference 2024",
-  },
-  {
-    id: "3",
-    trainerId: "3",
-    trainerName: "Emily Rodriguez",
-    date: "2024-01-30",
-    remarks: "Training Course",
-    type: "personal",
-    description: "Attending advanced safety certification",
-  },
+  // {
+  //   id: "1",
+  //   trainerId: "1",
+  //   trainerName: "Dr. Sarah Johnson",
+  //   date: "2024-01-15",
+  //   remarks: "Personal Leave",
+  //   type: "personal",
+  //   description: "Family commitment",
+  // },
+  // {
+  //   id: "2",
+  //   trainerId: "2",
+  //   trainerName: "Mike Chen",
+  //   date: "2024-01-25",
+  //   remarks: "Conference Attendance",
+  //   type: "unavailable",
+  //   description: "Speaking at Tech Conference 2024",
+  // },
+  // {
+  //   id: "3",
+  //   trainerId: "3",
+  //   trainerName: "Emily Rodriguez",
+  //   date: "2024-01-30",
+  //   remarks: "Training Course",
+  //   type: "personal",
+  //   description: "Attending advanced safety certification",
+  // },
 ];
 
 const ClientOrganisationDetail = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("information");
+  // Controlled dropdown menu state to avoid accidental opens during scroll
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const lastScrollRef = useRef<number>(0);
+
+  // update last scroll time to detect recent scrolls
+  useEffect(() => {
+    const onScroll = () => {
+      lastScrollRef.current = Date.now();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleMenuOpenChange = (nextOpen: boolean, id: string | null) => {
+    if (nextOpen) {
+      const now = Date.now();
+      if (now - lastScrollRef.current < 250) {
+        // ignore open triggered immediately after scroll
+        return;
+      }
+      setOpenMenuId(id);
+    } else {
+      setOpenMenuId(null);
+    }
+  };
   const { toast } = useToast();
 
   // API state management
@@ -577,9 +602,9 @@ const ClientOrganisationDetail = () => {
                         <TableCell>{coordinator.designation}</TableCell>
                         <TableCell>{new Date(coordinator.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <DropdownMenu>
+                          <DropdownMenu open={openMenuId === coordinator.id} onOpenChange={(next) => handleMenuOpenChange(next, next ? coordinator.id : null)}>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -697,9 +722,9 @@ const ClientOrganisationDetail = () => {
                         <TableCell>{learner.completedCourses || 0}</TableCell>
                         <TableCell>{getStatusBadge(learner.status || "active")}</TableCell>
                         <TableCell>
-                          <DropdownMenu>
+                          <DropdownMenu open={openMenuId === learner.id} onOpenChange={(next) => handleMenuOpenChange(next, next ? learner.id : null)}>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>

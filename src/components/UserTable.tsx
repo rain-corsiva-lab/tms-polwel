@@ -2,7 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoreHorizontal, Edit, Trash2, Eye, History, Mail } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -141,9 +142,9 @@ const UserTable = ({ users, title }: UserTableProps) => {
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">{user.lastLogin || "Never"}</td>
                   <td className="py-3 px-4">
-                    <DropdownMenu>
+                    <SafeDropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -180,7 +181,7 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           Delete User
                         </DropdownMenuItem>
                       </DropdownMenuContent>
-                    </DropdownMenu>
+                    </SafeDropdownMenu>
                   </td>
                 </tr>
               ))}

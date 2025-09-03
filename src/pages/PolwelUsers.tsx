@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail, RefreshCw, X } from "lucide-react";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
@@ -369,9 +370,9 @@ export default function PolwelUsers() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <EditPolwelUserDialog user={user} onUserUpdated={fetchUsers} />
-                      <DropdownMenu>
+                      <SafeDropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -419,7 +420,7 @@ export default function PolwelUsers() {
                             Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
-                      </DropdownMenu>
+                      </SafeDropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
