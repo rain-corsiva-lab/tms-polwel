@@ -361,7 +361,8 @@ export const trainersApi = {
   // Create trainer blockout
   createBlockout: async (id: string, blockoutData: {
     date: string;
-    reason: string;
+  // Remarks replace reason and are optional
+  remarks?: string;
     type: string;
     description?: string;
     isRecurring?: boolean;

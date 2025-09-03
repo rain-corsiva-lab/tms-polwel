@@ -632,8 +632,8 @@ async function main() {
       trainerId: davidChen.id,
       startDate: new Date('2024-01-25'),
       endDate: new Date('2024-01-25'),
-      reason: 'Conference Attendance',
-      type: 'unavailable',
+  remarks: 'Conference Attendance',
+  // 'type' removed in schema; omitted
       description: 'Speaking at Leadership Excellence Conference 2024',
     },
   });
@@ -643,8 +643,8 @@ async function main() {
       trainerId: jenniferLee.id,
       startDate: new Date('2024-02-05'),
       endDate: new Date('2024-02-05'),
-      reason: 'Personal Leave',
-      type: 'personal',
+  remarks: 'Personal Leave',
+  // 'type' removed in schema; omitted
       description: 'Family commitment',
     },
   });

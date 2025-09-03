@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,36 +24,27 @@ const blockoutTypes = [
   { value: "holiday", label: "Public Holiday" },
   { value: "unavailable", label: "Unavailable" },
   { value: "maintenance", label: "Training/Maintenance" },
-  { value: "other", label: "Other" }
+  { value: "other", label: "Other" },
 ];
 
 const recurringPatterns = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
-  { value: "yearly", label: "Yearly" }
+  { value: "yearly", label: "Yearly" },
 ];
 
-export function EditTrainerBlockoutDialog({
-  blockout,
-  onBlockoutUpdate,
-  onClose
-}: EditTrainerBlockoutDialogProps) {
+export function EditTrainerBlockoutDialog({ blockout, onBlockoutUpdate, onClose }: EditTrainerBlockoutDialogProps) {
   const [formData, setFormData] = useState({
     startDate: blockout.startDate,
     endDate: blockout.endDate,
-    reason: blockout.reason,
-    type: blockout.type,
-    description: blockout.description || '',
+    remarks: (blockout as any).remarks || "",
+    description: blockout.description || "",
     isRecurring: blockout.isRecurring,
-    recurringPattern: blockout.recurringPattern || ''
+    recurringPattern: blockout.recurringPattern || "",
   });
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    blockout.startDate ? parseISO(blockout.startDate) : undefined
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    blockout.endDate ? parseISO(blockout.endDate) : undefined
-  );
+  const [startDate, setStartDate] = useState<Date | undefined>(blockout.startDate ? parseISO(blockout.startDate) : undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(blockout.endDate ? parseISO(blockout.endDate) : undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -61,27 +52,21 @@ export function EditTrainerBlockoutDialog({
     const newErrors: Record<string, string> = {};
 
     if (!startDate) {
-      newErrors.startDate = 'Start date is required';
+      newErrors.startDate = "Start date is required";
     }
 
     if (!endDate) {
-      newErrors.endDate = 'End date is required';
+      newErrors.endDate = "End date is required";
     }
 
     if (startDate && endDate && startDate > endDate) {
-      newErrors.endDate = 'End date cannot be before start date';
+      newErrors.endDate = "End date cannot be before start date";
     }
 
-    if (!formData.reason.trim()) {
-      newErrors.reason = 'Reason is required';
-    }
-
-    if (!formData.type) {
-      newErrors.type = 'Type is required';
-    }
+    // remarks are optional now
 
     if (formData.isRecurring && !formData.recurringPattern) {
-      newErrors.recurringPattern = 'Recurring pattern is required when recurring is enabled';
+      newErrors.recurringPattern = "Recurring pattern is required when recurring is enabled";
     }
 
     setErrors(newErrors);
@@ -94,33 +79,32 @@ export function EditTrainerBlockoutDialog({
     setIsSubmitting(true);
     try {
       await onBlockoutUpdate(blockout.id, {
-        startDate: startDate ? format(startDate, 'yyyy-MM-dd') : formData.startDate,
-        endDate: endDate ? format(endDate, 'yyyy-MM-dd') : formData.endDate,
-        reason: formData.reason.trim(),
-        type: formData.type,
+        startDate: startDate ? format(startDate, "yyyy-MM-dd") : formData.startDate,
+        endDate: endDate ? format(endDate, "yyyy-MM-dd") : formData.endDate,
+        remarks: formData.remarks?.trim() || null,
         description: formData.description.trim(),
         isRecurring: formData.isRecurring,
-        recurringPattern: formData.isRecurring ? formData.recurringPattern : undefined
+        recurringPattern: formData.isRecurring ? formData.recurringPattern : undefined,
       });
     } catch (error) {
-      console.error('Error updating blockout:', error);
-      setErrors({ submit: 'Failed to update blockout. Please try again.' });
+      console.error("Error updating blockout:", error);
+      setErrors({ submit: "Failed to update blockout. Please try again." });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
 
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: ''
+        [field]: "",
       }));
     }
   };
@@ -130,9 +114,7 @@ export function EditTrainerBlockoutDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Trainer Blockout</DialogTitle>
-          <DialogDescription>
-            Update the blockout details for {blockout.trainerName}
-          </DialogDescription>
+          <DialogDescription>Update the blockout details for {blockout.trainerName}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
@@ -144,11 +126,7 @@ export function EditTrainerBlockoutDialog({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground",
-                      errors.startDate && "border-red-500"
-                    )}
+                    className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground", errors.startDate && "border-red-500")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {startDate ? format(startDate, "MMM dd, yyyy") : "Start date"}
@@ -161,11 +139,11 @@ export function EditTrainerBlockoutDialog({
                     onSelect={(date) => {
                       setStartDate(date);
                       if (date) {
-                        setFormData(prev => ({ ...prev, startDate: format(date, 'yyyy-MM-dd') }));
+                        setFormData((prev) => ({ ...prev, startDate: format(date, "yyyy-MM-dd") }));
                         // Reset end date if it's before the new start date
                         if (endDate && date > endDate) {
                           setEndDate(undefined);
-                          setFormData(prev => ({ ...prev, endDate: '' }));
+                          setFormData((prev) => ({ ...prev, endDate: "" }));
                         }
                       }
                     }}
@@ -183,11 +161,7 @@ export function EditTrainerBlockoutDialog({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground",
-                      errors.endDate && "border-red-500"
-                    )}
+                    className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground", errors.endDate && "border-red-500")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {endDate ? format(endDate, "MMM dd, yyyy") : "End date"}
@@ -200,7 +174,7 @@ export function EditTrainerBlockoutDialog({
                     onSelect={(date) => {
                       setEndDate(date);
                       if (date) {
-                        setFormData(prev => ({ ...prev, endDate: format(date, 'yyyy-MM-dd') }));
+                        setFormData((prev) => ({ ...prev, endDate: format(date, "yyyy-MM-dd") }));
                       }
                     }}
                     disabled={(date) => date < new Date("1900-01-01") || (startDate && date < startDate)}
@@ -212,38 +186,17 @@ export function EditTrainerBlockoutDialog({
             </div>
           </div>
 
-          {/* Reason */}
+          {/* Remarks (optional) */}
           <div className="grid gap-2">
-            <Label htmlFor="reason">Reason *</Label>
+            <Label htmlFor="remarks">Remarks (optional)</Label>
             <Input
-              id="reason"
-              placeholder="e.g., Personal Leave, Sick Day, Training"
-              value={formData.reason}
-              onChange={(e) => handleInputChange('reason', e.target.value)}
-              className={errors.reason ? "border-red-500" : ""}
+              id="remarks"
+              placeholder="Optional remarks"
+              value={formData.remarks}
+              onChange={(e) => handleInputChange("remarks", e.target.value)}
+              className={errors.remarks ? "border-red-500" : ""}
             />
-            {errors.reason && <p className="text-sm text-red-500">{errors.reason}</p>}
-          </div>
-
-          {/* Type */}
-          <div className="grid gap-2">
-            <Label htmlFor="type">Type *</Label>
-            <Select 
-              value={formData.type} 
-              onValueChange={(value) => handleInputChange('type', value)}
-            >
-              <SelectTrigger className={errors.type ? "border-red-500" : ""}>
-                <SelectValue placeholder="Select blockout type" />
-              </SelectTrigger>
-              <SelectContent>
-                {blockoutTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
+            {errors.remarks && <p className="text-sm text-red-500">{errors.remarks}</p>}
           </div>
 
           {/* Description */}
@@ -253,7 +206,7 @@ export function EditTrainerBlockoutDialog({
               id="description"
               placeholder="Optional description or additional notes"
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={(e) => handleInputChange("description", e.target.value)}
               rows={3}
             />
           </div>
@@ -272,10 +225,7 @@ export function EditTrainerBlockoutDialog({
           {formData.isRecurring && (
             <div className="grid gap-2">
               <Label htmlFor="recurringPattern">Recurring Pattern *</Label>
-              <Select 
-                value={formData.recurringPattern} 
-                onValueChange={(value) => handleInputChange('recurringPattern', value)}
-              >
+              <Select value={formData.recurringPattern} onValueChange={(value) => handleInputChange("recurringPattern", value)}>
                 <SelectTrigger className={errors.recurringPattern ? "border-red-500" : ""}>
                   <SelectValue placeholder="Select recurring pattern" />
                 </SelectTrigger>
@@ -292,11 +242,7 @@ export function EditTrainerBlockoutDialog({
           )}
 
           {/* Form Errors */}
-          {errors.submit && (
-            <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded p-3">
-              {errors.submit}
-            </div>
-          )}
+          {errors.submit && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded p-3">{errors.submit}</div>}
         </div>
 
         <DialogFooter>

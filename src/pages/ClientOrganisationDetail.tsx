@@ -52,7 +52,8 @@ interface TrainerBlockout {
   trainerName: string;
   date: string;
   reason: string;
-  type: "maintenance" | "holiday" | "unavailable" | "personal" | "other";
+  // 'type' removed for trainer blockouts; use optional 'remarks' instead
+  remarks?: string;
   description?: string;
 }
 
@@ -84,7 +85,7 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
     trainerId: "1",
     trainerName: "Dr. Sarah Johnson",
     date: "2024-01-15",
-    reason: "Personal Leave",
+    remarks: "Personal Leave",
     type: "personal",
     description: "Family commitment",
   },
@@ -93,7 +94,7 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
     trainerId: "2",
     trainerName: "Mike Chen",
     date: "2024-01-25",
-    reason: "Conference Attendance",
+    remarks: "Conference Attendance",
     type: "unavailable",
     description: "Speaking at Tech Conference 2024",
   },
@@ -102,7 +103,7 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
     trainerId: "3",
     trainerName: "Emily Rodriguez",
     date: "2024-01-30",
-    reason: "Training Course",
+    remarks: "Training Course",
     type: "personal",
     description: "Attending advanced safety certification",
   },

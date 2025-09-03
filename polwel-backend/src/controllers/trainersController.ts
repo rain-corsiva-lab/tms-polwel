@@ -440,12 +440,12 @@ export const getTrainerBlockouts = async (req: AuthenticatedRequest, res: Respon
 export const createTrainerBlockout = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { startDate, endDate, reason, type, description, isRecurring, recurringPattern } = req.body;
+    const { startDate, endDate, remarks, description, isRecurring, recurringPattern } = req.body;
 
-    if (!id || !startDate || !endDate || !reason || !type) {
+    if (!id || !startDate || !endDate) {
       return res.status(400).json({
         success: false,
-        message: 'Trainer ID, start date, end date, reason, and type are required'
+        message: 'Trainer ID, start date and end date are required'
       });
     }
 
@@ -480,8 +480,7 @@ export const createTrainerBlockout = async (req: AuthenticatedRequest, res: Resp
         trainerId: id,
         startDate: start,
         endDate: end,
-        reason,
-        type,
+        remarks: remarks || null,
         description: description || null,
         isRecurring: isRecurring || false,
         recurringPattern: recurringPattern || null

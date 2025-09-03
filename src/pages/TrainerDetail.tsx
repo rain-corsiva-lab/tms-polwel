@@ -494,7 +494,7 @@ const TrainerDetail = () => {
                   <div key={blockout.id} className="p-3 border rounded-lg bg-red-50">
                     <div className="flex items-center space-x-2 mb-2">
                       <Calendar className="h-4 w-4 text-red-500" />
-                      <span className="font-medium text-red-700">{blockout.reason}</span>
+                      <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
                     </div>
                     <div className="text-sm text-red-600">
                       <div>Unavailable</div>

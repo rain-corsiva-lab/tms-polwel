@@ -56,7 +56,8 @@ interface TrainerBlockout {
   trainerName: string;
   date: string;
   reason: string;
-  type: "maintenance" | "holiday" | "unavailable" | "personal" | "other";
+  // legacy 'type' removed; use optional 'remarks' instead
+  remarks?: string;
   description?: string;
 }
 

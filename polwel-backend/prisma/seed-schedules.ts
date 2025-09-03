@@ -290,7 +290,6 @@ async function seedCourseSchedulesAndBlockouts() {
         }
 
         if (!hasConflict) {
-          const blockoutTypes = ['vacation', 'sick', 'personal', 'training', 'conference'];
           const blockoutReasons = [
             'Annual Leave',
             'Medical Appointment',
@@ -306,8 +305,8 @@ async function seedCourseSchedulesAndBlockouts() {
               trainerId: trainer.id,
               startDate: blockoutStartDate!,
               endDate: blockoutEndDate!,
-              reason: faker.helpers.arrayElement(blockoutReasons),
-              type: faker.helpers.arrayElement(blockoutTypes),
+              remarks: faker.helpers.arrayElement(blockoutReasons),
+              // 'type' removed in schema; omitted
               description: faker.lorem.sentence(),
               isRecurring: faker.datatype.boolean(0.2), // 20% chance of being recurring
               recurringPattern: faker.datatype.boolean(0.2) ? 
@@ -315,7 +314,7 @@ async function seedCourseSchedulesAndBlockouts() {
             }
           });
 
-          console.log(`    Created blockout: ${blockout.reason} (${blockoutStartDate!.toDateString()} - ${blockoutEndDate!.toDateString()})`);
+          console.log(`    Created blockout: ${blockout.remarks} (${blockoutStartDate!.toDateString()} - ${blockoutEndDate!.toDateString()})`);
         } else {
           console.log(`    Failed to create blockout ${i + 1} for ${trainer.name} - too many conflicts`);
         }

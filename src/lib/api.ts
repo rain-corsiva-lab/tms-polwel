@@ -515,7 +515,8 @@ export const trainersApi = {
   // Create trainer blockout
   createBlockout: async (id: string, blockoutData: {
     date: string;
-    reason: string;
+  // Remarks replace reason and are optional
+  remarks?: string;
     type: string;
     description?: string;
     isRecurring?: boolean;
@@ -1090,8 +1091,8 @@ export const trainerBlockoutsApi = {
     trainerId: string;
     startDate: string;
     endDate: string;
-    reason: string;
-    type?: string;
+    // Remarks replace reason and are optional
+    remarks?: string;
     description?: string;
     isRecurring?: boolean;
     recurringPattern?: string;
@@ -1106,8 +1107,7 @@ export const trainerBlockoutsApi = {
   async update(blockoutId: string, updateData: {
     startDate?: string;
     endDate?: string;
-    reason?: string;
-    type?: string;
+  remarks?: string | null;
     description?: string;
     isRecurring?: boolean;
     recurringPattern?: string;

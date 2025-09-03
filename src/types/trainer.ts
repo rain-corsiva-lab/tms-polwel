@@ -4,8 +4,7 @@ export interface TrainerBlockout {
   trainerName: string;
   startDate: string;
   endDate: string;
-  reason: string;
-  type: string;
+  remarks?: string | null;
   description?: string;
   isRecurring: boolean;
   recurringPattern?: string;

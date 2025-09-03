@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
-
+// Helper to safely extract remarks with a fallback to legacy 'reason'.
+// Use any because generated Prisma types may not yet reflect the schema change.
+function getRemarks(obj: any): string | null {
+  if (!obj) return null;
+  return (obj as any).remarks ?? (obj as any).reason ?? null;
+}
 
 export const trainerBlockoutController = {
   // Get all blockouts for a trainer
@@ -68,8 +73,7 @@ export const trainerBlockoutController = {
         trainerName: blockout.trainer.name,
         startDate: blockout.startDate.toISOString().split('T')[0],
         endDate: blockout.endDate.toISOString().split('T')[0],
-        reason: blockout.reason,
-        type: blockout.type,
+  remarks: getRemarks(blockout),
         description: blockout.description,
         isRecurring: blockout.isRecurring,
         recurringPattern: blockout.recurringPattern,
@@ -169,8 +173,7 @@ export const trainerBlockoutController = {
             trainerName: blockout.trainer.name,
             startDate: blockout.startDate.toISOString().split('T')[0],
             endDate: blockout.endDate.toISOString().split('T')[0],
-            reason: blockout.reason,
-            type: blockout.type,
+            remarks: getRemarks(blockout),
             description: blockout.description,
             isRecurring: blockout.isRecurring,
             recurringPattern: blockout.recurringPattern
@@ -201,13 +204,13 @@ export const trainerBlockoutController = {
   // Create a new blockout
   async createBlockout(req: Request, res: Response): Promise<Response | void> {
     try {
-      const { trainerId, startDate, endDate, reason, type = 'personal', description, isRecurring = false, recurringPattern } = req.body;
+      const { trainerId, startDate, endDate, remarks, description, isRecurring = false, recurringPattern } = req.body;
 
       // Validate required fields
-      if (!trainerId || !startDate || !endDate || !reason) {
+      if (!trainerId || !startDate || !endDate) {
         return res.status(400).json({
           success: false,
-          error: 'Trainer ID, start date, end date, and reason are required'
+          error: 'Trainer ID, start date and end date are required'
         });
       }
 
@@ -277,7 +280,7 @@ export const trainerBlockoutController = {
             id: b.id,
             startDate: b.startDate.toISOString().split('T')[0],
             endDate: b.endDate.toISOString().split('T')[0],
-            reason: b.reason
+            remarks: getRemarks(b)
           }))
         });
       }
@@ -319,11 +322,10 @@ export const trainerBlockoutController = {
           trainerId,
           startDate: start,
           endDate: end,
-          reason,
-          type,
-          description,
-          isRecurring,
-          recurringPattern
+    remarks: remarks || null,
+    description,
+    isRecurring,
+    recurringPattern
         },
         include: {
           trainer: {
@@ -336,10 +338,10 @@ export const trainerBlockoutController = {
         }
       });
 
-      // Log the creation
-      console.log(`Created blockout for trainer ${trainer.name}: ${reason} (${startDate} to ${endDate})`);
+  // Log the creation (use provided remarks)
+  console.log(`Created blockout for trainer ${trainer.name}: ${remarks || 'no remarks'} (${startDate} to ${endDate})`);
 
-      res.status(201).json({
+    res.status(201).json({
         success: true,
         data: {
           id: newBlockout.id,
@@ -347,8 +349,7 @@ export const trainerBlockoutController = {
           trainerName: newBlockout.trainer.name,
           startDate: newBlockout.startDate.toISOString().split('T')[0],
           endDate: newBlockout.endDate.toISOString().split('T')[0],
-          reason: newBlockout.reason,
-          type: newBlockout.type,
+          remarks: getRemarks(newBlockout),
           description: newBlockout.description,
           isRecurring: newBlockout.isRecurring,
           recurringPattern: newBlockout.recurringPattern,
@@ -371,8 +372,8 @@ export const trainerBlockoutController = {
   // Update a blockout
   async updateBlockout(req: Request, res: Response): Promise<Response | void> {
     try {
-      const { id } = req.params;
-      const { startDate, endDate, reason, type, description, isRecurring, recurringPattern } = req.body;
+  const { id } = req.params;
+  const { startDate, endDate, remarks, description, isRecurring, recurringPattern } = req.body;
 
       if (!id) {
         return res.status(400).json({
@@ -443,11 +444,11 @@ export const trainerBlockoutController = {
             success: false,
             error: 'Updated blockout would conflict with existing blockouts',
             conflicts: conflictingBlockouts.map(b => ({
-              id: b.id,
-              startDate: b.startDate.toISOString().split('T')[0],
-              endDate: b.endDate.toISOString().split('T')[0],
-              reason: b.reason
-            }))
+                  id: b.id,
+                  startDate: b.startDate.toISOString().split('T')[0],
+                  endDate: b.endDate.toISOString().split('T')[0],
+                  remarks: getRemarks(b)
+                }))
           });
         }
       }
@@ -455,8 +456,7 @@ export const trainerBlockoutController = {
       const updateData: any = {};
       if (startDate !== undefined) updateData.startDate = new Date(startDate);
       if (endDate !== undefined) updateData.endDate = new Date(endDate);
-      if (reason !== undefined) updateData.reason = reason;
-      if (type !== undefined) updateData.type = type;
+  if (remarks !== undefined) updateData.remarks = remarks;
       if (description !== undefined) updateData.description = description;
       if (isRecurring !== undefined) updateData.isRecurring = isRecurring;
       if (recurringPattern !== undefined) updateData.recurringPattern = recurringPattern;
@@ -483,8 +483,7 @@ export const trainerBlockoutController = {
           trainerName: updatedBlockout.trainer.name,
           startDate: updatedBlockout.startDate.toISOString().split('T')[0],
           endDate: updatedBlockout.endDate.toISOString().split('T')[0],
-          reason: updatedBlockout.reason,
-          type: updatedBlockout.type,
+          remarks: getRemarks(updatedBlockout),
           description: updatedBlockout.description,
           isRecurring: updatedBlockout.isRecurring,
           recurringPattern: updatedBlockout.recurringPattern,
@@ -537,7 +536,7 @@ export const trainerBlockoutController = {
         where: { id }
       });
 
-      console.log(`Deleted blockout for trainer ${existingBlockout.trainer.name}: ${existingBlockout.reason}`);
+  console.log(`Deleted blockout for trainer ${existingBlockout.trainer.name}: ${getRemarks(existingBlockout)}`);
 
       res.json({
         success: true,
@@ -594,8 +593,7 @@ export const trainerBlockoutController = {
           trainerName: blockout.trainer.name,
           startDate: blockout.startDate.toISOString().split('T')[0],
           endDate: blockout.endDate.toISOString().split('T')[0],
-          reason: blockout.reason,
-          type: blockout.type,
+          remarks: getRemarks(blockout),
           description: blockout.description,
           isRecurring: blockout.isRecurring,
           recurringPattern: blockout.recurringPattern,

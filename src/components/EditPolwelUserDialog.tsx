@@ -166,7 +166,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
@@ -216,6 +216,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Create</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Edit</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Delete</th>
+                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">All</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -244,6 +245,18 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
                                 />
                               </td>
                             ))}
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Object.values(modulePermissions).every((v) => v) as CheckedState}
+                                onCheckedChange={(checkedState) => {
+                                  const setAll = checkedState === true;
+                                  setPermissions((prev) => ({
+                                    ...prev,
+                                    [module]: Object.keys(prev[module]).reduce((acc, key) => ({ ...acc, [key]: setAll }), {} as any),
+                                  }));
+                                }}
+                              />
+                            </td>
                           </tr>
                         );
                       })}

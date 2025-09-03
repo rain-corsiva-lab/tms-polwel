@@ -3,6 +3,12 @@ import { UserRole } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 
+// Helper to safely extract remarks with fallback to legacy 'reason'.
+function getRemarks(obj: any): string | null {
+  if (!obj) return null;
+  return (obj as any).remarks ?? (obj as any).reason ?? null;
+}
+
 // Get trainer dashboard data - only accessible by the trainer themselves
 export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -155,14 +161,13 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
           address: run.venue.address
         } : null
       })),
-      blockoutDates: blockouts.map(blockout => ({
-        id: blockout.id,
-        startDate: blockout.startDate,
-        endDate: blockout.endDate,
-        reason: blockout.reason,
-        type: blockout.type,
-        description: blockout.description,
-        isRecurring: blockout.isRecurring
+  blockoutDates: blockouts.map(blockout => ({
+    id: blockout.id,
+    startDate: blockout.startDate,
+    endDate: blockout.endDate,
+    remarks: getRemarks(blockout),
+    description: blockout.description,
+    isRecurring: blockout.isRecurring
   })),
   fees: fees.map((f: any) => ({ id: f.id, feePerRun: f.feePerRun, remarks: f.remarks, course: f.course }))
     };

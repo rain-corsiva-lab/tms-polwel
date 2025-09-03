@@ -61,8 +61,7 @@ interface BlockoutDate {
   id: string;
   startDate: string;
   endDate: string;
-  reason: string;
-  type: string;
+  remarks?: string | null;
   description?: string;
   isRecurring: boolean;
 }
@@ -263,9 +262,6 @@ export default function TrainerDashboard() {
             <p className="text-muted-foreground">Manage your profile and training schedule</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button size="sm" variant="ghost" onClick={() => (window.location.href = "/trainers/new")}>
-              Add Trainer
-            </Button>
             <Button onClick={() => setShowEditProfile(true)}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Profile
@@ -428,7 +424,7 @@ export default function TrainerDashboard() {
                       <div key={blockout.id} className="p-3 border rounded-lg bg-red-50">
                         <div className="flex items-center space-x-2 mb-2">
                           <CalendarIcon className="h-4 w-4 text-red-500" />
-                          <span className="font-medium text-red-700">{blockout.reason}</span>
+                          <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
                         </div>
                         <div className="text-sm text-red-600">Unavailable</div>
                       </div>
