@@ -23,8 +23,7 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
     // Limit search length to avoid excessively long patterns
     const search = rawSearch && rawSearch.length > 0 ? rawSearch.substring(0, 500) : undefined;
 
-    const rawIndustry = typeof req.query.industry === 'string' ? req.query.industry.trim() : undefined;
-    const industry = rawIndustry && rawIndustry.length > 0 ? rawIndustry.substring(0, 200) : undefined;
+  // industry field removed from schema
 
     const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim() : undefined;
 
@@ -34,7 +33,6 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
 
     if (search) {
       orClauses.push({ name: { contains: search } });
-      orClauses.push({ industry: { contains: search } });
     }
 
     if (orClauses.length > 0) {
@@ -48,9 +46,7 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
       }
     }
 
-    if (industry) {
-      where.industry = { contains: industry };
-    }
+  // industry removed - no extra filters
 
     // Get organizations with pagination
     const [organizations, total] = await Promise.all([
@@ -75,7 +71,6 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
       organizations: organizations.map(org => ({
         id: org.id,
         name: org.name,
-        industry: org.industry,
         status: org.status,
         address: org.address,
         contactEmail: org.contactEmail,
@@ -167,8 +162,6 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
   try {
     const {
       name,
-      
-      industry,
       status = UserStatus.ACTIVE,
       address,
       contactEmail,
@@ -204,7 +197,6 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
     const organization = await prisma.organization.create({
       data: {
   name,
-        industry: industry || null,
         status,
         address: address || null,
         contactEmail: contactEmail || null,
@@ -371,21 +363,8 @@ export const getOrganizationStats = async (req: AuthenticatedRequest, res: Respo
 // Get all industries
 export const getIndustries = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const organizations = await prisma.organization.findMany({
-      select: {
-        industry: true
-      },
-      where: {
-        industry: { not: null }
-      }
-    });
-
-    // Get unique industries
-    const industries = [...new Set(organizations.map(org => org.industry).filter(Boolean))];
-
-    return res.json({
-      industries: industries.sort()
-    });
+  // industry field removed from schema; return empty list
+  return res.json({ industries: [] });
   } catch (error) {
     console.error('Get industries error:', error);
     return res.status(500).json({
@@ -424,7 +403,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
       where.OR = [
         { name: { contains: search as string } },
         { email: { contains: search as string } },
-        { department: { contains: search as string } }
+        { designation: { contains: search as string } }
       ];
     }
 
@@ -436,16 +415,11 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
           id: true,
           name: true,
           email: true,
-          department: true,
+          designation: true,
           status: true,
           lastLogin: true,
           createdAt: true,
-          updatedAt: true,
-          _count: {
-            select: {
-              bookingsCreated: true
-            }
-          }
+          updatedAt: true
         },
         skip,
         take: Number(limit),
@@ -458,9 +432,8 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
       id: coordinator.id,
       name: coordinator.name,
       email: coordinator.email,
-      department: coordinator.department || 'N/A',
-      status: coordinator.status,
-      schedulesCount: coordinator._count.bookingsCreated,
+  designation: coordinator.designation || 'N/A',
+  status: coordinator.status,
       lastActive: coordinator.lastLogin 
         ? new Date(coordinator.lastLogin).toISOString()
         : 'Never',
@@ -489,8 +462,8 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
 // Create training coordinator for an organization
 export const createOrganizationCoordinator = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { organizationId } = req.params;
-    const { name, email, department, password } = req.body;
+  const { organizationId } = req.params;
+  const { name, email, designation, password } = req.body;
 
     if (!organizationId) {
       return res.status(400).json({
@@ -543,7 +516,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
         password: hashedPassword,
         role: 'TRAINING_COORDINATOR',
         organizationId,
-        department: department || null,
+  designation: designation || null,
         status: 'PENDING', // Set as PENDING for onboarding
         resetToken: setupToken, // Use resetToken for account completion
         resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
@@ -554,7 +527,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
         id: true,
         name: true,
         email: true,
-        department: true,
+        designation: true,
         status: true,
         createdAt: true,
         updatedAt: true
@@ -576,7 +549,6 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
       ...coordinator,
       tempPassword,
       setupToken,
-      schedulesCount: 0,
       lastActive: 'Never'
     });
   } catch (error) {
@@ -591,8 +563,8 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
 // Update training coordinator
 export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { organizationId, coordinatorId } = req.params;
-    const { name, email, department, status } = req.body;
+  const { organizationId, coordinatorId } = req.params;
+  const { name, email, designation, status } = req.body;
 
     if (!organizationId || !coordinatorId) {
       return res.status(400).json({
@@ -636,29 +608,23 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
       data: {
         ...(name && { name }),
         ...(email && { email }),
-        ...(department !== undefined && { department }),
+        ...(designation !== undefined && { designation }),
         ...(status && { status })
       },
       select: {
         id: true,
         name: true,
         email: true,
-        department: true,
+        designation: true,
         status: true,
         lastLogin: true,
         createdAt: true,
         updatedAt: true,
-        _count: {
-          select: {
-            bookingsCreated: true
-          }
-        }
       }
     });
 
     return res.json({
       ...updatedCoordinator,
-      schedulesCount: updatedCoordinator._count.bookingsCreated,
       lastActive: updatedCoordinator.lastLogin 
         ? new Date(updatedCoordinator.lastLogin).toISOString()
         : 'Never'
@@ -755,7 +721,7 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
       where.status = status as UserStatus;
     }
 
-    // Get learners with pagination
+    // Get learners with pagination (simplified select)
     const [learners, total] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -763,29 +729,10 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
           id: true,
           name: true,
           email: true,
-          department: true,
+          designation: true,
           status: true,
           createdAt: true,
-          updatedAt: true,
-          _count: {
-            select: {
-              bookings: {
-                where: {
-                  status: {
-                    in: ['CONFIRMED', 'COMPLETED']
-                  }
-                }
-              }
-            }
-          },
-          bookings: {
-            where: {
-              status: 'COMPLETED'
-            },
-            select: {
-              id: true
-            }
-          }
+          updatedAt: true
         },
         skip,
         take: Number(limit),
@@ -798,10 +745,10 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
       id: learner.id,
       name: learner.name,
       email: learner.email,
-      department: learner.department || 'N/A',
+      designation: learner.designation || 'N/A',
       status: learner.status,
-      enrolledCourses: learner._count.bookings,
-      completedCourses: learner.bookings.length,
+      enrolledCourses: 0,
+      completedCourses: 0,
       createdAt: learner.createdAt,
       updatedAt: learner.updatedAt
     }));

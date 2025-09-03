@@ -25,7 +25,6 @@ async function main() {
   const spfOrg = await prisma.organization.create({
     data: {
   name: 'Singapore Police Force',
-      industry: 'Government',
       address: 'Police Cantonment Complex, 391 New Bridge Road, Singapore 188762',
       contactEmail: 'contact@spf.gov.sg',
       contactPhone: '+65 6355 0000',
@@ -37,7 +36,6 @@ async function main() {
   const angMoKioDiv = await prisma.organization.create({
     data: {
   name: 'Singapore Police Force - Ang Mo Kio Division',
-      industry: 'Government',
       address: 'Ang Mo Kio Police Division HQ, Singapore',
       contactEmail: 'contact@spf.gov.sg',
       contactPhone: '+65 6555 0001',
@@ -50,7 +48,6 @@ async function main() {
   const choaChuKangDiv = await prisma.organization.create({
     data: {
   name: 'Singapore Police Force - Choa Chu Kang Division',
-      industry: 'Government',
       address: 'Choa Chu Kang Police Division HQ, Singapore',
       contactEmail: 'contact@spf.gov.sg',
       contactPhone: '+65 6555 0002',
@@ -75,8 +72,8 @@ async function main() {
       status: UserStatus.ACTIVE,
       emailVerified: true,
   // mfaRemoved
-      permissionLevel: 'Administrator',
-      department: 'System Administration',
+  permissionLevel: 'Administrator',
+  designation: 'System Administration',
       lastLogin: new Date('2024-01-15T09:30:00Z'),
       passwordExpiry: new Date('2024-04-15'),
     },
@@ -91,8 +88,8 @@ async function main() {
       status: UserStatus.INACTIVE,
       emailVerified: true,
   // mfaRemoved
-      permissionLevel: 'Manager',
-      department: 'Course Management',
+  permissionLevel: 'Manager',
+  designation: 'Course Management',
       lastLogin: new Date('2024-01-10T11:15:00Z'),
       passwordExpiry: new Date('2024-04-10'),
       createdBy: johnTan.id,
@@ -108,8 +105,8 @@ async function main() {
       status: UserStatus.PENDING,
       emailVerified: false,
   // mfaRemoved
-      permissionLevel: 'Staff',
-      department: 'Training Coordination',
+  permissionLevel: 'Staff',
+  designation: 'Training Coordination',
       createdBy: johnTan.id,
     },
   });
@@ -124,8 +121,8 @@ async function main() {
       status: UserStatus.ACTIVE,
       emailVerified: true,
   // mfaRemoved
-      organizationId: angMoKioDiv.id,
-      division: 'Ang Mo Kio Division',
+  organizationId: angMoKioDiv.id,
+  division: 'Ang Mo Kio Division',
       buCostCentre: 'AMK001',
       buNumberRequired: true,
       paymentMode: PaymentMode.ULTF,
@@ -146,8 +143,8 @@ async function main() {
       status: UserStatus.ACTIVE,
       emailVerified: true,
   // mfaRemoved
-      organizationId: choaChuKangDiv.id,
-      division: 'Choa Chu Kang Division',
+  organizationId: choaChuKangDiv.id,
+  division: 'Choa Chu Kang Division',
       buCostCentre: 'CCK002',
       buNumberRequired: true,
       paymentMode: PaymentMode.TRANSITION_DOLLARS,

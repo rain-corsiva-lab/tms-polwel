@@ -1,22 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
@@ -25,7 +12,7 @@ interface TrainingCoordinator {
   id: string;
   name: string;
   email: string;
-  department: string;
+  designation: string;
   status: string;
 }
 
@@ -33,24 +20,22 @@ interface EditCoordinatorDialogProps {
   coordinator: TrainingCoordinator | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCoordinatorUpdate: (coordinatorId: string, coordinatorData: {
-    name?: string;
-    email?: string;
-    department?: string;
-    status?: string;
-  }) => Promise<void>;
+  onCoordinatorUpdate: (
+    coordinatorId: string,
+    coordinatorData: {
+      name?: string;
+      email?: string;
+      designation?: string;
+      status?: string;
+    }
+  ) => Promise<void>;
 }
 
-export function EditCoordinatorDialog({ 
-  coordinator, 
-  open, 
-  onOpenChange, 
-  onCoordinatorUpdate 
-}: EditCoordinatorDialogProps) {
+export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoordinatorUpdate }: EditCoordinatorDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    department: "",
+    designation: "",
     status: "ACTIVE",
   });
   const [loading, setLoading] = useState(false);
@@ -63,7 +48,7 @@ export function EditCoordinatorDialog({
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
-        department: coordinator.department || "",
+        designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
       });
     }
@@ -71,8 +56,8 @@ export function EditCoordinatorDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!coordinator || !formData.name || !formData.email || !formData.department) {
+
+    if (!coordinator || !formData.name || !formData.email || !formData.designation) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -83,11 +68,11 @@ export function EditCoordinatorDialog({
 
     try {
       setLoading(true);
-      
+
       await onCoordinatorUpdate(coordinator.id, {
         name: formData.name,
         email: formData.email,
-        department: formData.department,
+        designation: formData.designation,
         status: formData.status,
       });
 
@@ -111,7 +96,7 @@ export function EditCoordinatorDialog({
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
-        department: coordinator.department || "",
+        designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
       });
     }
@@ -126,53 +111,47 @@ export function EditCoordinatorDialog({
             <Edit className="h-5 w-5" />
             Edit Training Coordinator
           </DialogTitle>
-          <DialogDescription>
-            Update the training coordinator information below.
-          </DialogDescription>
+          <DialogDescription>Update the training coordinator information below.</DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="coordinatorName">Coordinator Name *</Label>
             <Input
               id="coordinatorName"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Enter coordinator's full name"
               disabled={loading}
             />
           </div>
-          
+
           <div>
             <Label htmlFor="coordinatorEmail">Email Address *</Label>
             <Input
               id="coordinatorEmail"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="Enter email address"
               disabled={loading}
             />
           </div>
-          
+
           <div>
-            <Label htmlFor="coordinatorDepartment">Department *</Label>
+            <Label htmlFor="coordinatorDesignation">Designation *</Label>
             <Input
-              id="coordinatorDepartment"
-              value={formData.department}
-              onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-              placeholder="Enter department"
+              id="coordinatorDesignation"
+              value={formData.designation}
+              onChange={(e) => setFormData((prev) => ({ ...prev, designation: e.target.value }))}
+              placeholder="Enter designation"
               disabled={loading}
             />
           </div>
 
           <div>
             <Label htmlFor="coordinatorStatus">Status *</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-              disabled={loading}
-            >
+            <Select value={formData.status} onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))} disabled={loading}>
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -183,30 +162,20 @@ export function EditCoordinatorDialog({
               </SelectContent>
             </Select>
           </div>
-          
         </form>
 
         <DialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleCancel}
-            disabled={loading}
-          >
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            disabled={loading}
-          >
+          <Button type="submit" onClick={handleSubmit} disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Updating...
               </>
             ) : (
-              'Update Coordinator'
+              "Update Coordinator"
             )}
           </Button>
         </DialogFooter>

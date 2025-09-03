@@ -1,34 +1,15 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
 
 interface AddCoordinatorDialogProps {
-  onCoordinatorAdd: (coordinatorData: {
-    name: string;
-    email: string;
-    department: string;
-    password: string;
-  }) => Promise<void>;
+  onCoordinatorAdd: (coordinatorData: { name: string; email: string; designation: string; password: string }) => Promise<void>;
 }
 
 export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogProps) {
@@ -37,15 +18,15 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
     name: "",
     email: "",
     contactNumber: "",
-    department: "",
+    designation: "",
   });
 
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.contactNumber || !formData.department) {
+
+    if (!formData.name || !formData.email || !formData.contactNumber || !formData.designation) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -57,11 +38,11 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
     try {
       // Generate temporary password for coordinator
       const tempPassword = Math.random().toString(36).slice(-8);
-      
+
       await onCoordinatorAdd({
         name: formData.name,
         email: formData.email,
-        department: formData.department,
+        designation: formData.designation,
         password: tempPassword,
       });
 
@@ -76,7 +57,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         name: "",
         email: "",
         contactNumber: "",
-        department: "",
+        designation: "",
       });
       setOpen(false);
     } catch (error) {
@@ -98,53 +79,50 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
             <UserCheck className="h-5 w-5" />
             Add New Training Coordinator
           </DialogTitle>
-          <DialogDescription>
-            Create a new training coordinator account. User will set password in onboarding flow.
-          </DialogDescription>
+          <DialogDescription>Create a new training coordinator account. User will set password in onboarding flow.</DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="coordinatorName">Training Coordinator Name *</Label>
             <Input
               id="coordinatorName"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Enter coordinator's full name"
             />
           </div>
-          
+
           <div>
             <Label htmlFor="coordinatorEmail">Email Address * (Unique Identifier)</Label>
             <Input
               id="coordinatorEmail"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="Enter unique email address"
             />
           </div>
-          
+
           <div>
             <Label htmlFor="coordinatorContact">Contact Number *</Label>
             <Input
               id="coordinatorContact"
               value={formData.contactNumber}
-              onChange={(e) => setFormData(prev => ({ ...prev, contactNumber: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
               placeholder="Enter contact number"
             />
           </div>
 
           <div>
-            <Label htmlFor="coordinatorDepartment">Department *</Label>
+            <Label htmlFor="coordinatorDesignation">Designation *</Label>
             <Input
-              id="coordinatorDepartment"
-              value={formData.department}
-              onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-              placeholder="Enter department"
+              id="coordinatorDesignation"
+              value={formData.designation}
+              onChange={(e) => setFormData((prev) => ({ ...prev, designation: e.target.value }))}
+              placeholder="Enter designation"
             />
           </div>
-          
         </form>
 
         <DialogFooter>

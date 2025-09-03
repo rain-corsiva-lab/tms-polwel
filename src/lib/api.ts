@@ -796,7 +796,7 @@ export const clientOrganizationsApi = {
   createCoordinator: async (organizationId: string, coordinatorData: {
     name: string;
     email: string;
-    department?: string;
+  designation?: string;
     password: string;
   }) => {
     return apiRequest(`/client-organizations/${organizationId}/coordinators`, {
@@ -809,7 +809,7 @@ export const clientOrganizationsApi = {
   updateCoordinator: async (organizationId: string, coordinatorId: string, coordinatorData: {
     name?: string;
     email?: string;
-    department?: string;
+  designation?: string;
     status?: string;
   }) => {
     return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {

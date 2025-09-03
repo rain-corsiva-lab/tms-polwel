@@ -127,7 +127,7 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
       role: user.role,
       status: user.status,
       organizationId: user.organizationId,
-      department: user.department,
+      designation: user.designation,
       division: user.division,
       lastLogin: new Date(),
       organization: user.organization ? {

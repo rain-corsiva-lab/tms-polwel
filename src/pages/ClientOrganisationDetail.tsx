@@ -20,7 +20,7 @@ interface TrainingCoordinator {
   id: string;
   name: string;
   email: string;
-  department: string;
+  designation: string;
   status: string;
   organizationId: string;
   createdAt: string;
@@ -30,7 +30,7 @@ interface Learner {
   id: string;
   name: string;
   email: string;
-  department?: string;
+  designation?: string;
   status?: string;
   enrolledCourses?: number;
   completedCourses?: number;
@@ -131,7 +131,6 @@ const ClientOrganisationDetail = () => {
     contactPhone: "",
     contactPerson: "",
     address: "",
-    industry: "",
     buNumber: "",
   });
 
@@ -163,7 +162,6 @@ const ClientOrganisationDetail = () => {
         contactPhone: data.contactPhone || "",
         contactPerson: data.contactPerson || "",
         address: data.address || "",
-        industry: data.industry || "",
         buNumber: data.buNumber || "",
       });
     } catch (error: any) {
@@ -238,7 +236,6 @@ const ClientOrganisationDetail = () => {
       setSaving(true);
       await clientOrganizationsApi.update(id, {
         name: formData.name,
-        industry: formData.industry,
         address: formData.address,
         contactEmail: formData.contactEmail,
         contactPhone: formData.contactPhone,
@@ -255,7 +252,6 @@ const ClientOrganisationDetail = () => {
         contactPhone: formData.contactPhone,
         contactPerson: formData.contactPerson,
         address: formData.address,
-        industry: formData.industry,
         buNumber: formData.buNumber,
       });
 
@@ -276,7 +272,7 @@ const ClientOrganisationDetail = () => {
     }
   };
 
-  const handleCoordinatorAdd = async (coordinatorData: { name: string; email: string; department: string; password: string }) => {
+  const handleCoordinatorAdd = async (coordinatorData: { name: string; email: string; designation: string; password: string }) => {
     if (!id) return;
 
     try {
@@ -290,7 +286,7 @@ const ClientOrganisationDetail = () => {
     }
   };
 
-  const handleCoordinatorEdit = async (coordinatorId: string, coordinatorData: { name?: string; email?: string; department?: string; status?: string }) => {
+  const handleCoordinatorEdit = async (coordinatorId: string, coordinatorData: { name?: string; email?: string; designation?: string; status?: string }) => {
     if (!id) return;
 
     try {
@@ -514,14 +510,7 @@ const ClientOrganisationDetail = () => {
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="industry">Industry</Label>
-                  {isEditing ? (
-                    <Input id="industry" value={formData.industry} onChange={(e) => setFormData((prev) => ({ ...prev, industry: e.target.value }))} />
-                  ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{organization.industry || "Not specified"}</p>
-                  )}
-                </div>
+                {/* industry field removed */}
               </div>
 
               <div>
@@ -558,8 +547,7 @@ const ClientOrganisationDetail = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Schedules</TableHead>
+                    <TableHead>Designation</TableHead>
                     <TableHead>Last Active</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -585,8 +573,7 @@ const ClientOrganisationDetail = () => {
                       <TableRow key={coordinator.id}>
                         <TableCell className="font-medium">{coordinator.name}</TableCell>
                         <TableCell>{coordinator.email}</TableCell>
-                        <TableCell>{coordinator.department}</TableCell>
-                        <TableCell>0</TableCell>
+                        <TableCell>{coordinator.designation}</TableCell>
                         <TableCell>{new Date(coordinator.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -665,7 +652,7 @@ const ClientOrganisationDetail = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Department</TableHead>
+                    <TableHead>Designation</TableHead>
                     <TableHead>Enrolled</TableHead>
                     <TableHead>Completed</TableHead>
                     <TableHead>Status</TableHead>
@@ -693,7 +680,7 @@ const ClientOrganisationDetail = () => {
                       <TableRow key={learner.id}>
                         <TableCell className="font-medium">{learner.name}</TableCell>
                         <TableCell>{learner.email}</TableCell>
-                        <TableCell>{learner.department || "N/A"}</TableCell>
+                        <TableCell>{learner.designation || "N/A"}</TableCell>
                         <TableCell>{learner.enrolledCourses || 0}</TableCell>
                         <TableCell>{learner.completedCourses || 0}</TableCell>
                         <TableCell>{getStatusBadge(learner.status || "active")}</TableCell>

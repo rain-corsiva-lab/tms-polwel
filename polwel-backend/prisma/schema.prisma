@@ -25,7 +25,7 @@ model User {
   resetToken          String?             @db.Text
   resetTokenExpiry    DateTime?
   permissionLevel     String?
-  department          String?
+  designation         String?
   organizationId      String?
   division            String?
   buCostCentre        String?
@@ -69,7 +69,7 @@ model User {
 model Organization {
   id              String     @id @default(cuid())
   name            String
-  industry        String?
+  // industry removed
   address         String?
   contactEmail    String?
   contactPhone    String?
