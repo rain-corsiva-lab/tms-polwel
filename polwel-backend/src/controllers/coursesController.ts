@@ -73,9 +73,9 @@ export const coursesController = {
 
       if (search) {
         where.OR = [
-          { title: { contains: search as string, mode: 'insensitive' } },
-          { description: { contains: search as string, mode: 'insensitive' } },
-          { category: { contains: search as string, mode: 'insensitive' } }
+          { title: { contains: search as string } },
+          { description: { contains: search as string } },
+          { category: { contains: search as string } }
         ];
       }
 

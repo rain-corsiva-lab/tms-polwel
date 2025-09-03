@@ -11,25 +11,45 @@ import EmailService from '../services/emailService';
 // Get all client organizations with pagination and filtering
 export const getClientOrganizations = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { page = 1, limit = 10, search, status, industry } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    // Parse and sanitize query parameters
+    const rawPage = Number(req.query.page || 1);
+    const rawLimit = Number(req.query.limit || 10);
+    // Cap values to prevent heavy queries
+    const pageNum = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+    const limitNum = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(1000, Math.floor(rawLimit)) : 10;
+    const skip = (pageNum - 1) * limitNum;
 
-    // Build where clause
+    const rawSearch = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
+    // Limit search length to avoid excessively long patterns
+    const search = rawSearch && rawSearch.length > 0 ? rawSearch.substring(0, 500) : undefined;
+
+    const rawIndustry = typeof req.query.industry === 'string' ? req.query.industry.trim() : undefined;
+    const industry = rawIndustry && rawIndustry.length > 0 ? rawIndustry.substring(0, 200) : undefined;
+
+    const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim() : undefined;
+
+    // Build where clause defensively
     const where: any = {};
+    const orClauses: any[] = [];
 
     if (search) {
-      where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { industry: { contains: search as string, mode: 'insensitive' } }
-      ];
+      orClauses.push({ name: { contains: search } });
+      orClauses.push({ industry: { contains: search } });
     }
 
-    if (status) {
-      where.status = status as UserStatus;
+    if (orClauses.length > 0) {
+      where.OR = orClauses;
+    }
+
+    if (rawStatus) {
+      // Only set status if it matches allowed enum values
+      if (['ACTIVE', 'INACTIVE', 'PENDING', 'LOCKED'].includes(rawStatus)) {
+        where.status = rawStatus as UserStatus;
+      }
     }
 
     if (industry) {
-      where.industry = { contains: industry as string, mode: 'insensitive' };
+      where.industry = { contains: industry };
     }
 
     // Get organizations with pagination
@@ -44,14 +64,14 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
             }
           }
         },
-        skip,
-        take: Number(limit),
+  skip,
+  take: limitNum,
         orderBy: { createdAt: 'desc' }
       }),
       prisma.organization.count({ where })
     ]);
 
-    return res.json({
+  return res.json({
       organizations: organizations.map(org => ({
         id: org.id,
         name: org.name,
@@ -70,10 +90,10 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
         }
       })),
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / Number(limit))
+        totalPages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -402,9 +422,9 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
 
     if (search) {
       where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { email: { contains: search as string, mode: 'insensitive' } },
-        { department: { contains: search as string, mode: 'insensitive' } }
+        { name: { contains: search as string } },
+        { email: { contains: search as string } },
+        { department: { contains: search as string } }
       ];
     }
 
@@ -725,9 +745,9 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
 
     if (search) {
       where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { email: { contains: search as string, mode: 'insensitive' } },
-        { department: { contains: search as string, mode: 'insensitive' } }
+        { name: { contains: search as string } },
+        { email: { contains: search as string } },
+        { department: { contains: search as string } }
       ];
     }
 

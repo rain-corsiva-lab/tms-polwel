@@ -42,10 +42,10 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
     // Add search filter if provided (search in partner name and contact info)
     if (search) {
       where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { bio: { contains: search as string, mode: 'insensitive' } }, // point of contact
-        { partnerOrganization: { contains: search as string, mode: 'insensitive' } },
-        { experience: { contains: search as string, mode: 'insensitive' } } // contact number
+  { name: { contains: search as string } },
+  { bio: { contains: search as string } }, // point of contact
+  { partnerOrganization: { contains: search as string } },
+  { experience: { contains: search as string } } // contact number
       ];
     }
 

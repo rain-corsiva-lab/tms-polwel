@@ -369,8 +369,8 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
 
     if (search) {
       where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { email: { contains: search as string, mode: 'insensitive' } }
+  { name: { contains: search as string } },
+  { email: { contains: search as string } }
       ];
     }
 

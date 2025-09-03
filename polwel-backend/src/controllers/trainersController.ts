@@ -25,9 +25,9 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
 
     if (search) {
       where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { email: { contains: search as string, mode: 'insensitive' } },
-        { partnerOrganization: { contains: search as string, mode: 'insensitive' } }
+  { name: { contains: search as string } },
+  { email: { contains: search as string } },
+  { partnerOrganization: { contains: search as string } }
       ];
     }
 
@@ -559,7 +559,7 @@ export const getPartnerOrganizations = async (req: AuthenticatedRequest, res: Re
     if (search) {
       where.partnerOrganization = {
         contains: search as string,
-        mode: 'insensitive'
+        
       };
     }
 
