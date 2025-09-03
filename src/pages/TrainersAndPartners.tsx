@@ -17,7 +17,7 @@ import { EditTrainerDialog } from "@/components/EditTrainerDialog";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import StatsCard from "@/components/StatsCard";
 import { useToast } from "@/hooks/use-toast";
-import { trainersApi, partnersApi } from "@/lib/api";
+import { trainersApi, partnersApi, polwelUsersApi } from "@/lib/api";
 
 // Enhanced user data structure for Trainers
 interface Trainer {
@@ -540,12 +540,23 @@ const TrainersAndPartners = () => {
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem
-                                    onClick={() => {
-                                      // TODO: Implement password reset for trainers
-                                      toast({
-                                        title: "Feature Coming Soon",
-                                        description: "Password reset for trainers will be available soon",
-                                      });
+                                    onClick={async () => {
+                                      try {
+                                        if (!trainer.email) {
+                                          throw new Error("Trainer has no email address");
+                                        }
+                                        await polwelUsersApi.sendPasswordResetLink(trainer.id);
+                                        toast({
+                                          title: "Password Reset Link Sent",
+                                          description: `Password reset link has been sent to ${trainer.email}`,
+                                        });
+                                      } catch (error: any) {
+                                        toast({
+                                          title: "Failed to Send Reset",
+                                          description: error?.message || "Could not send password reset link. Please try again.",
+                                          variant: "destructive",
+                                        });
+                                      }
                                     }}
                                   >
                                     <Mail className="h-4 w-4 mr-2" />

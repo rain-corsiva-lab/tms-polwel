@@ -610,11 +610,22 @@ const ClientOrganisationDetail = () => {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem
-                                onClick={() => {
-                                  toast({
-                                    title: "Password Reset Link Sent",
-                                    description: `Password reset link has been sent to ${coordinator.email}`,
-                                  });
+                                onClick={async () => {
+                                  try {
+                                    if (!coordinator.email) throw new Error("Coordinator has no email address");
+                                    // Use polwel users API which supports sending reset links for any role
+                                    await (await import("@/lib/api")).polwelUsersApi.sendPasswordResetLink(coordinator.id);
+                                    toast({
+                                      title: "Password Reset Link Sent",
+                                      description: `Password reset link has been sent to ${coordinator.email}`,
+                                    });
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Failed to Send Reset",
+                                      description: error?.message || "Could not send password reset link. Please try again.",
+                                      variant: "destructive",
+                                    });
+                                  }
                                 }}
                               >
                                 <Mail className="h-4 w-4 mr-2" />

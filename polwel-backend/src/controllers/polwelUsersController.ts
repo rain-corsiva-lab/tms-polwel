@@ -135,12 +135,9 @@ export const getUserAuditTrail = async (req: AuthenticatedRequest, res: Response
       });
     }
 
-    // Check if user exists and is POLWEL
+    // Find user by id (allow sending reset links to any role: POLWEL, TRAINER, TRAINING_COORDINATOR, etc.)
     const user = await prisma.user.findFirst({
-      where: {
-        id: id,
-        role: UserRole.POLWEL
-      }
+      where: { id }
     });
 
     if (!user) {
@@ -186,24 +183,20 @@ export const sendPasswordResetLink = async (req: AuthenticatedRequest, res: Resp
       });
     }
 
-    // Check if user exists and is POLWEL
-    const user = await prisma.user.findFirst({
-      where: {
-        id: id,
-        role: UserRole.POLWEL
-      }
-    });
+    // Check if user exists (allow any role: POLWEL, TRAINER, TRAINING_COORDINATOR)
+    const user = await prisma.user.findUnique({ where: { id } });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'POLWEL user not found'
+        message: 'User not found'
       });
     }
 
     // Generate reset token
     const resetToken = EmailService.generateResetToken();
-    const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day from now
+    // Expire in 1 hour to match email copy and reduce window
+    const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour from now
 
     // Save reset token to database
     await prisma.user.update({
@@ -214,12 +207,16 @@ export const sendPasswordResetLink = async (req: AuthenticatedRequest, res: Resp
       }
     });
 
+  // Build frontend reset URL (frontend route is /reset-password/:token)
+  const frontend = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const resetUrl = frontend ? `${frontend}/reset-password/${resetToken}` : resetToken;
+
     // Send reset email
     if (user.email) {
       const emailSent = await EmailService.sendPasswordResetEmail(
         user.email,
         user.name,
-        resetToken
+        resetUrl
       );
 
       if (emailSent) {
