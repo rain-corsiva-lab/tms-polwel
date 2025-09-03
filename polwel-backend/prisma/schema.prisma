@@ -15,7 +15,7 @@ model User {
   role                UserRole
   status              UserStatus          @default(PENDING)
   emailVerified       Boolean             @default(false)
-  mfaEnabled          Boolean             @default(false)
+  // mfaEnabled removed
   mfaSecret           String?             @db.Text
   lastLogin           DateTime?
   passwordExpiry      DateTime?

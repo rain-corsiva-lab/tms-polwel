@@ -96,9 +96,8 @@ router.get('/:id', /* logRoute('USERS_GET_BY_ID'), */ authenticateToken, authori
         name: true,
         role: true,
         status: true,
-        emailVerified: true,
-        mfaEnabled: true,
-        lastLogin: true,
+  emailVerified: true,
+  lastLogin: true,
   // permissionLevel & department removed from API responses
         organizationId: true,
         division: true,

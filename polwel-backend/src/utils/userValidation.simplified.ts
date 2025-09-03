@@ -115,7 +115,7 @@ export class UserValidationService {
                       conflictInfo.conflictRole === 'TRAINER' ? 'trainer' :
                       conflictInfo.conflictRole === 'TRAINING_COORDINATOR' ? 'training coordinator' : 'user';
       
-      return `Email ${email} is already registered as an active ${roleText}`;
+      return `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`;
     } else {
       return `Email ${email} was previously used but is now available for reuse`;
     }

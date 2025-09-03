@@ -279,9 +279,8 @@ export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Respo
         name: true,
         role: true,
         status: true,
-        lastLogin: true,
-        mfaEnabled: true,
-        emailVerified: true,
+  lastLogin: true,
+  emailVerified: true,
         failedLoginAttempts: true,
         lockedUntil: true,
         passwordExpiry: true,
@@ -342,7 +341,6 @@ export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Respo
         passwordExpired: user.passwordExpiry ? new Date() > user.passwordExpiry : false,
         accountLocked: user.lockedUntil ? new Date() < user.lockedUntil : false,
         failedLoginAttempts: user.failedLoginAttempts,
-        mfaEnabled: user.mfaEnabled,
         emailVerified: user.emailVerified
       }
     });
@@ -390,7 +388,6 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
           role: true,
           status: true,
           lastLogin: true,
-          mfaEnabled: true,
           createdAt: true,
           updatedAt: true,
           permissions: {
@@ -450,7 +447,6 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
           role: true,
           status: true,
           lastLogin: true,
-          mfaEnabled: true,
           createdAt: true,
           updatedAt: true,
           permissions: {
@@ -482,21 +478,19 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
 
 // Create new POLWEL user
 export const createPolwelUser = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const {
-      name,
-      email,
-      permissions = []
-    } = req.body;
+  // Capture requested email early so it's available in catch blocks
+  const { name, email, permissions = [] } = req.body;
+  const requestedEmail = email ? String(email).trim().toLowerCase() : undefined;
 
+  try {
     // Prepare data for validation (simple sanitization)
     const userData = {
       name: name?.trim(),
-      email: email?.trim().toLowerCase()
+      email: requestedEmail
     };
 
     // Validate user data
-    const validationErrors = await UserValidationService.validatePolwelUserData(userData);
+  const validationErrors = await UserValidationService.validatePolwelUserData(userData as { name?: string; email?: string });
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
@@ -506,11 +500,12 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     }
 
     // Check for email conflicts
-    const emailConflict = await UserValidationService.checkEmailConflict(userData.email);
+    const emailToCheck = userData.email || '';
+    const emailConflict = await UserValidationService.checkEmailConflict(String(emailToCheck));
     if (emailConflict.isActiveConflict) {
       const conflictMessage = UserValidationService.generateEmailConflictMessage(
-        emailConflict, 
-        userData.email
+        emailConflict,
+        String(emailToCheck)
       );
       return res.status(409).json({
         success: false,
@@ -621,9 +616,10 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     // Handle specific Prisma errors
     if (error instanceof Error) {
       if (error.message.includes('Unique constraint')) {
+        // Provide a clear, role-specific message for duplicate emails
         return res.status(409).json({
           success: false,
-          message: 'A user with this email address already exists'
+          message: `Email ${requestedEmail} is already registered as an active POLWEL User/trainer/training coordinator`
         });
       }
       
@@ -931,61 +927,7 @@ export const resetPolwelUserPassword = async (req: AuthenticatedRequest, res: Re
   }
 };
 
-// Toggle MFA for POLWEL user
-export const togglePolwelUserMfa = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { enabled } = req.body;
-
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-
-    // Check if user exists and is POLWEL
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        id: id,
-        role: UserRole.POLWEL
-      }
-    });
-
-    if (!existingUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'POLWEL user not found'
-      });
-    }
-
-    const user = await prisma.user.update({
-      where: { id: id },
-      data: {
-        mfaEnabled: enabled,
-        mfaSecret: enabled ? crypto.randomBytes(32).toString('hex') : null
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        mfaEnabled: true
-      }
-    });
-
-    return res.json({
-      success: true,
-      message: `MFA ${enabled ? 'enabled' : 'disabled'} successfully`,
-      user
-    });
-  } catch (error) {
-    console.error('Toggle POLWEL user MFA error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-};
+// MFA endpoints removed — MFA has been deprecated
 
 // Resend setup email to POLWEL user
 export const resendPolwelUserSetup = async (req: AuthenticatedRequest, res: Response) => {

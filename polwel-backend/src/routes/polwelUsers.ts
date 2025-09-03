@@ -7,7 +7,6 @@ import {
   updatePolwelUser,
   deletePolwelUser,
   resetPolwelUserPassword,
-  togglePolwelUserMfa,
   getAvailablePermissions,
   getUserAuditTrail,
   sendPasswordResetLink,
@@ -37,6 +36,5 @@ router.delete('/:id', deletePolwelUser);
 router.post('/:id/reset-password', resetPolwelUserPassword);
 router.post('/:id/send-reset-link', sendPasswordResetLink);
 router.post('/:id/resend-setup', resendPolwelUserSetup);
-router.post('/:id/toggle-mfa', togglePolwelUserMfa);
 
 export default router;

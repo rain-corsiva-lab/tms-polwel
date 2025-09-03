@@ -527,7 +527,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'User with this email already exists'
+        message: `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`
       });
     }
 
@@ -626,7 +626,7 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
       if (emailExists) {
         return res.status(409).json({
           success: false,
-          message: 'User with this email already exists'
+          message: `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`
         });
       }
     }

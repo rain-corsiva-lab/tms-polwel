@@ -35,7 +35,6 @@ interface PolwelUser {
   role: "POLWEL";
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   lastLogin: string | null;
-  mfaEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   permissions?: Array<{

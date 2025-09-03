@@ -26,7 +26,7 @@ interface PolwelUser {
   role: "POLWEL";
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   lastLogin: string | null;
-  mfaEnabled: boolean;
+  // mfaEnabled removed
   passwordExpiry?: string;
   failedLoginAttempts?: number;
   // permissionLevel and department removed
@@ -58,58 +58,58 @@ export default function PolwelUsers() {
 
   // Dummy data for POLWEL users
   const dummyUsers: PolwelUser[] = [
-    {
-      id: "1",
-      name: "Alice Wong",
-      email: "alice.wong@polwel.com",
-      role: "POLWEL",
-      status: "ACTIVE",
-      lastLogin: "2024-08-12T10:30:00Z",
-      mfaEnabled: true,
-      passwordExpiry: "2024-12-31T23:59:59Z",
-      failedLoginAttempts: 0,
-      createdAt: "2023-06-01T00:00:00Z",
-      updatedAt: "2024-08-12T10:30:00Z",
-    },
-    {
-      id: "2",
-      name: "Robert Chen",
-      email: "robert.chen@polwel.com",
-      role: "POLWEL",
-      status: "ACTIVE",
-      lastLogin: "2024-08-11T14:15:00Z",
-      mfaEnabled: false,
-      passwordExpiry: "2024-11-30T23:59:59Z",
-      failedLoginAttempts: 0,
-      createdAt: "2023-07-15T00:00:00Z",
-      updatedAt: "2024-08-11T14:15:00Z",
-    },
-    {
-      id: "3",
-      name: "Maria Garcia",
-      email: "maria.garcia@polwel.com",
-      role: "POLWEL",
-      status: "PENDING",
-      lastLogin: null,
-      mfaEnabled: false,
-      passwordExpiry: "2024-09-30T23:59:59Z",
-      failedLoginAttempts: 0,
-      createdAt: "2024-08-01T00:00:00Z",
-      updatedAt: "2024-08-01T00:00:00Z",
-    },
-    {
-      id: "4",
-      name: "David Kim",
-      email: "david.kim@polwel.com",
-      role: "POLWEL",
-      status: "ACTIVE",
-      lastLogin: "2024-08-10T09:45:00Z",
-      mfaEnabled: true,
-      passwordExpiry: "2024-10-31T23:59:59Z",
-      failedLoginAttempts: 0,
-      createdAt: "2023-08-20T00:00:00Z",
-      updatedAt: "2024-08-10T09:45:00Z",
-    },
+    //   {
+    //     id: "1",
+    //     name: "Alice Wong",
+    //     email: "alice.wong@polwel.com",
+    //     role: "POLWEL",
+    //     status: "ACTIVE",
+    //     lastLogin: "2024-08-12T10:30:00Z",
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-12-31T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2023-06-01T00:00:00Z",
+    //     updatedAt: "2024-08-12T10:30:00Z",
+    //   },
+    //   {
+    //     id: "2",
+    //     name: "Robert Chen",
+    //     email: "robert.chen@polwel.com",
+    //     role: "POLWEL",
+    //     status: "ACTIVE",
+    //     lastLogin: "2024-08-11T14:15:00Z",
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-11-30T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2023-07-15T00:00:00Z",
+    //     updatedAt: "2024-08-11T14:15:00Z",
+    //   },
+    //   {
+    //     id: "3",
+    //     name: "Maria Garcia",
+    //     email: "maria.garcia@polwel.com",
+    //     role: "POLWEL",
+    //     status: "PENDING",
+    //     lastLogin: null,
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-09-30T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2024-08-01T00:00:00Z",
+    //     updatedAt: "2024-08-01T00:00:00Z",
+    //   },
+    //   {
+    //     id: "4",
+    //     name: "David Kim",
+    //     email: "david.kim@polwel.com",
+    //     role: "POLWEL",
+    //     status: "ACTIVE",
+    //     lastLogin: "2024-08-10T09:45:00Z",
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-10-31T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2023-08-20T00:00:00Z",
+    //     updatedAt: "2024-08-10T09:45:00Z",
+    //   },
   ];
 
   // Fetch users from API
@@ -194,29 +194,6 @@ export default function PolwelUsers() {
       });
     } catch (error) {
       console.error("Error resetting password:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reset password",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleToggleMfa = async (userId: string, enabled: boolean) => {
-    try {
-      await polwelUsersApi.toggleMfa(userId, enabled);
-      toast({
-        title: "MFA Updated",
-        description: `MFA ${enabled ? "enabled" : "disabled"} successfully`,
-      });
-      fetchUsers(); // Refresh the list
-    } catch (error) {
-      console.error("Error toggling MFA:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update MFA settings",
-        variant: "destructive",
-      });
     }
   };
 
@@ -276,7 +253,6 @@ export default function PolwelUsers() {
                 Name: u.name,
                 Email: u.email,
                 Status: u.status,
-                MFA: u.mfaEnabled ? "Enabled" : "Disabled",
                 LastLogin: u.lastLogin ? format(new Date(u.lastLogin), "dd/MM/yyyy") : "Never",
                 CreatedAt: format(new Date(u.createdAt), "dd/MM/yyyy"),
                 UpdatedAt: format(new Date(u.updatedAt), "dd/MM/yyyy"),
@@ -375,7 +351,6 @@ export default function PolwelUsers() {
                 <TableHead>Email</TableHead>
                 {/* department and permission level removed */}
                 <TableHead>Status</TableHead>
-                <TableHead>MFA</TableHead>
                 <TableHead>Last Login</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -389,9 +364,7 @@ export default function PolwelUsers() {
                   <TableCell>
                     <Badge variant={user.status === "ACTIVE" ? "default" : user.status === "PENDING" ? "outline" : "secondary"}>{user.status}</Badge>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={user.mfaEnabled ? "default" : "outline"}>{user.mfaEnabled ? "Enabled" : "Disabled"}</Badge>
-                  </TableCell>
+                  {/* MFA removed */}
                   <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -437,13 +410,10 @@ export default function PolwelUsers() {
                           {user.status === "PENDING" && (
                             <DropdownMenuItem onClick={() => handleResendSetup(user.id, user.name)}>
                               <RefreshCw className="h-4 w-4 mr-2" />
-                              Resend Setup Email
+                              Resend Onboarding Email
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => handleToggleMfa(user.id, !user.mfaEnabled)}>
-                            <Shield className="h-4 w-4 mr-2" />
-                            {user.mfaEnabled ? "Disable" : "Enable"} MFA
-                          </DropdownMenuItem>
+                          {/* MFA toggle removed */}
                           <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete User

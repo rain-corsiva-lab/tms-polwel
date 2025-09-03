@@ -13,7 +13,6 @@ interface User {
   role: "POLWEL" | "TrainingCoordinator" | "Trainer" | "Learner";
   status: "Active" | "Inactive" | "Pending" | "Locked";
   lastLogin: string;
-  mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
 
@@ -53,7 +52,6 @@ const allUsers: User[] = [
     role: "POLWEL",
     status: "Active",
     lastLogin: "2024-01-15 09:30",
-    mfaEnabled: true,
     passwordExpiry: "2024-04-15",
     failedLoginAttempts: 0,
     // permissionLevel & department removed
@@ -69,7 +67,7 @@ const allUsers: User[] = [
     role: "TrainingCoordinator",
     status: "Active",
     lastLogin: "2024-01-14 16:45",
-    mfaEnabled: true,
+    // mfaRemoved
     passwordExpiry: "2024-04-14",
     failedLoginAttempts: 0,
     organization: "Singapore Police Force",
@@ -91,7 +89,7 @@ const allUsers: User[] = [
     role: "Trainer",
     status: "Active",
     lastLogin: "2024-01-13 14:20",
-    mfaEnabled: true,
+    // mfaRemoved
     passwordExpiry: "2024-04-13",
     failedLoginAttempts: 0,
     contactNumber: "+65 9123 4567",
@@ -109,7 +107,7 @@ const allUsers: User[] = [
     role: "POLWEL",
     status: "Inactive",
     lastLogin: "2024-01-10 11:15",
-    mfaEnabled: true,
+    // mfaRemoved
     passwordExpiry: "2024-04-10",
     failedLoginAttempts: 0,
     // permissionLevel & department removed
@@ -125,7 +123,7 @@ const allUsers: User[] = [
     role: "TrainingCoordinator",
     status: "Active",
     lastLogin: "2024-01-15 08:45",
-    mfaEnabled: true,
+    // mfaRemoved
     passwordExpiry: "2024-04-15",
     failedLoginAttempts: 0,
     organization: "Singapore Police Force",
@@ -146,7 +144,6 @@ const allUsers: User[] = [
     role: "Trainer",
     status: "Active",
     lastLogin: "2024-01-12 15:30",
-    mfaEnabled: true,
     passwordExpiry: "2024-04-12",
     failedLoginAttempts: 0,
     contactNumber: "+65 8765 4321",
@@ -164,7 +161,7 @@ const allUsers: User[] = [
     role: "Learner",
     status: "Active",
     lastLogin: "2024-01-14 10:20",
-    mfaEnabled: false,
+    // mfaRemoved
     passwordExpiry: "2024-04-14",
     failedLoginAttempts: 0,
     enrolledCourses: ["Leadership Development", "Communication Skills"],
@@ -183,7 +180,7 @@ const allUsers: User[] = [
     role: "Learner",
     status: "Locked",
     lastLogin: "2024-01-05 14:30",
-    mfaEnabled: false,
+    // mfaRemoved
     passwordExpiry: "2024-04-05",
     failedLoginAttempts: 5,
     enrolledCourses: ["Team Building"],

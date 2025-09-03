@@ -74,7 +74,7 @@ async function main() {
       role: UserRole.POLWEL,
       status: UserStatus.ACTIVE,
       emailVerified: true,
-      mfaEnabled: true,
+  // mfaRemoved
       permissionLevel: 'Administrator',
       department: 'System Administration',
       lastLogin: new Date('2024-01-15T09:30:00Z'),
@@ -90,7 +90,7 @@ async function main() {
       role: UserRole.POLWEL,
       status: UserStatus.INACTIVE,
       emailVerified: true,
-      mfaEnabled: true,
+  // mfaRemoved
       permissionLevel: 'Manager',
       department: 'Course Management',
       lastLogin: new Date('2024-01-10T11:15:00Z'),
@@ -107,7 +107,7 @@ async function main() {
       role: UserRole.POLWEL,
       status: UserStatus.PENDING,
       emailVerified: false,
-      mfaEnabled: false,
+  // mfaRemoved
       permissionLevel: 'Staff',
       department: 'Training Coordination',
       createdBy: johnTan.id,
@@ -123,7 +123,7 @@ async function main() {
       role: UserRole.TRAINING_COORDINATOR,
       status: UserStatus.ACTIVE,
       emailVerified: true,
-      mfaEnabled: true,
+  // mfaRemoved
       organizationId: angMoKioDiv.id,
       division: 'Ang Mo Kio Division',
       buCostCentre: 'AMK001',
@@ -145,7 +145,7 @@ async function main() {
       role: UserRole.TRAINING_COORDINATOR,
       status: UserStatus.ACTIVE,
       emailVerified: true,
-      mfaEnabled: true,
+  // mfaRemoved
       organizationId: choaChuKangDiv.id,
       division: 'Choa Chu Kang Division',
       buCostCentre: 'CCK002',
@@ -167,7 +167,7 @@ async function main() {
       role: UserRole.TRAINER,
       status: UserStatus.ACTIVE,
       emailVerified: true,
-      mfaEnabled: true,
+  // mfaRemoved
       availabilityStatus: AvailabilityStatus.AVAILABLE,
       partnerOrganization: 'Excellence Training Partners',
       bio: 'Experienced trainer with over 5 years in corporate development. Passionate about empowering teams and individuals to reach their full potential through innovative training methodologies.',
@@ -189,7 +189,7 @@ async function main() {
       role: UserRole.TRAINER,
       status: UserStatus.ACTIVE,
       emailVerified: true,
-      mfaEnabled: true,
+  // mfaRemoved
       availabilityStatus: AvailabilityStatus.LIMITED,
       partnerOrganization: 'Professional Development Corp',
       bio: 'Specialist in communication and customer service training with extensive experience in corporate environments.',
@@ -211,7 +211,7 @@ async function main() {
       role: UserRole.TRAINER,
       status: UserStatus.PENDING,
       emailVerified: false,
-      mfaEnabled: false,
+  // mfaRemoved
       availabilityStatus: AvailabilityStatus.AVAILABLE,
       partnerOrganization: 'Training Solutions Ltd',
       specializations: ['Project Management', 'Leadership'],
@@ -229,7 +229,7 @@ async function main() {
       role: UserRole.LEARNER,
       status: UserStatus.ACTIVE,
       emailVerified: true,
-      mfaEnabled: false,
+  // mfaRemoved
       organizationId: angMoKioDiv.id,
       division: 'Ang Mo Kio Division',
       employeeId: 'SPF001234',
@@ -247,7 +247,7 @@ async function main() {
       role: UserRole.LEARNER,
       status: UserStatus.LOCKED,
       emailVerified: true,
-      mfaEnabled: false,
+  // mfaRemoved
       organizationId: choaChuKangDiv.id,
       division: 'Choa Chu Kang Division',
       employeeId: 'SPF005678',

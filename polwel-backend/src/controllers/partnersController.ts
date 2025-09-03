@@ -204,7 +204,6 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         experience: contactNumber || '', // Store contact number in experience
         specializations: coursesAssigned || [], // Store courses in specializations
         certifications: contactDesignation ? [contactDesignation] : [], // Store designation in certifications
-        mfaEnabled: false,
       },
       select: {
         id: true,

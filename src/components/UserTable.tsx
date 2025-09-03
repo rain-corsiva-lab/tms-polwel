@@ -13,7 +13,6 @@ interface User {
   role: "POLWEL" | "TrainingCoordinator" | "Trainer" | "Learner";
   status: "Active" | "Inactive" | "Pending" | "Locked";
   lastLogin?: string;
-  mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
 

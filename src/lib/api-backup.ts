@@ -255,12 +255,7 @@ export const polwelUsersApi = {
   },
 
   // Toggle MFA
-  toggleMfa: async (id: string, enabled: boolean) => {
-    return apiRequest(`/polwel-users/${id}/toggle-mfa`, {
-      method: 'POST',
-      body: JSON.stringify({ enabled }),
-    });
-  },
+
 
   // Get detailed user information
   getDetails: async (id: string | number) => {
