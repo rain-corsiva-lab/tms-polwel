@@ -44,7 +44,7 @@ const Header = () => {
       case "TRAINING_COORDINATOR":
         return "Training Coordinator";
       case "TRAINER":
-        return "Trainer";
+        return "Associate Trainer";
       case "LEARNER":
         return "Learner";
       default:

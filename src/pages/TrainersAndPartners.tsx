@@ -301,9 +301,9 @@ const TrainersAndPartners = () => {
         <div>
           <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <GraduationCap className="h-6 w-6" />
-            Trainers & Partners
+            Associate Trainers & Training Partners
           </h2>
-          <p className="text-muted-foreground">Manage training partners and their availability</p>
+          <p className="text-muted-foreground">Manage associate trainers and training partners and their availability</p>
         </div>
         <div className="flex space-x-3">
           <Button variant="outline" onClick={() => setFilterOpen((o) => !o)}>
@@ -335,9 +335,9 @@ const TrainersAndPartners = () => {
               const wb = XLSX.utils.book_new();
               const trainerSheet = XLSX.utils.json_to_sheet(trainerRows);
               const partnerSheet = XLSX.utils.json_to_sheet(partnerRows);
-              XLSX.utils.book_append_sheet(wb, trainerSheet, "Trainers");
-              XLSX.utils.book_append_sheet(wb, partnerSheet, "Partners");
-              XLSX.writeFile(wb, "trainers_partners.xlsx");
+              XLSX.utils.book_append_sheet(wb, trainerSheet, "Associate Trainers");
+              XLSX.utils.book_append_sheet(wb, partnerSheet, "Training Partners");
+              XLSX.writeFile(wb, "associate_trainers_training_partners.xlsx");
             }}
           >
             <Download className="h-4 w-4 mr-2" />
@@ -394,7 +394,7 @@ const TrainersAndPartners = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Trainers</p>
+                    <p className="text-sm font-medium text-muted-foreground">Total Associate Trainers</p>
                     <p className="text-2xl font-bold text-foreground">{totalTrainers}</p>
                   </div>
                   <div className="p-2 bg-accent rounded-lg">

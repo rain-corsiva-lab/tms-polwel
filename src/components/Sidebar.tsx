@@ -14,7 +14,7 @@ const navigation = [
 
 const userManagementItems = [
   { name: "POLWEL Users", href: "/polwel-users", icon: Shield },
-  { name: "Trainers & Partners", href: "/trainers", icon: GraduationCap },
+  { name: "Associate Trainers & Training Partners", href: "/trainers", icon: GraduationCap },
 ];
 
 const clientOrgsItems = [

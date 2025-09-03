@@ -145,9 +145,9 @@ const TrainingCalendar = ({
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <CalendarIcon className="h-5 w-5" />
-              <span>Trainer Availability Calendar</span>
+              <span>Associate Trainer Availability Calendar</span>
             </CardTitle>
-            <CardDescription>View trainer blockout dates. Blocked dates show which trainers are unavailable.</CardDescription>
+            <CardDescription>View associate trainer blockout dates. Blocked dates show which associate trainers are unavailable.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -227,8 +227,8 @@ const TrainingCalendar = ({
             <CardTitle className="text-lg">{selectedDate ? format(selectedDate, "MMMM dd, yyyy") : "Select a Date"}</CardTitle>
             <CardDescription>
               {selectedDateBlockouts.length > 0
-                ? `${selectedDateBlockouts.length} trainer${selectedDateBlockouts.length > 1 ? "s" : ""} blocked out`
-                : "All trainers available for this date"}
+                ? `${selectedDateBlockouts.length} associate trainer${selectedDateBlockouts.length > 1 ? "s" : ""} blocked out`
+                : "All associate trainers available for this date"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -286,7 +286,7 @@ const TrainingCalendar = ({
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="trainer">Trainer *</Label>
+                        <Label htmlFor="trainer">Associate Trainer *</Label>
                         <select
                           id="trainer"
                           className="w-full p-2 border rounded-md"
@@ -326,7 +326,7 @@ const TrainingCalendar = ({
 
                       <div className="flex space-x-2 pt-4">
                         <Button onClick={handleAddTrainerBlockout} disabled={!selectedTrainerForBlockout}>
-                          Block Trainer
+                          Block Associate Trainer
                         </Button>
                         <Button variant="outline" onClick={() => setIsBlockoutDialogOpen(false)}>
                           Cancel

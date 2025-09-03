@@ -6,19 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import TrainerCalendar from "@/components/TrainerCalendar";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Building, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  BookOpen,
-  Edit,
-  CheckCircle,
-  AlertCircle
-} from "lucide-react";
+import { User, Mail, Phone, Building, MapPin, Calendar, Clock, BookOpen, Edit, CheckCircle, AlertCircle } from "lucide-react";
 
 // Mock trainer data - this would typically come from authentication context
 const trainerData = {
@@ -34,36 +22,41 @@ const trainerData = {
   availabilityStatus: "Available",
   specializations: ["Leadership Development", "Team Building", "Communication Skills"],
   certifications: ["Certified Professional Trainer", "Leadership Coach", "Team Dynamics Specialist"],
-  writeUp: "Experienced trainer with over 5 years in corporate development. Passionate about empowering teams and individuals to reach their full potential through innovative training methodologies.",
+  writeUp:
+    "Experienced trainer with over 5 years in corporate development. Passionate about empowering teams and individuals to reach their full potential through innovative training methodologies.",
   totalTrainingSessions: 45,
   upcomingSessions: 8,
   completedHours: 120,
   rating: 4.8,
-  profileImage: null
+  profileImage: null,
 };
 
 const TrainerPartner = () => {
   const [trainerProfile, setTrainerProfile] = useState(trainerData);
 
   const handleProfileUpdate = (updatedData: { specializations: string[]; writeUp: string }) => {
-    setTrainerProfile(prev => ({
+    setTrainerProfile((prev) => ({
       ...prev,
       specializations: updatedData.specializations,
-      writeUp: updatedData.writeUp
+      writeUp: updatedData.writeUp,
     }));
   };
+  const [showEditProfile, setShowEditProfile] = useState(false);
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Trainer Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Associate Trainer Dashboard</h1>
           <p className="text-muted-foreground">Manage your profile and training schedule</p>
         </div>
-        <Button>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Profile
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowEditProfile(true)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Profile
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -76,15 +69,16 @@ const TrainerPartner = () => {
                 <Avatar className="h-24 w-24">
                   <AvatarImage src={trainerData.profileImage || ""} />
                   <AvatarFallback className="text-lg">
-                    {trainerData.name.split(' ').map(n => n[0]).join('')}
+                    {trainerData.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
                   </AvatarFallback>
                 </Avatar>
               </div>
               <CardTitle className="text-xl">{trainerData.name}</CardTitle>
               <div className="flex justify-center space-x-2">
-                <Badge className={trainerData.status === 'Active' ? 'bg-success text-success-foreground' : 'bg-muted'}>
-                  {trainerData.status}
-                </Badge>
+                <Badge className={trainerData.status === "Active" ? "bg-success text-success-foreground" : "bg-muted"}>{trainerData.status}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -121,10 +115,20 @@ const TrainerPartner = () => {
                   <BookOpen className="h-5 w-5 mr-2" />
                   Complete Profile
                 </CardTitle>
-                <EditProfileDialog 
-                  specializations={trainerProfile.specializations}
-                  writeUp={trainerProfile.writeUp}
-                  onSave={handleProfileUpdate}
+                <EditProfileDialog
+                  isOpen={showEditProfile}
+                  onClose={() => setShowEditProfile(false)}
+                  profile={{
+                    id: trainerProfile.id,
+                    name: trainerProfile.name,
+                    email: trainerProfile.email,
+                    bio: trainerProfile.writeUp,
+                    specializations: trainerProfile.specializations,
+                  }}
+                  onProfileUpdated={(updated) => {
+                    if (updated) handleProfileUpdate({ specializations: updated.specializations, writeUp: updated.writeUp });
+                    setShowEditProfile(false);
+                  }}
                 />
               </div>
             </CardHeader>
@@ -139,18 +143,15 @@ const TrainerPartner = () => {
                   ))}
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h4 className="text-sm font-medium text-foreground mb-2">Professional Write-up</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {trainerProfile.writeUp}
-                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{trainerProfile.writeUp}</p>
               </div>
             </CardContent>
           </Card>
-
         </div>
 
         {/* Calendar Section */}
@@ -164,13 +165,9 @@ const TrainerPartner = () => {
               <p className="text-muted-foreground">View and manage your training sessions</p>
             </CardHeader>
             <CardContent>
-              <TrainerCalendar 
-                trainerId={trainerProfile.id} 
-                trainerName={trainerProfile.name}
-              />
+              <TrainerCalendar trainerId={trainerProfile.id} trainerName={trainerProfile.name} />
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>
