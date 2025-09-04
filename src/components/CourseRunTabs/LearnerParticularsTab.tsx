@@ -51,11 +51,26 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newLearner, setNewLearner] = useState<Partial<Learner>>({
     courseRunId,
+    name: 'John Doe',
+    designation: 'Senior Officer',
+    email: 'john.doe@company.com',
+    contactNumber: '+65 9123 4567',
+    buNumber: 'BU001',
+    division: '',
+    department: '',
     paymentMode: 'Self-Payment',
+    trainingOfficerName: '',
+    trainingOfficerEmail: '',
+    trainingOfficerPhone: '',
+    feesRemarks: 'Standard training fee',
+    poPaymentAdviceNumber: 'PO2024001',
+    invoiceNumber: 'INV-2024-001',
+    receiptNumber: 'RCP-2024-001',
+    remarks: 'Regular enrollment for skills development program',
     enrolmentStatus: 'Enrolled',
     attendance: 'Present'
   });
-  const [selectedDiscount, setSelectedDiscount] = useState<string>('none');
+  const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([]);
   
   // Get available divisions from client organizations
   const allDivisions = clientOrganizations.flatMap(org => 
@@ -72,13 +87,17 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
   // Calculate final fee
   const calculateFinalFee = () => {
     const baseFee = courseData.defaultCourseFee || 0;
-    if (!selectedDiscount || selectedDiscount === 'none') return baseFee;
+    if (!selectedDiscounts.length) return baseFee;
     
-    const discount = courseData.discounts?.find(d => d.id === selectedDiscount);
-    if (!discount) return baseFee;
+    let totalDiscountAmount = 0;
+    selectedDiscounts.forEach(discountId => {
+      const discount = courseData.discounts?.find(d => d.id === discountId);
+      if (discount) {
+        totalDiscountAmount += (baseFee * discount.percentage) / 100;
+      }
+    });
     
-    const discountAmount = (baseFee * discount.percentage) / 100;
-    return baseFee - discountAmount;
+    return Math.max(0, baseFee - totalDiscountAmount);
   };
 
   // Set default training coordinator when division is selected
@@ -114,9 +133,9 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
       return;
     }
 
-    // Calculate final fee and set discount
+    // Calculate final fee and set discounts
     const finalFee = calculateFinalFee();
-    const appliedDiscounts = selectedDiscount && selectedDiscount !== 'none' ? [selectedDiscount] : [];
+    const appliedDiscounts = selectedDiscounts.length > 0 ? selectedDiscounts : [];
 
     const learner: Learner = {
       id: `learner-${Date.now()}`,
@@ -152,7 +171,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
       enrolmentStatus: 'Enrolled',
       attendance: 'Present'
     });
-    setSelectedDiscount('none');
+    setSelectedDiscounts([]);
     setIsAddDialogOpen(false);
   };
 
@@ -408,20 +427,30 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="discount">Apply Discount (Optional)</Label>
-                        <Select value={selectedDiscount} onValueChange={setSelectedDiscount}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="No discount" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No discount</SelectItem>
-                            {courseData.discounts?.map(discount => (
-                              <SelectItem key={discount.id} value={discount.id}>
+                        <Label>Apply Discounts (Optional)</Label>
+                        <div className="space-y-2 max-h-24 overflow-y-auto border rounded p-2">
+                          {courseData.discounts?.map(discount => (
+                            <div key={discount.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={discount.id}
+                                checked={selectedDiscounts.includes(discount.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedDiscounts([...selectedDiscounts, discount.id]);
+                                  } else {
+                                    setSelectedDiscounts(selectedDiscounts.filter(id => id !== discount.id));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={discount.id} className="text-sm cursor-pointer">
                                 {discount.name} ({discount.percentage}%)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                              </Label>
+                            </div>
+                          ))}
+                          {(!courseData.discounts || courseData.discounts.length === 0) && (
+                            <p className="text-muted-foreground text-sm">No discounts available</p>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <Label>Total Fees Before GST</Label>
@@ -431,15 +460,27 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                       </div>
                     </div>
                     
-                    {selectedDiscount && selectedDiscount !== 'none' && (
+                    {selectedDiscounts.length > 0 && (
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="text-sm text-green-800">
-                          <strong>Discount Applied:</strong> {courseData.discounts?.find(d => d.id === selectedDiscount)?.name} 
-                          ({courseData.discounts?.find(d => d.id === selectedDiscount)?.percentage}% off)
-                        </div>
-                        <div className="text-sm text-green-800">
-                          <strong>Discount Amount:</strong> $
-                          {((courseData.defaultCourseFee || 0) * (courseData.discounts?.find(d => d.id === selectedDiscount)?.percentage || 0) / 100).toFixed(2)}
+                        <div className="text-sm text-green-800 space-y-1">
+                          <div><strong>Discounts Applied:</strong></div>
+                          {selectedDiscounts.map(discountId => {
+                            const discount = courseData.discounts?.find(d => d.id === discountId);
+                            if (!discount) return null;
+                            const discountAmount = ((courseData.defaultCourseFee || 0) * discount.percentage) / 100;
+                            return (
+                              <div key={discountId} className="ml-4">
+                                • {discount.name} ({discount.percentage}% off) - ${discountAmount.toFixed(2)}
+                              </div>
+                            );
+                          })}
+                          <div className="pt-2 border-t border-green-200">
+                            <strong>Total Discount Amount:</strong> $
+                            {selectedDiscounts.reduce((total, discountId) => {
+                              const discount = courseData.discounts?.find(d => d.id === discountId);
+                              return total + (discount ? ((courseData.defaultCourseFee || 0) * discount.percentage) / 100 : 0);
+                            }, 0).toFixed(2)}
+                          </div>
                         </div>
                       </div>
                     )}
