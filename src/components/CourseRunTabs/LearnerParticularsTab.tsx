@@ -19,13 +19,33 @@ interface LearnerParticularsTabProps {
   learners: Learner[];
   onAddLearner: (learner: Learner) => void;
   onUpdateLearner: (learnerId: string, data: Partial<Learner>) => void;
+  courseData?: {
+    defaultCourseFee?: number;
+    discounts?: Array<{ id: string; name: string; percentage: number }>;
+  };
+  clientOrganizations?: Array<{
+    id: string;
+    name: string;
+    divisions?: Array<{
+      id: string;
+      name: string;
+      trainingOfficers?: Array<{
+        id: string;
+        name: string;
+        email: string;
+        phone: string;
+      }>;
+    }>;
+  }>;
 }
 
 const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
   courseRunId,
   learners,
   onAddLearner,
-  onUpdateLearner
+  onUpdateLearner,
+  courseData = {},
+  clientOrganizations = []
 }) => {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -35,6 +55,46 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
     enrolmentStatus: 'Enrolled',
     attendance: 'Present'
   });
+  const [selectedDiscount, setSelectedDiscount] = useState<string>('');
+  
+  // Get available divisions from client organizations
+  const allDivisions = clientOrganizations.flatMap(org => 
+    (org.divisions || []).map(div => ({
+      ...div,
+      organizationName: org.name
+    }))
+  );
+
+  // Get training officers for selected division
+  const selectedDivision = allDivisions.find(div => div.id === newLearner.division);
+  const availableTrainingOfficers = selectedDivision?.trainingOfficers || [];
+
+  // Calculate final fee
+  const calculateFinalFee = () => {
+    const baseFee = courseData.defaultCourseFee || 0;
+    if (!selectedDiscount) return baseFee;
+    
+    const discount = courseData.discounts?.find(d => d.id === selectedDiscount);
+    if (!discount) return baseFee;
+    
+    const discountAmount = (baseFee * discount.percentage) / 100;
+    return baseFee - discountAmount;
+  };
+
+  // Set default training officer when division is selected
+  const handleDivisionChange = (divisionId: string) => {
+    const division = allDivisions.find(div => div.id === divisionId);
+    const defaultOfficer = division?.trainingOfficers?.[0];
+    
+    setNewLearner({
+      ...newLearner,
+      division: divisionId,
+      department: division?.name || '',
+      trainingOfficerName: defaultOfficer?.name || '',
+      trainingOfficerEmail: defaultOfficer?.email || '',
+      trainingOfficerPhone: defaultOfficer?.phone || ''
+    });
+  };
 
   const paymentModes = [
     'Self-Payment',
@@ -54,6 +114,10 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
       return;
     }
 
+    // Calculate final fee and set discount
+    const finalFee = calculateFinalFee();
+    const appliedDiscounts = selectedDiscount ? [selectedDiscount] : [];
+
     const learner: Learner = {
       id: `learner-${Date.now()}`,
       courseRunId,
@@ -65,8 +129,8 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
       department: newLearner.department || '',
       paymentMode: newLearner.paymentMode || 'Self-Payment',
       buNumber: newLearner.buNumber,
-      feesBeforeGST: newLearner.feesBeforeGST || 0,
-      discounts: newLearner.discounts || [],
+      feesBeforeGST: finalFee,
+      discounts: appliedDiscounts,
       feesRemarks: newLearner.feesRemarks,
       poPaymentAdviceNumber: newLearner.poPaymentAdviceNumber,
       invoiceNumber: newLearner.invoiceNumber,
@@ -88,6 +152,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
       enrolmentStatus: 'Enrolled',
       attendance: 'Present'
     });
+    setSelectedDiscount('');
     setIsAddDialogOpen(false);
   };
 
@@ -147,7 +212,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
               <DialogHeader>
                 <DialogTitle>Add New Learner</DialogTitle>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="grid grid-cols-2 gap-6 py-4">
                 {/* Personal Information */}
                 <div className="space-y-4">
                   <h4 className="font-medium">Personal Information</h4>
@@ -160,13 +225,34 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                       placeholder="Enter learner's full name"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="designation">Designation *</Label>
-                    <Input
-                      id="designation"
-                      value={newLearner.designation || ''}
-                      onChange={(e) => setNewLearner({...newLearner, designation: e.target.value})}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="designation">Designation *</Label>
+                      <Input
+                        id="designation"
+                        value={newLearner.designation || ''}
+                        onChange={(e) => setNewLearner({...newLearner, designation: e.target.value})}
+                        placeholder="Job title"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="division">Division / Department</Label>
+                      <Select
+                        value={newLearner.division}
+                        onValueChange={handleDivisionChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select division" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allDivisions.map(division => (
+                            <SelectItem key={division.id} value={division.id}>
+                              {division.name} ({division.organizationName})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="email">Email Address *</Label>
@@ -175,6 +261,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                       type="email"
                       value={newLearner.email || ''}
                       onChange={(e) => setNewLearner({...newLearner, email: e.target.value})}
+                      placeholder="learner@company.com"
                     />
                   </div>
                   <div>
@@ -183,21 +270,58 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                       id="contactNumber"
                       value={newLearner.contactNumber || ''}
                       onChange={(e) => setNewLearner({...newLearner, contactNumber: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="division">Division / Department</Label>
-                    <Input
-                      id="division"
-                      value={newLearner.division || ''}
-                      onChange={(e) => setNewLearner({...newLearner, division: e.target.value})}
+                      placeholder="+65 xxxx xxxx"
                     />
                   </div>
                 </div>
 
-                {/* Payment & Training Officer Information */}
+                {/* Training Officer & Payment Information */}
                 <div className="space-y-4">
-                  <h4 className="font-medium">Payment & Training Officer</h4>
+                  <h4 className="font-medium">Training Officer & Payment</h4>
+                  <div>
+                    <Label htmlFor="trainingOfficer">Training Officer</Label>
+                    <Select
+                      value={`${newLearner.trainingOfficerName}|${newLearner.trainingOfficerEmail}|${newLearner.trainingOfficerPhone}`}
+                      onValueChange={(value) => {
+                        const [name, email, phone] = value.split('|');
+                        setNewLearner({
+                          ...newLearner,
+                          trainingOfficerName: name,
+                          trainingOfficerEmail: email,
+                          trainingOfficerPhone: phone
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select training officer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTrainingOfficers.map(officer => (
+                          <SelectItem 
+                            key={officer.id} 
+                            value={`${officer.name}|${officer.email}|${officer.phone}`}
+                          >
+                            {officer.name} ({officer.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {newLearner.trainingOfficerName && (
+                    <div className="p-3 bg-muted rounded-lg space-y-2">
+                      <div className="text-sm">
+                        <strong>Name:</strong> {newLearner.trainingOfficerName}
+                      </div>
+                      <div className="text-sm">
+                        <strong>Email:</strong> {newLearner.trainingOfficerEmail}
+                      </div>
+                      <div className="text-sm">
+                        <strong>Phone:</strong> {newLearner.trainingOfficerPhone}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <Label htmlFor="paymentMode">Payment Mode</Label>
                     <Select
@@ -214,40 +338,54 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="feesBeforeGST">Fees before GST</Label>
-                    <Input
-                      id="feesBeforeGST"
-                      type="number"
-                      value={newLearner.feesBeforeGST || ''}
-                      onChange={(e) => setNewLearner({...newLearner, feesBeforeGST: parseFloat(e.target.value)})}
-                    />
+                </div>
+
+                {/* Fees Calculation Section */}
+                <div className="col-span-2 space-y-4">
+                  <h4 className="font-medium border-t pt-4">Fee Calculation</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label>Default Course Fee</Label>
+                      <div className="p-2 bg-muted rounded text-sm">
+                        ${courseData.defaultCourseFee?.toFixed(2) || '0.00'}
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="discount">Apply Discount (Optional)</Label>
+                      <Select value={selectedDiscount} onValueChange={setSelectedDiscount}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="No discount" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No discount</SelectItem>
+                          {courseData.discounts?.map(discount => (
+                            <SelectItem key={discount.id} value={discount.id}>
+                              {discount.name} ({discount.percentage}%)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Final Fee (Before GST)</Label>
+                      <div className="p-2 bg-primary/10 rounded text-sm font-semibold">
+                        ${calculateFinalFee().toFixed(2)}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="trainingOfficerName">Training Officer's Name</Label>
-                    <Input
-                      id="trainingOfficerName"
-                      value={newLearner.trainingOfficerName || ''}
-                      onChange={(e) => setNewLearner({...newLearner, trainingOfficerName: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="trainingOfficerEmail">Training Officer's Email</Label>
-                    <Input
-                      id="trainingOfficerEmail"
-                      type="email"
-                      value={newLearner.trainingOfficerEmail || ''}
-                      onChange={(e) => setNewLearner({...newLearner, trainingOfficerEmail: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="trainingOfficerPhone">Training Officer's Phone</Label>
-                    <Input
-                      id="trainingOfficerPhone"
-                      value={newLearner.trainingOfficerPhone || ''}
-                      onChange={(e) => setNewLearner({...newLearner, trainingOfficerPhone: e.target.value})}
-                    />
-                  </div>
+                  
+                  {selectedDiscount && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="text-sm text-green-800">
+                        <strong>Discount Applied:</strong> {courseData.discounts?.find(d => d.id === selectedDiscount)?.name} 
+                        ({courseData.discounts?.find(d => d.id === selectedDiscount)?.percentage}% off)
+                      </div>
+                      <div className="text-sm text-green-800">
+                        <strong>Discount Amount:</strong> $
+                        {((courseData.defaultCourseFee || 0) * (courseData.discounts?.find(d => d.id === selectedDiscount)?.percentage || 0) / 100).toFixed(2)}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Remarks */}
@@ -258,6 +396,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                     value={newLearner.remarks || ''}
                     onChange={(e) => setNewLearner({...newLearner, remarks: e.target.value})}
                     rows={3}
+                    placeholder="Additional notes or special instructions"
                   />
                 </div>
               </div>
