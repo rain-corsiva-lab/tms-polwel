@@ -55,7 +55,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
     enrolmentStatus: 'Enrolled',
     attendance: 'Present'
   });
-  const [selectedDiscount, setSelectedDiscount] = useState<string>('');
+  const [selectedDiscount, setSelectedDiscount] = useState<string>('none');
   
   // Get available divisions from client organizations
   const allDivisions = clientOrganizations.flatMap(org => 
@@ -72,7 +72,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
   // Calculate final fee
   const calculateFinalFee = () => {
     const baseFee = courseData.defaultCourseFee || 0;
-    if (!selectedDiscount) return baseFee;
+    if (!selectedDiscount || selectedDiscount === 'none') return baseFee;
     
     const discount = courseData.discounts?.find(d => d.id === selectedDiscount);
     if (!discount) return baseFee;
@@ -116,7 +116,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
 
     // Calculate final fee and set discount
     const finalFee = calculateFinalFee();
-    const appliedDiscounts = selectedDiscount ? [selectedDiscount] : [];
+    const appliedDiscounts = selectedDiscount && selectedDiscount !== 'none' ? [selectedDiscount] : [];
 
     const learner: Learner = {
       id: `learner-${Date.now()}`,
@@ -152,7 +152,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
       enrolmentStatus: 'Enrolled',
       attendance: 'Present'
     });
-    setSelectedDiscount('');
+    setSelectedDiscount('none');
     setIsAddDialogOpen(false);
   };
 
@@ -357,7 +357,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                           <SelectValue placeholder="No discount" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No discount</SelectItem>
+                          <SelectItem value="none">No discount</SelectItem>
                           {courseData.discounts?.map(discount => (
                             <SelectItem key={discount.id} value={discount.id}>
                               {discount.name} ({discount.percentage}%)
@@ -374,7 +374,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                     </div>
                   </div>
                   
-                  {selectedDiscount && (
+                  {selectedDiscount && selectedDiscount !== 'none' && (
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="text-sm text-green-800">
                         <strong>Discount Applied:</strong> {courseData.discounts?.find(d => d.id === selectedDiscount)?.name} 
