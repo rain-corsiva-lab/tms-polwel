@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PaginationControls from "@/components/ui/pagination";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,12 +75,14 @@ const TrainersAndPartners = () => {
     total: 0,
     totalPages: 0,
   });
+  const [perPage, setPerPage] = useState(10);
   const [partnersPagination, setPartnersPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
     totalPages: 0,
   });
+  const [partnersPerPage, setPartnersPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -189,12 +192,14 @@ const TrainersAndPartners = () => {
   ];
 
   // Fetch trainers from API or use dummy data
-  const fetchTrainers = async () => {
+  const fetchTrainers = async (pageArg?: number, limitArg?: number) => {
     try {
       setLoading(true);
+      const pageToUse = pageArg ?? pagination.page;
+      const limitToUse = limitArg ?? perPage;
       const response = await trainersApi.getAll({
-        page: pagination.page,
-        limit: pagination.limit,
+        page: pageToUse,
+        limit: limitToUse,
         search: searchQuery || undefined,
         status: statusFilter || undefined,
       });
@@ -210,7 +215,7 @@ const TrainersAndPartners = () => {
         })) || [];
 
       setTrainers(mappedTrainers);
-      setPagination(response.pagination || pagination);
+      setPagination(response.pagination || { ...pagination, limit: limitToUse, page: pageToUse });
     } catch (error) {
       console.error("Error fetching trainers:", error);
       // Use dummy data when API fails
@@ -227,12 +232,14 @@ const TrainersAndPartners = () => {
   };
 
   // Fetch partners from API or use dummy data
-  const fetchPartners = async () => {
+  const fetchPartners = async (pageArg?: number, limitArg?: number) => {
     try {
       setPartnersLoading(true);
+      const pageToUse = pageArg ?? partnersPagination.page;
+      const limitToUse = limitArg ?? partnersPerPage;
       const response = await partnersApi.getAll({
-        page: partnersPagination.page,
-        limit: partnersPagination.limit,
+        page: pageToUse,
+        limit: limitToUse,
         search: searchQuery || undefined,
         status: statusFilter || undefined,
       });
@@ -245,7 +252,7 @@ const TrainersAndPartners = () => {
         })) || [];
 
       setPartners(mappedPartners);
-      setPartnersPagination(response.pagination || partnersPagination);
+      setPartnersPagination(response.pagination || { ...partnersPagination, limit: limitToUse, page: pageToUse });
     } catch (error) {
       console.error("Error fetching partners:", error);
       // Use dummy data when API fails
@@ -266,10 +273,24 @@ const TrainersAndPartners = () => {
     fetchTrainers();
   }, [pagination.page, searchQuery, statusFilter]);
 
+  // When perPage changes, reset to page 1 so the new limit is applied immediately
+  useEffect(() => {
+    // reset to page 1 and immediately fetch with new limit
+    setPagination((p) => ({ ...p, page: 1 }));
+    fetchTrainers(1, perPage);
+  }, [perPage]);
+
   // Fetch partners on component mount and when filters change
   useEffect(() => {
     fetchPartners();
   }, [partnersPagination.page, searchQuery, statusFilter]);
+
+  // When partnersPerPage changes, reset partners page to 1 so the new limit is applied immediately
+  useEffect(() => {
+    // reset to page 1 and immediately fetch with new limit
+    setPartnersPagination((p) => ({ ...p, page: 1 }));
+    fetchPartners(1, partnersPerPage);
+  }, [partnersPerPage]);
 
   // Calculate stats from real data
   const totalTrainers = trainers.length;
@@ -573,6 +594,15 @@ const TrainersAndPartners = () => {
                     </TableBody>
                   </Table>
                 </CardContent>
+                <div className="px-4">
+                  <PaginationControls
+                    page={pagination.page}
+                    perPage={perPage}
+                    total={pagination.total}
+                    onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+                    onPerPageChange={(pp) => setPerPage(pp)}
+                  />
+                </div>
               </Card>
             </TabsContent>
 
@@ -709,6 +739,15 @@ const TrainersAndPartners = () => {
                     </TableBody>
                   </Table>
                 </CardContent>
+                <div className="px-4">
+                  <PaginationControls
+                    page={partnersPagination.page}
+                    perPage={partnersPerPage}
+                    total={partnersPagination.total}
+                    onPageChange={(p) => setPartnersPagination((prev) => ({ ...prev, page: p }))}
+                    onPerPageChange={(pp) => setPartnersPerPage(pp)}
+                  />
+                </div>
               </Card>
             </TabsContent>
           </Tabs>

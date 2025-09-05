@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import PaginationControls from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -45,6 +46,7 @@ export default function PolwelUsers() {
     total: 0,
     totalPages: 0,
   });
+  const [perPage, setPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -119,13 +121,13 @@ export default function PolwelUsers() {
       setLoading(true);
       const response = await polwelUsersApi.getAll({
         page: pagination.page,
-        limit: pagination.limit,
+        limit: perPage,
         search: searchQuery || undefined,
         status: statusFilter || undefined,
       });
 
       setUsers(response.users || []);
-      setPagination(response.pagination || pagination);
+      setPagination(response.pagination || { ...pagination, limit: perPage });
 
       // Debug: Log the first user to see the data structure
       if (response.users && response.users.length > 0) {
@@ -162,6 +164,13 @@ export default function PolwelUsers() {
   useEffect(() => {
     fetchUsers();
   }, [pagination.page, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    // refetch when perPage changes; reset to page 1
+    setPagination((p) => ({ ...p, page: 1 }));
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perPage]);
 
   // Handle user actions
   const handleDeleteUser = async (userId: string) => {
@@ -427,6 +436,17 @@ export default function PolwelUsers() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination controls - moved to bottom of table for better UX */}
+          <div className="px-4 border-t mt-4">
+            <PaginationControls
+              page={pagination.page}
+              perPage={perPage}
+              total={pagination.total}
+              onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+              onPerPageChange={(pp) => setPerPage(pp)}
+            />
+          </div>
 
           {users.length === 0 && (
             <div className="text-center py-12">

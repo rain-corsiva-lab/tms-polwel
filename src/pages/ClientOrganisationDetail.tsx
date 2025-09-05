@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import PaginationControls from "@/components/ui/pagination";
 import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload, MoreHorizontal, Edit, Mail, Loader2, Trash2 } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
@@ -116,6 +117,7 @@ const ClientOrganisationDetail = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const lastScrollRef = useRef<number>(0);
 
+  // ...existing imports...
   // update last scroll time to detect recent scrolls
   useEffect(() => {
     const onScroll = () => {
@@ -143,6 +145,10 @@ const ClientOrganisationDetail = () => {
   const [organization, setOrganization] = useState<any>(null);
   const [coordinators, setCoordinators] = useState<TrainingCoordinator[]>([]);
   const [learners, setLearners] = useState<Learner[]>([]);
+  const [coordinatorsPagination, setCoordinatorsPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [coordinatorsPerPage, setCoordinatorsPerPage] = useState(10);
+  const [learnersPagination, setLearnersPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [learnersPerPage, setLearnersPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [coordinatorsLoading, setCoordinatorsLoading] = useState(false);
   const [learnersLoading, setLearnersLoading] = useState(false);
@@ -208,8 +214,9 @@ const ClientOrganisationDetail = () => {
 
     try {
       setCoordinatorsLoading(true);
-      const response = await clientOrganizationsApi.getCoordinators(id);
+      const response = await clientOrganizationsApi.getCoordinators(id, { page: coordinatorsPagination.page, limit: coordinatorsPerPage });
       setCoordinators(response.coordinators || []);
+      setCoordinatorsPagination(response.pagination || { ...coordinatorsPagination, limit: coordinatorsPerPage });
     } catch (error: any) {
       console.error("Error fetching coordinators:", error);
       toast({
@@ -221,14 +228,14 @@ const ClientOrganisationDetail = () => {
       setCoordinatorsLoading(false);
     }
   };
-
   const fetchLearners = async () => {
     if (!id) return;
 
     try {
       setLearnersLoading(true);
-      const response = await clientOrganizationsApi.getLearners(id);
+      const response = await clientOrganizationsApi.getLearners(id, { page: learnersPagination.page, limit: learnersPerPage });
       setLearners(response.learners || []);
+      setLearnersPagination(response.pagination || { ...learnersPagination, limit: learnersPerPage });
     } catch (error: any) {
       console.error("Error fetching learners:", error);
       toast({
@@ -248,12 +255,26 @@ const ClientOrganisationDetail = () => {
     }
   }, [activeTab, id]);
 
+  useEffect(() => {
+    if (activeTab === "coordinators") {
+      fetchCoordinators();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coordinatorsPagination.page, coordinatorsPerPage]);
+
   // Load learners when learners tab is activated
   useEffect(() => {
     if (activeTab === "learners" && learners.length === 0) {
       fetchLearners();
     }
   }, [activeTab, id]);
+
+  useEffect(() => {
+    if (activeTab === "learners") {
+      fetchLearners();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [learnersPagination.page, learnersPerPage]);
 
   const handleSaveChanges = async () => {
     if (!organization || !id) return;
@@ -671,6 +692,15 @@ const ClientOrganisationDetail = () => {
                 </TableBody>
               </Table>
             </CardContent>
+            <div className="px-4 border-t mt-4">
+              <PaginationControls
+                page={coordinatorsPagination.page}
+                perPage={coordinatorsPerPage}
+                total={coordinatorsPagination.total}
+                onPageChange={(p) => setCoordinatorsPagination((prev) => ({ ...prev, page: p }))}
+                onPerPageChange={(pp) => setCoordinatorsPerPage(pp)}
+              />
+            </div>
           </Card>
         </TabsContent>
 
@@ -742,6 +772,15 @@ const ClientOrganisationDetail = () => {
                 </TableBody>
               </Table>
             </CardContent>
+            <div className="px-4 border-t mt-4">
+              <PaginationControls
+                page={learnersPagination.page}
+                perPage={learnersPerPage}
+                total={learnersPagination.total}
+                onPageChange={(p) => setLearnersPagination((prev) => ({ ...prev, page: p }))}
+                onPerPageChange={(pp) => setLearnersPerPage(pp)}
+              />
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
