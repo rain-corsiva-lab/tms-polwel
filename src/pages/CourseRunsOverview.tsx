@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Search, Plus, Users, MapPin, Clock, Filter, X } from "lucide-react";
+import { Calendar, Search, Plus, Users, MapPin, Filter, MoreVertical, Mail, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { CourseRun } from "@/types/courseRun";
 
 const CourseRunsOverview = () => {
@@ -172,18 +172,24 @@ const CourseRunsOverview = () => {
     navigate(`/course-runs/${courseRun.courseId}/${courseRun.id}`);
   };
 
-  const handleMarkAsCancelled = (courseRun: CourseRun) => {
+  const handleSendCourseConfirmationEmail = (courseRun: CourseRun) => {
+    toast({
+      title: "Course Confirmation Email Sent",
+      description: `Confirmation email sent for ${courseRun.serialNumber} - ${courseRun.courseTitle}`,
+    });
+  };
+
+  const handleMarkAsCompleted = (courseRun: CourseRun) => {
     const updatedRuns = courseRuns.map(run => 
       run.id === courseRun.id 
-        ? { ...run, status: 'Cancelled' as const, updatedAt: new Date().toISOString() }
+        ? { ...run, status: 'Completed' as const, updatedAt: new Date().toISOString() }
         : run
     );
     setCourseRuns(updatedRuns);
     
     toast({
-      title: "Course Run Cancelled",
-      description: `${courseRun.serialNumber} - ${courseRun.courseTitle} has been marked as cancelled`,
-      variant: "destructive"
+      title: "Course Run Completed",
+      description: `${courseRun.serialNumber} - ${courseRun.courseTitle} has been marked as completed`,
     });
   };
 
@@ -273,109 +279,84 @@ const CourseRunsOverview = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Course Run</TableHead>
-                    <TableHead>Schedule</TableHead>
-                    <TableHead>Venue</TableHead>
-                    <TableHead>Participants</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="w-[300px]">Course Details</TableHead>
+                    <TableHead className="w-[150px]">Schedule</TableHead>
+                    <TableHead className="w-[200px]">Venue</TableHead>
+                    <TableHead className="w-[120px]">Participants</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[80px]">Type</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRuns.map((run) => (
-                    <TableRow key={run.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{run.courseTitle}</p>
+                    <TableRow key={run.id} className="hover:bg-muted/50">
+                      <TableCell className="py-4">
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">{run.courseTitle}</p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{run.serialNumber}</span>
+                            <span className="font-mono">{run.serialNumber}</span>
                             <span>•</span>
                             <span>{run.courseCode}</span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-sm">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(run.startDate).toLocaleDateString()} - {new Date(run.endDate).toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Clock className="w-3 h-3" />
-                            {run.startTime} - {run.endTime}
-                          </div>
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-1 text-sm">
+                          <Calendar className="w-3 h-3 text-muted-foreground" />
+                          <span>{new Date(run.startDate).toLocaleDateString()} - {new Date(run.endDate).toLocaleDateString()}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-4">
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">{run.venue?.name}</p>
-                          </div>
+                          <MapPin className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-sm">{run.venue?.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-4">
                         <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                          <Badge variant={getParticipantsBadgeVariant(run.currentParticipants, run.minClassSize)}>
-                            {run.currentParticipants} / {run.maxClassSize || '∞'}
+                          <Users className="w-3 h-3 text-muted-foreground" />
+                          <Badge variant={getParticipantsBadgeVariant(run.currentParticipants, run.minClassSize)} className="text-xs">
+                            {run.currentParticipants}/{run.maxClassSize || '∞'}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Min: {run.minClassSize}
-                        </p>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(run.status)}>
+                      <TableCell className="py-4">
+                        <Badge variant={getStatusBadgeVariant(run.status)} className="text-xs">
                           {run.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
+                      <TableCell className="py-4">
+                        <Badge variant="outline" className="text-xs">
                           {run.type}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewCourseRun(run)}
-                          >
-                            Manage
-                          </Button>
-                          
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Mark as Cancelled"
-                                disabled={run.status === 'Cancelled'}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Cancel Course Run</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to cancel "{run.serialNumber} - {run.courseTitle}"? This action cannot be undone and will notify all participants.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleMarkAsCancelled(run)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Mark as Cancelled
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
+                      <TableCell className="py-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-background border">
+                            <DropdownMenuItem onClick={() => handleViewCourseRun(run)}>
+                              <Users className="w-4 h-4 mr-2" />
+                              Manage
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendCourseConfirmationEmail(run)}>
+                              <Mail className="w-4 h-4 mr-2" />
+                              Send Course Confirmation Email
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleMarkAsCompleted(run)}
+                              disabled={run.status === 'Completed'}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Mark as Completed
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
