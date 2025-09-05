@@ -609,10 +609,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                   {learners.map((learner) => (
                     <TableRow key={learner.id}>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{learner.name}</p>
-                          <p className="text-sm text-muted-foreground">{learner.division}</p>
-                        </div>
+                        <p className="font-medium">{learner.name}</p>
                       </TableCell>
                       <TableCell>{learner.designation}</TableCell>
                       <TableCell>
