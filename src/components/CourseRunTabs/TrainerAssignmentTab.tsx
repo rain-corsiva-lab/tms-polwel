@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, DollarSign } from "lucide-react";
+import { UserCheck, DollarSign, Mail } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { CourseRun } from "@/types/courseRun";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -18,6 +19,7 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
   courseRun,
   onUpdate
 }) => {
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(courseRun);
   
@@ -111,6 +113,31 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
       }, 0);
   };
 
+  const handleSendTrainingConfirmationEmail = () => {
+    const selectedTrainers = availableTrainers.filter(trainer => 
+      assignedTrainers[trainer.id].selected
+    );
+    
+    if (selectedTrainers.length === 0) {
+      toast({
+        title: "No Trainers Selected",
+        description: "Please select trainers before sending confirmation emails",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Training Confirmation Emails Sent",
+      description: `Confirmation emails sent to ${selectedTrainers.length} selected trainer(s)`,
+    });
+  };
+
+  // Filter trainers based on editing mode
+  const displayTrainers = isEditing 
+    ? availableTrainers 
+    : availableTrainers.filter(trainer => assignedTrainers[trainer.id].selected);
+
   return (
     <div className="space-y-8">
       {/* Action Buttons */}
@@ -127,9 +154,19 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>
-              Edit Trainer Assignment
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                onClick={handleSendTrainingConfirmationEmail}
+                disabled={getSelectedTrainersCount() === 0}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Send Training Confirmation Email
+              </Button>
+              <Button onClick={() => setIsEditing(true)}>
+                Edit Trainer Assignment
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -152,7 +189,19 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
         </div>
 
         <div className="space-y-4">
-          {availableTrainers.map((trainer) => {
+          {displayTrainers.length === 0 && !isEditing && (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No trainers assigned yet</p>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditing(true)}
+                className="mt-2"
+              >
+                Assign Trainers
+              </Button>
+            </div>
+          )}
+          {displayTrainers.map((trainer) => {
             const assignment = assignedTrainers[trainer.id];
             return (
               <div key={trainer.id} className="border rounded-lg p-4 space-y-4">
