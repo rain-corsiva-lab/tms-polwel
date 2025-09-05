@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Upload, Mail, Phone, Edit, Trash2, Users } from "lucide-react";
+import { Plus, Upload, Mail, Phone, Edit, Trash2, Users, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -230,7 +230,13 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Attendance List - Enrolled Learners</DialogTitle>
+                <div className="flex items-center justify-between">
+                  <DialogTitle>Attendance List - Enrolled Learners</DialogTitle>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </div>
               </DialogHeader>
               <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
                 {learners.length === 0 ? (
@@ -248,43 +254,27 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                           </span>
                           <div className="flex-1">
                             <p className="font-medium">{learner.name}</p>
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              <span>{learner.designation}</span>
-                              <span>•</span>
-                              <span>{learner.email}</span>
-                              {learner.division && (
-                                <>
-                                  <span>•</span>
-                                  <span>{learner.division}</span>
-                                </>
-                              )}
-                            </div>
+                            <p className="text-sm text-muted-foreground">{learner.contactNumber}</p>
                           </div>
                         </div>
                         
-                        <div className="flex items-center space-x-6">
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`am-${learner.id}`}
-                                checked={false}
-                                onCheckedChange={() => {}}
-                              />
-                              <label htmlFor={`am-${learner.id}`} className="text-sm font-medium">AM</label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`pm-${learner.id}`}
-                                checked={false}
-                                onCheckedChange={() => {}}
-                              />
-                              <label htmlFor={`pm-${learner.id}`} className="text-sm font-medium">PM</label>
-                            </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`am-${learner.id}`}
+                              checked={false}
+                              onCheckedChange={() => {}}
+                            />
+                            <label htmlFor={`am-${learner.id}`} className="text-sm font-medium">AM</label>
                           </div>
-                          
-                          <Badge variant={learner.enrolmentStatus === 'Cancelled' ? 'destructive' : 'secondary'}>
-                            {learner.enrolmentStatus}
-                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`pm-${learner.id}`}
+                              checked={false}
+                              onCheckedChange={() => {}}
+                            />
+                            <label htmlFor={`pm-${learner.id}`} className="text-sm font-medium">PM</label>
+                          </div>
                         </div>
                       </div>
                     ))}
