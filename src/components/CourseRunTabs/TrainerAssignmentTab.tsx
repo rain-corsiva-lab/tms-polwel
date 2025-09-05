@@ -248,8 +248,10 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
                           onChange={(e) => 
                             handleTrainerFeeChange(trainer.id, 'baseFee', parseFloat(e.target.value))
                           }
-                          disabled={!isEditing}
+                          disabled={true}
+                          className="bg-muted"
                         />
+                        <p className="text-xs text-muted-foreground">Base fee cannot be edited</p>
                       </div>
                       <div>
                         <Label htmlFor={`additionalCosts-${trainer.id}`}>Additional Costs</Label>
