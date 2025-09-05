@@ -3,10 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { DollarSign, Calculator } from "lucide-react";
+import { DollarSign } from "lucide-react";
 import type { CourseRun } from "@/types/courseRun";
 
 interface CourseRunFeesExpensesTabProps {
@@ -33,24 +30,6 @@ const CourseRunFeesExpensesTab: React.FC<CourseRunFeesExpensesTabProps> = ({
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // Calculate total fees
-  const calculateTotalFees = () => {
-    const courseFee = formData.courseFee || 0;
-    const venueFee = formData.venueFee || 0;
-    const otherFees = formData.otherFees || 0;
-    const adminFees = formData.adminFees || 0;
-    const contingencyFees = formData.contingencyFees || 0;
-    
-    return courseFee + venueFee + otherFees + adminFees + contingencyFees;
-  };
-
-  // Calculate per participant fee
-  const calculatePerParticipantFee = () => {
-    const totalFees = calculateTotalFees();
-    const participants = formData.currentParticipants || 1;
-    return totalFees / participants;
   };
 
   return (
@@ -116,8 +95,6 @@ const CourseRunFeesExpensesTab: React.FC<CourseRunFeesExpensesTabProps> = ({
         </div>
       </div>
 
-      <Separator />
-
       {/* Additional Fees */}
       <div className="space-y-4">
         <h4 className="text-base font-medium">Additional Fees</h4>
@@ -171,132 +148,6 @@ const CourseRunFeesExpensesTab: React.FC<CourseRunFeesExpensesTabProps> = ({
               disabled={!isEditing}
               placeholder="0.00"
             />
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Minimum Participants & Remarks */}
-      <div className="space-y-4">
-        <h4 className="text-base font-medium">Participation Requirements</h4>
-        
-        <div className="space-y-2">
-          <Label htmlFor="minParticipants">Minimum Participants</Label>
-          <Input
-            id="minParticipants"
-            type="number"
-            min="1"
-            value={formData.minParticipants || formData.minClassSize}
-            onChange={(e) => handleInputChange("minParticipants", parseInt(e.target.value) || 1)}
-            disabled={!isEditing}
-            placeholder="1"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="feeRemarks">Remarks (for minimum participants not met)</Label>
-          <Textarea
-            id="feeRemarks"
-            value={formData.feeRemarks || ''}
-            onChange={(e) => handleInputChange("feeRemarks", e.target.value)}
-            disabled={!isEditing}
-            placeholder="Enter remarks when minimum participants is not met"
-            rows={3}
-          />
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Fee Summary */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Calculator className="w-4 h-4" />
-          <h4 className="text-base font-medium">Fee Summary</h4>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Fee Breakdown */}
-          <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-            <h5 className="font-medium">Fee Breakdown</h5>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Course Fee:</span>
-                <span>${(formData.courseFee || 0).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Venue Fee:</span>
-                <span>${(formData.venueFee || 0).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Other Fees:</span>
-                <span>${(formData.otherFees || 0).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Admin Fees:</span>
-                <span>${(formData.adminFees || 0).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Contingency Fees:</span>
-                <span>${(formData.contingencyFees || 0).toFixed(2)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-medium">
-                <span>Total Fees:</span>
-                <Badge variant="secondary">${calculateTotalFees().toFixed(2)}</Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* Per Participant Calculation */}
-          <div className="space-y-3 p-4 border rounded-lg bg-primary/5">
-            <h5 className="font-medium">Per Participant Fee</h5>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Total Fees:</span>
-                <span>${calculateTotalFees().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Current Participants:</span>
-                <span>{formData.currentParticipants || 1}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-medium">
-                <span>Fee Per Participant:</span>
-                <Badge variant="default">${calculatePerParticipantFee().toFixed(2)}</Badge>
-              </div>
-            </div>
-            {formData.feeType === 'per-head' && (
-              <p className="text-xs text-muted-foreground">
-                Fee is charged per participant
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Revenue Projection */}
-        <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-950/20">
-          <h5 className="font-medium mb-2">Revenue Projection</h5>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600">
-                ${(calculateTotalFees() * 0.8).toFixed(2)}
-              </div>
-              <div className="text-muted-foreground">Minimum (80% capacity)</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600">
-                ${calculateTotalFees().toFixed(2)}
-              </div>
-              <div className="text-muted-foreground">Current ({formData.currentParticipants} participants)</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600">
-                ${(calculateTotalFees() * (formData.maxClassSize || formData.recommendedClassSize) / (formData.currentParticipants || 1)).toFixed(2)}
-              </div>
-              <div className="text-muted-foreground">Maximum ({formData.maxClassSize || formData.recommendedClassSize} participants)</div>
-            </div>
           </div>
         </div>
       </div>
