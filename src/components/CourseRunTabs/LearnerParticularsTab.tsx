@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Upload, Mail, Phone, Edit, Trash2 } from "lucide-react";
+import { Plus, Upload, Mail, Phone, Edit, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -49,6 +49,7 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
 }) => {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAttendanceListOpen, setIsAttendanceListOpen] = useState(false);
   const [newLearner, setNewLearner] = useState<Partial<Learner>>({
     courseRunId,
     name: 'John Doe',
@@ -220,6 +221,56 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
             <Upload className="w-4 h-4 mr-2" />
             Import CSV
           </Button>
+          <Dialog open={isAttendanceListOpen} onOpenChange={setIsAttendanceListOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Users className="w-4 h-4 mr-2" />
+                Attendance List
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Attendance List - Enrolled Learners</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                {learners.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No learners enrolled</p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Total Enrolled: {learners.length} learners
+                    </p>
+                    {learners.map((learner, index) => (
+                      <div key={learner.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <span className="text-sm font-medium text-muted-foreground w-8">
+                            {index + 1}.
+                          </span>
+                          <div>
+                            <p className="font-medium">{learner.name}</p>
+                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <span>{learner.designation}</span>
+                              <span>•</span>
+                              <span>{learner.email}</span>
+                              {learner.division && (
+                                <>
+                                  <span>•</span>
+                                  <span>{learner.division}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant={learner.enrolmentStatus === 'Cancelled' ? 'destructive' : 'secondary'}>
+                          {learner.enrolmentStatus}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -534,7 +585,6 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Attendance</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Designation</TableHead>
                     <TableHead>Contact</TableHead>
@@ -546,12 +596,6 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                 <TableBody>
                   {learners.map((learner) => (
                     <TableRow key={learner.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={learner.attendance === 'Present'}
-                          onCheckedChange={(checked) => handleAttendanceChange(learner, checked as boolean)}
-                        />
-                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{learner.name}</p>
