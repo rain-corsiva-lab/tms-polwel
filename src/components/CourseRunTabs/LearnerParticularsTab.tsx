@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Upload, Mail, Phone, Edit, Trash2, Users, Download } from "lucide-react";
+import { Plus, Upload, Mail, Phone, Edit, Trash2, Users, Download, MoreVertical, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Learner } from "@/types/courseRun";
 
 interface LearnerParticularsTabProps {
@@ -50,6 +51,10 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAttendanceListOpen, setIsAttendanceListOpen] = useState(false);
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [selectedLearnerForWithdraw, setSelectedLearnerForWithdraw] = useState<Learner | null>(null);
+  const [withdrawalReason, setWithdrawalReason] = useState('');
+  const [withdrawalDocument, setWithdrawalDocument] = useState<File | null>(null);
   const [newLearner, setNewLearner] = useState<Partial<Learner>>({
     courseRunId,
     name: 'John Doe',
@@ -199,6 +204,48 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
     toast({
       title: "Attendance Updated",
       description: `${learner.name} marked as ${newAttendance.toLowerCase()}`,
+    });
+  };
+
+  const handleMarkAsWithdrawn = (learner: Learner) => {
+    setSelectedLearnerForWithdraw(learner);
+    setIsWithdrawDialogOpen(true);
+  };
+
+  const handleConfirmWithdrawal = () => {
+    if (!selectedLearnerForWithdraw || !withdrawalReason) {
+      toast({
+        title: "Error",
+        description: "Please select a withdrawal reason",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    onUpdateLearner(selectedLearnerForWithdraw.id, { 
+      enrolmentStatus: 'Withdrawn',
+      attendance: 'Withdrawn',
+      remarks: `Withdrawn - Reason: ${withdrawalReason}${withdrawalDocument ? ` (Document: ${withdrawalDocument.name})` : ''}`,
+      updatedAt: new Date().toISOString()
+    });
+
+    toast({
+      title: "Learner Withdrawn",
+      description: `${selectedLearnerForWithdraw.name} has been marked as withdrawn`,
+    });
+
+    // Reset dialog state
+    setIsWithdrawDialogOpen(false);
+    setSelectedLearnerForWithdraw(null);
+    setWithdrawalReason('');
+    setWithdrawalDocument(null);
+  };
+
+  const handleEditLearner = (learner: Learner) => {
+    // TODO: Implement edit learner functionality
+    toast({
+      title: "Edit Learner",
+      description: "Edit learner functionality will be implemented soon",
     });
   };
 
@@ -636,39 +683,29 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                           {learner.enrolmentStatus}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Send Training Confirmation Email"
-                              >
-                                <Mail className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Send Training Confirmation Email</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to send a training confirmation email to {learner.name} at {learner.email}?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleSendConfirmationEmail(learner)}>
-                                  Send Email
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-
-                          <Button variant="ghost" size="icon" title="Edit Learner">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <DropdownMenu>
+                           <DropdownMenuTrigger asChild>
+                             <Button variant="ghost" size="icon">
+                               <MoreVertical className="w-4 h-4" />
+                             </Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="end" className="bg-background border">
+                             <DropdownMenuItem onClick={() => handleEditLearner(learner)}>
+                               <Edit className="w-4 h-4 mr-2" />
+                               Edit
+                             </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem 
+                               onClick={() => handleMarkAsWithdrawn(learner)}
+                               className="text-destructive focus:text-destructive"
+                             >
+                               <Trash2 className="w-4 h-4 mr-2" />
+                               Mark as Withdrawn
+                             </DropdownMenuItem>
+                           </DropdownMenuContent>
+                         </DropdownMenu>
+                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -677,6 +714,72 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Withdrawal Dialog */}
+      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark Learner as Withdrawn</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedLearnerForWithdraw && (
+              <p className="text-sm text-muted-foreground">
+                Withdrawing: <span className="font-medium">{selectedLearnerForWithdraw.name}</span>
+              </p>
+            )}
+            
+            <div>
+              <Label htmlFor="withdrawalReason">Reason for Withdrawal *</Label>
+              <Select value={withdrawalReason} onValueChange={setWithdrawalReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select withdrawal reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Medical Leave">Medical Leave</SelectItem>
+                  <SelectItem value="Emergency">Emergency</SelectItem>
+                  <SelectItem value="Forfeit">Forfeit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="withdrawalDocument">Attach Document (Optional)</Label>
+              <div className="mt-2">
+                <Input
+                  id="withdrawalDocument"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setWithdrawalDocument(file);
+                    }
+                  }}
+                />
+                {withdrawalDocument && (
+                  <p className="text-sm text-muted-foreground mt-1 flex items-center">
+                    <FileText className="w-4 h-4 mr-1" />
+                    {withdrawalDocument.name}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsWithdrawDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmWithdrawal}
+              disabled={!withdrawalReason}
+            >
+              Confirm Withdrawal
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
