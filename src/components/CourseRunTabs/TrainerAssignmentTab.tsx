@@ -276,9 +276,11 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
                         onChange={(e) => 
                           handleTrainerFeeChange(trainer.id, 'remarks', e.target.value)
                         }
-                        disabled={!isEditing}
+                        disabled={true}
+                        className="bg-muted"
                         rows={2}
                       />
+                      <p className="text-xs text-muted-foreground">Remarks cannot be edited</p>
                     </div>
 
                     {/* Fee Summary */}
