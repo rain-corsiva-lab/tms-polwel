@@ -242,11 +242,11 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                     </p>
                     {learners.map((learner, index) => (
                       <div key={learner.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-4 flex-1">
                           <span className="text-sm font-medium text-muted-foreground w-8">
                             {index + 1}.
                           </span>
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium">{learner.name}</p>
                             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                               <span>{learner.designation}</span>
@@ -261,9 +261,31 @@ const LearnerParticularsTab: React.FC<LearnerParticularsTabProps> = ({
                             </div>
                           </div>
                         </div>
-                        <Badge variant={learner.enrolmentStatus === 'Cancelled' ? 'destructive' : 'secondary'}>
-                          {learner.enrolmentStatus}
-                        </Badge>
+                        
+                        <div className="flex items-center space-x-6">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`am-${learner.id}`}
+                                checked={false}
+                                onCheckedChange={() => {}}
+                              />
+                              <label htmlFor={`am-${learner.id}`} className="text-sm font-medium">AM</label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`pm-${learner.id}`}
+                                checked={false}
+                                onCheckedChange={() => {}}
+                              />
+                              <label htmlFor={`pm-${learner.id}`} className="text-sm font-medium">PM</label>
+                            </div>
+                          </div>
+                          
+                          <Badge variant={learner.enrolmentStatus === 'Cancelled' ? 'destructive' : 'secondary'}>
+                            {learner.enrolmentStatus}
+                          </Badge>
+                        </div>
                       </div>
                     ))}
                   </div>
