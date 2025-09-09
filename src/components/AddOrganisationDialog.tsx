@@ -20,7 +20,7 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    organisationType: "internal",
+    organisationType: "POLWEL",
     divisionOrganisationName: "",
     buNumber: "",
   });
@@ -43,7 +43,7 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
     try {
       await clientOrganizationsApi.create({
         name: formData.divisionOrganisationName,
-        industry: formData.organisationType === "internal" ? "SPF" : "External",
+        industry: formData.organisationType,
         buNumber: formData.buNumber || undefined,
       });
 
@@ -54,7 +54,7 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
 
       // Reset form and close dialog
       setFormData({
-        organisationType: "internal",
+        organisationType: "POLWEL",
         divisionOrganisationName: "",
         buNumber: "",
       });
@@ -101,15 +101,23 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
             <RadioGroup
               value={formData.organisationType}
               onValueChange={(value) => setFormData(prev => ({ ...prev, organisationType: value }))}
-              className="flex flex-row space-x-6 mt-2"
+              className="grid grid-cols-2 gap-4 mt-2"
             >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="internal" id="internal" />
-                <Label htmlFor="internal">Internal (SPF)</Label>
+                <RadioGroupItem value="POLWEL" id="polwel" />
+                <Label htmlFor="polwel">POLWEL</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="external" id="external" />
-                <Label htmlFor="external">External</Label>
+                <RadioGroupItem value="SPF" id="spf" />
+                <Label htmlFor="spf">SPF</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Public Sector" id="public" />
+                <Label htmlFor="public">Public Sector</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Private Sector" id="private" />
+                <Label htmlFor="private">Private Sector</Label>
               </div>
             </RadioGroup>
           </div>
@@ -120,7 +128,7 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
               id="divisionOrganisationName"
               value={formData.divisionOrganisationName}
               onChange={(e) => setFormData(prev => ({ ...prev, divisionOrganisationName: e.target.value }))}
-              placeholder={formData.organisationType === "internal" ? "e.g. Ang Mo Kio" : "e.g. External Organisation Name"}
+              placeholder="e.g. Ang Mo Kio Division"
             />
           </div>
           <div>
