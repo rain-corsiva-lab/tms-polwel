@@ -40,10 +40,10 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.organisationName) {
+    if (!formData.divisionDepartment) {
       toast({
         title: "Validation Error",
-        description: "Organisation name is required.",
+        description: "Division/Department is required.",
         variant: "destructive",
       });
       return;
@@ -111,22 +111,22 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="organisationName">Organisation Name *</Label>
-            <Input
-              id="organisationName"
-              value={formData.organisationName}
-              onChange={(e) => setFormData(prev => ({ ...prev, organisationName: e.target.value }))}
-              placeholder="e.g. Singapore Police Force, SPF / POLWEL"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="divisionDepartment">Division / Department</Label>
+            <Label htmlFor="divisionDepartment">Division / Department *</Label>
             <Input
               id="divisionDepartment"
               value={formData.divisionDepartment}
               onChange={(e) => setFormData(prev => ({ ...prev, divisionDepartment: e.target.value }))}
               placeholder="e.g. Ang Mo Kio / AAO"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="organisationName">Organisation Name</Label>
+            <Input
+              id="organisationName"
+              value={formData.organisationName}
+              onChange={(e) => setFormData(prev => ({ ...prev, organisationName: e.target.value }))}
+              placeholder="e.g. Singapore Police Force, SPF / POLWEL"
             />
           </div>
           
@@ -153,47 +153,12 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
             {formData.requireBuNumber && (
             <div>
               <Label htmlFor="buNumber">BU Number *</Label>
-              <Select
-              value={formData.buNumber}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, buNumber: value }))}
-              >
-              <SelectTrigger>
-                <SelectValue placeholder="Select BU number" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="HTX01">HTX01</SelectItem>
-                <SelectItem value="MHA06">MHA06</SelectItem>
-                <SelectItem value="MHA09">MHA09</SelectItem>
-                <SelectItem value="MHA10">MHA10</SelectItem>
-                <SelectItem value="MHA11">MHA11</SelectItem>
-                <SelectItem value="MHA12">MHA12</SelectItem>
-                <SelectItem value="MHA13">MHA13</SelectItem>
-                <SelectItem value="MHA15">MHA15</SelectItem>
-                <SelectItem value="MHA18">MHA18</SelectItem>
-                <SelectItem value="MHA19">MHA19</SelectItem>
-                <SelectItem value="MHA20">MHA20</SelectItem>
-                <SelectItem value="MHA21">MHA21</SelectItem>
-                <SelectItem value="MHA22">MHA22</SelectItem>
-                <SelectItem value="MHA23">MHA23</SelectItem>
-                <SelectItem value="MHA24">MHA24</SelectItem>
-                <SelectItem value="MHA26">MHA26</SelectItem>
-                <SelectItem value="MHA27">MHA27</SelectItem>
-                <SelectItem value="MHA28">MHA28</SelectItem>
-                <SelectItem value="MHA29">MHA29</SelectItem>
-                <SelectItem value="MHA30">MHA30</SelectItem>
-                <SelectItem value="MHA31">MHA31</SelectItem>
-                <SelectItem value="MHA32">MHA32</SelectItem>
-                <SelectItem value="MHA33">MHA33</SelectItem>
-                <SelectItem value="MHA34">MHA34</SelectItem>
-                <SelectItem value="MHA35">MHA35</SelectItem>
-                <SelectItem value="MHA42">MHA42</SelectItem>
-                <SelectItem value="MHA43">MHA43</SelectItem>
-                <SelectItem value="MHA51">MHA51</SelectItem>
-                <SelectItem value="MHA55">MHA55</SelectItem>
-                <SelectItem value="MHA56">MHA56</SelectItem>
-                <SelectItem value="MHD01">MHD01</SelectItem>
-              </SelectContent>
-              </Select>
+              <Input
+                id="buNumber"
+                value={formData.buNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, buNumber: e.target.value }))}
+                placeholder="Enter BU number"
+              />
             </div>
             )}
           
