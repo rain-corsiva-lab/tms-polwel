@@ -22,13 +22,14 @@ import {
 import { Plus, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { clientOrganizationsApi } from "@/lib/api";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisationCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    organisationName: "",
-    divisionDepartment: "",
+    organisationType: "internal",
+    divisionOrganisationName: "",
     divisionAddress: "",
     paymentMode: "",
     requireBuNumber: false,
@@ -40,10 +41,10 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.divisionDepartment) {
+    if (!formData.divisionOrganisationName) {
       toast({
         title: "Validation Error",
-        description: "Division/Department is required.",
+        description: "Name of Division/Organisation is required.",
         variant: "destructive",
       });
       return;
@@ -52,21 +53,21 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
     setLoading(true);
     try {
       await clientOrganizationsApi.create({
-        name: formData.organisationName,
-        industry: formData.divisionDepartment || undefined,
+        name: formData.divisionOrganisationName,
+        industry: formData.organisationType === "internal" ? "SPF" : "External",
         address: formData.divisionAddress || undefined,
         buNumber: formData.requireBuNumber ? formData.buNumber : undefined,
       });
 
       toast({
         title: "Organisation Created",
-        description: `Organisation "${formData.organisationName}" has been created successfully.`,
+        description: `Organisation "${formData.divisionOrganisationName}" has been created successfully.`,
       });
 
       // Reset form and close dialog
       setFormData({
-        organisationName: "",
-        divisionDepartment: "",
+        organisationType: "internal",
+        divisionOrganisationName: "",
         divisionAddress: "",
         paymentMode: "",
         requireBuNumber: false,
@@ -111,22 +112,30 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="divisionDepartment">Division / Department *</Label>
-            <Input
-              id="divisionDepartment"
-              value={formData.divisionDepartment}
-              onChange={(e) => setFormData(prev => ({ ...prev, divisionDepartment: e.target.value }))}
-              placeholder="e.g. Ang Mo Kio / AAO"
-            />
+            <Label>Organisation Type *</Label>
+            <RadioGroup
+              value={formData.organisationType}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, organisationType: value }))}
+              className="flex flex-row space-x-6 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="internal" id="internal" />
+                <Label htmlFor="internal">Internal (SPF)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="external" id="external" />
+                <Label htmlFor="external">External</Label>
+              </div>
+            </RadioGroup>
           </div>
           
           <div>
-            <Label htmlFor="organisationName">Organisation Name</Label>
+            <Label htmlFor="divisionOrganisationName">Name of Division/Organisation *</Label>
             <Input
-              id="organisationName"
-              value={formData.organisationName}
-              onChange={(e) => setFormData(prev => ({ ...prev, organisationName: e.target.value }))}
-              placeholder="e.g. Singapore Police Force, SPF / POLWEL"
+              id="divisionOrganisationName"
+              value={formData.divisionOrganisationName}
+              onChange={(e) => setFormData(prev => ({ ...prev, divisionOrganisationName: e.target.value }))}
+              placeholder={formData.organisationType === "internal" ? "e.g. Ang Mo Kio" : "e.g. External Organisation Name"}
             />
           </div>
           
