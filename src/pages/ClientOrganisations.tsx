@@ -35,47 +35,29 @@ const ClientOrganisations = () => {
   const dummyClientOrgs: ClientOrg[] = [
     {
       id: "1",
-      name: "SPF",
-      division: "Ang Mo Kio Division",
-      industry: "Technology",
+      name: "Ang Mo Kio",
+      division: "Training Division",
+      industry: "Government",
       coordinatorsCount: 3,
       learnersCount: 45,
       status: "ACTIVE"
     },
     {
       id: "2", 
-      name: "Healthcare Solutions Pte Ltd",
-      division: "Central Operations",
-      industry: "Healthcare",
+      name: "Boon Lay",
+      division: "Operations Division",
+      industry: "Government",
       coordinatorsCount: 2,
       learnersCount: 28,
       status: "ACTIVE"
     },
     {
       id: "3",
-      name: "Financial Services Group",
-      division: "Training Department",
-      industry: "Finance",
+      name: "Yuhua",
+      division: "Development Division",
+      industry: "Government",
       coordinatorsCount: 4,
       learnersCount: 67,
-      status: "ACTIVE"
-    },
-    {
-      id: "4",
-      name: "Manufacturing Excellence",
-      division: "Safety Division",
-      industry: "Manufacturing",
-      coordinatorsCount: 1,
-      learnersCount: 15,
-      status: "INACTIVE"
-    },
-    {
-      id: "5",
-      name: "Education Partners",
-      division: "Professional Development",
-      industry: "Education",
-      coordinatorsCount: 2,
-      learnersCount: 32,
       status: "ACTIVE"
     }
   ];
@@ -169,7 +151,7 @@ const ClientOrganisations = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Department</TableHead>
+                <TableHead>Division</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Coordinators</TableHead>
                 <TableHead className="text-center">Learners</TableHead>
