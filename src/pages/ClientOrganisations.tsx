@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Building2, Users, UserCheck, Search } from "lucide-react";
 import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
@@ -21,6 +22,8 @@ interface ClientOrg {
 
 const ClientOrganisations = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [clientOrgs, setClientOrgs] = useState<ClientOrg[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -37,7 +40,7 @@ const ClientOrganisations = () => {
       id: "1",
       name: "Ang Mo Kio",
       division: "Training Division",
-      industry: "Government",
+      industry: "SPF",
       coordinatorsCount: 3,
       learnersCount: 45,
       status: "ACTIVE"
@@ -46,7 +49,7 @@ const ClientOrganisations = () => {
       id: "2", 
       name: "Boon Lay",
       division: "Operations Division",
-      industry: "Government",
+      industry: "POLWEL",
       coordinatorsCount: 2,
       learnersCount: 28,
       status: "ACTIVE"
@@ -55,9 +58,18 @@ const ClientOrganisations = () => {
       id: "3",
       name: "Yuhua",
       division: "Development Division",
-      industry: "Government",
+      industry: "Public Sector",
       coordinatorsCount: 4,
       learnersCount: 67,
+      status: "INACTIVE"
+    },
+    {
+      id: "4",
+      name: "Tech Solutions Pte Ltd",
+      division: "Training Division",
+      industry: "Private Sector",
+      coordinatorsCount: 1,
+      learnersCount: 23,
       status: "ACTIVE"
     }
   ];
@@ -70,6 +82,8 @@ const ClientOrganisations = () => {
         page: pagination.page,
         limit: pagination.limit,
         search: searchTerm || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        industry: typeFilter !== "all" ? typeFilter : undefined,
       });
 
       // Map backend data to frontend interface
@@ -99,23 +113,26 @@ const ClientOrganisations = () => {
     }
   };
 
-  // Fetch organizations on component mount and when search changes
+  // Fetch organizations on component mount and when search or filters change
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       fetchClientOrgs();
     }, 300); // Debounce search
 
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter, typeFilter]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
 
-  // Filter client orgs based on search term (for immediate UI feedback)
-  const filteredOrgs = clientOrgs.filter(org =>
-    org.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter client orgs based on search term and filters (for immediate UI feedback)
+  const filteredOrgs = clientOrgs.filter(org => {
+    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || org.status === statusFilter;
+    const matchesType = typeFilter === "all" || org.industry === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -127,7 +144,7 @@ const ClientOrganisations = () => {
         <AddOrganisationDialog onOrganisationCreated={fetchClientOrgs} />
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
@@ -137,6 +154,30 @@ const ClientOrganisations = () => {
             className="pl-10"
           />
         </div>
+        
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="INACTIVE">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="POLWEL">POLWEL</SelectItem>
+            <SelectItem value="SPF">SPF</SelectItem>
+            <SelectItem value="Public Sector">Public Sector</SelectItem>
+            <SelectItem value="Private Sector">Private Sector</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
