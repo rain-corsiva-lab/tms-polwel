@@ -179,12 +179,7 @@ const ClientOrganisations = () => {
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Building2 className="h-4 w-4 text-primary shrink-0" />
-                        <div>
-                          <div className="font-medium">{org.name}</div>
-                          {org.division && (
-                            <div className="text-sm text-muted-foreground">{org.division}</div>
-                          )}
-                        </div>
+                        <div className="font-medium">{org.name}</div>
                       </div>
                     </TableCell>
                     <TableCell>
