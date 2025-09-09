@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Users, UserCheck, Search, ExternalLink } from "lucide-react";
+import { Building2, Users, UserCheck, Search } from "lucide-react";
 import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
 import { clientOrganizationsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -126,8 +126,7 @@ const ClientOrganisations = () => {
 
   // Filter client orgs based on search term (for immediate UI feedback)
   const filteredOrgs = clientOrgs.filter(org =>
-    org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.industry.toLowerCase().includes(searchTerm.toLowerCase())
+    org.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -165,17 +164,16 @@ const ClientOrganisations = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Organization</TableHead>
-                <TableHead>Industry</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Coordinators</TableHead>
                 <TableHead className="text-center">Learners</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredOrgs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
+                  <TableCell colSpan={5} className="text-center py-12">
                     <div className="flex flex-col items-center space-y-4">
                       <Building2 className="h-12 w-12 text-muted-foreground" />
                       <div>
@@ -197,9 +195,6 @@ const ClientOrganisations = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-muted-foreground">{org.industry || "-"}</span>
-                    </TableCell>
-                    <TableCell>
                       <Badge variant={org.status === "ACTIVE" ? "default" : "secondary"}>
                         {org.status}
                       </Badge>
@@ -218,9 +213,8 @@ const ClientOrganisations = () => {
                     </TableCell>
                     <TableCell>
                       <Link to={`/client-organisations/${org.id}`}>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <ExternalLink className="h-4 w-4" />
-                          <span className="sr-only">View organization details</span>
+                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary-foreground">
+                          Manage
                         </Button>
                       </Link>
                     </TableCell>
