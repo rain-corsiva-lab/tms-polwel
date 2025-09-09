@@ -169,7 +169,7 @@ const ClientOrganisations = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Organization</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Coordinators</TableHead>
                 <TableHead className="text-center">Learners</TableHead>
