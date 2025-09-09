@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ClientOrg {
   id: string;
   name: string;
+  division?: string;
   industry: string;
   coordinatorsCount: number;
   learnersCount: number;
@@ -34,7 +35,8 @@ const ClientOrganisations = () => {
   const dummyClientOrgs: ClientOrg[] = [
     {
       id: "1",
-      name: "TechCorp Singapore",
+      name: "SPF",
+      division: "Ang Mo Kio Division",
       industry: "Technology",
       coordinatorsCount: 3,
       learnersCount: 45,
@@ -43,6 +45,7 @@ const ClientOrganisations = () => {
     {
       id: "2", 
       name: "Healthcare Solutions Pte Ltd",
+      division: "Central Operations",
       industry: "Healthcare",
       coordinatorsCount: 2,
       learnersCount: 28,
@@ -51,6 +54,7 @@ const ClientOrganisations = () => {
     {
       id: "3",
       name: "Financial Services Group",
+      division: "Training Department",
       industry: "Finance",
       coordinatorsCount: 4,
       learnersCount: 67,
@@ -59,6 +63,7 @@ const ClientOrganisations = () => {
     {
       id: "4",
       name: "Manufacturing Excellence",
+      division: "Safety Division",
       industry: "Manufacturing",
       coordinatorsCount: 1,
       learnersCount: 15,
@@ -67,6 +72,7 @@ const ClientOrganisations = () => {
     {
       id: "5",
       name: "Education Partners",
+      division: "Professional Development",
       industry: "Education",
       coordinatorsCount: 2,
       learnersCount: 32,
@@ -191,7 +197,12 @@ const ClientOrganisations = () => {
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Building2 className="h-4 w-4 text-primary shrink-0" />
-                        <span className="font-medium">{org.name}</span>
+                        <div>
+                          <div className="font-medium">{org.name}</div>
+                          {org.division && (
+                            <div className="text-sm text-muted-foreground">{org.division}</div>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -213,7 +224,7 @@ const ClientOrganisations = () => {
                     </TableCell>
                     <TableCell>
                       <Link to={`/client-organisations/${org.id}`}>
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary-foreground">
+                        <Button variant="ghost" size="sm" className="text-primary hover:bg-muted hover:text-primary">
                           Manage
                         </Button>
                       </Link>
