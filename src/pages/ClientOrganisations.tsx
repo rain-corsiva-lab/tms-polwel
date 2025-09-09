@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, UserCheck, Calendar, Search, Plus } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Building2, Users, UserCheck, Search, ExternalLink } from "lucide-react";
 import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
 import { clientOrganizationsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -160,55 +160,75 @@ const ClientOrganisations = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrgs.map((org) => (
-            <Link key={org.id} to={`/client-organisations/${org.id}`}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">{org.name}</CardTitle>
-                    </div>
-                    <Badge variant={org.status === "ACTIVE" ? "default" : "secondary"}>
-                      {org.status}
-                    </Badge>
-                  </div>
-                  {org.industry && <CardDescription>{org.industry}</CardDescription>}
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <UserCheck className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Coordinators</span>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Organization</TableHead>
+                <TableHead>Industry</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-center">Coordinators</TableHead>
+                <TableHead className="text-center">Learners</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOrgs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12">
+                    <div className="flex flex-col items-center space-y-4">
+                      <Building2 className="h-12 w-12 text-muted-foreground" />
+                      <div>
+                        <h3 className="text-lg font-semibold text-muted-foreground mb-2">No organizations found</h3>
+                        <p className="text-muted-foreground">
+                          {searchTerm ? "Try adjusting your search terms" : "No client organizations have been added yet"}
+                        </p>
                       </div>
-                      <span className="font-semibold">{org.coordinatorsCount}</span>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Learners</span>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredOrgs.map((org) => (
+                  <TableRow key={org.id} className="hover:bg-muted/50">
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <Building2 className="h-4 w-4 text-primary shrink-0" />
+                        <span className="font-medium">{org.name}</span>
                       </div>
-                      <span className="font-semibold">{org.learnersCount}</span>
-                    </div>
-                    
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-
-          {filteredOrgs.length === 0 && !loading && (
-            <div className="col-span-full text-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No organizations found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm ? "Try adjusting your search terms" : "No client organizations have been added yet"}
-              </p>
-            </div>
-          )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">{org.industry || "-"}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={org.status === "ACTIVE" ? "default" : "secondary"}>
+                        {org.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center space-x-1">
+                        <UserCheck className="h-3 w-3 text-muted-foreground" />
+                        <span>{org.coordinatorsCount}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center space-x-1">
+                        <Users className="h-3 w-3 text-muted-foreground" />
+                        <span>{org.learnersCount}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Link to={`/client-organisations/${org.id}`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <ExternalLink className="h-4 w-4" />
+                          <span className="sr-only">View organization details</span>
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
