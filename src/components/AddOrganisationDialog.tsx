@@ -11,14 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Plus, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { clientOrganizationsApi } from "@/lib/api";
@@ -30,9 +22,6 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
   const [formData, setFormData] = useState({
     organisationType: "internal",
     divisionOrganisationName: "",
-    divisionAddress: "",
-    paymentMode: "",
-    requireBuNumber: false,
     buNumber: "",
   });
 
@@ -55,8 +44,7 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
       await clientOrganizationsApi.create({
         name: formData.divisionOrganisationName,
         industry: formData.organisationType === "internal" ? "SPF" : "External",
-        address: formData.divisionAddress || undefined,
-        buNumber: formData.requireBuNumber ? formData.buNumber : undefined,
+        buNumber: formData.buNumber || undefined,
       });
 
       toast({
@@ -68,9 +56,6 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
       setFormData({
         organisationType: "internal",
         divisionOrganisationName: "",
-        divisionAddress: "",
-        paymentMode: "",
-        requireBuNumber: false,
         buNumber: "",
       });
       setOpen(false);
@@ -138,53 +123,14 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
               placeholder={formData.organisationType === "internal" ? "e.g. Ang Mo Kio" : "e.g. External Organisation Name"}
             />
           </div>
-          
           <div>
-            <Label htmlFor="divisionAddress">Division Address</Label>
+            <Label htmlFor="buNumber">BU Number (Optional)</Label>
             <Input
-              id="divisionAddress"
-              value={formData.divisionAddress}
-              onChange={(e) => setFormData(prev => ({ ...prev, divisionAddress: e.target.value }))}
-              placeholder="Enter division address"
+              id="buNumber"
+              value={formData.buNumber}
+              onChange={(e) => setFormData(prev => ({ ...prev, buNumber: e.target.value }))}
+              placeholder="Enter BU number"
             />
-          </div>
-
-
-            <div className="flex items-center space-x-2">
-            <Checkbox
-              id="requireBuNumber"
-              checked={formData.requireBuNumber}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requireBuNumber: !!checked }))}
-            />
-            <Label htmlFor="requireBuNumber">Require BU number?</Label>
-            </div>
-
-            {formData.requireBuNumber && (
-            <div>
-              <Label htmlFor="buNumber">BU Number *</Label>
-              <Input
-                id="buNumber"
-                value={formData.buNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, buNumber: e.target.value }))}
-                placeholder="Enter BU number"
-              />
-            </div>
-            )}
-          
-
-          <div>
-            <Label htmlFor="paymentMode">Payment Mode</Label>
-            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select payment mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ULTF">ULTF</SelectItem>
-                <SelectItem value="Transition Dollars">Transition Dollars</SelectItem>
-                <SelectItem value="Self Sponsored">Self Sponsored</SelectItem>
-                <SelectItem value="Not Applicable">Not Applicable</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </form>
 
