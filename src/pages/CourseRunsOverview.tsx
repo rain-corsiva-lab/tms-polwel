@@ -564,17 +564,17 @@ const CourseRunsOverview = () => {
                         </div>
                       </TableCell>
                        <TableCell className="py-4">
-                         <Badge 
-                           variant={getStatusBadgeVariant(run.status)} 
-                           className={`text-xs ${getStatusBadgeClass(run.status, run.cancellationApproved, run.trainerAssignmentApproved)} ${
-                             (run.status === 'Cancelled' && !run.cancellationApproved) || (run.status === 'Active' && !run.trainerAssignmentApproved) 
-                               ? 'cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 border-2' 
-                               : ''
-                           } ${
-                             run.status === 'Cancelled' && !run.cancellationApproved ? 'border-amber-300' : ''
-                           } ${
-                             run.status === 'Active' && !run.trainerAssignmentApproved ? 'border-amber-300' : ''
-                           }`}
+                          <Badge 
+                            variant={getStatusBadgeVariant(run.status)} 
+                            className={`text-xs text-center ${getStatusBadgeClass(run.status, run.cancellationApproved, run.trainerAssignmentApproved)} ${
+                              (run.status === 'Cancelled' && !run.cancellationApproved) || (run.status === 'Active' && !run.trainerAssignmentApproved) 
+                                ? 'cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 border-2' 
+                                : ''
+                            } ${
+                              run.status === 'Cancelled' && !run.cancellationApproved ? 'border-amber-300' : ''
+                            } ${
+                              run.status === 'Active' && !run.trainerAssignmentApproved ? 'border-amber-300' : ''
+                            }`}
                            onClick={
                              run.status === 'Cancelled' && !run.cancellationApproved 
                                ? () => handleCancellationApproval(run)
