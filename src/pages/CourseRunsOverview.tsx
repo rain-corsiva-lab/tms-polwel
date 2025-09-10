@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Search, Plus, Users, MapPin, Filter, MoreVertical, Mail, CheckCircle } from "lucide-react";
+import { Calendar, Search, Plus, Users, MapPin, Filter, MoreVertical, Mail, CheckCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import SendCourseCompletionDialog from "@/components/SendCourseCompletionDialog";
+import CancelCourseRunDialog from "@/components/CancelCourseRunDialog";
 import type { CourseRun } from "@/types/courseRun";
 
 const CourseRunsOverview = () => {
@@ -21,6 +22,7 @@ const CourseRunsOverview = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedCourseRun, setSelectedCourseRun] = useState<CourseRun | null>(null);
 
   // Mock data - replace with API call
@@ -55,7 +57,7 @@ const CourseRunsOverview = () => {
         maxClassSize: 25,
         recommendedClassSize: 20,
         individualRegistrationRequired: true,
-        status: 'Open',
+        status: 'Active',
         currentParticipants: 8,
         createdAt: '2025-08-01T10:00:00Z',
         updatedAt: '2025-08-20T15:30:00Z'
@@ -123,7 +125,7 @@ const CourseRunsOverview = () => {
         maxClassSize: 20,
         recommendedClassSize: 18,
         individualRegistrationRequired: true,
-        status: 'Pending',
+        status: 'Active',
         currentParticipants: 5,
         createdAt: '2025-08-15T10:00:00Z',
         updatedAt: '2025-08-26T09:00:00Z'
@@ -190,9 +192,9 @@ const CourseRunsOverview = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'Open': return 'default';
+      case 'Active': return 'default';
       case 'Confirmed': return 'default';
-      case 'Pending': return 'secondary';
+      case 'Draft': return 'secondary';
       case 'Cancelled': return 'destructive';
       case 'In Progress': return 'default';
       case 'Completed': return 'secondary';
@@ -212,6 +214,11 @@ const CourseRunsOverview = () => {
   const handleSendCourseCompletionEmail = (courseRun: CourseRun) => {
     setSelectedCourseRun(courseRun);
     setEmailDialogOpen(true);
+  };
+
+  const handleCancelCourseRun = (courseRun: CourseRun) => {
+    setSelectedCourseRun(courseRun);
+    setCancelDialogOpen(true);
   };
 
   const handleMarkAsCompleted = (courseRun: CourseRun) => {
@@ -273,15 +280,15 @@ const CourseRunsOverview = () => {
                   <Filter className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Open">Open</SelectItem>
-                  <SelectItem value="Confirmed">Confirmed</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
+                    <SelectContent>
+                      <SelectItem value="All">All Status</SelectItem>
+                      <SelectItem value="Draft">Draft</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Confirmed">Confirmed</SelectItem>
+                      <SelectItem value="In Progress">In Progress</SelectItem>
+                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
               </Select>
             </div>
           </div>
@@ -378,6 +385,15 @@ const CourseRunsOverview = () => {
                               <Users className="w-4 h-4 mr-2" />
                               Manage
                             </DropdownMenuItem>
+                            {(run.status === 'Active' || run.status === 'Confirmed') && (
+                              <DropdownMenuItem 
+                                onClick={() => handleCancelCourseRun(run)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <X className="w-4 h-4 mr-2" />
+                                Cancel Run
+                              </DropdownMenuItem>
+                            )}
                             {run.status === 'Completed' && (
                               <DropdownMenuItem onClick={() => handleSendCourseCompletionEmail(run)}>
                                 <Mail className="w-4 h-4 mr-2" />
@@ -407,6 +423,12 @@ const CourseRunsOverview = () => {
       <SendCourseCompletionDialog
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
+        courseRun={selectedCourseRun}
+      />
+
+      <CancelCourseRunDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
         courseRun={selectedCourseRun}
       />
     </div>

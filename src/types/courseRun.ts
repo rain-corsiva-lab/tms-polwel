@@ -46,7 +46,7 @@ export interface CourseRun {
   maxClassSize?: number;
   recommendedClassSize: number;
   individualRegistrationRequired: boolean;
-  status: 'Pending' | 'Open' | 'Confirmed' | 'Cancelled' | 'In Progress' | 'Completed';
+  status: 'Active' | 'Confirmed' | 'Cancelled' | 'In Progress' | 'Completed' | 'Draft';
   currentParticipants: number;
   remarks?: string;
   createdAt: string;

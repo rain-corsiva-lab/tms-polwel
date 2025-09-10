@@ -546,6 +546,14 @@ export default function CourseRunForm() {
           >
             Cancel
           </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={loading}
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Mark as Draft
+          </Button>
           <Button type="submit" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Course Run

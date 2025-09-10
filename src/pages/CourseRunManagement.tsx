@@ -66,7 +66,7 @@ const CourseRunManagement = () => {
       maxClassSize: 25,
       recommendedClassSize: 20,
       individualRegistrationRequired: true,
-      status: 'Open',
+      status: 'Active',
       currentParticipants: 8,
       createdAt: '2025-08-01T10:00:00Z',
       updatedAt: '2025-08-20T15:30:00Z'
@@ -331,9 +331,9 @@ const CourseRunManagement = () => {
         
         <div className="flex items-center space-x-2">
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            courseRun.status === 'Open' ? 'bg-blue-100 text-blue-700' :
+            courseRun.status === 'Active' ? 'bg-blue-100 text-blue-700' :
             courseRun.status === 'Confirmed' ? 'bg-green-100 text-green-700' :
-            courseRun.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+            courseRun.status === 'Draft' ? 'bg-yellow-100 text-yellow-700' :
             courseRun.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
             courseRun.status === 'In Progress' ? 'bg-purple-100 text-purple-700' :
             'bg-gray-100 text-gray-700'
