@@ -303,6 +303,15 @@ const CourseRunsOverview = () => {
         ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' 
         : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200';
     }
+    if (status === 'In Progress') {
+      return 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200';
+    }
+    if (status === 'Completed') {
+      return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
+    }
+    if (status === 'Confirmed') {
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200';
+    }
     return '';
   };
 
