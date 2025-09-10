@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
@@ -28,6 +29,7 @@ interface AddCoordinatorDialogProps {
     email: string;
     department: string;
     password: string;
+    isPrimaryCoordinator?: boolean;
   }) => Promise<void>;
 }
 
@@ -38,6 +40,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
     email: "",
     contactNumber: "",
     department: "",
+    isPrimaryCoordinator: false,
   });
 
   const { toast } = useToast();
@@ -63,6 +66,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         email: formData.email,
         department: formData.department,
         password: tempPassword,
+        isPrimaryCoordinator: formData.isPrimaryCoordinator,
       });
 
       // Only show success toast if the API call succeeds
@@ -77,6 +81,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         email: "",
         contactNumber: "",
         department: "",
+        isPrimaryCoordinator: false,
       });
       setOpen(false);
     } catch (error) {
@@ -143,6 +148,19 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
               onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
               placeholder="Enter department"
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="primaryCoordinator"
+              checked={formData.isPrimaryCoordinator}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, isPrimaryCoordinator: checked as boolean }))
+              }
+            />
+            <Label htmlFor="primaryCoordinator" className="text-sm font-normal">
+              Make primary coordinator
+            </Label>
           </div>
           
         </form>
