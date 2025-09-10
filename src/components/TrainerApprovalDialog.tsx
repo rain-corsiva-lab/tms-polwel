@@ -82,17 +82,41 @@ export default function TrainerApprovalDialog({
             <Label className="text-sm font-medium mb-2 block">Assigned Trainer(s)</Label>
             <div className="space-y-3">
               {courseRun.trainers?.map((trainer, index) => (
-                <div key={trainer.id} className="flex items-center gap-3 p-2 bg-background rounded border">
+                <div key={trainer.id} className="flex items-center gap-3 p-3 bg-background rounded border">
                   <User className="w-4 h-4 text-muted-foreground" />
                   <div className="flex-1">
                     <p className="font-medium text-sm">{trainer.name}</p>
                     <p className="text-xs text-muted-foreground">Trainer ID: {trainer.id}</p>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    Lead Trainer
-                  </Badge>
+                  <div className="text-right">
+                    <Badge variant="outline" className="text-xs mb-1">
+                      Lead Trainer
+                    </Badge>
+                    <p className="text-sm font-semibold text-green-600">
+                      ${courseRun.contractFees.baseAmount.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {courseRun.contractFees.perRun ? 'Per Run' : 'Per Head'}
+                    </p>
+                  </div>
                 </div>
               ))}
+              
+              {courseRun.contractFees.additionalCosts > 0 && (
+                <div className="flex items-center justify-between p-2 bg-amber-50 rounded border border-amber-200">
+                  <span className="text-sm text-amber-800">Additional Costs</span>
+                  <span className="text-sm font-semibold text-amber-800">
+                    +${courseRun.contractFees.additionalCosts.toLocaleString()}
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between p-2 bg-blue-50 rounded border border-blue-200">
+                <span className="text-sm font-medium text-blue-800">Total Trainer Fees</span>
+                <span className="text-lg font-bold text-blue-800">
+                  ${(courseRun.contractFees.baseAmount + courseRun.contractFees.additionalCosts).toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -105,12 +129,6 @@ export default function TrainerApprovalDialog({
               <MapPin className="w-4 h-4 text-muted-foreground" />
               <span>{courseRun.venue?.name}</span>
             </div>
-          </div>
-
-          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Approving this trainer assignment will confirm the course run and send notification emails to trainers and enrolled participants.
-            </p>
           </div>
         </div>
 
