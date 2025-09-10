@@ -195,11 +195,15 @@ const CourseRunsOverview = () => {
       case 'Active': return 'default';
       case 'Confirmed': return 'default';
       case 'Draft': return 'secondary';
-      case 'Cancelled': return 'destructive';
+      case 'Cancelled': return 'outline';
       case 'In Progress': return 'default';
       case 'Completed': return 'secondary';
       default: return 'outline';
     }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    return status === 'Cancelled' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' : '';
   };
 
   const getParticipantsBadgeVariant = (current: number, min: number) => {
@@ -233,6 +237,15 @@ const CourseRunsOverview = () => {
       title: "Course Run Completed",
       description: `${courseRun.serialNumber} - ${courseRun.courseTitle} has been marked as completed`,
     });
+  };
+
+  const handleCancelledCourseRun = (courseRunId: string) => {
+    const updatedRuns = courseRuns.map(run => 
+      run.id === courseRunId 
+        ? { ...run, status: 'Cancelled' as const, updatedAt: new Date().toISOString() }
+        : run
+    );
+    setCourseRuns(updatedRuns);
   };
 
   if (loading) {
@@ -364,7 +377,10 @@ const CourseRunsOverview = () => {
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
-                        <Badge variant={getStatusBadgeVariant(run.status)} className="text-xs">
+                        <Badge 
+                          variant={getStatusBadgeVariant(run.status)} 
+                          className={`text-xs ${getStatusBadgeClass(run.status)}`}
+                        >
                           {run.status}
                         </Badge>
                       </TableCell>
@@ -430,6 +446,7 @@ const CourseRunsOverview = () => {
         open={cancelDialogOpen}
         onOpenChange={setCancelDialogOpen}
         courseRun={selectedCourseRun}
+        onCancel={handleCancelledCourseRun}
       />
     </div>
   );

@@ -12,12 +12,14 @@ interface CancelCourseRunDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   courseRun: CourseRun | null;
+  onCancel?: (courseRunId: string) => void;
 }
 
 export default function CancelCourseRunDialog({ 
   open, 
   onOpenChange, 
-  courseRun 
+  courseRun,
+  onCancel 
 }: CancelCourseRunDialogProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -37,10 +39,14 @@ export default function CancelCourseRunDialog({
       return;
     }
 
-    // Here you would typically send the cancellation request to your API
+    // Update the status to cancelled
+    if (courseRun?.id && onCancel) {
+      onCancel(courseRun.id);
+    }
+    
     toast({
-      title: "Cancellation Request Submitted",
-      description: `Cancellation request for ${courseRun?.serialNumber} has been sent to management for approval.`,
+      title: "Course Run Cancelled",
+      description: `${courseRun?.serialNumber} has been cancelled and is pending management approval.`,
     });
 
     // Reset form and close dialog
