@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Search, Plus, Users, MapPin, Filter, MoreVertical, Mail, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import SendCourseConfirmationDialog from "@/components/SendCourseConfirmationDialog";
 import type { CourseRun } from "@/types/courseRun";
 
 const CourseRunsOverview = () => {
@@ -19,6 +20,8 @@ const CourseRunsOverview = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedCourseRun, setSelectedCourseRun] = useState<CourseRun | null>(null);
 
   // Mock data - replace with API call
   useEffect(() => {
@@ -173,10 +176,8 @@ const CourseRunsOverview = () => {
   };
 
   const handleSendCourseConfirmationEmail = (courseRun: CourseRun) => {
-    toast({
-      title: "Course Confirmation Email Sent",
-      description: `Confirmation email sent for ${courseRun.serialNumber} - ${courseRun.courseTitle}`,
-    });
+    setSelectedCourseRun(courseRun);
+    setEmailDialogOpen(true);
   };
 
   const handleMarkAsCompleted = (courseRun: CourseRun) => {
@@ -366,6 +367,12 @@ const CourseRunsOverview = () => {
           )}
         </CardContent>
       </Card>
+
+      <SendCourseConfirmationDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        courseRun={selectedCourseRun}
+      />
     </div>
   );
 };
