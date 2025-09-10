@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Search, Plus, Users, MapPin, Filter, MoreVertical, Mail, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import SendCourseConfirmationDialog from "@/components/SendCourseConfirmationDialog";
+import SendCourseCompletionDialog from "@/components/SendCourseCompletionDialog";
 import type { CourseRun } from "@/types/courseRun";
 
 const CourseRunsOverview = () => {
@@ -127,6 +127,40 @@ const CourseRunsOverview = () => {
         currentParticipants: 5,
         createdAt: '2025-08-15T10:00:00Z',
         updatedAt: '2025-08-26T09:00:00Z'
+      },
+      {
+        id: 'run-4',
+        serialNumber: 'CR004/25',
+        courseId: 'course-4',
+        courseTitle: 'Workplace Safety & Health Management',
+        courseCode: 'WSH01',
+        type: 'Open',
+        startDate: '2025-08-20',
+        endDate: '2025-08-22',
+        startTime: '09:00',
+        endTime: '17:00',
+        venueId: 'venue-3',
+        venue: {
+          id: 'venue-3',
+          name: 'Safety Training Hub',
+          address: '789 Safety Blvd, Singapore'
+        },
+        trainerIds: ['trainer-4'],
+        trainers: [{ id: 'trainer-4', name: 'Ms. Lisa Wong' }],
+        contractFees: {
+          baseAmount: 4500,
+          perRun: true,
+          perHead: false,
+          additionalCosts: 200
+        },
+        minClassSize: 8,
+        maxClassSize: 16,
+        recommendedClassSize: 12,
+        individualRegistrationRequired: true,
+        status: 'Completed',
+        currentParticipants: 14,
+        createdAt: '2025-07-20T10:00:00Z',
+        updatedAt: '2025-08-25T16:00:00Z'
       }
     ];
 
@@ -175,7 +209,7 @@ const CourseRunsOverview = () => {
     navigate(`/course-runs/${courseRun.courseId}/${courseRun.id}`);
   };
 
-  const handleSendCourseConfirmationEmail = (courseRun: CourseRun) => {
+  const handleSendCourseCompletionEmail = (courseRun: CourseRun) => {
     setSelectedCourseRun(courseRun);
     setEmailDialogOpen(true);
   };
@@ -344,10 +378,12 @@ const CourseRunsOverview = () => {
                               <Users className="w-4 h-4 mr-2" />
                               Manage
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleSendCourseConfirmationEmail(run)}>
-                              <Mail className="w-4 h-4 mr-2" />
-                              Send Course Confirmation Email
-                            </DropdownMenuItem>
+                            {run.status === 'Completed' && (
+                              <DropdownMenuItem onClick={() => handleSendCourseCompletionEmail(run)}>
+                                <Mail className="w-4 h-4 mr-2" />
+                                Send Course Completion Email
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleMarkAsCompleted(run)}
@@ -368,7 +404,7 @@ const CourseRunsOverview = () => {
         </CardContent>
       </Card>
 
-      <SendCourseConfirmationDialog
+      <SendCourseCompletionDialog
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
         courseRun={selectedCourseRun}

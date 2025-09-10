@@ -13,17 +13,17 @@ import { Mail, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { CourseRun } from "@/types/courseRun";
 
-interface SendCourseConfirmationDialogProps {
+interface SendCourseCompletionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   courseRun: CourseRun | null;
 }
 
-const SendCourseConfirmationDialog = ({ 
+const SendCourseCompletionDialog = ({ 
   open, 
   onOpenChange, 
   courseRun 
-}: SendCourseConfirmationDialogProps) => {
+}: SendCourseCompletionDialogProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     cc: "",
@@ -37,8 +37,8 @@ const SendCourseConfirmationDialog = ({
     if (!courseRun) return;
 
     toast({
-      title: "Course Confirmation Email Sent",
-      description: `Confirmation email sent for ${courseRun.serialNumber} - ${courseRun.courseTitle}`,
+      title: "Course Completion Email Sent",
+      description: `Completion email sent for ${courseRun.serialNumber} - ${courseRun.courseTitle}`,
     });
 
     // Reset form
@@ -59,7 +59,7 @@ const SendCourseConfirmationDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="w-5 h-5" />
-            Send Course Confirmation Email
+            Send Course Completion Email
           </DialogTitle>
         </DialogHeader>
 
@@ -85,7 +85,7 @@ const SendCourseConfirmationDialog = ({
               type="email"
               value={formData.cc}
               onChange={(e) => setFormData(prev => ({ ...prev, cc: e.target.value }))}
-              placeholder="by default sent to all learners"
+              placeholder="Enter CC recipients (optional)"
             />
             <p className="text-xs text-muted-foreground">
               CC recipients will receive additional content and attachments
@@ -137,7 +137,7 @@ const SendCourseConfirmationDialog = ({
             </Button>
             <Button type="submit">
               <Mail className="w-4 h-4 mr-2" />
-              Send Course Confirmation Email
+              Send Course Completion Email
             </Button>
           </div>
         </form>
@@ -146,4 +146,4 @@ const SendCourseConfirmationDialog = ({
   );
 };
 
-export default SendCourseConfirmationDialog;
+export default SendCourseCompletionDialog;
