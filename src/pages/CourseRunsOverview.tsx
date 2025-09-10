@@ -416,14 +416,15 @@ const CourseRunsOverview = () => {
                                 Send Course Completion Email
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleMarkAsCompleted(run)}
-                              disabled={run.status === 'Completed'}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Mark as Completed
-                            </DropdownMenuItem>
+                            {run.status !== 'Completed' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleMarkAsCompleted(run)}>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Mark as Completed
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
