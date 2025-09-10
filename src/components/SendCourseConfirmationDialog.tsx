@@ -87,24 +87,30 @@ const SendCourseConfirmationDialog = ({
               onChange={(e) => setFormData(prev => ({ ...prev, cc: e.target.value }))}
               placeholder="by default sent to all learners"
             />
+            <p className="text-xs text-muted-foreground">
+              CC recipients will receive additional content and attachments
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="additionalBody" className="text-sm font-medium">
-              Additional Body Content
+              Additional Body Content (CC only)
             </Label>
             <Textarea
               id="additionalBody"
               value={formData.additionalBody}
               onChange={(e) => setFormData(prev => ({ ...prev, additionalBody: e.target.value }))}
-              placeholder="Enter any additional message content..."
+              placeholder="Enter any additional message content for CC recipients only..."
               rows={4}
             />
+            <p className="text-xs text-muted-foreground">
+              Learners will only receive the standard templated email content
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="attachments" className="text-sm font-medium">
-              Additional Attachments
+              Additional Attachments (CC only)
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -116,6 +122,9 @@ const SendCourseConfirmationDialog = ({
               />
               <Paperclip className="w-4 h-4 text-muted-foreground" />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Attachments will only be sent to CC recipients, not to learners
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
