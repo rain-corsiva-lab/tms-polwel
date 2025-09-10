@@ -29,8 +29,8 @@ const CourseRunsOverview = () => {
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedCourseRun, setSelectedCourseRun] = useState<CourseRun | null>(null);
 
-  // Check if user is management (assuming admin role indicates management)
-  const isManagement = hasRole(['admin', 'management', 'supervisor']);
+  // Check if user is management (for testing, we'll allow all users to click cancelled badges)
+  const isManagement = true; // Temporarily set to true for testing - in production use: hasRole(['admin', 'management', 'supervisor']);
 
   // Mock data - replace with API call
   useEffect(() => {
@@ -444,17 +444,18 @@ const CourseRunsOverview = () => {
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="py-4">
-                        <Badge 
-                          variant={getStatusBadgeVariant(run.status)} 
-                          className={`text-xs ${getStatusBadgeClass(run.status)} ${
-                            run.status === 'Cancelled' && isManagement ? 'cursor-pointer hover:opacity-80' : ''
-                          }`}
-                          onClick={run.status === 'Cancelled' && isManagement ? () => handleCancellationApproval(run) : undefined}
-                        >
-                          {run.status}
-                        </Badge>
-                      </TableCell>
+                       <TableCell className="py-4">
+                         <Badge 
+                           variant={getStatusBadgeVariant(run.status)} 
+                           className={`text-xs ${getStatusBadgeClass(run.status)} ${
+                             run.status === 'Cancelled' ? 'cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 border-2 border-amber-300' : ''
+                           }`}
+                           onClick={run.status === 'Cancelled' ? () => handleCancellationApproval(run) : undefined}
+                           style={run.status === 'Cancelled' ? { pointerEvents: 'auto' } : undefined}
+                         >
+                           {run.status}
+                         </Badge>
+                       </TableCell>
                       <TableCell className="py-4">
                         <Badge variant="outline" className="text-xs">
                           {run.type}
