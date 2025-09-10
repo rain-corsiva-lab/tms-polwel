@@ -85,7 +85,6 @@ const SendCourseCompletionDialog = ({
               type="email"
               value={formData.cc}
               onChange={(e) => setFormData(prev => ({ ...prev, cc: e.target.value }))}
-              placeholder="Enter CC recipients (optional)"
             />
             <p className="text-xs text-muted-foreground">
               CC recipients will receive additional content and attachments
@@ -94,13 +93,12 @@ const SendCourseCompletionDialog = ({
 
           <div className="space-y-2">
             <Label htmlFor="additionalBody" className="text-sm font-medium">
-              Additional Body Content (CC only)
+              Additional Body Content
             </Label>
             <Textarea
               id="additionalBody"
               value={formData.additionalBody}
               onChange={(e) => setFormData(prev => ({ ...prev, additionalBody: e.target.value }))}
-              placeholder="Enter any additional message content for CC recipients only..."
               rows={4}
             />
             <p className="text-xs text-muted-foreground">
@@ -110,7 +108,7 @@ const SendCourseCompletionDialog = ({
 
           <div className="space-y-2">
             <Label htmlFor="attachments" className="text-sm font-medium">
-              Additional Attachments (CC only)
+              Additional Attachments
             </Label>
             <div className="flex items-center gap-2">
               <Input
