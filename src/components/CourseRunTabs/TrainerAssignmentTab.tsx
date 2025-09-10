@@ -9,6 +9,7 @@ import { UserCheck, DollarSign, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { CourseRun } from "@/types/courseRun";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface TrainerAssignmentTabProps {
   courseRun: CourseRun;
@@ -22,6 +23,11 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(courseRun);
+  
+  // Email dialog state
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailCC, setEmailCC] = useState('');
+  const [additionalBodyContent, setAdditionalBodyContent] = useState('');
   
   // Dummy trainer data (from course creation)
   const availableTrainers = [
@@ -113,7 +119,7 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
       }, 0);
   };
 
-  const handleSendTrainingConfirmationEmail = () => {
+  const handleOpenEmailDialog = () => {
     const selectedTrainers = availableTrainers.filter(trainer => 
       assignedTrainers[trainer.id].selected
     );
@@ -121,16 +127,28 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
     if (selectedTrainers.length === 0) {
       toast({
         title: "No Trainers Selected",
-        description: "Please select trainers before sending confirmation emails",
+        description: "Please select trainers before sending assignment emails",
         variant: "destructive"
       });
       return;
     }
 
+    setShowEmailDialog(true);
+  };
+
+  const handleSendTrainerEmail = () => {
+    const selectedTrainers = availableTrainers.filter(trainer => 
+      assignedTrainers[trainer.id].selected
+    );
+
     toast({
-      title: "Training Confirmation Emails Sent",
-      description: `Confirmation emails sent to ${selectedTrainers.length} selected trainer(s)`,
+      title: "Trainer Assignment Emails Sent",
+      description: `Assignment emails sent to ${selectedTrainers.length} selected trainer(s)`,
     });
+    
+    setShowEmailDialog(false);
+    setEmailCC('');
+    setAdditionalBodyContent('');
   };
 
   // Filter trainers based on editing mode
@@ -155,14 +173,53 @@ const TrainerAssignmentTab: React.FC<TrainerAssignmentTabProps> = ({
             </>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                onClick={handleSendTrainingConfirmationEmail}
-                disabled={getSelectedTrainersCount() === 0}
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                Send Training Confirmation Email
-              </Button>
+              <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleOpenEmailDialog}
+                    disabled={getSelectedTrainersCount() === 0}
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Trainer Assignment Email
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Send Trainer Assignment Email</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="email-cc">CC</Label>
+                      <Input
+                        id="email-cc"
+                        type="email"
+                        placeholder="Enter CC email addresses"
+                        value={emailCC}
+                        onChange={(e) => setEmailCC(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="additional-body">Additional Body Content:</Label>
+                      <Textarea
+                        id="additional-body"
+                        placeholder="Enter additional content for the email body..."
+                        value={additionalBodyContent}
+                        onChange={(e) => setAdditionalBodyContent(e.target.value)}
+                        rows={4}
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSendTrainerEmail}>
+                        Send Trainer Email
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Button onClick={() => setIsEditing(true)}>
                 Edit Trainer Assignment
               </Button>
