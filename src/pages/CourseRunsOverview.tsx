@@ -8,14 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Search, Plus, Users, MapPin, Filter, MoreVertical, Mail, CheckCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import SendCourseCompletionDialog from "@/components/SendCourseCompletionDialog";
 import CancelCourseRunDialog from "@/components/CancelCourseRunDialog";
+import CancellationApprovalDialog from "@/components/CancellationApprovalDialog";
 import type { CourseRun } from "@/types/courseRun";
 
 const CourseRunsOverview = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasRole } = useAuth();
   const [courseRuns, setCourseRuns] = useState<CourseRun[]>([]);
   const [filteredRuns, setFilteredRuns] = useState<CourseRun[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,7 +26,11 @@ const CourseRunsOverview = () => {
   const [loading, setLoading] = useState(true);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedCourseRun, setSelectedCourseRun] = useState<CourseRun | null>(null);
+
+  // Check if user is management (assuming admin role indicates management)
+  const isManagement = hasRole(['admin', 'management', 'supervisor']);
 
   // Mock data - replace with API call
   useEffect(() => {
@@ -239,10 +246,36 @@ const CourseRunsOverview = () => {
     });
   };
 
-  const handleCancelledCourseRun = (courseRunId: string) => {
+  const handleCancelledCourseRun = (courseRunId: string, reason: string) => {
     const updatedRuns = courseRuns.map(run => 
       run.id === courseRunId 
-        ? { ...run, status: 'Cancelled' as const, updatedAt: new Date().toISOString() }
+        ? { ...run, status: 'Cancelled' as const, cancellationReason: reason, updatedAt: new Date().toISOString() }
+        : run
+    );
+    setCourseRuns(updatedRuns);
+  };
+
+  const handleCancellationApproval = (courseRun: CourseRun) => {
+    if (isManagement) {
+      setSelectedCourseRun(courseRun);
+      setApprovalDialogOpen(true);
+    }
+  };
+
+  const handleApproveCancellation = (courseRunId: string) => {
+    // In a real app, this would make an API call to approve the cancellation
+    // For now, we'll just keep the status as cancelled
+    toast({
+      title: "Cancellation Approved",
+      description: "Cancellation emails have been sent to learners",
+    });
+  };
+
+  const handleRejectCancellation = (courseRunId: string) => {
+    // Revert the status back to Active or previous status
+    const updatedRuns = courseRuns.map(run => 
+      run.id === courseRunId 
+        ? { ...run, status: 'Active' as const, cancellationReason: undefined }
         : run
     );
     setCourseRuns(updatedRuns);
@@ -379,7 +412,10 @@ const CourseRunsOverview = () => {
                       <TableCell className="py-4">
                         <Badge 
                           variant={getStatusBadgeVariant(run.status)} 
-                          className={`text-xs ${getStatusBadgeClass(run.status)}`}
+                          className={`text-xs ${getStatusBadgeClass(run.status)} ${
+                            run.status === 'Cancelled' && isManagement ? 'cursor-pointer hover:opacity-80' : ''
+                          }`}
+                          onClick={run.status === 'Cancelled' && isManagement ? () => handleCancellationApproval(run) : undefined}
                         >
                           {run.status}
                         </Badge>
@@ -448,6 +484,14 @@ const CourseRunsOverview = () => {
         onOpenChange={setCancelDialogOpen}
         courseRun={selectedCourseRun}
         onCancel={handleCancelledCourseRun}
+      />
+
+      <CancellationApprovalDialog
+        open={approvalDialogOpen}
+        onOpenChange={setApprovalDialogOpen}
+        courseRun={selectedCourseRun}
+        onApprove={handleApproveCancellation}
+        onReject={handleRejectCancellation}
       />
     </div>
   );

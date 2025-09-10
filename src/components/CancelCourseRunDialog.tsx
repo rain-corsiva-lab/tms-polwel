@@ -12,7 +12,7 @@ interface CancelCourseRunDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   courseRun: CourseRun | null;
-  onCancel?: (courseRunId: string) => void;
+  onCancel?: (courseRunId: string, reason: string) => void;
 }
 
 export default function CancelCourseRunDialog({ 
@@ -40,8 +40,8 @@ export default function CancelCourseRunDialog({
     }
 
     // Update the status to cancelled
-    if (courseRun?.id && onCancel) {
-      onCancel(courseRun.id);
+    if (courseRun?.id && onCancel && formData.reason.trim()) {
+      onCancel(courseRun.id, formData.reason.trim());
     }
     
     toast({

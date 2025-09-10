@@ -49,6 +49,7 @@ export interface CourseRun {
   status: 'Active' | 'Confirmed' | 'Cancelled' | 'In Progress' | 'Completed' | 'Draft';
   currentParticipants: number;
   remarks?: string;
+  cancellationReason?: string;
   createdAt: string;
   updatedAt: string;
 }
