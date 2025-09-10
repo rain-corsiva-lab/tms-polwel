@@ -50,6 +50,7 @@ export interface CourseRun {
   currentParticipants: number;
   remarks?: string;
   cancellationReason?: string;
+  cancellationApproved?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -203,6 +203,7 @@ const CourseRunsOverview = () => {
         status: 'Cancelled',
         currentParticipants: 12,
         cancellationReason: 'Trainer unavailable due to emergency. Alternative venue not available for the scheduled dates.',
+        cancellationApproved: false,
         createdAt: '2025-08-05T10:00:00Z',
         updatedAt: '2025-09-01T14:30:00Z'
       }
@@ -244,8 +245,13 @@ const CourseRunsOverview = () => {
     }
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    return status === 'Cancelled' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' : '';
+  const getStatusBadgeClass = (status: string, cancellationApproved?: boolean) => {
+    if (status === 'Cancelled') {
+      return cancellationApproved 
+        ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' 
+        : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200';
+    }
+    return '';
   };
 
   const getParticipantsBadgeVariant = (current: number, min: number) => {
@@ -298,8 +304,14 @@ const CourseRunsOverview = () => {
   };
 
   const handleApproveCancellation = (courseRunId: string) => {
-    // In a real app, this would make an API call to approve the cancellation
-    // For now, we'll just keep the status as cancelled
+    // Update the course run to mark as approved
+    const updatedRuns = courseRuns.map(run => 
+      run.id === courseRunId 
+        ? { ...run, cancellationApproved: true, updatedAt: new Date().toISOString() }
+        : run
+    );
+    setCourseRuns(updatedRuns);
+    
     toast({
       title: "Cancellation Approved",
       description: "Cancellation emails have been sent to learners",
@@ -447,11 +459,11 @@ const CourseRunsOverview = () => {
                        <TableCell className="py-4">
                          <Badge 
                            variant={getStatusBadgeVariant(run.status)} 
-                           className={`text-xs ${getStatusBadgeClass(run.status)} ${
-                             run.status === 'Cancelled' ? 'cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 border-2 border-amber-300' : ''
+                           className={`text-xs ${getStatusBadgeClass(run.status, run.cancellationApproved)} ${
+                             run.status === 'Cancelled' && !run.cancellationApproved ? 'cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 border-2 border-amber-300' : ''
                            }`}
-                           onClick={run.status === 'Cancelled' ? () => handleCancellationApproval(run) : undefined}
-                           style={run.status === 'Cancelled' ? { pointerEvents: 'auto' } : undefined}
+                           onClick={run.status === 'Cancelled' && !run.cancellationApproved ? () => handleCancellationApproval(run) : undefined}
+                           style={run.status === 'Cancelled' && !run.cancellationApproved ? { pointerEvents: 'auto' } : undefined}
                          >
                            {run.status}
                          </Badge>
