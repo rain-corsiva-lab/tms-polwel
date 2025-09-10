@@ -170,6 +170,41 @@ const CourseRunsOverview = () => {
         currentParticipants: 14,
         createdAt: '2025-07-20T10:00:00Z',
         updatedAt: '2025-08-25T16:00:00Z'
+      },
+      {
+        id: 'run-5',
+        serialNumber: 'CR005/25',
+        courseId: 'course-5',
+        courseTitle: 'Data Analytics for Business',
+        courseCode: 'DAB01',
+        type: 'Open',
+        startDate: '2025-09-25',
+        endDate: '2025-09-27',
+        startTime: '09:00',
+        endTime: '17:00',
+        venueId: 'venue-1',
+        venue: {
+          id: 'venue-1',
+          name: 'POLWEL Training Center',
+          address: '123 Training Street, Singapore'
+        },
+        trainerIds: ['trainer-5'],
+        trainers: [{ id: 'trainer-5', name: 'Dr. Anna Tech' }],
+        contractFees: {
+          baseAmount: 6500,
+          perRun: true,
+          perHead: false,
+          additionalCosts: 300
+        },
+        minClassSize: 10,
+        maxClassSize: 20,
+        recommendedClassSize: 15,
+        individualRegistrationRequired: true,
+        status: 'Cancelled',
+        currentParticipants: 12,
+        cancellationReason: 'Trainer unavailable due to emergency. Alternative venue not available for the scheduled dates.',
+        createdAt: '2025-08-05T10:00:00Z',
+        updatedAt: '2025-09-01T14:30:00Z'
       }
     ];
 
