@@ -101,9 +101,6 @@ const SendCourseCompletionDialog = ({
               onChange={(e) => setFormData(prev => ({ ...prev, additionalBody: e.target.value }))}
               rows={4}
             />
-            <p className="text-xs text-muted-foreground">
-              Learners will only receive the standard templated email content
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -120,9 +117,6 @@ const SendCourseCompletionDialog = ({
               />
               <Paperclip className="w-4 h-4 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Attachments will only be sent to CC recipients, not to learners
-            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
