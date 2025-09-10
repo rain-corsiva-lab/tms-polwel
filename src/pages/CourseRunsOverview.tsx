@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import SendCourseCompletionDialog from "@/components/SendCourseCompletionDialog";
 import CancelCourseRunDialog from "@/components/CancelCourseRunDialog";
 import CancellationApprovalDialog from "@/components/CancellationApprovalDialog";
+import TrainerApprovalDialog from "@/components/TrainerApprovalDialog";
 import type { CourseRun } from "@/types/courseRun";
 
 const CourseRunsOverview = () => {
@@ -27,6 +28,7 @@ const CourseRunsOverview = () => {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [trainerApprovalDialogOpen, setTrainerApprovalDialogOpen] = useState(false);
   const [selectedCourseRun, setSelectedCourseRun] = useState<CourseRun | null>(null);
 
   // Check if user is management (for testing, we'll allow all users to click cancelled badges)
@@ -66,6 +68,7 @@ const CourseRunsOverview = () => {
         individualRegistrationRequired: true,
         status: 'Active',
         currentParticipants: 8,
+        trainerAssignmentApproved: false,
         createdAt: '2025-08-01T10:00:00Z',
         updatedAt: '2025-08-20T15:30:00Z'
       },
@@ -134,6 +137,7 @@ const CourseRunsOverview = () => {
         individualRegistrationRequired: true,
         status: 'Active',
         currentParticipants: 5,
+        trainerAssignmentApproved: false,
         createdAt: '2025-08-15T10:00:00Z',
         updatedAt: '2025-08-26T09:00:00Z'
       },
@@ -235,7 +239,7 @@ const CourseRunsOverview = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'Active': return 'default';
+      case 'Active': return 'outline';
       case 'Confirmed': return 'default';
       case 'Draft': return 'secondary';
       case 'Cancelled': return 'outline';
@@ -245,10 +249,15 @@ const CourseRunsOverview = () => {
     }
   };
 
-  const getStatusBadgeClass = (status: string, cancellationApproved?: boolean) => {
+  const getStatusBadgeClass = (status: string, cancellationApproved?: boolean, trainerAssignmentApproved?: boolean) => {
     if (status === 'Cancelled') {
       return cancellationApproved 
         ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' 
+        : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200';
+    }
+    if (status === 'Active') {
+      return trainerAssignmentApproved 
+        ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' 
         : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200';
     }
     return '';
@@ -303,6 +312,13 @@ const CourseRunsOverview = () => {
     }
   };
 
+  const handleTrainerApproval = (courseRun: CourseRun) => {
+    if (isManagement) {
+      setSelectedCourseRun(courseRun);
+      setTrainerApprovalDialogOpen(true);
+    }
+  };
+
   const handleApproveCancellation = (courseRunId: string) => {
     // Update the course run to mark as approved
     const updatedRuns = courseRuns.map(run => 
@@ -323,6 +339,26 @@ const CourseRunsOverview = () => {
     const updatedRuns = courseRuns.map(run => 
       run.id === courseRunId 
         ? { ...run, status: 'Active' as const, cancellationReason: undefined }
+        : run
+    );
+    setCourseRuns(updatedRuns);
+  };
+
+  const handleApproveTrainerAssignment = (courseRunId: string) => {
+    // Update the course run to mark trainer assignment as approved
+    const updatedRuns = courseRuns.map(run => 
+      run.id === courseRunId 
+        ? { ...run, trainerAssignmentApproved: true, updatedAt: new Date().toISOString() }
+        : run
+    );
+    setCourseRuns(updatedRuns);
+  };
+
+  const handleRejectTrainerAssignment = (courseRunId: string) => {
+    // For rejection, we could change status back to Draft or keep as Active but reset approval
+    const updatedRuns = courseRuns.map(run => 
+      run.id === courseRunId 
+        ? { ...run, trainerAssignmentApproved: false, status: 'Draft' as const }
         : run
     );
     setCourseRuns(updatedRuns);
@@ -459,11 +495,27 @@ const CourseRunsOverview = () => {
                        <TableCell className="py-4">
                          <Badge 
                            variant={getStatusBadgeVariant(run.status)} 
-                           className={`text-xs ${getStatusBadgeClass(run.status, run.cancellationApproved)} ${
-                             run.status === 'Cancelled' && !run.cancellationApproved ? 'cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 border-2 border-amber-300' : ''
+                           className={`text-xs ${getStatusBadgeClass(run.status, run.cancellationApproved, run.trainerAssignmentApproved)} ${
+                             (run.status === 'Cancelled' && !run.cancellationApproved) || (run.status === 'Active' && !run.trainerAssignmentApproved) 
+                               ? 'cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 border-2' 
+                               : ''
+                           } ${
+                             run.status === 'Cancelled' && !run.cancellationApproved ? 'border-amber-300' : ''
+                           } ${
+                             run.status === 'Active' && !run.trainerAssignmentApproved ? 'border-amber-300' : ''
                            }`}
-                           onClick={run.status === 'Cancelled' && !run.cancellationApproved ? () => handleCancellationApproval(run) : undefined}
-                           style={run.status === 'Cancelled' && !run.cancellationApproved ? { pointerEvents: 'auto' } : undefined}
+                           onClick={
+                             run.status === 'Cancelled' && !run.cancellationApproved 
+                               ? () => handleCancellationApproval(run)
+                               : run.status === 'Active' && !run.trainerAssignmentApproved
+                               ? () => handleTrainerApproval(run)
+                               : undefined
+                           }
+                           style={
+                             (run.status === 'Cancelled' && !run.cancellationApproved) || (run.status === 'Active' && !run.trainerAssignmentApproved)
+                               ? { pointerEvents: 'auto' } 
+                               : undefined
+                           }
                          >
                            {run.status}
                          </Badge>
@@ -540,6 +592,14 @@ const CourseRunsOverview = () => {
         courseRun={selectedCourseRun}
         onApprove={handleApproveCancellation}
         onReject={handleRejectCancellation}
+      />
+
+      <TrainerApprovalDialog
+        open={trainerApprovalDialogOpen}
+        onOpenChange={setTrainerApprovalDialogOpen}
+        courseRun={selectedCourseRun}
+        onApprove={handleApproveTrainerAssignment}
+        onReject={handleRejectTrainerAssignment}
       />
     </div>
   );

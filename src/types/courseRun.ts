@@ -51,6 +51,7 @@ export interface CourseRun {
   remarks?: string;
   cancellationReason?: string;
   cancellationApproved?: boolean;
+  trainerAssignmentApproved?: boolean;
   createdAt: string;
   updatedAt: string;
 }
