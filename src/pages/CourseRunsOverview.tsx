@@ -304,7 +304,7 @@ const CourseRunsOverview = () => {
         : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200';
     }
     if (status === 'In Progress') {
-      return 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200';
+      return 'bg-indigo-100 text-indigo-800 border-indigo-200 hover:bg-indigo-200';
     }
     if (status === 'Completed') {
       return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
