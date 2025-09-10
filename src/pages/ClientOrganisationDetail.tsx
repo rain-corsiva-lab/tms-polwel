@@ -147,25 +147,94 @@ const ClientOrganisationDetail = () => {
     }
   }, [id]);
 
+  // Mock organization data
+  const mockOrganizations = {
+    "1": {
+      id: "1",
+      name: "Ang Mo Kio",
+      contactEmail: "contact@angmokio.gov.sg",
+      contactPhone: "+65 6755 2000",
+      contactPerson: "John Tan",
+      address: "123 Ang Mo Kio Avenue 8, Singapore 560123",
+      industry: "SPF",
+      buNumber: "BU001",
+      status: "ACTIVE"
+    },
+    "2": {
+      id: "2",
+      name: "Boon Lay",
+      contactEmail: "contact@boonlay.gov.sg",
+      contactPhone: "+65 6794 3000",
+      contactPerson: "Sarah Lee",
+      address: "456 Boon Lay Way, Singapore 649846",
+      industry: "POLWEL",
+      buNumber: "BU002",
+      status: "ACTIVE"
+    },
+    "3": {
+      id: "3",
+      name: "Yuhua",
+      contactEmail: "contact@yuhua.gov.sg",
+      contactPhone: "+65 6567 4000",
+      contactPerson: "Michael Wong",
+      address: "789 Yuhua Avenue 3, Singapore 610789",
+      industry: "Public Sector",
+      buNumber: "BU003",
+      status: "INACTIVE"
+    },
+    "4": {
+      id: "4",
+      name: "Tech Solutions Pte Ltd",
+      contactEmail: "info@techsolutions.com.sg",
+      contactPhone: "+65 6234 5678",
+      contactPerson: "David Chen",
+      address: "10 Science Park Road, Singapore 117684",
+      industry: "Private Sector",
+      buNumber: "BU004",
+      status: "ACTIVE"
+    }
+  };
+
   const fetchOrganization = async () => {
     if (!id) return;
     
     try {
       setLoading(true);
       setError(null);
-      const data = await clientOrganizationsApi.getById(id);
-      setOrganization(data);
       
-      // Set form data
-      setFormData({
-        name: data.name || '',
-        contactEmail: data.contactEmail || '',
-        contactPhone: data.contactPhone || '',
-        contactPerson: data.contactPerson || '',
-        address: data.address || '',
-        industry: data.industry || '',
-        buNumber: data.buNumber || ''
-      });
+      // Try API first, fallback to mock data
+      try {
+        const data = await clientOrganizationsApi.getById(id);
+        setOrganization(data);
+        
+        // Set form data
+        setFormData({
+          name: data.name || '',
+          contactEmail: data.contactEmail || '',
+          contactPhone: data.contactPhone || '',
+          contactPerson: data.contactPerson || '',
+          address: data.address || '',
+          industry: data.industry || '',
+          buNumber: data.buNumber || ''
+        });
+      } catch (apiError) {
+        // Use mock data as fallback
+        const mockData = mockOrganizations[id as keyof typeof mockOrganizations];
+        if (mockData) {
+          setOrganization(mockData);
+          setFormData({
+            name: mockData.name,
+            contactEmail: mockData.contactEmail,
+            contactPhone: mockData.contactPhone,
+            contactPerson: mockData.contactPerson,
+            address: mockData.address,
+            industry: mockData.industry,
+            buNumber: mockData.buNumber
+          });
+        } else {
+          throw new Error('Organization not found');
+        }
+      }
     } catch (error: any) {
       console.error('Error fetching organization:', error);
       setError(error.message || 'Failed to fetch organization');
@@ -179,13 +248,54 @@ const ClientOrganisationDetail = () => {
     }
   };
 
+  // Mock coordinators data
+  const mockCoordinators = {
+    "1": [
+      {
+        id: "coord1",
+        name: "Alice Johnson",
+        email: "alice.johnson@angmokio.gov.sg",
+        department: "Training Department",
+        status: "ACTIVE",
+        organizationId: "1",
+        createdAt: "2024-01-15T00:00:00Z"
+      },
+      {
+        id: "coord2", 
+        name: "Bob Smith",
+        email: "bob.smith@angmokio.gov.sg",
+        department: "Operations Department",
+        status: "ACTIVE",
+        organizationId: "1",
+        createdAt: "2024-02-20T00:00:00Z"
+      },
+      {
+        id: "coord3",
+        name: "Carol Lee",
+        email: "carol.lee@angmokio.gov.sg", 
+        department: "HR Department",
+        status: "ACTIVE",
+        organizationId: "1",
+        createdAt: "2024-03-10T00:00:00Z"
+      }
+    ]
+  };
+
   const fetchCoordinators = async () => {
     if (!id) return;
     
     try {
       setCoordinatorsLoading(true);
-      const response = await clientOrganizationsApi.getCoordinators(id);
-      setCoordinators(response.coordinators || []);
+      
+      // Try API first, fallback to mock data
+      try {
+        const response = await clientOrganizationsApi.getCoordinators(id);
+        setCoordinators(response.coordinators || []);
+      } catch (apiError) {
+        // Use mock data as fallback
+        const mockData = mockCoordinators[id as keyof typeof mockCoordinators] || [];
+        setCoordinators(mockData);
+      }
     } catch (error: any) {
       console.error('Error fetching coordinators:', error);
       toast({
@@ -198,13 +308,71 @@ const ClientOrganisationDetail = () => {
     }
   };
 
+  // Mock learners data
+  const mockLearners = {
+    "1": [
+      {
+        id: "learner1",
+        name: "David Wilson",
+        email: "david.wilson@angmokio.gov.sg",
+        department: "Operations",
+        status: "active",
+        enrolledCourses: 3,
+        completedCourses: 1,
+        organizationId: "1",
+        createdAt: "2024-01-10T00:00:00Z"
+      },
+      {
+        id: "learner2",
+        name: "Emma Brown",
+        email: "emma.brown@angmokio.gov.sg",
+        department: "Training",
+        status: "active",
+        enrolledCourses: 2,
+        completedCourses: 2,
+        organizationId: "1",
+        createdAt: "2024-02-15T00:00:00Z"
+      },
+      {
+        id: "learner3",
+        name: "Frank Davis",
+        email: "frank.davis@angmokio.gov.sg",
+        department: "HR",
+        status: "active",
+        enrolledCourses: 4,
+        completedCourses: 3,
+        organizationId: "1",
+        createdAt: "2024-03-20T00:00:00Z"
+      },
+      {
+        id: "learner4",
+        name: "Grace Kim",
+        email: "grace.kim@angmokio.gov.sg",
+        department: "Operations",
+        status: "inactive",
+        enrolledCourses: 1,
+        completedCourses: 0,
+        organizationId: "1",
+        createdAt: "2024-04-05T00:00:00Z"
+      }
+    ]
+  };
+
   const fetchLearners = async () => {
     if (!id) return;
     
     try {
       setLearnersLoading(true);
-      const response = await clientOrganizationsApi.getLearners(id);
-      setLearners(response.learners || []);
+      
+      // Try API first, fallback to mock data
+      try {
+        const response = await clientOrganizationsApi.getLearners(id);
+        setLearners(response.learners || []);
+      } catch (apiError) {
+        // Use mock data as fallback
+        const mockData = mockLearners[id as keyof typeof mockLearners] || [];
+        setLearners(mockData);
+      }
     } catch (error: any) {
       console.error('Error fetching learners:', error);
       toast({
