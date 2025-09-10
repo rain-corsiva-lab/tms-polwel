@@ -310,7 +310,7 @@ const CourseRunsOverview = () => {
       return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
     }
     if (status === 'Confirmed') {
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200';
+      return 'bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200';
     }
     return '';
   };
