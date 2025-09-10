@@ -255,7 +255,7 @@ const CourseRunsOverview = () => {
     if (status === 'Cancelled') {
       return cancellationApproved 
         ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' 
-        : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200';
+        : 'bg-amber-200 text-amber-900 border-amber-300 hover:bg-amber-300';
     }
     if (status === 'Active') {
       return trainerAssignmentApproved 
