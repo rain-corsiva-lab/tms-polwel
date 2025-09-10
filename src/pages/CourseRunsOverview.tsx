@@ -212,6 +212,47 @@ const CourseRunsOverview = () => {
         cancellationApproved: false,
         createdAt: '2025-08-05T10:00:00Z',
         updatedAt: '2025-09-01T14:30:00Z'
+      },
+      {
+        id: 'run-6',
+        serialNumber: 'CR006/25',
+        courseId: 'course-6',
+        courseTitle: 'Cybersecurity Awareness Training',
+        courseCode: 'CAT01',
+        type: 'Open',
+        startDate: '2025-09-08',
+        endDate: '2025-09-12',
+        startTime: '09:00',
+        endTime: '17:00',
+        venueId: 'venue-4',
+        venue: {
+          id: 'venue-4',
+          name: 'IT Security Training Lab',
+          address: '321 Cyber Street, Singapore'
+        },
+        trainerIds: ['trainer-6'],
+        trainers: [{ id: 'trainer-6', name: 'Mr. David Security' }],
+        contractFees: {
+          baseAmount: 5500,
+          perRun: true,
+          perHead: false,
+          additionalCosts: 300
+        },
+        courseFee: 850,
+        feeType: 'per-head' as const,
+        venueFee: 200,
+        otherFees: 50,
+        adminFees: 100,
+        minClassSize: 10,
+        maxClassSize: 24,
+        recommendedClassSize: 18,
+        individualRegistrationRequired: true,
+        status: 'In Progress',
+        currentParticipants: 19,
+        trainerAssignmentApproved: true,
+        remarks: 'Course is running smoothly with high engagement',
+        createdAt: '2025-08-05T10:00:00Z',
+        updatedAt: '2025-09-08T09:00:00Z'
       }
     ];
 
