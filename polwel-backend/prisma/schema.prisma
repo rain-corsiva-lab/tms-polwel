@@ -75,7 +75,7 @@ model Organization {
   contactPhone    String?
   contactPerson   String?
   buNumber        String?
-  divisionAddress String?
+  organizationType OrganizationType @default(POLWEL)
   status          UserStatus @default(ACTIVE)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -383,4 +383,11 @@ enum AuditActionType {
   PERMISSION_CHANGE
   PASSWORD_CHANGE
   PROFILE_UPDATE
+}
+
+enum OrganizationType {
+  POLWEL
+  SPF
+  PUBLIC_SECTOR
+  PRIVATE_SECTOR
 }

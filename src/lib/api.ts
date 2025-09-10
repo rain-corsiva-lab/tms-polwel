@@ -705,7 +705,7 @@ export const clientOrganizationsApi = {
     limit?: number;
     search?: string;
     status?: string;
-    industry?: string;
+  organizationType?: string;
   } = {}) => {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -725,14 +725,13 @@ export const clientOrganizationsApi = {
   // Create new organization
   create: async (orgData: {
     name: string;
-    industry?: string;
     status?: string;
     address?: string;
     contactEmail?: string;
     contactPhone?: string;
     contactPerson?: string;
     buNumber?: string;
-    divisionAddress?: string;
+  organizationType?: string;
   }) => {
     return apiRequest('/client-organizations', {
       method: 'POST',
@@ -743,14 +742,13 @@ export const clientOrganizationsApi = {
   // Update organization
   update: async (id: string, orgData: {
     name?: string;
-    industry?: string;
     status?: string;
     address?: string;
     contactEmail?: string;
     contactPhone?: string;
     contactPerson?: string;
     buNumber?: string;
-    divisionAddress?: string;
+  organizationType?: string;
   }) => {
     return apiRequest(`/client-organizations/${id}`, {
       method: 'PUT',

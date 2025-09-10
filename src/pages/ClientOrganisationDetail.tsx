@@ -288,7 +288,6 @@ const ClientOrganisationDetail = () => {
         contactPhone: formData.contactPhone,
         contactPerson: formData.contactPerson,
         buNumber: formData.buNumber,
-        divisionAddress: formData.address,
       });
 
       // Update local state

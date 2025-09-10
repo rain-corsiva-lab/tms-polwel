@@ -25,7 +25,8 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
 
   // industry field removed from schema
 
-    const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim() : undefined;
+  const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim() : undefined;
+  const rawOrgType = typeof req.query.organizationType === 'string' ? req.query.organizationType.trim() : undefined;
 
     // Build where clause defensively
     const where: any = {};
@@ -45,6 +46,11 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
         where.status = rawStatus as UserStatus;
       }
     }
+    if (rawOrgType) {
+      if (['POLWEL', 'SPF', 'PUBLIC_SECTOR', 'PRIVATE_SECTOR'].includes(rawOrgType)) {
+        where.organizationType = rawOrgType as any;
+      }
+    }
 
   // industry removed - no extra filters
 
@@ -52,13 +58,26 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
     const [organizations, total] = await Promise.all([
       prisma.organization.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          address: true,
+          contactEmail: true,
+          contactPhone: true,
+          buNumber: true,
+          organizationType: true,
+          createdAt: true,
+          updatedAt: true,
           _count: {
             select: {
               users: true,
               bookings: true
             }
-          }
+          },
+          users: {
+            select: { role: true },
+          },
         },
   skip,
   take: limitNum,
@@ -76,9 +95,11 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
         contactEmail: org.contactEmail,
         contactPhone: org.contactPhone,
         buNumber: org.buNumber,
-        divisionAddress: org.divisionAddress,
+        organizationType: org.organizationType,
         createdAt: org.createdAt,
         updatedAt: org.updatedAt,
+        coordinatorsCount: org.users.filter(u => u.role === 'TRAINING_COORDINATOR').length,
+        learnersCount: org.users.filter(u => u.role === 'LEARNER').length,
         stats: {
           totalUsers: org._count.users,
           totalBookings: org._count.bookings
@@ -167,7 +188,7 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
       contactEmail,
       contactPhone,
       buNumber,
-      divisionAddress
+      organizationType = 'POLWEL'
     } = req.body;
 
     // Validation
@@ -194,15 +215,19 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
       });
     }
 
+    // Validate organizationType
+    const allowedTypes = ['POLWEL','SPF','PUBLIC_SECTOR','PRIVATE_SECTOR'];
+    const orgType = allowedTypes.includes(organizationType) ? organizationType : 'POLWEL';
+
     const organization = await prisma.organization.create({
       data: {
-  name,
+        name,
         status,
         address: address || null,
         contactEmail: contactEmail || null,
         contactPhone: contactPhone || null,
         buNumber: buNumber || null,
-        divisionAddress: divisionAddress || null
+        organizationType: orgType as any,
       }
     });
 
@@ -229,7 +254,7 @@ export const updateClientOrganization = async (req: AuthenticatedRequest, res: R
       contactPhone,
       contactPerson,
       buNumber,
-      divisionAddress
+      organizationType
     } = req.body;
 
     if (!id) {
@@ -263,7 +288,7 @@ export const updateClientOrganization = async (req: AuthenticatedRequest, res: R
         ...(contactPhone !== undefined && { contactPhone }),
         ...(contactPerson !== undefined && { contactPerson }),
         ...(buNumber !== undefined && { buNumber }),
-        ...(divisionAddress !== undefined && { divisionAddress })
+        ...(organizationType !== undefined && { organizationType })
       }
     });
 
