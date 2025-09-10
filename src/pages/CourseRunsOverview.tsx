@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import SendCourseCompletionDialog from "@/components/SendCourseCompletionDialog";
+import { SendCourseConfirmationDialog } from "@/components/SendCourseConfirmationDialog";
 import CancelCourseRunDialog from "@/components/CancelCourseRunDialog";
 import CancellationApprovalDialog from "@/components/CancellationApprovalDialog";
 import TrainerApprovalDialog from "@/components/TrainerApprovalDialog";
@@ -26,6 +27,7 @@ const CourseRunsOverview = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [trainerApprovalDialogOpen, setTrainerApprovalDialogOpen] = useState(false);
@@ -296,6 +298,25 @@ const CourseRunsOverview = () => {
     });
   };
 
+  const handleMarkAsConfirmed = (courseRun: CourseRun) => {
+    setSelectedCourseRun(courseRun);
+    setConfirmationDialogOpen(true);
+  };
+
+  const handleConfirmCourseRun = (courseRun: CourseRun) => {
+    const updatedRuns = courseRuns.map(run => 
+      run.id === courseRun.id 
+        ? { ...run, status: 'Confirmed' as const, updatedAt: new Date().toISOString() }
+        : run
+    );
+    setCourseRuns(updatedRuns);
+    
+    toast({
+      title: "Course Confirmation Sent",
+      description: `Confirmation emails sent to all learners for ${courseRun.serialNumber}`,
+    });
+  };
+
   const handleCancelledCourseRun = (courseRunId: string, reason: string) => {
     const updatedRuns = courseRuns.map(run => 
       run.id === courseRunId 
@@ -546,12 +567,18 @@ const CourseRunsOverview = () => {
                                 Cancel Run
                               </DropdownMenuItem>
                             )}
-                            {run.status === 'Completed' && (
-                              <DropdownMenuItem onClick={() => handleSendCourseCompletionEmail(run)}>
-                                <Mail className="w-4 h-4 mr-2" />
-                                Send Course Completion Email
-                              </DropdownMenuItem>
-                            )}
+                             {run.status === 'Active' && run.trainerAssignmentApproved && (
+                               <DropdownMenuItem onClick={() => handleMarkAsConfirmed(run)}>
+                                 <Mail className="w-4 h-4 mr-2" />
+                                 Mark as Confirmed
+                               </DropdownMenuItem>
+                             )}
+                             {run.status === 'Completed' && (
+                               <DropdownMenuItem onClick={() => handleSendCourseCompletionEmail(run)}>
+                                 <Mail className="w-4 h-4 mr-2" />
+                                 Send Course Completion Email
+                               </DropdownMenuItem>
+                             )}
                             {run.status !== 'Completed' && (
                               <>
                                 <DropdownMenuSeparator />
@@ -600,6 +627,13 @@ const CourseRunsOverview = () => {
         courseRun={selectedCourseRun}
         onApprove={handleApproveTrainerAssignment}
         onReject={handleRejectTrainerAssignment}
+      />
+
+      <SendCourseConfirmationDialog
+        open={confirmationDialogOpen}
+        onOpenChange={setConfirmationDialogOpen}
+        courseRun={selectedCourseRun}
+        onConfirm={handleConfirmCourseRun}
       />
     </div>
   );
