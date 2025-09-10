@@ -247,7 +247,7 @@ const CourseRunsOverview = () => {
         maxClassSize: 24,
         recommendedClassSize: 18,
         individualRegistrationRequired: true,
-        status: 'In Progress',
+        status: 'In-Progress',
         currentParticipants: 19,
         trainerAssignmentApproved: true,
         remarks: 'Course is running smoothly with high engagement',
@@ -286,7 +286,8 @@ const CourseRunsOverview = () => {
       case 'Confirmed': return 'default';
       case 'Draft': return 'secondary';
       case 'Cancelled': return 'outline';
-      case 'In Progress': return 'default';
+      case 'In Progress':
+      case 'In-Progress': return 'default';
       case 'Completed': return 'secondary';
       default: return 'outline';
     }
@@ -303,7 +304,7 @@ const CourseRunsOverview = () => {
         ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' 
         : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200';
     }
-    if (status === 'In Progress') {
+    if (status === 'In Progress' || status === 'In-Progress') {
       return 'bg-indigo-100 text-indigo-800 border-indigo-200 hover:bg-indigo-200';
     }
     if (status === 'Completed') {
