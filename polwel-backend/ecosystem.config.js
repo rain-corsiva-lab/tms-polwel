@@ -1,9 +1,10 @@
 module.exports = {
   apps: [
+    // Use __dirname so the config works regardless of where PM2 is started from
     {
       name: 'polwel-backend-local',
-      script: 'dist/index.js',
-      cwd: '/var/www/polwel/backend',
+      script: __dirname + '/dist/index.js',
+      cwd: __dirname,
       env: {
         NODE_ENV: 'local',
         PORT: 3001
@@ -19,8 +20,8 @@ module.exports = {
     },
     {
       name: 'polwel-backend-staging',
-      script: 'dist/index.js',
-      cwd: '/var/www/polwel/backend',
+      script: __dirname + '/dist/index.js',
+      cwd: __dirname,
       env: {
         NODE_ENV: 'staging',
         PORT: 3001
@@ -39,8 +40,8 @@ module.exports = {
     },
     {
       name: 'polwel-backend-production',
-      script: 'dist/index.js',
-      cwd: '/var/www/polwel/backend',
+      script: __dirname + '/dist/index.js',
+      cwd: __dirname,
       env: {
         NODE_ENV: 'production',
         PORT: 3001
