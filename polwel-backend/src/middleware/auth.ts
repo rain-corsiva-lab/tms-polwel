@@ -145,16 +145,18 @@ export const authorizeRoles = (...allowedRoles: string[]) => {
       return;
     }
 
-    // TEMPORARILY DISABLE PERMISSION CHECKS - ALLOW ALL AUTHENTICATED USERS
-    // if (!allowedRoles.includes(req.user.role)) {
-    //   res.status(403).json({ 
-    //     error: 'Insufficient permissions',
-    //     code: 'INSUFFICIENT_PERMISSIONS',
-    //     required: allowedRoles,
-    //     current: req.user.role
-    //   });
-    //   return;
-    // }
+    // Enforce permission checks
+    if (!allowedRoles || allowedRoles.length === 0) {
+      // no role restriction provided
+    } else if (!allowedRoles.includes(req.user.role)) {
+      res.status(403).json({ 
+        error: 'Insufficient permissions',
+        code: 'INSUFFICIENT_PERMISSIONS',
+        required: allowedRoles,
+        current: req.user.role
+      });
+      return;
+    }
 
     next();
   };

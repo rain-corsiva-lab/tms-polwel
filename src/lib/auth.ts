@@ -36,6 +36,7 @@ class AuthService {
   private lastActivityKey = 'polwel_last_activity';
   private refreshTokenTimer: NodeJS.Timeout | null = null;
   private sessionCheckTimer: NodeJS.Timeout | null = null;
+  private suppressExpiryRedirectUntil: number | null = null;
 
   constructor(apiUrl: string = import.meta.env.VITE_API_URL || 'http://localhost:3001/api') {
     this.apiUrl = apiUrl;
@@ -60,6 +61,11 @@ class AuthService {
     const token = this.getToken();
     if (token) {
       this.scheduleTokenRefresh();
+
+      // Suppress automatic expiry redirects for a short grace period
+      try {
+        this.suppressExpiryRedirectUntil = Date.now() + 3000; // 3 seconds
+      } catch (e) {}
     }
   }
 
@@ -124,6 +130,12 @@ class AuthService {
 
   private handleSessionExpiry(): void {
     console.log('Handling session expiry...');
+    // If we recently logged in, skip immediate redirect to avoid race conditions
+    if (this.suppressExpiryRedirectUntil && Date.now() < this.suppressExpiryRedirectUntil) {
+      console.log('Skipping session expiry redirect due to recent login');
+      return;
+    }
+
     this.clearTokens();
     
     // Show toast notification
@@ -271,6 +283,15 @@ class AuthService {
 
       this.scheduleTokenRefresh();
 
+      // Dispatch a custom event so the rest of the app updates immediately
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polwel_auth_updated'));
+        }
+      } catch (e) {
+        // ignore
+      }
+
       toast.success(`Welcome back, ${data.user.name}!`);
       return data;
     } catch (error) {
@@ -345,10 +366,13 @@ class AuthService {
     let token = this.getToken();
     const user = this.getUser();
 
-    // If no token or user, redirect to login
+    // If no token or user, surface a 401 error instead of forcing logout.
+    // This avoids race conditions where a login has just stored tokens but
+    // another request checks before the auth context updated.
     if (!token || !user) {
-      this.handleSessionExpiry();
-      throw new Error('Authentication required - no token or user data');
+      const err = new Error('Authentication required - no token or user data');
+      (err as any).status = 401;
+      throw err;
     }
 
     // First attempt with current token
@@ -362,19 +386,16 @@ class AuthService {
         },
       });
 
-      // If 401/403, try to refresh token once
+      // If 401/403, try to refresh token only for expiration errors; otherwise surface 403 to caller
       if (response.status === 401 || response.status === 403) {
         const errorData = await response.json().catch(() => ({ error: 'Authentication error' }));
         
-        console.log('Token invalid, attempting refresh...', errorData);
-        
-        // Check if it's specifically a token expiration error
+        console.log('Auth error response received:', response.status, errorData);
+
+        // If token expired, attempt refresh and retry
         if (errorData.code === 'TOKEN_EXPIRED' || errorData.error?.includes('expired')) {
-          console.log('Token expired, attempting refresh...');
           const newToken = await this.refreshToken();
-          
           if (newToken) {
-            console.log('Token refreshed successfully, retrying request...');
             const retryResponse = await fetch(`${this.apiUrl}${endpoint}`, {
               ...options,
               headers: {
@@ -383,26 +404,23 @@ class AuthService {
                 ...options.headers,
               },
             });
-            
-            if (retryResponse.ok) {
-              return retryResponse.json();
-            } else {
-              const retryError = await retryResponse.json().catch(() => ({ error: 'Request failed after token refresh' }));
-              console.error('Request failed after token refresh:', retryError);
-              this.handleSessionExpiry();
-              throw new Error('Session expired - please login again');
-            }
-          } else {
-            console.error('Token refresh failed, redirecting to login');
-            this.handleSessionExpiry();
-            throw new Error('Session expired - please login again');
+
+            if (retryResponse.ok) return retryResponse.json();
+            const retryError = await retryResponse.json().catch(() => ({ error: 'Request failed after token refresh' }));
+            const err = new Error(retryError.error || 'Request failed after token refresh');
+            (err as any).status = retryResponse.status;
+            throw err;
           }
-        } else {
-          // Not a token expiration error, but still auth error
-          console.error('Authentication error:', errorData);
-          this.handleSessionExpiry();
-          throw new Error('Authentication failed - please login again');
+          const err = new Error('Session expired - please login again');
+          (err as any).status = 401;
+          throw err;
         }
+
+        // Non-expiry 401/403: surface to caller (do not auto-logout)
+        const err = new Error(errorData.error || 'Authentication failed');
+        (err as any).status = response.status;
+        (err as any).code = errorData.code;
+        throw err;
       }
 
       if (response.ok) {

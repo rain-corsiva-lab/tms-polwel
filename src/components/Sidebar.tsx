@@ -49,7 +49,7 @@ const Sidebar = ({ className }: SidebarProps) => {
 
       <nav className="flex-1 px-4 space-y-1">
         {/* Trainer Dashboard - Only show for trainers */}
-        {hasRole("TRAINER") && (
+        {user?.role === "TRAINER" && (
           <NavLink
             to="/trainer-dashboard"
             className={({ isActive }) =>
@@ -65,7 +65,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* User Management Dropdown - hidden for trainers */}
-        {!hasRole("TRAINER") && (
+        {user?.role !== "TRAINER" && (
           <div className="space-y-1">
             <button
               onClick={() => setUserManagementOpen(!userManagementOpen)}
@@ -113,7 +113,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* Course Management Dropdown - hidden for trainers */}
-        {!hasRole("TRAINER") && (
+        {user?.role !== "TRAINER" && (
           <div className="space-y-1">
             <button
               onClick={() => setCourseManagementOpen(!courseManagementOpen)}

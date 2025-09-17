@@ -29,6 +29,7 @@ import ResetPassword from "./pages/ResetPassword";
 import CompleteSetup from "./pages/CompleteSetup";
 
 import NotFound from "./pages/NotFound";
+import Forbidden from "./pages/Forbidden";
 
 const queryClient = new QueryClient();
 
@@ -158,6 +159,7 @@ const App = () => (
             </Route>
 
             {/* 404 page */}
+            <Route path="403" element={<Forbidden />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

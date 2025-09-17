@@ -1,8 +1,8 @@
-import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Lock, Building } from 'lucide-react';
+import { ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, Lock, Building } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,11 +10,7 @@ interface ProtectedRouteProps {
   organizationId?: string;
 }
 
-export function ProtectedRoute({ 
-  children, 
-  requiredRoles = [], 
-  organizationId 
-}: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRoles = [], organizationId }: ProtectedRouteProps) {
   const { isAuthenticated, user, loading, hasRole, canAccessOrganization } = useAuth();
   const location = useLocation();
 
@@ -31,9 +27,15 @@ export function ProtectedRoute({
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+  // Role checks
+  if (requiredRoles && requiredRoles.length > 0 && !hasRole(requiredRoles)) {
+    return <Navigate to="/403" replace />;
+  }
 
-  // TEMPORARILY DISABLE ALL PERMISSION CHECKS - ALLOW ALL AUTHENTICATED USERS
-  console.log('ProtectedRoute: User authenticated, allowing access', { user, requiredRoles, organizationId });
+  // Organization checks
+  if (organizationId && !canAccessOrganization(organizationId)) {
+    return <Navigate to="/403" replace />;
+  }
 
   // All checks passed, render the protected content
   return <>{children}</>;

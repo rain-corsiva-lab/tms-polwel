@@ -43,11 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     window.addEventListener("storage", handleStorageChange);
+    // Listen for explicit auth update events (dispatched after login)
+    const handleAuthUpdated = () => checkAuth();
+    window.addEventListener("polwel_auth_updated", handleAuthUpdated as EventListener);
 
     // Cleanup
     return () => {
       clearInterval(authCheckInterval);
       window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("polwel_auth_updated", handleAuthUpdated as EventListener);
     };
   }, []);
 
@@ -93,7 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return normalizedRequired.some((req) => userRoles.includes(req));
   };
   const canAccessOrganization = (orgId: string) => authService.canAccessOrganization(orgId);
-  const apiRequest = authService.apiRequest.bind(authService);
+  const rawApiRequest = authService.apiRequest.bind(authService);
+  const apiRequest = async (endpoint: string, options?: RequestInit) => {
+    try {
+      return await rawApiRequest(endpoint, options);
+    } catch (err: any) {
+      // If backend returns 403, redirect to /403 (do not logout)
+      if (err && (err.status === 403 || err.code === "INSUFFICIENT_PERMISSIONS" || err.code === "ORG_ACCESS_DENIED")) {
+        if (typeof window !== "undefined") {
+          window.location.href = "/403";
+          return;
+        }
+      }
+      // For other errors, rethrow
+      throw err;
+    }
+  };
 
   return (
     <AuthContext.Provider

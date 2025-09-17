@@ -91,6 +91,7 @@ console.log('🔧 Environment Debug:', {
 console.log('🌐 API Base URL:', API_BASE_URL);
 
 // Get auth token from localStorage (matching the token key used in auth service)
+import { authService } from './auth';
 const getAuthToken = () => {
   return localStorage.getItem('polwel_access_token');
 };
@@ -152,36 +153,43 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         if (response.status === 401 || response.status === 403) {
           console.error(`Authentication Error (${response.status}):`, errorData);
           
-          // Check if it's a token expiration error
+          // Check if it's a token expiration error - attempt refresh once
           if (errorData.code === 'TOKEN_EXPIRED' || errorData.error?.includes('expired')) {
-            console.log('Token expired detected in API, clearing tokens and redirecting...');
-            localStorage.removeItem('polwel_access_token');
-            localStorage.removeItem('polwel_refresh_token');
-            localStorage.removeItem('polwel_user_data');
-            localStorage.removeItem('polwel_last_activity');
-            
-            // Show error message
-            console.error('Session expired, redirecting to login');
-            
-            // Redirect to login
-            if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-              window.location.replace('/login');
+            try {
+              const newToken = await authService.refreshToken();
+              if (newToken) {
+                // retry request with new token
+                const retryConfig: RequestInit = {
+                  ...config,
+                  headers: {
+                    ...config.headers,
+                    Authorization: `Bearer ${newToken}`,
+                  },
+                };
+                const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, retryConfig);
+                if (retryResponse.ok) {
+                  return retryResponse.json();
+                }
+                const rd = await retryResponse.json().catch(() => ({}));
+                const err = new Error(rd.error || 'Request failed after token refresh');
+                (err as any).status = retryResponse.status;
+                throw err;
+              }
+              const err = new Error('Session expired. Please login again.');
+              (err as any).status = 401;
+              throw err;
+            } catch (refreshErr) {
+              const err = new Error('Session expired. Please login again.');
+              (err as any).status = 401;
+              throw err;
             }
-            
-            throw new Error('Session expired. Please login again.');
           }
-          
-          // Other authentication errors
-          localStorage.removeItem('polwel_access_token');
-          localStorage.removeItem('polwel_refresh_token');
-          localStorage.removeItem('polwel_user_data');
-          localStorage.removeItem('polwel_last_activity');
-          
-          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-            window.location.replace('/login');
-          }
-          
-          throw new Error('Authentication failed. Please login again.');
+
+          // Non-expiry authentication errors: surface to caller without clearing tokens
+          const authErr = new Error(errorData.error || errorData.message || 'Authentication failed');
+          (authErr as any).status = response.status;
+          (authErr as any).code = errorData.code;
+          throw authErr;
         }
         
         console.error(`API Error (${response.status}):`, errorData);
