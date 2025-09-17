@@ -16,6 +16,7 @@ import { AddTrainerBlockoutDialog } from "@/components/AddTrainerBlockoutDialog"
 import TrainerCalendar from "@/components/TrainerCalendar";
 import { Calendar as CalendarIcon, Clock, MapPin, Mail, Phone, Building2, User, Edit, Plus, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { trainerDashboardApi } from "@/lib/api";
 
 interface TrainerProfile {
@@ -75,6 +76,8 @@ interface DashboardData {
 }
 
 export default function TrainerDashboard() {
+  const { user, hasRole } = useAuth();
+  const isTrainerUser = hasRole("TRAINER");
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [feesState, setFeesState] = useState<DashboardData["fees"]>([]);
   const [loading, setLoading] = useState(true);
@@ -441,120 +444,124 @@ export default function TrainerDashboard() {
             </Card>
           </div>
         </div>
-        {/* Full width Training Fee section */}
-        <div className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-sm font-medium">Training Fee</CardTitle>
-                <CardDescription>Your configured per-course fees</CardDescription>
-              </div>
-              <div>
-                <Button size="sm" onClick={() => openAddDialog()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Training Fee
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40">
-                    <tr>
-                      <th className="text-left p-2">Course Code</th>
-                      <th className="text-left p-2">Course</th>
-                      <th className="text-left p-2">Fee</th>
-                      <th className="text-left p-2">Remarks</th>
-                      <th className="text-right p-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(!feesState || feesState.length === 0) && (
+        {/* Full width Training Fee section - hidden for trainer users */}
+        {!isTrainerUser && (
+          <div className="mt-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-medium">Training Fee</CardTitle>
+                  <CardDescription>Your configured per-course fees</CardDescription>
+                </div>
+                <div>
+                  <Button size="sm" onClick={() => openAddDialog()}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Training Fee
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40">
                       <tr>
-                        <td colSpan={4} className="p-4 text-center text-muted-foreground">
-                          No fees
-                        </td>
+                        <th className="text-left p-2">Course Code</th>
+                        <th className="text-left p-2">Course</th>
+                        <th className="text-left p-2">Fee</th>
+                        <th className="text-left p-2">Remarks</th>
+                        <th className="text-right p-2">Actions</th>
                       </tr>
-                    )}
-                    {(feesState || []).map((f) => (
-                      <tr key={f.id} className="border-t">
-                        <td className="p-2 whitespace-nowrap">{f.course.courseCode || "N/A"}</td>
-                        <td className="p-2">{f.course.title}</td>
-                        <td className="p-2">{f.feePerRun.toLocaleString(undefined, { style: "currency", currency: "SGD" })}</td>
-                        <td className="p-2">{f.remarks || ""}</td>
-                        <td className="p-2 justify-items-end">
-                          <div className="flex items-center space-x-2">
-                            <Button size="sm" variant="ghost" onClick={() => openAddDialog()} type="button">
-                              Add Fee
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => openEditDialog(f)} type="button">
-                              Edit
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => removeFee(f)} type="button">
-                              Remove
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                    </thead>
+                    <tbody>
+                      {(!feesState || feesState.length === 0) && (
+                        <tr>
+                          <td colSpan={4} className="p-4 text-center text-muted-foreground">
+                            No fees
+                          </td>
+                        </tr>
+                      )}
+                      {(feesState || []).map((f) => (
+                        <tr key={f.id} className="border-t">
+                          <td className="p-2 whitespace-nowrap">{f.course.courseCode || "N/A"}</td>
+                          <td className="p-2">{f.course.title}</td>
+                          <td className="p-2">{f.feePerRun.toLocaleString(undefined, { style: "currency", currency: "SGD" })}</td>
+                          <td className="p-2">{f.remarks || ""}</td>
+                          <td className="p-2 justify-items-end">
+                            <div className="flex items-center space-x-2">
+                              <Button size="sm" variant="ghost" onClick={() => openAddDialog()} type="button">
+                                Add Fee
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => openEditDialog(f)} type="button">
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => removeFee(f)} type="button">
+                                Remove
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Fee Dialog (Dialog component) */}
-        <Dialog open={showFeeDialog} onOpenChange={(open) => setShowFeeDialog(open)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingFee ? "Edit" : "Add"} Training Fee</DialogTitle>
-              <DialogDescription>{editingFee ? "Update the fee details" : "Add a fee for a course"}</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={submitFee} className="space-y-4">
-              {!editingFee && (
+        {!isTrainerUser && (
+          <Dialog open={showFeeDialog} onOpenChange={(open) => setShowFeeDialog(open)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingFee ? "Edit" : "Add"} Training Fee</DialogTitle>
+                <DialogDescription>{editingFee ? "Update the fee details" : "Add a fee for a course"}</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={submitFee} className="space-y-4">
+                {!editingFee && (
+                  <div>
+                    <Label>Course *</Label>
+                    <Select onValueChange={(v) => setCourseId(v)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courseOptions.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {(c.courseCode || "N/A") + " - " + c.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div>
-                  <Label>Course *</Label>
-                  <Select onValueChange={(v) => setCourseId(v)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courseOptions.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {(c.courseCode || "N/A") + " - " + c.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Fees (per run) *</Label>
+                  <Input
+                    value={feePerRun}
+                    onChange={(e) => {
+                      // allow only digits and dot
+                      const v = e.target.value;
+                      const sanitized = v.replace(/[^0-9.]/g, "");
+                      setFeePerRun(sanitized);
+                    }}
+                    required
+                  />
                 </div>
-              )}
-              <div>
-                <Label>Fees (per run) *</Label>
-                <Input
-                  value={feePerRun}
-                  onChange={(e) => {
-                    // allow only digits and dot
-                    const v = e.target.value;
-                    const sanitized = v.replace(/[^0-9.]/g, "");
-                    setFeePerRun(sanitized);
-                  }}
-                  required
-                />
-              </div>
-              <div>
-                <Label>Remarks</Label>
-                <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={3} />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setShowFeeDialog(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">{editingFee ? "Update Fee" : "Add Fee"}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div>
+                  <Label>Remarks</Label>
+                  <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={3} />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setShowFeeDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">{editingFee ? "Update Fee" : "Add Fee"}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Upcoming Sessions Table
         <Card>

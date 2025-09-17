@@ -17,6 +17,8 @@ module.exports = {
       out_file: './logs/backend-out.log',
       log_file: './logs/backend-combined.log',
       time: true
+      ,
+      autorestart: true
     },
     {
       name: 'polwel-backend-staging',
@@ -35,6 +37,7 @@ module.exports = {
       log_file: './logs/backend-combined.log',
       time: true,
       restart_delay: 5000,
+      autorestart: true,
       max_restarts: 10,
       min_uptime: '10s'
     },
@@ -55,6 +58,7 @@ module.exports = {
       log_file: './logs/backend-combined.log',
       time: true,
       restart_delay: 5000,
+      autorestart: true,
       max_restarts: 5,
       min_uptime: '30s'
     }

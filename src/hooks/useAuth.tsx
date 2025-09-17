@@ -1,5 +1,5 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { authService, User, AuthResponse } from '@/lib/auth';
+import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { authService, User, AuthResponse } from "@/lib/auth";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -7,7 +7,7 @@ interface AuthContextType {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   loading: boolean;
-  hasRole: (roles: string[]) => boolean;
+  hasRole: (roleOrRoles: string | string[]) => boolean;
   canAccessOrganization: (orgId: string) => boolean;
   apiRequest: (endpoint: string, options?: RequestInit) => Promise<any>;
 }
@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = () => {
       const authenticated = authService.isAuthenticated();
       const userData = authService.getUser();
-      
+
       setIsAuthenticated(authenticated);
       setUser(userData);
       setLoading(false);
@@ -37,17 +37,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for storage changes (for cross-tab synchronization)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'polwel_access_token' || e.key === 'polwel_user_data') {
+      if (e.key === "polwel_access_token" || e.key === "polwel_user_data") {
         checkAuth();
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
 
     // Cleanup
     return () => {
       clearInterval(authCheckInterval);
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
@@ -70,7 +70,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const hasRole = (roles: string[]) => authService.hasRole(roles);
+  const hasRole = (roleOrRoles: string | string[]) => {
+    const userObj = authService.getUser();
+    if (!userObj) return false;
+
+    const rolesToCheck = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles];
+
+    // normalize casing
+    const normalizedRequired = rolesToCheck.map((r) => String(r).toUpperCase().trim());
+
+    // user may have single role or roles array in future
+    const userRoles: string[] = [];
+    if ((userObj as any).roles && Array.isArray((userObj as any).roles)) {
+      (userObj as any).roles.forEach((r: any) => userRoles.push(String(r).toUpperCase()));
+    } else if (userObj.role) {
+      userRoles.push(String(userObj.role).toUpperCase());
+    }
+
+    // Superuser: POLWEL has access to everything
+    if (userRoles.includes("POLWEL")) return true;
+
+    return normalizedRequired.some((req) => userRoles.includes(req));
+  };
   const canAccessOrganization = (orgId: string) => authService.canAccessOrganization(orgId);
   const apiRequest = authService.apiRequest.bind(authService);
 
@@ -95,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,7 @@ import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { EditCoordinatorDialog } from "@/components/EditCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { clientOrganizationsApi } from "@/lib/api";
 import Swal from "sweetalert2";
 
@@ -112,6 +113,10 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
 
 const ClientOrganisationDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user, hasRole } = useAuth();
+  const isTCUser = hasRole("TRAINING_COORDINATOR");
+  const userOrgId = user?.organizationId;
   const [activeTab, setActiveTab] = useState("information");
   // Controlled dropdown menu state to avoid accidental opens during scroll
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -177,6 +182,14 @@ const ClientOrganisationDetail = () => {
       fetchOrganization();
     }
   }, [id]);
+
+  // Enforce TC access: if user is a training coordinator, prevent viewing other orgs
+  useEffect(() => {
+    if (isTCUser && id && userOrgId && id !== userOrgId) {
+      toast({ title: "Access denied", description: "You can only view your own organisation.", variant: "destructive" });
+      navigate("/client-organisations", { replace: true });
+    }
+  }, [isTCUser, id, userOrgId, navigate, toast]);
 
   const fetchOrganization = async () => {
     if (!id) return;
@@ -250,13 +263,13 @@ const ClientOrganisationDetail = () => {
 
   // Load coordinators when coordinators tab is activated
   useEffect(() => {
-    if (activeTab === "coordinators" && coordinators.length === 0) {
+    if (!isTCUser && activeTab === "coordinators" && coordinators.length === 0) {
       fetchCoordinators();
     }
   }, [activeTab, id]);
 
   useEffect(() => {
-    if (activeTab === "coordinators") {
+    if (!isTCUser && activeTab === "coordinators") {
       fetchCoordinators();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -481,7 +494,7 @@ const ClientOrganisationDetail = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="information">Organization Information</TabsTrigger>
-          <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>
+          {!isTCUser && <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>}
           <TabsTrigger value="learners">Learners</TabsTrigger>
         </TabsList>
 

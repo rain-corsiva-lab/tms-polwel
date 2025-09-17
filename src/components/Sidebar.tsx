@@ -31,7 +31,7 @@ const Sidebar = ({ className }: SidebarProps) => {
   const [userManagementOpen, setUserManagementOpen] = useState(false);
   const [clientOrgsOpen, setClientOrgsOpen] = useState(false);
   const [courseManagementOpen, setCourseManagementOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
 
   return (
     <aside
@@ -49,7 +49,7 @@ const Sidebar = ({ className }: SidebarProps) => {
 
       <nav className="flex-1 px-4 space-y-1">
         {/* Trainer Dashboard - Only show for trainers */}
-        {user?.role === "TRAINER" && (
+        {hasRole("TRAINER") && (
           <NavLink
             to="/trainer-dashboard"
             className={({ isActive }) =>
@@ -65,7 +65,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* User Management Dropdown - hidden for trainers */}
-        {user?.role !== "TRAINER" && (
+        {!hasRole("TRAINER") && (
           <div className="space-y-1">
             <button
               onClick={() => setUserManagementOpen(!userManagementOpen)}
@@ -112,37 +112,39 @@ const Sidebar = ({ className }: SidebarProps) => {
           </div>
         )}
 
-        {/* Course Management Dropdown */}
-        <div className="space-y-1">
-          <button
-            onClick={() => setCourseManagementOpen(!courseManagementOpen)}
-            className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-          >
-            <BookOpen className="mr-3 h-5 w-5" />
-            Course Management
-            {courseManagementOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
-          </button>
+        {/* Course Management Dropdown - hidden for trainers */}
+        {!hasRole("TRAINER") && (
+          <div className="space-y-1">
+            <button
+              onClick={() => setCourseManagementOpen(!courseManagementOpen)}
+              className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            >
+              <BookOpen className="mr-3 h-5 w-5" />
+              Course Management
+              {courseManagementOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
+            </button>
 
-          {courseManagementOpen && (
-            <div className="ml-6 space-y-1">
-              {courseManagementItems.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                      isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                    )
-                  }
-                >
-                  <item.icon className="mr-3 h-4 w-4" />
-                  {item.name}
-                </NavLink>
-              ))}
-            </div>
-          )}
-        </div>
+            {courseManagementOpen && (
+              <div className="ml-6 space-y-1">
+                {courseManagementItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                        isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      )
+                    }
+                  >
+                    <item.icon className="mr-3 h-4 w-4" />
+                    {item.name}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
     </aside>
   );
