@@ -114,7 +114,7 @@ const mockTrainerBlockouts: TrainerBlockout[] = [
 const ClientOrganisationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, loading: authLoading } = useAuth();
   const isTCUser = hasRole("TRAINING_COORDINATOR");
   const userOrgId = user?.organizationId;
   const [activeTab, setActiveTab] = useState("information");
@@ -184,12 +184,22 @@ const ClientOrganisationDetail = () => {
   }, [id]);
 
   // Enforce TC access: if user is a training coordinator, prevent viewing other orgs
+  // Wait until auth state is loaded before enforcing TC access rules
   useEffect(() => {
-    if (isTCUser && id && userOrgId && id !== userOrgId) {
+    if (authLoading) return;
+
+    // If no id parameter present, show error and navigate back
+    if (!id) {
+      toast({ title: "Missing organisation", description: "No organisation selected.", variant: "destructive" });
+      navigate("/client-organisations", { replace: true });
+      return;
+    }
+
+    if (isTCUser && userOrgId && id !== userOrgId) {
       toast({ title: "Access denied", description: "You can only view your own organisation.", variant: "destructive" });
       navigate("/client-organisations", { replace: true });
     }
-  }, [isTCUser, id, userOrgId, navigate, toast]);
+  }, [isTCUser, id, userOrgId, navigate, toast, authLoading]);
 
   const fetchOrganization = async () => {
     if (!id) return;

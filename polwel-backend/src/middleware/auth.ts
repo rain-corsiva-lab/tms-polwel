@@ -177,8 +177,25 @@ export const authorizeOrganization = (req: Request, res: Response, next: NextFun
     return;
   }
 
-  const requestedOrgId = req.params.organizationId || req.body.organizationId;
-  
+  // Safely read route params (some routes use :id, others use :organizationId)
+  const params = req.params || {};
+  const requestedOrgId = (params.organizationId ?? params.id) || req.body?.organizationId;
+
+  // If no org id was provided in the request, surface a clear error
+  if (!requestedOrgId) {
+    // Allow POLWEL to proceed even if no org id present (they have cross-org access)
+    if (req.user.role === 'POLWEL') {
+      next();
+      return;
+    }
+
+    res.status(400).json({
+      error: 'Organization identifier missing from request',
+      code: 'ORG_ID_MISSING'
+    });
+    return;
+  }
+
   // POLWEL users can access any organization
   if (req.user.role === 'POLWEL') {
     next();

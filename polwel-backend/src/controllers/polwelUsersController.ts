@@ -39,6 +39,13 @@ const permissionNameMapping: Record<string, string> = {
   'course-management:edit': 'courses.edit',
   'course-management:update': 'courses.edit', 
   'course-management:delete': 'courses.delete',
+
+  // Course Runs & Operations (frontend uses a different key)
+  'course-runs-operations:view': 'courses.view',
+  'course-runs-operations:create': 'courses.create',
+  'course-runs-operations:edit': 'courses.edit',
+  'course-runs-operations:update': 'courses.edit',
+  'course-runs-operations:delete': 'courses.delete',
   
   // Course & Venue Setup
   'course-venue-setup:view': 'venues.view',
@@ -74,6 +81,20 @@ const permissionNameMapping: Record<string, string> = {
   'reports-analytics:edit': 'reports.edit',
   'reports-analytics:update': 'reports.edit',
   'reports-analytics:delete': 'reports.delete'
+
+  // Email, Reporting and Resource Library (frontend key)
+  , 'email-reporting-library:view': 'reports.view'
+  , 'email-reporting-library:create': 'reports.create'
+  , 'email-reporting-library:edit': 'reports.edit'
+  , 'email-reporting-library:update': 'reports.edit'
+  , 'email-reporting-library:delete': 'reports.delete'
+
+  // Finance and Activity (map to bookings permissions for financial actions)
+  , 'finance-activity:view': 'bookings.view'
+  , 'finance-activity:create': 'bookings.create'
+  , 'finance-activity:edit': 'bookings.edit'
+  , 'finance-activity:update': 'bookings.edit'
+  , 'finance-activity:delete': 'bookings.delete'
 };
 
 // Helper function to map frontend permission names to database permission names
@@ -513,17 +534,12 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     // Map and process permissions for creation
     console.log('Permissions requested for creation:', permissions);
     
-    const mappedPermissions = mapPermissionNames(permissions);
-    console.log('Mapped permissions for creation:', mappedPermissions);
-    
-    // Look up the actual permission records from database
-    const validPermissions = await prisma.permission.findMany({
-      where: {
-        name: { in: mappedPermissions }
-      }
-    });
-    
-    console.log('Valid permissions found for creation:', validPermissions.map(p => ({ id: p.id, name: p.name })));
+    let mappedPermissions = mapPermissionNames(permissions);
+    console.log('Mapped permissions for creation (raw):', mappedPermissions);
+
+    // Deduplicate and restrict to dot-style names (canonical format)
+    mappedPermissions = Array.from(new Set(mappedPermissions)).filter(p => p.includes('.'));
+    console.log('Normalized permission names for creation:', mappedPermissions);
     // if (validPermissions.length !== permissions.length) {
     //   return res.status(400).json({
     //     success: false,
@@ -563,12 +579,12 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
       // Create user permissions with human-readable names
       console.log('Creating permissions for user:', user.id, 'Count:', mappedPermissions.length);
       if (mappedPermissions.length > 0) {
-        // Store permissions with human-readable names directly
+        // Store permissions with human-readable names directly (canonical dot format)
         for (const permissionName of mappedPermissions) {
           await tx.userPermission.create({
             data: {
               userId: user.id,
-              permissionName: permissionName, // Store human-readable name directly
+              permissionName: permissionName,
               granted: true
             }
           });
@@ -686,16 +702,13 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       mappedPermissions = mapPermissionNames(permissions);
       console.log('Mapped permissions for update:', mappedPermissions);
       
-      // Validate permission name format
-      mappedPermissions = mappedPermissions.filter(permName => {
+      // Normalize: dedupe + keep only canonical dot-style names
+      mappedPermissions = Array.from(new Set(mappedPermissions)).filter(permName => {
         const isValid = permName.includes('.');
-        if (!isValid) {
-          console.log(`Invalid permission format: ${permName}`);
-        }
+        if (!isValid) console.log(`Invalid permission format (skipped): ${permName}`);
         return isValid;
       });
-      
-      console.log('Valid permission names for update:', mappedPermissions);
+      console.log('Normalized permission names for update:', mappedPermissions);
     }
 
     // Update user and permissions in a transaction
@@ -723,28 +736,27 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       console.log('Mapped permission names found:', mappedPermissions.length);
       
       if (Array.isArray(permissions)) {
-        // Delete existing permissions first
-        const deletedCount = await tx.userPermission.deleteMany({
-          where: { userId: id }
-        });
-        console.log('Deleted existing permissions:', deletedCount.count);
+          // Delete existing permissions first
+          const deletedCount = await tx.userPermission.deleteMany({
+            where: { userId: id }
+          });
+          console.log('Deleted existing permissions:', deletedCount.count);
 
-        // Only create new permissions if we have valid ones
-        if (mappedPermissions.length > 0) {
-          // Store permissions with human-readable names directly
-          for (const permissionName of mappedPermissions) {
-            await tx.userPermission.create({
-              data: {
-                userId: id,
-                permissionName: permissionName, // Store human-readable name directly
-                granted: true
-              }
-            });
+          // Only create new permissions if we have normalized dot-style names
+          if (mappedPermissions.length > 0) {
+            for (const permissionName of mappedPermissions) {
+              await tx.userPermission.create({
+                data: {
+                  userId: id,
+                  permissionName: permissionName,
+                  granted: true
+                }
+              });
+            }
+            console.log('New permissions created successfully with names:', mappedPermissions);
+          } else {
+            console.log('No mapped permissions provided - permissions cleared');
           }
-          console.log('New permissions created successfully with names:', mappedPermissions);
-        } else {
-          console.log('No valid permissions to create - permissions cleared');
-        }
       } else {
         console.log('Permissions not provided - skipping permission changes');
       }

@@ -88,9 +88,9 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
           users: "user-management-polwel",
           trainers: "user-management-trainers",
           clients: "user-management-client-orgs",
-          courses: "course-management",
+          courses: "course-runs-operations",
           venues: "course-venue-setup",
-          bookings: "booking-management",
+          bookings: "finance-activity",
           calendar: "training-calendar",
           reports: "reports-analytics",
         };
@@ -105,7 +105,21 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
 
         const frontendAction = actionMapping[permissionAction];
 
-        if (frontendModule && frontendAction && updatedPermissions[frontendModule] && updatedPermissions[frontendModule][frontendAction] !== undefined) {
+        if (permissionModule === "reports") {
+          // DB 'reports' permission should mark reporting-related frontend modules.
+          // Only set actions on frontend modules that exist in our permissions state.
+          ["reports-analytics", "email-reporting-library"].forEach((fm) => {
+            const fmKey = fm as keyof UserPermissions;
+            if (updatedPermissions[fmKey] && typeof updatedPermissions[fmKey][frontendAction] !== "undefined") {
+              updatedPermissions[fmKey][frontendAction] = true;
+            }
+          });
+        } else if (
+          frontendModule &&
+          frontendAction &&
+          updatedPermissions[frontendModule] &&
+          typeof updatedPermissions[frontendModule][frontendAction] !== "undefined"
+        ) {
           updatedPermissions[frontendModule][frontendAction] = true;
         }
       });

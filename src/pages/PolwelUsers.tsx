@@ -16,7 +16,7 @@ import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog
 import { ViewDetailsDialog } from "@/components/ViewDetailsDialog";
 import { PasswordResetDialog } from "@/components/PasswordResetDialog";
 import { polwelUsersApi, debugAuthState } from "@/lib/api";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -375,7 +375,23 @@ export default function PolwelUsers() {
                     <Badge variant={user.status === "ACTIVE" ? "default" : user.status === "PENDING" ? "outline" : "secondary"}>{user.status}</Badge>
                   </TableCell>
                   {/* MFA removed */}
-                  <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}</TableCell>
+                  <TableCell>
+                    {user.lastLogin
+                      ? (() => {
+                          try {
+                            const d = parseISO(user.lastLogin as string);
+                            return format(d, "dd/MM/yyyy");
+                          } catch (e) {
+                            // Fallback to toLocaleDateString if parse fails
+                            try {
+                              return new Date(user.lastLogin as string).toLocaleDateString();
+                            } catch (ee) {
+                              return "Invalid date";
+                            }
+                          }
+                        })()
+                      : "Never"}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <EditPolwelUserDialog user={user} onUserUpdated={fetchUsers} />
