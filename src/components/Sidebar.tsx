@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Users, UserCheck, GraduationCap, Building2, BarChart3, Settings, Shield, ChevronDown, ChevronRight, BookOpen, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,25 +32,32 @@ const Sidebar = ({ className }: SidebarProps) => {
   const [userManagementOpen, setUserManagementOpen] = useState(false);
   const [clientOrgsOpen, setClientOrgsOpen] = useState(false);
   const [courseManagementOpen, setCourseManagementOpen] = useState(false);
-  const { user } = useAuth();
-  const { hasAny } = usePermission();
+  const { user, isAuthenticated, loading } = useAuth();
+  const { hasAny, list } = usePermission();
 
-  // Determine visibility for top-level groups: show parent if at least one child is visible
-  // If user is not yet loaded, default to visible to avoid hiding UI during initial auth check
-  const userManagementVisible = user ? user.role !== "TRAINER" && hasAny(["users.view", "trainers.view", "clients.view"]) : true;
+  // Determine visibility for top-level groups
+  // POLWEL users should see all menus regardless of specific permissions
+  const isPolwelUser = user?.role === "POLWEL";
+  const userManagementVisible = user?.role === "TRAINER" ? false : isPolwelUser || hasAny(["users.view", "trainers.view", "clients.view"]);
 
-  const courseManagementVisible = user ? user.role !== "TRAINER" && hasAny(["courses.view", "venues.view"]) : true;
+  const courseManagementVisible = user?.role === "TRAINER" ? false : isPolwelUser || hasAny(["courses.view", "venues.view"]);
 
-  // Debug: print computed visibility and normalized permission list
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const permDebug = typeof window !== "undefined" && (usePermission as any) && (usePermission as any)().list ? (usePermission as any)().list() : [];
-    console.debug("Sidebar debug - perms:", permDebug);
-    console.debug("Sidebar debug - visibility:", { userManagementVisible, courseManagementVisible });
-  } catch (e) {
-    // ignore
-  }
+  // Debug logging for staging troubleshooting
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      console.debug("🔍 [SIDEBAR] Debug info:", {
+        userRole: user?.role,
+        isPolwelUser,
+        isAuthenticated,
+        loading,
+        permissionsCount: user?.permissions?.length || 0,
+        permissions: list(),
+        userManagementVisible,
+        courseManagementVisible,
+        environment: import.meta.env.MODE,
+      });
+    }
+  }, [loading, isAuthenticated, user, isPolwelUser, userManagementVisible, courseManagementVisible, list]);
 
   return (
     <aside
@@ -98,7 +105,7 @@ const Sidebar = ({ className }: SidebarProps) => {
             {userManagementOpen && (
               <div className="ml-6 space-y-1">
                 {userManagementItems
-                  .filter((item) => !item.permission || hasAny([item.permission]))
+                  .filter((item) => !item.permission || isPolwelUser || hasAny([item.permission]))
                   .map((item) => (
                     <NavLink
                       key={item.name}
@@ -116,7 +123,7 @@ const Sidebar = ({ className }: SidebarProps) => {
                   ))}
 
                 {/* Client Organisations as direct link (show only if has clients.view) */}
-                {hasAny(["clients.view"]) && (
+                {(isPolwelUser || hasAny(["clients.view"])) && (
                   <NavLink
                     to="/client-organisations"
                     className={({ isActive }) =>
@@ -150,7 +157,7 @@ const Sidebar = ({ className }: SidebarProps) => {
             {courseManagementOpen && (
               <div className="ml-6 space-y-1">
                 {courseManagementItems
-                  .filter((item) => !item.permission || hasAny([item.permission]))
+                  .filter((item) => !item.permission || isPolwelUser || hasAny([item.permission]))
                   .map((item) => (
                     <NavLink
                       key={item.name}

@@ -274,8 +274,21 @@ class AuthService {
 
       const data: AuthResponse = await response.json();
       
+      // Ensure user has permissions array
+      const userData = {
+        ...data.user,
+        permissions: data.user.permissions || []
+      };
+      
+      console.log('🔐 [AUTH] Login response received:', {
+        userRole: userData.role,
+        permissionsCount: userData.permissions.length,
+        permissions: userData.permissions,
+        environment: import.meta.env.MODE
+      });
+      
       localStorage.setItem(this.tokenKey, data.accessToken);
-      localStorage.setItem(this.userKey, JSON.stringify(data.user));
+      localStorage.setItem(this.userKey, JSON.stringify(userData));
       localStorage.setItem(this.lastActivityKey, Date.now().toString());
       
       if (data.refreshToken) {
@@ -293,8 +306,8 @@ class AuthService {
         // ignore
       }
 
-      toast.success(`Welcome back, ${data.user.name}!`);
-      return data;
+      toast.success(`Welcome back, ${userData.name}!`);
+      return { ...data, user: userData };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       toast.error(errorMessage);
