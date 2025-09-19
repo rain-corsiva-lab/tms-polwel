@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, authorizeRoles } from '../middleware/auth';
+import { authenticateToken, authorizeRoles, requirePermissions } from '../middleware/auth';
 import {
   getPolwelUsers,
   getPolwelUserById,
@@ -23,18 +23,18 @@ router.use(authenticateToken);
 router.use(authorizeRoles('POLWEL'));
 
 // Get available permissions
-router.get('/permissions', getAvailablePermissions);
+router.get('/permissions', requirePermissions('users.view'), getAvailablePermissions);
 
 // POLWEL Users routes
-router.get('/', getPolwelUsers);
-router.get('/:id', getPolwelUserById);
-router.get('/:id/details', getPolwelUserDetails);
-router.get('/:id/audit-trail', getUserAuditTrail);
-router.post('/', createPolwelUser);
-router.put('/:id', updatePolwelUser);
-router.delete('/:id', deletePolwelUser);
-router.post('/:id/reset-password', resetPolwelUserPassword);
-router.post('/:id/send-reset-link', sendPasswordResetLink);
-router.post('/:id/resend-setup', resendPolwelUserSetup);
+router.get('/', requirePermissions('users.view'), getPolwelUsers);
+router.get('/:id', requirePermissions('users.view'), getPolwelUserById);
+router.get('/:id/details', requirePermissions('users.view'), getPolwelUserDetails);
+router.get('/:id/audit-trail', requirePermissions('users.view'), getUserAuditTrail);
+router.post('/', requirePermissions('users.create'), createPolwelUser);
+router.put('/:id', requirePermissions('users.edit'), updatePolwelUser);
+router.delete('/:id', requirePermissions('users.delete'), deletePolwelUser);
+router.post('/:id/reset-password', requirePermissions('users.edit'), resetPolwelUserPassword);
+router.post('/:id/send-reset-link', requirePermissions('users.edit'), sendPasswordResetLink);
+router.post('/:id/resend-setup', requirePermissions('users.edit'), resendPolwelUserSetup);
 
 export default router;

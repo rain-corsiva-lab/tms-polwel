@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { authService, User, AuthResponse } from "@/lib/auth";
+import { toast } from "sonner";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -104,8 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       // If backend returns 403, redirect to /403 (do not logout)
       if (err && (err.status === 403 || err.code === "INSUFFICIENT_PERMISSIONS" || err.code === "ORG_ACCESS_DENIED")) {
+        // Do not toast here: navigation may already show guard feedback or component-level handler will toast
         if (typeof window !== "undefined") {
-          window.location.href = "/403";
+          try {
+            // Try to use history API to avoid full reload
+            window.history.replaceState({}, "", "/403");
+            // Also dispatch a popstate so Router updates if needed
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          } catch (e) {
+            window.location.href = "/403";
+          }
           return;
         }
       }

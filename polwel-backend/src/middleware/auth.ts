@@ -13,6 +13,7 @@ declare global {
         email: string;
         role: string;
         organizationId?: string;
+        permissions?: Set<string>;
       };
     }
   }
@@ -24,6 +25,7 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     organizationId?: string;
+    permissions?: Set<string>;
   };
 }
 
@@ -165,6 +167,67 @@ export const authorizeRoles = (...allowedRoles: string[]) => {
 // Legacy middleware for backward compatibility
 export const authorize = (...roles: string[]) => {
   return authorizeRoles(...roles);
+};
+
+// Permission-based authorization middleware
+// required can be a single permission (e.g., 'courses.view') or array
+export const requirePermissions = (required: string | string[]) => {
+  const requiredList = Array.isArray(required) ? required : [required];
+  const normalizedRequired = requiredList
+    .filter(Boolean)
+    .map((p) => String(p).trim().toLowerCase());
+
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ 
+        error: 'Authentication required',
+        code: 'NOT_AUTHENTICATED'
+      });
+      return;
+    }
+
+    // For now, only enforce granular permissions for POLWEL users
+    if (req.user.role !== 'POLWEL') {
+      next();
+      return;
+    }
+
+    try {
+      // Fetch and cache permissions on the request if not present
+      if (!req.user.permissions) {
+        const userPerms = await prisma.userPermission.findMany({
+          where: { userId: req.user.userId, granted: true },
+          select: { permissionName: true }
+        });
+        req.user.permissions = new Set(
+          userPerms
+            .map((p) => String(p.permissionName || '').toLowerCase())
+            .filter((p) => p.includes('.'))
+        );
+      }
+
+      const userPerms = req.user.permissions || new Set<string>();
+
+      // Check for any match
+      const hasPermission = normalizedRequired.some((perm) => userPerms.has(perm));
+      if (!hasPermission) {
+        res.status(403).json({
+          error: 'Forbidden - insufficient permissions',
+          code: 'INSUFFICIENT_PERMISSIONS',
+          requiredPermissions: normalizedRequired
+        });
+        return;
+      }
+
+      next();
+    } catch (e) {
+      console.error('Permission check error:', e);
+      res.status(500).json({
+        error: 'Internal server error',
+        code: 'PERMISSION_CHECK_FAILED'
+      });
+    }
+  };
 };
 
 // Organization-specific authorization

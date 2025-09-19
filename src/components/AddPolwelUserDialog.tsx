@@ -76,15 +76,20 @@ export function AddPolwelUserDialog() {
     setLoading(true);
 
     try {
-      // Convert permissions to array of permission names
-      const permissionNames: string[] = [];
+      // Convert permissions to array of canonical permission names
+      const permissionNamesRaw: string[] = [];
       Object.entries(permissions).forEach(([module, modulePermissions]) => {
         Object.entries(modulePermissions).forEach(([action, granted]) => {
           if (granted) {
-            permissionNames.push(`${module}:${action}`);
+            permissionNamesRaw.push(`${module}:${action}`);
           }
         });
       });
+      // Map to canonical names
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const { mapFrontendPermissions } = await import("@/lib/permissionMapping");
+      const permissionNames = mapFrontendPermissions(permissionNamesRaw);
 
       const response = await polwelUsersApi.create({
         name: formData.name,

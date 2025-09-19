@@ -1,14 +1,14 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma';
-import { authenticateToken, authorizeRoles, authorizeOwnershipOrAdmin } from '../middleware/auth';
+import { authenticateToken, authorizeRoles, authorizeOwnershipOrAdmin, requirePermissions } from '../middleware/auth';
 // import { logRoute, logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 const router = express.Router();
 
 
 // Get all users (POLWEL and TRAINING_COORDINATOR only)
-router.get('/', /* logRoute('USERS_GET_ALL'), */ authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), async (req: Request, res: Response): Promise<void> => {
+router.get('/', /* logRoute('USERS_GET_ALL'), */ authenticateToken, authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('users.view'), async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
   console.log(`👥 [USERS] Get all users request started`);
   

@@ -100,14 +100,25 @@ const permissionNameMapping: Record<string, string> = {
 // Helper function to map frontend permission names to database permission names
 const mapPermissionNames = (frontendPermissions: string[]): string[] => {
   return frontendPermissions.map(permission => {
+    // Direct mapping first
     const mappedPermission = permissionNameMapping[permission];
     if (mappedPermission) {
       console.log(`Mapped permission: ${permission} -> ${mappedPermission}`);
       return mappedPermission;
-    } else {
-      console.log(`No mapping found for permission: ${permission}, using as-is`);
-      return permission;
     }
+
+    // Normalize common frontend formats into dot-style heuristically
+    const norm = String(permission).toLowerCase();
+    const dot1 = norm.replace(/:/g, '.').replace(/-/g, '.');
+    // If it already looks dot-style, use it
+    if (dot1.includes('.')) {
+      console.log(`Normalized permission heuristic: ${permission} -> ${dot1}`);
+      return dot1;
+    }
+
+    // Fallback: return original and allow caller to filter invalid ones
+    console.log(`No mapping found for permission: ${permission}, returning raw`);
+    return permission;
   });
 };
 
@@ -537,9 +548,15 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     let mappedPermissions = mapPermissionNames(permissions);
     console.log('Mapped permissions for creation (raw):', mappedPermissions);
 
-    // Deduplicate and restrict to dot-style names (canonical format)
-    mappedPermissions = Array.from(new Set(mappedPermissions)).filter(p => p.includes('.'));
-    console.log('Normalized permission names for creation:', mappedPermissions);
+  // Deduplicate and normalize heuristics already applied; now filter against DB canonical names
+  const requestedSet = Array.from(new Set(mappedPermissions));
+  console.log('Requested permission candidates for creation:', requestedSet);
+
+  // Resolve against permissions table to ensure only valid canonical names are stored
+  const dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
+  const dbNames = dbPermissions.map(p => p.name);
+  mappedPermissions = requestedSet.filter(p => dbNames.includes(p));
+  console.log('Normalized permission names for creation (validated against DB):', mappedPermissions);
     // if (validPermissions.length !== permissions.length) {
     //   return res.status(400).json({
     //     success: false,
@@ -702,13 +719,13 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       mappedPermissions = mapPermissionNames(permissions);
       console.log('Mapped permissions for update:', mappedPermissions);
       
-      // Normalize: dedupe + keep only canonical dot-style names
-      mappedPermissions = Array.from(new Set(mappedPermissions)).filter(permName => {
-        const isValid = permName.includes('.');
-        if (!isValid) console.log(`Invalid permission format (skipped): ${permName}`);
-        return isValid;
-      });
-      console.log('Normalized permission names for update:', mappedPermissions);
+      // Normalize: dedupe + validate against DB permissions table
+      const requestedSet = Array.from(new Set(mappedPermissions));
+      console.log('Requested permission candidates for update:', requestedSet);
+      const dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
+      const dbNames = dbPermissions.map(p => p.name);
+      mappedPermissions = requestedSet.filter(p => dbNames.includes(p));
+      console.log('Normalized permission names for update (validated against DB):', mappedPermissions);
     }
 
     // Update user and permissions in a transaction

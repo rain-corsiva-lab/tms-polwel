@@ -13,6 +13,7 @@ export interface User {
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
+  permissions?: string[];
 }
 
 export interface AuthResponse {
@@ -420,6 +421,9 @@ class AuthService {
         const err = new Error(errorData.error || 'Authentication failed');
         (err as any).status = response.status;
         (err as any).code = errorData.code;
+        if (response.status === 403) {
+          (err as any).name = 'PermissionError';
+        }
         throw err;
       }
 

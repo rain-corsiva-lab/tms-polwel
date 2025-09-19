@@ -1,4 +1,5 @@
 // Error classification and user-friendly message mapping
+import { toast } from 'sonner';
 const classifyAndFormatError = (error: any, endpoint: string): Error => {
   const errorMessage = error.message || error.toString();
   const lowerMessage = errorMessage.toLowerCase();
@@ -189,6 +190,16 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           const authErr = new Error(errorData.error || errorData.message || 'Authentication failed');
           (authErr as any).status = response.status;
           (authErr as any).code = errorData.code;
+          // If 403, annotate as PermissionError for UI toasts and optionally redirect
+          if (response.status === 403) {
+            (authErr as any).name = 'PermissionError';
+            try {
+              // soft redirect so current component can decide; keeps toast visible
+              if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/403')) {
+                // Allow component-level catch to show toast; devs can navigate to /403 as needed
+              }
+            } catch {}
+          }
           throw authErr;
         }
         
@@ -211,7 +222,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
       return data;
     } catch (error) {
       // Classify and format the error consistently across all environments
-      const classifiedError = classifyAndFormatError(error, endpoint);
+  const classifiedError = classifyAndFormatError(error, endpoint);
       lastError = classifiedError;
       
       console.error(`API Request attempt ${i + 1} failed:`, {
@@ -236,6 +247,16 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         }
       }
       
+      // If permission error, show toast and soft redirect to /403
+      if (classifiedError.name === 'PermissionError') {
+        // Do not auto-toast here; components performing explicit actions should toast.
+        // For full page loads, route guards will redirect to /403.
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/403')) {
+          window.history.replaceState(null, '', '/403');
+        }
+        throw classifiedError;
+      }
+
       // Don't retry on authentication errors
       if (classifiedError.name === 'AuthenticationError') {
         throw classifiedError;

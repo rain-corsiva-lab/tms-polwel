@@ -54,7 +54,10 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        organization: true
+        organization: true,
+        permissions: {
+          select: { permissionName: true, granted: true }
+        }
       }
     });
 
@@ -130,6 +133,7 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
       designation: user.designation,
       division: user.division,
       lastLogin: new Date(),
+      permissions: (user.permissions || []).filter(p => p.granted).map(p => p.permissionName),
       organization: user.organization ? {
         id: user.organization.id,
         name: user.organization.name,

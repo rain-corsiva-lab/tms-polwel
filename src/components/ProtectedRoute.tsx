@@ -3,14 +3,16 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Lock, Building } from "lucide-react";
+import Forbidden from "@/pages/Forbidden";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRoles?: string[];
   organizationId?: string;
+  requiredPermissions?: string[];
 }
 
-export function ProtectedRoute({ children, requiredRoles = [], organizationId }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRoles = [], organizationId, requiredPermissions = [] }: ProtectedRouteProps) {
   const { isAuthenticated, user, loading, hasRole, canAccessOrganization } = useAuth();
   const location = useLocation();
 
@@ -35,6 +37,19 @@ export function ProtectedRoute({ children, requiredRoles = [], organizationId }:
   // Organization checks
   if (organizationId && !canAccessOrganization(organizationId)) {
     return <Navigate to="/403" replace />;
+  }
+
+  // Permission checks (client-side convenience; backend remains source of truth)
+  if (requiredPermissions.length > 0) {
+    const raw = (user as any)?.permissions;
+    // Only enforce on the client if we actually have a permissions list.
+    // If not present, let the backend enforce so we don't block valid users by mistake.
+    if (Array.isArray(raw) && raw.length > 0) {
+      const userPerms = new Set(raw.map((p: string) => p.toLowerCase()));
+      const needs = requiredPermissions.map((p) => p.toLowerCase());
+      const ok = needs.every((p) => userPerms.has(p));
+      if (!ok) return <Navigate to="/403" replace />;
+    }
   }
 
   // All checks passed, render the protected content

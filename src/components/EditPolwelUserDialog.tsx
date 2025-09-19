@@ -37,14 +37,15 @@ interface PolwelUser {
   lastLogin: string | null;
   createdAt: string;
   updatedAt: string;
-  permissions?: Array<{
-    permission: {
-      id: string;
-      name: string;
-      module: string;
-      action: string;
-    };
-  }>;
+  permissions?: Array<
+    | string
+    | {
+        id?: string;
+        permissionName?: string;
+        granted?: boolean;
+        createdAt?: string;
+      }
+  >;
 }
 
 interface EditPolwelUserDialogProps {
@@ -78,43 +79,29 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
     if (open && user.permissions) {
       const updatedPermissions = { ...permissions };
 
-      user.permissions.forEach((userPermission) => {
-        // Extract module and action from permission name (e.g., "users.view" -> module: "users", action: "view")
-        const permissionName = userPermission.permissionName;
-        const [permissionModule, permissionAction] = permissionName.split(".");
+      const moduleMapping: Record<string, keyof UserPermissions> = {
+        users: "user-management-polwel",
+        trainers: "user-management-trainers",
+        clients: "user-management-client-orgs",
+        courses: "course-runs-operations",
+        venues: "course-venue-setup",
+        bookings: "finance-activity",
+        reports: "email-reporting-library",
+      };
+      const actionMapping: Record<string, keyof ModulePermissions> = {
+        view: "view",
+        create: "create",
+        edit: "edit",
+        delete: "delete",
+      };
 
-        // Map database permission names to frontend module names
-        const moduleMapping: Record<string, keyof UserPermissions> = {
-          users: "user-management-polwel",
-          trainers: "user-management-trainers",
-          clients: "user-management-client-orgs",
-          courses: "course-runs-operations",
-          venues: "course-venue-setup",
-          bookings: "finance-activity",
-          calendar: "training-calendar",
-          reports: "reports-analytics",
-        };
-
+      user.permissions.forEach((perm) => {
+        const raw = typeof perm === "string" ? perm : perm?.permissionName;
+        if (!raw) return;
+        const [permissionModule, permissionAction] = raw.split(".");
         const frontendModule = moduleMapping[permissionModule];
-        const actionMapping: Record<string, keyof ModulePermissions> = {
-          view: "view",
-          create: "create",
-          edit: "edit",
-          delete: "delete",
-        };
-
         const frontendAction = actionMapping[permissionAction];
-
-        if (permissionModule === "reports") {
-          // DB 'reports' permission should mark reporting-related frontend modules.
-          // Only set actions on frontend modules that exist in our permissions state.
-          ["reports-analytics", "email-reporting-library"].forEach((fm) => {
-            const fmKey = fm as keyof UserPermissions;
-            if (updatedPermissions[fmKey] && typeof updatedPermissions[fmKey][frontendAction] !== "undefined") {
-              updatedPermissions[fmKey][frontendAction] = true;
-            }
-          });
-        } else if (
+        if (
           frontendModule &&
           frontendAction &&
           updatedPermissions[frontendModule] &&
@@ -133,21 +120,41 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
     setLoading(true);
 
     try {
-      // Convert permissions to array of permission names
-      const permissionNames: string[] = [];
+      // Convert permissions to array of canonical permission names
+      const permissionNamesRaw: string[] = [];
       Object.entries(permissions).forEach(([module, modulePermissions]) => {
         Object.entries(modulePermissions).forEach(([action, granted]) => {
           if (granted) {
-            permissionNames.push(`${module}:${action}`);
+            permissionNamesRaw.push(`${module}:${action}`);
           }
         });
       });
+      // Map to canonical names
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const { mapFrontendPermissions } = await import("@/lib/permissionMapping");
+      const permissionNames = mapFrontendPermissions(permissionNamesRaw);
 
       await polwelUsersApi.update(user.id, {
         name: formData.name,
         email: formData.email,
         permissions: permissionNames,
       });
+
+      // If editing the currently logged-in user, fetch fresh details and refresh auth storage
+      try {
+        const { authService } = await import("@/lib/auth");
+        const me = authService.getUser();
+        if (me && me.id === user.id) {
+          // Re-fetch this user to get updated permissions and store
+          const refreshed = await polwelUsersApi.getById(user.id);
+          const nextUser = { ...me, permissions: (refreshed?.permissions || []).filter((p: any) => p.granted).map((p: any) => p.permissionName) };
+          localStorage.setItem("polwel_user_data", JSON.stringify(nextUser));
+          window.dispatchEvent(new CustomEvent("polwel_auth_updated"));
+        }
+      } catch (e) {
+        // ignore refresh errors
+      }
 
       toast({
         title: "User Updated",

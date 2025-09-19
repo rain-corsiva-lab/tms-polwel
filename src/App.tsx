@@ -85,23 +85,58 @@ const App = () => (
 
               {/* User Management */}
               <Route path="users" element={<UserManagement />} />
-              <Route path="polwel-users" element={<PolwelUsers />} />
+              <Route
+                path="polwel-users"
+                element={
+                  <ProtectedRoute requiredPermissions={["users.view"]}>
+                    <PolwelUsers />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="clients" element={<UserManagement />} />
 
               {/* Trainer Management */}
-              <Route path="trainers" element={<TrainersAndPartners />} />
-              <Route path="trainers/:id" element={<TrainerDetail />} />
+              <Route
+                path="trainers"
+                element={
+                  <ProtectedRoute requiredPermissions={["trainers.view"]}>
+                    <TrainersAndPartners />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="trainers/:id"
+                element={
+                  <ProtectedRoute requiredPermissions={["trainers.view"]}>
+                    <TrainerDetail />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="learners" element={<UserManagement />} />
 
               {/* Organization Management */}
-              <Route path="client-organisations" element={<ClientOrganisations />} />
-              <Route path="client-organisations/:id" element={<ClientOrganisationDetail />} />
+              <Route
+                path="client-organisations"
+                element={
+                  <ProtectedRoute requiredPermissions={["clients.view"]}>
+                    <ClientOrganisations />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="client-organisations/:id"
+                element={
+                  <ProtectedRoute requiredPermissions={["clients.view"]}>
+                    <ClientOrganisationDetail />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Course Management */}
               <Route
                 path="course-creation"
                 element={
-                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["courses.view"]}>
                     <CourseArchive />
                   </ProtectedRoute>
                 }
@@ -109,7 +144,7 @@ const App = () => (
               <Route
                 path="course-creation/new"
                 element={
-                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["courses.create"]}>
                     <CourseForm />
                   </ProtectedRoute>
                 }
@@ -117,7 +152,7 @@ const App = () => (
               <Route
                 path="course-creation/edit/:id"
                 element={
-                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["courses.edit"]}>
                     <CourseForm />
                   </ProtectedRoute>
                 }
@@ -125,7 +160,7 @@ const App = () => (
               <Route
                 path="course-creation/view/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["courses.view"]}>
                     <CourseForm />
                   </ProtectedRoute>
                 }
@@ -133,7 +168,7 @@ const App = () => (
               <Route
                 path="course-creation/detail/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["courses.view"]}>
                     <CourseDetail />
                   </ProtectedRoute>
                 }
@@ -141,18 +176,53 @@ const App = () => (
               <Route
                 path="course-detail/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["courses.view"]}>
                     <CourseDetail />
                   </ProtectedRoute>
                 }
               />
 
               {/* Venue Management */}
-              <Route path="venue-setup" element={<VenueArchive />} />
-              <Route path="venue-setup/new" element={<VenueForm />} />
-              <Route path="venue-setup/edit/:id" element={<VenueForm />} />
-              <Route path="venue-setup/view/:id" element={<VenueForm />} />
-              <Route path="venue-detail/:id" element={<VenueDetail />} />
+              <Route
+                path="venue-setup"
+                element={
+                  <ProtectedRoute requiredPermissions={["venues.view"]}>
+                    <VenueArchive />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="venue-setup/new"
+                element={
+                  <ProtectedRoute requiredPermissions={["venues.create"]}>
+                    <VenueForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="venue-setup/edit/:id"
+                element={
+                  <ProtectedRoute requiredPermissions={["venues.edit"]}>
+                    <VenueForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="venue-setup/view/:id"
+                element={
+                  <ProtectedRoute requiredPermissions={["venues.view"]}>
+                    <VenueForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="venue-detail/:id"
+                element={
+                  <ProtectedRoute requiredPermissions={["venues.view"]}>
+                    <VenueDetail />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Settings */}
               <Route path="settings" element={<UserManagement />} />
