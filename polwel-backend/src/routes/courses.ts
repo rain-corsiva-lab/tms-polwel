@@ -13,7 +13,6 @@ router.get('/statistics', requirePermissions('courses.view'), coursesController.
 router.get('/:id', requirePermissions('courses.view'), coursesController.getCourseById);                // GET /api/courses/:id
 router.post('/', requirePermissions('courses.create'), coursesController.createCourse);                   // POST /api/courses
 router.put('/:id', requirePermissions('courses.edit'), coursesController.updateCourse);                 // PUT /api/courses/:id
-router.patch('/:id/status', requirePermissions('courses.edit'), coursesController.updateCourseStatus);  // PATCH /api/courses/:id/status
 router.delete('/:id', requirePermissions('courses.delete'), coursesController.deleteCourse);              // DELETE /api/courses/:id
 
 export default router;

@@ -13,7 +13,28 @@ export interface ErrorInfo {
  * This function works the same way in local, staging, and production
  */
 export const parseError = (error: any, context?: string): ErrorInfo => {
-  const errorMessage = error?.message || error?.toString() || 'An unexpected error occurred';
+  // Better error message extraction to handle objects that stringify to "[object Object]"
+  let errorMessage: string;
+  
+  if (typeof error === 'string') {
+    errorMessage = error;
+  } else if (error?.message && typeof error.message === 'string') {
+    errorMessage = error.message;
+  } else if (error?.error && typeof error.error === 'string') {
+    errorMessage = error.error;
+  } else if (error?.toString && typeof error.toString === 'function') {
+    const stringified = error.toString();
+    // Avoid "[object Object]" by checking if toString actually gives us useful info
+    if (stringified !== '[object Object]' && stringified !== 'Error') {
+      errorMessage = stringified;
+    } else {
+      // Try to extract useful information from the error object
+      errorMessage = JSON.stringify(error, null, 2);
+    }
+  } else {
+    errorMessage = 'An unexpected error occurred';
+  }
+  
   const errorName = error?.name || 'UnknownError';
   const lowerMessage = errorMessage.toLowerCase();
   

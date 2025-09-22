@@ -256,7 +256,9 @@ export const updateTrainer = async (req: AuthenticatedRequest, res: Response) =>
       bio, 
       specializations, 
       certifications, 
-      experience 
+      experience,
+      contactNumber,
+      onboardingDate
     } = req.body;
 
     if (!id) {
@@ -306,7 +308,9 @@ export const updateTrainer = async (req: AuthenticatedRequest, res: Response) =>
         ...(bio !== undefined && { bio }),
         ...(specializations !== undefined && { specializations }),
         ...(certifications !== undefined && { certifications }),
-        ...(experience !== undefined && { experience })
+        ...(experience !== undefined && { experience }),
+        ...(contactNumber !== undefined && { contactNumber }),
+        ...(onboardingDate !== undefined && { onboardingDate: onboardingDate ? new Date(onboardingDate) : null })
       },
       select: {
         id: true,
@@ -316,6 +320,8 @@ export const updateTrainer = async (req: AuthenticatedRequest, res: Response) =>
         status: true,
         availabilityStatus: true,
         partnerOrganization: true,
+        contactNumber: true,
+        onboardingDate: true,
         bio: true,
         specializations: true,
         certifications: true,

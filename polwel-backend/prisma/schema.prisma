@@ -99,8 +99,8 @@ model Course {
   level             String?
   prerequisites     Json?
   materials         Json?
-  status            CourseStatus @default(DRAFT)
   venueFee          Float        @default(0) // Renamed in UI as "Venue Expenses"
+  venueFeeType      String?      // Fee type suffix (/ venue or / head)
   venue             String?
   specifiedLocation String?      // Free-text location override when venue not sufficient
   trainers          Json?

@@ -104,7 +104,7 @@ const CourseDetail = () => {
             <div className="flex items-center gap-2 mt-2">
               {course.category && <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{course.category}</Badge>}
               {course.level && <Badge className="bg-purple-100 text-purple-800 border-purple-200">Lvl: {course.level}</Badge>}
-              {course.status && <Badge className="bg-blue-100 text-blue-800 border-blue-200">{course.status}</Badge>}
+              {/* status removed from Course model */}
               <Badge className="bg-blue-600 text-white">{course.certificates === "polwel" ? "POLWEL" : "PARTNER"}</Badge>
             </div>
           </div>

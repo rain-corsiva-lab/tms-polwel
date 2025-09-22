@@ -237,7 +237,9 @@ const ClientOrganisationDetail = () => {
 
     try {
       setCoordinatorsLoading(true);
+      console.log("Fetching coordinators for organization:", id);
       const response = await clientOrganizationsApi.getCoordinators(id, { page: coordinatorsPagination.page, limit: coordinatorsPerPage });
+      console.log("Coordinators API response:", response);
       setCoordinators(response.coordinators || []);
       setCoordinatorsPagination(response.pagination || { ...coordinatorsPagination, limit: coordinatorsPerPage });
     } catch (error: any) {
@@ -273,13 +275,13 @@ const ClientOrganisationDetail = () => {
 
   // Load coordinators when coordinators tab is activated
   useEffect(() => {
-    if (!isTCUser && activeTab === "coordinators" && coordinators.length === 0) {
+    if ((hasRole("POLWEL") || !isTCUser) && activeTab === "coordinators" && coordinators.length === 0) {
       fetchCoordinators();
     }
   }, [activeTab, id]);
 
   useEffect(() => {
-    if (!isTCUser && activeTab === "coordinators") {
+    if ((hasRole("POLWEL") || !isTCUser) && activeTab === "coordinators") {
       fetchCoordinators();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -504,7 +506,7 @@ const ClientOrganisationDetail = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="information">Organization Information</TabsTrigger>
-          {!isTCUser && <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>}
+          {(hasRole("POLWEL") || !isTCUser) && <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>}
           <TabsTrigger value="learners">Learners</TabsTrigger>
         </TabsList>
 

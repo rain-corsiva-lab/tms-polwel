@@ -896,7 +896,6 @@ export interface Course {
   level?: string;
   prerequisites?: string[];
   materials?: string[];
-  status?: string;
   venueFee?: number; // Venue expenses
   venue?: string;
   specifiedLocation?: string;
@@ -964,14 +963,6 @@ export const coursesApi = {
     return apiRequest(`/courses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(courseData),
-    });
-  },
-
-  // Update course status
-  updateStatus: async (id: string | number, status: string) => {
-    return apiRequest(`/courses/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
     });
   },
 

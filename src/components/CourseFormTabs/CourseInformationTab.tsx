@@ -14,6 +14,7 @@ import "react-quill/dist/quill.snow.css";
 interface CourseInformationTabProps {
   formData: any;
   onInputChange: (field: string, value: any) => void;
+  onVenueSelect?: (venue: any) => void;
   categories: any[];
   trainers: any[];
   partners: any[];
@@ -21,8 +22,29 @@ interface CourseInformationTabProps {
   loading?: { categories?: boolean; trainers?: boolean; venues?: boolean };
 }
 
-const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, onInputChange, categories, trainers, partners, venues, loading }) => {
+const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
+  formData,
+  onInputChange,
+  onVenueSelect,
+  categories,
+  trainers,
+  partners,
+  venues,
+  loading,
+}) => {
   const categoryGroups = Array.isArray(categories) ? categories : [];
+
+  const handleVenueChange = (venueId: string) => {
+    onInputChange("venue", venueId);
+
+    // Find the selected venue and trigger auto-fill
+    if (onVenueSelect && Array.isArray(venues)) {
+      const selectedVenue = venues.find((venue: any) => venue?.id === venueId);
+      if (selectedVenue) {
+        onVenueSelect(selectedVenue);
+      }
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -33,12 +55,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, o
         </div>
         <div className="space-y-2">
           <Label htmlFor="courseCode">Course Code</Label>
-          <Input
-            id="courseCode"
-            value={formData.courseCode || ""}
-            onChange={(e) => onInputChange("courseCode", e.target.value.toUpperCase())}
-            placeholder="e.g. LDR-101"
-          />
+          <Input id="courseCode" value={formData.courseCode || ""} onChange={(e) => onInputChange("courseCode", e.target.value)} placeholder="e.g. LDR-101" />
           <p className="text-[10px] text-muted-foreground">Optional unique code (auto uppercased)</p>
         </div>
         <div className="space-y-2">
@@ -203,7 +220,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, o
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="venue">Venue</Label>
-          <Select value={formData.venue} onValueChange={(value) => onInputChange("venue", value)}>
+          <Select value={formData.venue} onValueChange={handleVenueChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select venue" />
             </SelectTrigger>
@@ -211,9 +228,9 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({ formData, o
               {Array.isArray(venues) && venues.length > 0 ? (
                 venues.map((venue: any) => {
                   const name = typeof venue === "string" ? venue : venue?.name || "Unnamed Venue";
-                  const value = name;
+                  const venueId = venue?.id || name;
                   return (
-                    <SelectItem key={venue?.id || name} value={value}>
+                    <SelectItem key={venueId} value={venueId}>
                       {name}
                     </SelectItem>
                   );

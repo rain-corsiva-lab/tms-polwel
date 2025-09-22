@@ -10,6 +10,18 @@ interface FeesRevenueTabProps {
 }
 
 const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange }) => {
+  const handleNumericInputChange = (field: string, value: string) => {
+    // Remove leading zeros and handle empty string
+    const cleanValue = value.replace(/^0+/, "") || "0";
+    const numericValue = parseFloat(cleanValue) || 0;
+    onInputChange(field, numericValue);
+  };
+
+  const formatDisplayValue = (value: number | undefined) => {
+    // Return empty string if value is 0 or undefined, otherwise return the value as string
+    return value === 0 || value === undefined ? "" : value.toString();
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -17,8 +29,10 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
         <Input
           id="defaultCourseFee"
           type="number"
-          value={formData.defaultCourseFee || 0}
-          onChange={(e) => onInputChange("defaultCourseFee", parseFloat(e.target.value) || 0)}
+          step="0.01"
+          min="0"
+          value={formatDisplayValue(formData.defaultCourseFee)}
+          onChange={(e) => handleNumericInputChange("defaultCourseFee", e.target.value)}
           placeholder="0.00"
         />
         <p className="text-sm text-muted-foreground">Base fee for this course template</p>
@@ -30,28 +44,39 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
           <Input
             id="billingRate"
             type="number"
-            value={formData.billingRate || 0}
-            onChange={(e) => onInputChange("billingRate", parseFloat(e.target.value) || 0)}
+            step="0.01"
+            min="0"
+            value={formatDisplayValue(formData.billingRate)}
+            onChange={(e) => handleNumericInputChange("billingRate", e.target.value)}
             placeholder="0.00"
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="venueFee">Venue Expenses ($)</Label>
-          <Input
-            id="venueFee"
-            type="number"
-            value={formData.venueFee || 0}
-            onChange={(e) => onInputChange("venueFee", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
+          <div className="relative">
+            <Input
+              id="venueFee"
+              type="number"
+              step="0.01"
+              min="0"
+              value={formatDisplayValue(formData.venueFee)}
+              onChange={(e) => handleNumericInputChange("venueFee", e.target.value)}
+              placeholder="0.00"
+              className={formData.venueFeeType ? "pr-16" : ""}
+            />
+            {formData.venueFeeType && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{formData.venueFeeType}</span>}
+          </div>
+          {formData.venueFeeType && <p className="text-xs text-muted-foreground">Auto-filled from selected venue</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="contractsFeePayout">Contracts Fee Payout ($)</Label>
           <Input
             id="contractsFeePayout"
             type="number"
-            value={formData.contractsFeePayout || 0}
-            onChange={(e) => onInputChange("contractsFeePayout", parseFloat(e.target.value) || 0)}
+            step="0.01"
+            min="0"
+            value={formatDisplayValue(formData.contractsFeePayout)}
+            onChange={(e) => handleNumericInputChange("contractsFeePayout", e.target.value)}
             placeholder="0.00"
           />
         </div>

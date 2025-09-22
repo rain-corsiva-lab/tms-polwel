@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { z } from 'zod';
-import { CourseStatus } from '@prisma/client';
 import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
 import sanitizeHtml from 'sanitize-html';
@@ -37,17 +36,12 @@ const CourseCreateSchema = z.object({
   defaultCourseFee: z.number().default(0),
   billingRate: z.number().default(0),
   venueFee: z.number().default(0), // used as Venue Expenses
+  venueFeeType: z.string().optional(), // Fee type suffix (/ venue or / head)
   contractsFeePayout: z.number().default(0),
-  discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional(),
-  
-  status: z.nativeEnum(CourseStatus).default('DRAFT' as CourseStatus)
+  discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional()
 });
 
 const CourseUpdateSchema = CourseCreateSchema.partial();
-
-const CourseStatusSchema = z.object({
-  status: z.nativeEnum(CourseStatus)
-});
 
 export const coursesController = {
   // Get all courses with pagination and filtering
@@ -58,7 +52,6 @@ export const coursesController = {
         limit = '10',
         search,
         category,
-        status,
         certificates,
         sortBy = 'createdAt',
         sortOrder = 'desc'
@@ -81,10 +74,6 @@ export const coursesController = {
 
       if (category && category !== 'all') {
         where.category = category as string;
-      }
-
-      if (status && status !== 'all') {
-        where.status = status as CourseStatus;
       }
 
       if (certificates && certificates !== 'all') {
@@ -212,7 +201,6 @@ export const coursesController = {
       // Create course data object
       const courseData: any = {
         title: data.title,
-        status: data.status,
         certificates: data.certificates,
         creator: { connect: { id: userId } }
       };
@@ -258,6 +246,7 @@ export const coursesController = {
   if (data.defaultCourseFee !== undefined) courseData.defaultCourseFee = data.defaultCourseFee;
   if (data.billingRate !== undefined) courseData.billingRate = data.billingRate;
   if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
+  if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
   if (data.contractsFeePayout !== undefined) courseData.contractsFeePayout = data.contractsFeePayout;
   if (data.discounts !== undefined) courseData.discounts = data.discounts;
 
@@ -473,96 +462,11 @@ export const coursesController = {
   },
 
   // Update course status
-  async updateCourseStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
-    try {
-      const { id } = req.params;
-
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          message: 'Course ID is required'
-        });
-      }
-
-      // Validate input
-      const validation = CourseStatusSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: validation.error.errors
-        });
-      }
-
-      // Check if course exists
-      const existingCourse = await prisma.course.findUnique({
-        where: { id }
-      });
-
-      if (!existingCourse) {
-        return res.status(404).json({
-          success: false,
-          message: 'Course not found'
-        });
-      }
-
-      const { status } = validation.data;
-      const oldStatus = existingCourse.status;
-
-      const updatedCourse = await prisma.course.update({
-        where: { id },
-        data: { status },
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
-      });
-
-      // Log audit trail
-      if (req.user?.userId) {
-        await AuditService.log({
-          userId: req.user.userId,
-          action: 'Course Status Changed',
-          actionType: 'STATUS_CHANGE',
-          tableName: 'courses',
-          recordId: id,
-          oldValues: { status: oldStatus },
-          newValues: { status },
-          details: `Changed course status from ${oldStatus} to ${status} for: ${updatedCourse.title}`,
-          performedBy: req.user.userId
-        }, req);
-      }
-
-      return res.json({
-        success: true,
-        message: 'Course status updated successfully',
-        data: { course: updatedCourse }
-      });
-    } catch (error) {
-      console.error('Error updating course status:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to update course status',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  },
-
   // Get course statistics
   async getCourseStatistics(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
-      // Get total counts by status
-      const statusCounts = await prisma.course.groupBy({
-        by: ['status'],
-        _count: {
-          id: true
-        }
-      });
+      // Get total courses
+      const totalCourses = await prisma.course.count();
 
       // Get total counts by category
       const categoryCounts = await prisma.course.groupBy({
@@ -577,9 +481,6 @@ export const coursesController = {
         }
       });
 
-      // Get total courses count
-      const totalCourses = await prisma.course.count();
-
       // Get recent courses
       const recentCourses = await prisma.course.findMany({
         take: 5,
@@ -589,7 +490,6 @@ export const coursesController = {
         select: {
           id: true,
           title: true,
-          status: true,
           createdAt: true,
           creator: {
             select: {
@@ -603,14 +503,10 @@ export const coursesController = {
         success: true,
         data: {
           totalCourses,
-          statusBreakdown: statusCounts.reduce((acc: Record<string, number>, curr: any) => {
-            acc[curr.status] = curr._count.id;
+          categoryBreakdown: categoryCounts.reduce((acc: Record<string, number>, curr: any) => {
+            if (curr.category) acc[curr.category] = curr._count.id;
             return acc;
           }, {}),
-            categoryBreakdown: categoryCounts.reduce((acc: Record<string, number>, curr: any) => {
-              if (curr.category) acc[curr.category] = curr._count.id;
-              return acc;
-            }, {}),
           recentCourses
         }
       });

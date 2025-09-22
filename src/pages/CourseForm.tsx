@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { referencesApi, coursesApi } from "@/lib/api";
+import { referencesApi, coursesApi, venuesApi } from "@/lib/api";
 import CourseInformationTab from "@/components/CourseFormTabs/CourseInformationTab";
 import FeesRevenueTab from "@/components/CourseFormTabs/FeesRevenueTab";
 import DiscountsTab from "@/components/CourseFormTabs/DiscountsTab";
@@ -32,6 +32,7 @@ interface FormState {
   durationType: string;
   trainer: string[];
   venueFee: number;
+  venueFeeType: string;
   venue: string;
   specifiedLocation: string;
   certificates: string;
@@ -51,6 +52,7 @@ const initialForm: FormState = {
   durationType: "days",
   trainer: [],
   venueFee: 0,
+  venueFeeType: "",
   venue: "",
   specifiedLocation: "",
   certificates: "polwel",
@@ -81,13 +83,13 @@ const CourseForm: React.FC = () => {
           referencesApi.getCategories().catch(() => null),
           referencesApi.getTrainers().catch(() => null),
           referencesApi.getPartners().catch(() => null),
-          referencesApi.getVenues().catch(() => null),
+          venuesApi.getAll().catch(() => null),
         ]);
         setRefs({
           categories: cat?.data?.categories || [],
           trainers: tr?.data?.trainers || [],
           partners: pa?.data?.partners || [],
-          venues: ve?.data?.venues || [],
+          venues: Array.isArray(ve?.data) ? ve.data : ve?.data?.venues || [],
         });
       } finally {
         setLoading((l) => ({ ...l, categories: false, trainers: false, venues: false }));
@@ -114,6 +116,7 @@ const CourseForm: React.FC = () => {
             durationType: c.durationType || "days",
             trainer: Array.isArray(c.trainers) ? c.trainers.map((t: any) => (typeof t === "string" ? t : t.name || String(t))) : [],
             venueFee: c.venueFee || 0,
+            venueFeeType: c.venueFeeType || "",
             venue: c.venue || "",
             specifiedLocation: c.specifiedLocation || "",
             certificates: c.certificates || "polwel",
@@ -144,12 +147,61 @@ const CourseForm: React.FC = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleVenueSelect = (venue: any) => {
+    if (venue?.fee !== undefined && venue?.feeType) {
+      const vType = String(venue.feeType);
+      const feeTypeSuffix = vType === "PER_HEAD" || vType === "per_head" ? "/ head" : "/ venue";
+      setFormData((prev) => ({
+        ...prev,
+        venueFee: venue.fee,
+        venueFeeType: feeTypeSuffix,
+      }));
+
+      toast({
+        title: "Venue Fee Updated",
+        description: `Venue expenses auto-filled to $${venue.fee} ${feeTypeSuffix}`,
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const errors: string[] = [];
+
+    if (!formData.title?.trim()) {
+      errors.push("Course title is required");
+    }
+
+    if (!formData.category?.trim()) {
+      errors.push("Course category is required");
+    }
+
+    if (!formData.duration?.trim()) {
+      errors.push("Duration is required");
+    }
+
+    if (formData.courseCode && formData.courseCode.trim().length < 3) {
+      errors.push("Course code must be at least 3 characters");
+    }
+
+    if (errors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: errors.join(". "),
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.category) {
-      toast({ title: "Error", description: "Title & category required", variant: "destructive" });
+
+    if (!validateForm()) {
       return;
     }
+
     setLoading((l) => ({ ...l, submitting: true }));
     const payload: any = {
       courseCode: formData.courseCode,
@@ -160,6 +212,7 @@ const CourseForm: React.FC = () => {
       durationType: formData.durationType,
       trainers: formData.trainer,
       venueFee: formData.venueFee,
+      venueFeeType: formData.venueFeeType,
       venue: formData.venue,
       specifiedLocation: formData.specifiedLocation,
       certificates: formData.certificates,
@@ -179,11 +232,37 @@ const CourseForm: React.FC = () => {
       }
       navigate("/course-creation");
     } catch (err: any) {
+      console.error("Course save error:", err);
+      let title = "Error";
       let msg = "Save failed";
-      if (err?.response?.data?.message?.toLowerCase?.().includes("unique") || err?.response?.data?.error?.includes?.("courseCode")) {
-        msg = "Course code already exists";
+
+      // Handle validation errors
+      if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        title = "Validation Error";
+        const fieldErrors = err.response.data.errors.map((error: any) => error.message || error.msg).join(". ");
+        msg = fieldErrors;
+      } else if (err?.response?.data?.message) {
+        // Handle specific error messages from backend
+        const errorMessage = err.response.data.message;
+        if (errorMessage.toLowerCase().includes("unique") || errorMessage.toLowerCase().includes("coursecode")) {
+          title = "Duplicate Error";
+          msg = "Course code already exists";
+        } else if (errorMessage.toLowerCase().includes("validation")) {
+          title = "Validation Error";
+          msg = errorMessage;
+        } else if (errorMessage.toLowerCase().includes("required")) {
+          title = "Required Fields";
+          msg = errorMessage;
+        } else {
+          msg = errorMessage;
+        }
+      } else if (err?.response?.data?.error) {
+        msg = err.response.data.error;
+      } else if (err?.message) {
+        msg = err.message;
       }
-      toast({ title: "Error", description: msg, variant: "destructive" });
+
+      toast({ title, description: msg, variant: "destructive" });
     } finally {
       setLoading((l) => ({ ...l, submitting: false }));
     }
@@ -219,6 +298,7 @@ const CourseForm: React.FC = () => {
                 <CourseInformationTab
                   formData={formData}
                   onInputChange={handleInputChange as any}
+                  onVenueSelect={handleVenueSelect}
                   categories={refs.categories}
                   trainers={refs.trainers}
                   partners={refs.partners}

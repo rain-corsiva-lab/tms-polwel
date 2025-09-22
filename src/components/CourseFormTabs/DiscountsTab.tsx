@@ -95,7 +95,7 @@ const DiscountsTab: React.FC<DiscountsTabProps> = ({ formData, onInputChange }) 
             </div>
 
             <div className="flex items-end">
-              <Button onClick={addDiscount} className="w-full">
+              <Button type="button" onClick={addDiscount} className="w-full">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Discount
               </Button>
@@ -126,7 +126,13 @@ const DiscountsTab: React.FC<DiscountsTabProps> = ({ formData, onInputChange }) 
                     <TableCell className="font-medium">{discount.name}</TableCell>
                     <TableCell>{discount.percentage}%</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => removeDiscount(discount.id)} className="text-destructive hover:text-destructive">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDiscount(discount.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
