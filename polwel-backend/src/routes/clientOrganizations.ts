@@ -25,7 +25,7 @@ router.use(authenticateToken);
 router.get('/stats', authorizeRoles('POLWEL'), getOrganizationStats);
 router.get('/industries', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getIndustries);
 
-// Client Organizations routes
+// Client Organisations routes
 router.get('/', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('clients.view'), getClientOrganizations);
 router.get('/:id', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), authorizeOrganization, requirePermissions('clients.view'), getClientOrganizationById);
 router.post('/', authorizeRoles('POLWEL'), requirePermissions('clients.create'), createClientOrganization);

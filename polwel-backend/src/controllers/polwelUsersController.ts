@@ -26,7 +26,7 @@ const permissionNameMapping: Record<string, string> = {
   'user-management-trainers:update': 'trainers.edit',
   'user-management-trainers:delete': 'trainers.delete',
   
-  // User Management - Client Organizations
+  // User Management - Client Organisations
   'user-management-client-orgs:view': 'clients.view',
   'user-management-client-orgs:create': 'clients.create',
   'user-management-client-orgs:edit': 'clients.edit',
@@ -523,7 +523,7 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
+        message: validationErrors[0], // Use the first validation error as the main message
         errors: validationErrors
       });
     }

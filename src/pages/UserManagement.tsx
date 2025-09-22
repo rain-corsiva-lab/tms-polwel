@@ -326,7 +326,7 @@ const UserManagement = () => {
                 <span className="font-medium text-destructive">3</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Partner Organizations</span>
+                <span className="text-muted-foreground">Partner Organisations</span>
                 <span className="font-medium">12</span>
               </div>
             </div>

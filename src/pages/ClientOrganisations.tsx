@@ -36,7 +36,7 @@ const ClientOrganisations = () => {
 
   // No dummy data: always fetch from server. In case of error we show an empty list and surface a toast.
 
-  // Fetch client organizations from API
+  // Fetch client organisations from API
   const fetchClientOrgs = async (pageArg?: number, limitArg?: number) => {
     try {
       setLoading(true);
@@ -71,7 +71,7 @@ const ClientOrganisations = () => {
       // If fetch fails, show empty list and surface a toast so user is aware
       setClientOrgs([]);
       setPagination((p) => ({ ...p, total: 0, totalPages: 0 }));
-      toast({ title: "Failed to fetch client organizations", description: "Please try again later.", variant: "destructive" });
+      toast({ title: "Failed to fetch client organisations", description: "Please try again later.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -184,7 +184,7 @@ const ClientOrganisations = () => {
                 <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex items-center justify-center gap-2">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                    <span>Loading client organizations...</span>
+                    <span>Loading client organisations...</span>
                   </div>
                 </TableCell>
               </TableRow>
@@ -193,7 +193,7 @@ const ClientOrganisations = () => {
                 <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <Building2 className="h-8 w-8" />
-                    <div>No organizations found</div>
+                    <div>No organisations found</div>
                   </div>
                 </TableCell>
               </TableRow>

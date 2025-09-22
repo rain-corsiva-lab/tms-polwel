@@ -65,11 +65,11 @@ export function AddUserDialog() {
         return;
       }
 
-      // BU Cost Centre mandatory for SPF/POLWEL organizations
+      // BU Cost Centre mandatory for SPF/POLWEL organisations
       if ((formData.organizationName.includes("SPF") || formData.organizationName.includes("POLWEL")) && !formData.buCostCentre) {
         toast({
           title: "Validation Error",
-          description: "BU Cost Centre is mandatory for SPF/POLWEL organizations.",
+          description: "BU Cost Centre is mandatory for SPF/POLWEL organisations.",
           variant: "destructive",
         });
         return;
@@ -161,7 +161,7 @@ export function AddUserDialog() {
                 id="buCostCentre"
                 value={formData.buCostCentre}
                 onChange={(e) => setFormData((prev) => ({ ...prev, buCostCentre: e.target.value }))}
-                placeholder="Mandatory for SPF/POLWEL organizations"
+                placeholder="Mandatory for SPF/POLWEL organisations"
               />
             </div>
             <div className="flex items-center space-x-2">

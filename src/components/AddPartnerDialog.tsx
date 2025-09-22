@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import DateInput from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -42,6 +43,7 @@ interface PartnerData {
   pointOfContact: string;
   contactNumber: string;
   contactDesignation: string;
+  onboardingDate?: string;
 }
 
 interface AddPartnerDialogProps {
@@ -61,6 +63,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
     pointOfContact: "",
     contactNumber: "",
     contactDesignation: "",
+    onboardingDate: "",
   });
 
   const { toast } = useToast();
@@ -75,6 +78,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
         pointOfContact: partner.pointOfContact || "",
         contactNumber: partner.contactNumber || "",
         contactDesignation: partner.contactDesignation || "",
+        onboardingDate: partner.onboardingDate || "",
       });
     }
   }, [isEditMode, partner]);
@@ -134,6 +138,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       pointOfContact: "",
       contactNumber: "",
       contactDesignation: "",
+      onboardingDate: "",
     });
   };
 
@@ -261,6 +266,11 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
               onChange={(e) => setFormData({ ...formData, contactDesignation: e.target.value })}
               placeholder="Enter contact person designation"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="onboardingDate">Onboarding Date</Label>
+            <DateInput id="onboardingDate" value={formData.onboardingDate || ""} onChange={(v) => setFormData({ ...formData, onboardingDate: v || "" })} />
           </div>
 
           <DialogFooter>

@@ -61,7 +61,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, retries =
         }));
         
         console.error(`API Error (${response.status}):`, errorData);
-        throw new Error(`API Error: ${errorData.message || response.statusText}`);
+        throw new Error(errorData.message || response.statusText);
       }
 
       const data = await response.json();
@@ -398,9 +398,9 @@ export const trainersApi = {
   },
 };
 
-// Client Organizations API
+// Client Organisations API
 export const clientOrganizationsApi = {
-  // Get all organizations with pagination and filtering
+  // Get all organisations with pagination and filtering
   getAll: async (params: {
     page?: number;
     limit?: number;

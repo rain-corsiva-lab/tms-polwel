@@ -214,7 +214,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           errorMessage = `${errorMessage}. ${fieldErrors}`;
         }
         
-        throw new Error(`API Error: ${errorMessage}`);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -726,9 +726,9 @@ export const partnersApi = {
   },
 };
 
-// Client Organizations API
+// Client Organisations API
 export const clientOrganizationsApi = {
-  // Get all organizations with pagination and filtering
+  // Get all organisations with pagination and filtering
   getAll: async (params: {
     page?: number;
     limit?: number;

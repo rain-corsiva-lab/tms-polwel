@@ -449,7 +449,7 @@ const ClientOrganisationDetail = () => {
           <Link to="/client-organizations">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Organizations
+              Back to Organisations
             </Button>
           </Link>
         </div>

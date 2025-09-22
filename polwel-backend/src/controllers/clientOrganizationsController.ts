@@ -8,7 +8,7 @@ import EmailService from '../services/emailService';
 
 
 
-// Get all client organizations with pagination and filtering
+// Get all client organisations with pagination and filtering
 export const getClientOrganizations = async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Parse and sanitize query parameters
@@ -54,7 +54,7 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
 
   // industry removed - no extra filters
 
-    // Get organizations with pagination
+    // Get organisations with pagination
     const [organizations, total] = await Promise.all([
       prisma.organization.findMany({
         where,

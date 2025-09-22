@@ -114,7 +114,7 @@ const App = () => (
               />
               <Route path="learners" element={<UserManagement />} />
 
-              {/* Organization Management */}
+              {/* Organisation Management */}
               <Route
                 path="client-organisations"
                 element={

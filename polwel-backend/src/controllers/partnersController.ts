@@ -20,6 +20,7 @@ interface PartnerData {
   pointOfContact?: string;
   contactNumber?: string;
   contactDesignation?: string;
+  onboardingDate?: string;
 }
 
 // Get all partners with pagination and filtering
@@ -67,6 +68,7 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
           experience: true, // Store contact number here
           specializations: true, // Store courses assigned here
           certifications: true, // Store contact designation here
+          onboardingDate: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -86,6 +88,7 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
       contactDesignation: getFirstFromJsonArray(partner.certifications),
+      onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     }));
@@ -137,6 +140,7 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
         experience: true,
         specializations: true,
         certifications: true,
+        onboardingDate: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -155,6 +159,7 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
       contactDesignation: getFirstFromJsonArray(partner.certifications),
+      onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     };
@@ -177,7 +182,8 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
       coursesAssigned, 
       pointOfContact, 
       contactNumber, 
-      contactDesignation 
+      contactDesignation,
+      onboardingDate
     }: PartnerData = req.body;
 
     // Validation - only partnerName is required
@@ -204,6 +210,7 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         experience: contactNumber || '', // Store contact number in experience
         specializations: coursesAssigned || [], // Store courses in specializations
         certifications: contactDesignation ? [contactDesignation] : [], // Store designation in certifications
+        ...(onboardingDate && { onboardingDate: new Date(onboardingDate) }),
       },
       select: {
         id: true,
@@ -214,6 +221,7 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         experience: true,
         specializations: true,
         certifications: true,
+        onboardingDate: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -228,6 +236,7 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
       contactDesignation: getFirstFromJsonArray(partner.certifications),
+      onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     };
@@ -252,6 +261,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
       pointOfContact, 
       contactNumber, 
       contactDesignation,
+      onboardingDate,
       status 
     }: Partial<PartnerData> & { status?: UserStatus } = req.body;
 
@@ -284,6 +294,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         ...(contactNumber !== undefined && { experience: contactNumber }),
         ...(coursesAssigned !== undefined && { specializations: coursesAssigned }),
         ...(contactDesignation !== undefined && { certifications: contactDesignation ? [contactDesignation] : [] }),
+        ...(onboardingDate !== undefined && { onboardingDate: onboardingDate ? new Date(onboardingDate) : null }),
       },
       select: {
         id: true,
@@ -294,6 +305,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         experience: true,
         specializations: true,
         certifications: true,
+        onboardingDate: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -308,6 +320,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
       pointOfContact: partner.bio || '',
       contactNumber: partner.experience || '',
       contactDesignation: getFirstFromJsonArray(partner.certifications),
+      onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
       createdAt: partner.createdAt,
       updatedAt: partner.updatedAt,
     };
