@@ -134,16 +134,16 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
-          Add New Trainer
+          Add New Associate Trainer
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5" />
-            Add New Trainer
+            Add New Associate Trainer
           </DialogTitle>
-          <DialogDescription>Create a new standalone trainer account. User will set password in onboarding flow.</DialogDescription>
+          <DialogDescription>Create a new standalone associate trainer account. User will set password in onboarding flow.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -247,7 +247,7 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
             Cancel
           </Button>
           <Button type="submit" onClick={handleSubmit} disabled={loading}>
-            {loading ? "Creating..." : "Create Trainer"}
+            {loading ? "Creating..." : "Create Associate Trainer"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,29 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Building2, Edit, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +15,7 @@ import { errorHandlers } from "@/lib/errorHandler";
 // Available courses for selection
 const availableCourses = [
   "Leadership Development",
-  "Team Building", 
+  "Team Building",
   "Communication Skills",
   "Customer Service",
   "Project Management",
@@ -51,7 +32,7 @@ const availableCourses = [
   "Sales Training",
   "Professional Development",
   "Career Coaching",
-  "Presentation Skills"
+  "Presentation Skills",
 ];
 
 interface PartnerData {
@@ -66,16 +47,11 @@ interface PartnerData {
 interface AddPartnerDialogProps {
   onPartnerCreated?: () => void;
   onSuccess?: () => void;
-  mode?: 'create' | 'edit';
+  mode?: "create" | "edit";
   partner?: PartnerData;
 }
 
-export function AddPartnerDialog({ 
-  onPartnerCreated, 
-  onSuccess, 
-  mode = 'create', 
-  partner 
-}: AddPartnerDialogProps) {
+export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create", partner }: AddPartnerDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [courseSearchOpen, setCourseSearchOpen] = useState(false);
@@ -88,7 +64,7 @@ export function AddPartnerDialog({
   });
 
   const { toast } = useToast();
-  const isEditMode = mode === 'edit';
+  const isEditMode = mode === "edit";
 
   // Initialize form data when in edit mode
   useEffect(() => {
@@ -105,7 +81,7 @@ export function AddPartnerDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Only partner name is required since it's just data, not a user account
     if (!formData.partnerName) {
       toast({
@@ -137,7 +113,7 @@ export function AddPartnerDialog({
       // Reset form and close dialog
       resetForm();
       setOpen(false);
-      
+
       if (onPartnerCreated) onPartnerCreated();
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -163,18 +139,18 @@ export function AddPartnerDialog({
 
   const addCourse = (course: string) => {
     if (!formData.coursesAssigned.includes(course)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        coursesAssigned: [...prev.coursesAssigned, course]
+        coursesAssigned: [...prev.coursesAssigned, course],
       }));
     }
     setCourseSearchOpen(false);
   };
 
   const removeCourse = (courseToRemove: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      coursesAssigned: prev.coursesAssigned.filter(course => course !== courseToRemove)
+      coursesAssigned: prev.coursesAssigned.filter((course) => course !== courseToRemove),
     }));
   };
 
@@ -188,7 +164,7 @@ export function AddPartnerDialog({
         ) : (
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Add Partner
+            Add Training Partner
           </Button>
         )}
       </DialogTrigger>
@@ -196,13 +172,12 @@ export function AddPartnerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            {isEditMode ? 'Edit Partner' : 'Add New Partner'}
+            {isEditMode ? "Edit Partner" : "Add New Partner"}
           </DialogTitle>
           <DialogDescription>
-            {isEditMode 
-              ? 'Update partner organization information and contact details.'
-              : 'Register a new partner organization with their contact details and assigned courses.'
-            }
+            {isEditMode
+              ? "Update partner organization information and contact details."
+              : "Register a new partner organization with their contact details and assigned courses."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -221,12 +196,7 @@ export function AddPartnerDialog({
             <Label>Courses Assigned</Label>
             <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={courseSearchOpen}
-                  className="w-full justify-between"
-                >
+                <Button variant="outline" role="combobox" aria-expanded={courseSearchOpen} className="w-full justify-between">
                   Search and select courses...
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -238,36 +208,25 @@ export function AddPartnerDialog({
                     <CommandEmpty>No course found.</CommandEmpty>
                     <CommandGroup>
                       {availableCourses
-                        .filter(course => !formData.coursesAssigned.includes(course))
+                        .filter((course) => !formData.coursesAssigned.includes(course))
                         .map((course) => (
-                        <CommandItem
-                          key={course}
-                          onSelect={() => addCourse(course)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              formData.coursesAssigned.includes(course) ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {course}
-                        </CommandItem>
-                      ))}
+                          <CommandItem key={course} onSelect={() => addCourse(course)}>
+                            <Check className={cn("mr-2 h-4 w-4", formData.coursesAssigned.includes(course) ? "opacity-100" : "opacity-0")} />
+                            {course}
+                          </CommandItem>
+                        ))}
                     </CommandGroup>
                   </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>
-            
+
             {formData.coursesAssigned.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {formData.coursesAssigned.map((course) => (
                   <Badge key={course} variant="secondary" className="flex items-center gap-1">
                     {course}
-                    <X 
-                      className="h-3 w-3 cursor-pointer" 
-                      onClick={() => removeCourse(course)} 
-                    />
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => removeCourse(course)} />
                   </Badge>
                 ))}
               </div>
@@ -305,15 +264,11 @@ export function AddPartnerDialog({
           </div>
 
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : (isEditMode ? 'Update Partner' : 'Add Partner')}
+              {loading ? "Saving..." : isEditMode ? "Update Training Partner" : "Add Training Partner"}
             </Button>
           </DialogFooter>
         </form>

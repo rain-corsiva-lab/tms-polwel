@@ -496,14 +496,14 @@ const TrainersAndPartners = () => {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList>
-              <TabsTrigger value="trainers">Trainers</TabsTrigger>
-              <TabsTrigger value="partners">Partners</TabsTrigger>
+              <TabsTrigger value="trainers">Associate Trainers</TabsTrigger>
+              <TabsTrigger value="partners">Training Partners</TabsTrigger>
             </TabsList>
 
             <TabsContent value="trainers" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Training Partners</CardTitle>
+                  <CardTitle>Associate Trainers</CardTitle>
                   <CardDescription>Manage individual trainers and their availability</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -609,8 +609,8 @@ const TrainersAndPartners = () => {
             <TabsContent value="partners" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Partner Organizations</CardTitle>
-                  <CardDescription>Manage partner organizations and their details</CardDescription>
+                  <CardTitle>Training Partners</CardTitle>
+                  <CardDescription>Manage Training Partners and their details</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
