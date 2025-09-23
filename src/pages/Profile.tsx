@@ -22,6 +22,14 @@ const Profile = () => {
   const [bio, setBio] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [passwordTouched, setPasswordTouched] = useState(false);
+
+  const pwHasUpper = /[A-Z]/.test(newPassword);
+  const pwHasLower = /[a-z]/.test(newPassword);
+  const pwHasNumber = /[0-9]/.test(newPassword);
+  const pwHasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+  const pwHasLength = newPassword.length >= 12;
+  const pwValid = pwHasUpper && pwHasLower && pwHasNumber && pwHasSpecial && pwHasLength;
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -57,14 +65,15 @@ const Profile = () => {
           toast({ title: "Validation", description: "To change password provide both current and new password", variant: "destructive" });
           return;
         }
-        if (newPassword.length < 12) {
-          toast({ title: "Validation", description: "New password must be at least 12 characters", variant: "destructive" });
+        if (!pwValid) {
+          toast({ title: "Validation", description: "Password must be 12+ chars, with upper, lower, number, special.", variant: "destructive" });
           return;
         }
         await profileApi.changePassword({ currentPassword: currentPassword.trim(), newPassword: newPassword });
         toast({ title: "Success", description: "Password changed" });
         setCurrentPassword("");
         setNewPassword("");
+        setPasswordTouched(false);
       }
       toast({ title: "Success", description: "Profile updated" });
       setProfile(res.data);
@@ -105,7 +114,24 @@ const Profile = () => {
               <Label className="text-sm">Change password (leave blank to keep current)</Label>
               <div className="space-y-2 mt-2 max-w-md">
                 <Input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                <Input type="password" placeholder="New password (min 12 chars)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <Input
+                  type="password"
+                  placeholder="New password (12+ chars, upper/lower/number/special)"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (!passwordTouched) setPasswordTouched(true);
+                  }}
+                />
+                {(passwordTouched || newPassword.length > 0) && (
+                  <div className="text-xs space-y-1 mt-1">
+                    <Rule ok={pwHasLength} text="At least 12 characters" />
+                    <Rule ok={pwHasUpper} text="Contains an uppercase letter" />
+                    <Rule ok={pwHasLower} text="Contains a lowercase letter" />
+                    <Rule ok={pwHasNumber} text="Contains a number" />
+                    <Rule ok={pwHasSpecial} text="Contains a special character" />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -113,7 +139,9 @@ const Profile = () => {
               <Button variant="outline" onClick={() => navigate(-1)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>Save changes</Button>
+              <Button onClick={handleSave} disabled={(!!currentPassword || !!newPassword) && !pwValid}>
+                Save changes
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -123,3 +151,12 @@ const Profile = () => {
 };
 
 export default Profile;
+
+function Rule({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <div className={"flex items-center gap-2 " + (ok ? "text-green-600" : "text-muted-foreground")}>
+      <span className={"inline-block h-2 w-2 rounded-full " + (ok ? "bg-green-600" : "bg-gray-300")} />
+      <span>{text}</span>
+    </div>
+  );
+}

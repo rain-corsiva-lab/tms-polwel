@@ -26,6 +26,7 @@ interface TrainingCoordinator {
   status: string;
   organizationId: string;
   createdAt: string;
+  isPrimaryCoordinator?: boolean;
 }
 
 interface Learner {
@@ -343,12 +344,12 @@ const ClientOrganisationDetail = () => {
     }
   };
 
-  const handleCoordinatorAdd = async (coordinatorData: { name: string; email: string; designation: string; password: string }) => {
+  const handleCoordinatorAdd = async (coordinatorData: { name: string; email: string; designation: string; password: string; isPrimary?: boolean }) => {
     if (!id) return;
 
     try {
-      const newCoordinator = await clientOrganizationsApi.createCoordinator(id, coordinatorData);
-      setCoordinators((prev) => [newCoordinator, ...prev]);
+      await clientOrganizationsApi.createCoordinator(id, coordinatorData);
+      await fetchCoordinators();
       // Success toast will be handled by AddCoordinatorDialog
     } catch (error: any) {
       console.error("Error creating coordinator:", error);
@@ -357,12 +358,15 @@ const ClientOrganisationDetail = () => {
     }
   };
 
-  const handleCoordinatorEdit = async (coordinatorId: string, coordinatorData: { name?: string; email?: string; designation?: string; status?: string }) => {
+  const handleCoordinatorEdit = async (
+    coordinatorId: string,
+    coordinatorData: { name?: string; email?: string; designation?: string; status?: string; isPrimary?: boolean }
+  ) => {
     if (!id) return;
 
     try {
-      const updatedCoordinator = await clientOrganizationsApi.updateCoordinator(id, coordinatorId, coordinatorData);
-      setCoordinators((prev) => prev.map((coord) => (coord.id === coordinatorId ? updatedCoordinator : coord)));
+      await clientOrganizationsApi.updateCoordinator(id, coordinatorId, coordinatorData);
+      await fetchCoordinators();
       // Success toast will be handled by EditCoordinatorDialog
     } catch (error: any) {
       console.error("Error updating coordinator:", error);
@@ -642,7 +646,12 @@ const ClientOrganisationDetail = () => {
                   ) : (
                     coordinators.map((coordinator) => (
                       <TableRow key={coordinator.id}>
-                        <TableCell className="font-medium">{coordinator.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <span>{coordinator.name}</span>
+                            {coordinator.isPrimaryCoordinator && <Badge variant="secondary">Primary</Badge>}
+                          </div>
+                        </TableCell>
                         <TableCell>{coordinator.email}</TableCell>
                         <TableCell>{coordinator.designation}</TableCell>
                         <TableCell>{new Date(coordinator.createdAt).toLocaleDateString()}</TableCell>

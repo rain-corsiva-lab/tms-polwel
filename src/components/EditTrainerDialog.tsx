@@ -26,6 +26,7 @@ interface Trainer {
   createdAt: string;
   updatedAt: string;
   specializations?: string[];
+  certifications?: string[];
   bio?: string;
   experience?: string;
 }
@@ -49,7 +50,7 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
     partnerOrganization: trainer.partnerOrganization || "",
     bio: trainer.bio || "",
     specializations: trainer.specializations || trainer.courses || [],
-    certifications: [] as string[],
+    certifications: trainer.certifications || [],
     experience: trainer.experience || "",
   });
 
@@ -58,16 +59,25 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
 
   const { toast } = useToast();
 
+  const sanitizeSGPhone = (value: string | undefined) => {
+    if (!value) return undefined;
+    let digits = value.replace(/\D/g, "");
+    if (digits.startsWith("65") && digits.length >= 10) digits = digits.slice(2);
+    if (digits.length > 8) digits = digits.slice(0, 8);
+    return digits || undefined;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const sanitizedPhone = sanitizeSGPhone(formData.contactNumber);
       await trainersApi.update(trainer.id, {
         name: formData.name,
         email: formData.email,
         status: formData.status,
-        ...(formData.contactNumber !== undefined && { contactNumber: formData.contactNumber || undefined }),
+        ...(sanitizedPhone !== undefined && { contactNumber: sanitizedPhone }),
         ...(formData.onboardingDate ? { onboardingDate: new Date(formData.onboardingDate).toISOString() } : {}),
         partnerOrganization: formData.partnerOrganization || undefined,
         bio: formData.bio || undefined,

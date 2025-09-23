@@ -3,6 +3,38 @@ import { toast } from 'sonner';
 const classifyAndFormatError = (error: any, endpoint: string): Error => {
   const errorMessage = error.message || error.toString();
   const lowerMessage = errorMessage.toLowerCase();
+  const original = error as any;
+  const preserveProps = (target: any) => {
+    const keys = ['status', 'code', 'data', 'details', 'conflicts'];
+    for (const k of keys) {
+      if (original && Object.prototype.hasOwnProperty.call(original, k)) {
+        (target as any)[k] = (original as any)[k];
+      }
+    }
+  };
+
+  // Special handling: conflict details for trainer blockouts (HTTP 409)
+  if (original?.status === 409 && original?.data) {
+    try {
+      const d = original.data;
+      let msg = d.message || d.error || errorMessage;
+      if (d.conflicts && Array.isArray(d.conflicts) && d.conflicts.length > 0) {
+        const dates = d.conflicts
+          .map((c: any) => (c.startDate === c.endDate ? c.startDate : `${c.startDate} to ${c.endDate}`))
+          .slice(0, 5)
+          .join(', ');
+        if ((d.error || '').toLowerCase().includes('course')) {
+          msg = `The selected dates conflict with scheduled courses. Please choose different dates or reschedule the conflicting courses.`;
+        } else {
+          msg = `The selected dates overlap with existing unavailable dates on: ${dates}. Please choose different dates or remove those blockouts first.`;
+        }
+      }
+      const e = new Error(msg);
+      e.name = 'ConflictError';
+      preserveProps(e);
+      return e;
+    } catch {}
+  }
   
   // Network/Connection Errors
   if (lowerMessage.includes('failed to fetch') || 
@@ -12,6 +44,7 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('fetch')) {
     const networkError = new Error('Unable to connect to the server. Please check your internet connection and try again.');
     networkError.name = 'NetworkError';
+    preserveProps(networkError);
     return networkError;
   }
   
@@ -22,6 +55,7 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('session expired')) {
     const authError = new Error('Your session has expired. Please log in again.');
     authError.name = 'AuthenticationError';
+    preserveProps(authError);
     return authError;
   }
   
@@ -32,6 +66,7 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('missing')) {
     const validationError = new Error(errorMessage); // Keep original message for validation errors
     validationError.name = 'ValidationError';
+    preserveProps(validationError);
     return validationError;
   }
   
@@ -42,6 +77,7 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('unique constraint')) {
     const conflictError = new Error(errorMessage); // Keep original message for conflict errors
     conflictError.name = 'ConflictError';
+    preserveProps(conflictError);
     return conflictError;
   }
   
@@ -51,6 +87,7 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('access denied')) {
     const permissionError = new Error('You do not have permission to perform this action.');
     permissionError.name = 'PermissionError';
+    preserveProps(permissionError);
     return permissionError;
   }
   
@@ -59,6 +96,7 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('404')) {
     const notFoundError = new Error('The requested resource was not found.');
     notFoundError.name = 'NotFoundError';
+    preserveProps(notFoundError);
     return notFoundError;
   }
   
@@ -68,12 +106,14 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('server error')) {
     const serverError = new Error('A server error occurred. Please try again later.');
     serverError.name = 'ServerError';
+    preserveProps(serverError);
     return serverError;
   }
   
   // Default: return original error but with consistent formatting
   const formattedError = new Error(errorMessage);
   formattedError.name = 'ApplicationError';
+  preserveProps(formattedError);
   return formattedError;
 };
 
@@ -203,7 +243,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           throw authErr;
         }
         
-        console.error(`API Error (${response.status}):`, errorData);
+  console.error(`API Error (${response.status}):`, errorData);
         
         // Format error message to include field-specific errors
         let errorMessage = errorData.message || errorData.error || response.statusText;
@@ -214,7 +254,11 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
           errorMessage = `${errorMessage}. ${fieldErrors}`;
         }
         
-        throw new Error(errorMessage);
+        const httpError: any = new Error(errorMessage);
+        httpError.status = response.status;
+        httpError.code = errorData.code;
+        httpError.data = errorData;
+        throw httpError;
       }
 
       const data = await response.json();
@@ -826,6 +870,7 @@ export const clientOrganizationsApi = {
     email: string;
   designation?: string;
     password: string;
+  isPrimary?: boolean;
   }) => {
     return apiRequest(`/client-organizations/${organizationId}/coordinators`, {
       method: 'POST',
@@ -839,6 +884,7 @@ export const clientOrganizationsApi = {
     email?: string;
   designation?: string;
     status?: string;
+  isPrimary?: boolean;
   }) => {
     return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {
       method: 'PUT',

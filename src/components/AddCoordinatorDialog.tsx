@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
 
 interface AddCoordinatorDialogProps {
-  onCoordinatorAdd: (coordinatorData: { name: string; email: string; designation: string; password: string }) => Promise<void>;
+  onCoordinatorAdd: (coordinatorData: { name: string; email: string; designation: string; password: string; isPrimary?: boolean }) => Promise<void>;
 }
 
 export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogProps) {
@@ -19,6 +19,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
     email: "",
     contactNumber: "",
     designation: "",
+    isPrimary: false,
   });
 
   const { toast } = useToast();
@@ -44,6 +45,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         email: formData.email,
         designation: formData.designation,
         password: tempPassword,
+        isPrimary: formData.isPrimary || false,
       });
 
       // Only show success toast if the API call succeeds
@@ -58,6 +60,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         email: "",
         contactNumber: "",
         designation: "",
+        isPrimary: false,
       });
       setOpen(false);
     } catch (error) {
@@ -91,6 +94,17 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Enter coordinator's full name"
             />
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2">
+            <input
+              id="isPrimary"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={formData.isPrimary}
+              onChange={(e) => setFormData((prev) => ({ ...prev, isPrimary: e.target.checked }))}
+            />
+            <Label htmlFor="isPrimary">Set as primary training coordinator</Label>
           </div>
 
           <div>

@@ -14,6 +14,7 @@ interface TrainingCoordinator {
   email: string;
   designation: string;
   status: string;
+  isPrimaryCoordinator?: boolean;
 }
 
 interface EditCoordinatorDialogProps {
@@ -27,6 +28,7 @@ interface EditCoordinatorDialogProps {
       email?: string;
       designation?: string;
       status?: string;
+      isPrimary?: boolean;
     }
   ) => Promise<void>;
 }
@@ -37,6 +39,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
     email: "",
     designation: "",
     status: "ACTIVE",
+    isPrimary: false,
   });
   const [loading, setLoading] = useState(false);
 
@@ -50,6 +53,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
         email: coordinator.email || "",
         designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
+        isPrimary: !!coordinator.isPrimaryCoordinator,
       });
     }
   }, [coordinator]);
@@ -74,6 +78,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
         email: formData.email,
         designation: formData.designation,
         status: formData.status,
+        isPrimary: formData.isPrimary,
       });
 
       // Only show success toast if the API call succeeds
@@ -98,6 +103,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
         email: coordinator.email || "",
         designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
+        isPrimary: !!coordinator.isPrimaryCoordinator,
       });
     }
     onOpenChange(false);
@@ -124,6 +130,17 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
               placeholder="Enter coordinator's full name"
               disabled={loading}
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              id="isPrimary"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={formData.isPrimary}
+              onChange={(e) => setFormData((prev) => ({ ...prev, isPrimary: e.target.checked }))}
+            />
+            <Label htmlFor="isPrimary">Set as primary training coordinator</Label>
           </div>
 
           <div>

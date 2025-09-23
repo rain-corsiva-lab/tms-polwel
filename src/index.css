@@ -138,3 +138,13 @@
 .relative > .date-input-no-native {
   cursor: pointer;
 }
+
+/* Raise SweetAlert2 above dialog overlays */
+.swal2-container {
+  z-index: 100000 !important;
+}
+
+/* While SweetAlert2 is open, disable pointer events on Radix portals (dialogs, dropdowns) */
+body.swal2-shown [data-radix-portal] {
+  pointer-events: none !important;
+}

@@ -425,9 +425,43 @@ export default function TrainerDashboard() {
                     ))}
                     {selectedDateEvents.blockouts.map((blockout: any) => (
                       <div key={blockout.id} className="p-3 border rounded-lg bg-red-50">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <CalendarIcon className="h-4 w-4 text-red-500" />
-                          <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <CalendarIcon className="h-4 w-4 text-red-500" />
+                            <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const trainerId = dashboardData?.profile?.id;
+                                if (!trainerId) return;
+                                const result = await Swal.fire({
+                                  title: "Remove unavailable dates?",
+                                  text: "This will make the selected dates available again.",
+                                  icon: "warning",
+                                  showCancelButton: true,
+                                  confirmButtonColor: "#dc2626",
+                                  cancelButtonColor: "#6b7280",
+                                  confirmButtonText: "Yes, remove",
+                                  cancelButtonText: "Cancel",
+                                });
+                                if (!result.isConfirmed) return;
+                                await trainersApi.deleteBlockout(trainerId, blockout.id);
+                                toast({ title: "Blockout removed", description: "The date range is now available." });
+                                setSelectedDateEvents((prev) => ({
+                                  ...prev,
+                                  blockouts: prev.blockouts.filter((b: any) => b.id !== blockout.id),
+                                }));
+                                setSelectedDate(new Date(selectedDate));
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e?.message || "Failed to remove blockout", variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Remove
+                          </Button>
                         </div>
                         <div className="text-sm text-red-600">Unavailable</div>
                       </div>

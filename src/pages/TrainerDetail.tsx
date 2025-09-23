@@ -54,6 +54,7 @@ const TrainerDetail = () => {
   const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
   const [showFeeDialog, setShowFeeDialog] = useState(false);
   const [editingFee, setEditingFee] = useState<TrainerFee | null>(null);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
 
   // State for editable profile data
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -452,6 +453,7 @@ const TrainerDetail = () => {
           </CardHeader>
           <CardContent>
             <TrainerCalendar
+              key={calendarRefreshKey}
               trainerId={trainer.id}
               trainerName={trainer.name}
               selectedDate={selectedDate}
@@ -470,7 +472,7 @@ const TrainerDetail = () => {
               <div className="space-y-3">
                 {selectedDateEvents.courseRuns.map((run: any) => (
                   <div key={run.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex items-center space-x-2 mb-1">
                       <Calendar className="h-4 w-4 text-primary" />
                       <span className="font-medium">{run.courseName}</span>
                     </div>
@@ -492,9 +494,42 @@ const TrainerDetail = () => {
                 ))}
                 {selectedDateEvents.blockouts.map((blockout: any) => (
                   <div key={blockout.id} className="p-3 border rounded-lg bg-red-50">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Calendar className="h-4 w-4 text-red-500" />
-                      <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-red-500" />
+                        <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            if (!id) return;
+                            const result = await Swal.fire({
+                              title: "Remove unavailable dates?",
+                              text: "This will make the selected dates available again.",
+                              icon: "warning",
+                              showCancelButton: true,
+                              confirmButtonColor: "#dc2626",
+                              cancelButtonColor: "#6b7280",
+                              confirmButtonText: "Yes, remove",
+                              cancelButtonText: "Cancel",
+                            });
+                            if (!result.isConfirmed) return;
+                            await trainersApi.deleteBlockout(id, blockout.id);
+                            toast({ title: "Blockout Removed", description: "Date range is now available." });
+                            setSelectedDateEvents((prev) => ({
+                              ...prev,
+                              blockouts: prev.blockouts.filter((b: any) => b.id !== blockout.id),
+                            }));
+                            setCalendarRefreshKey((k) => k + 1);
+                          } catch (e: any) {
+                            toast({ title: "Error", description: e?.message || "Failed to remove blockout", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Remove
+                      </Button>
                     </div>
                     <div className="text-sm text-red-600">
                       <div>Unavailable</div>

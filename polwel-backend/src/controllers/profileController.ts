@@ -85,8 +85,17 @@ export const changePassword = async (req: AuthenticatedRequest, res: Response) =
 
     const { currentPassword, newPassword } = req.body;
 
-    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 12) {
-      return res.status(400).json({ success: false, message: 'New password must be at least 12 characters long' });
+    // Strong password: min 12 chars, upper, lower, number, special
+    const requirements = [
+      { ok: typeof newPassword === 'string' && newPassword.length >= 12, msg: 'at least 12 characters' },
+      { ok: /[A-Z]/.test(newPassword || ''), msg: 'one uppercase letter' },
+      { ok: /[a-z]/.test(newPassword || ''), msg: 'one lowercase letter' },
+      { ok: /\d/.test(newPassword || ''), msg: 'one number' },
+      { ok: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword || ''), msg: 'one special character' },
+    ];
+    const failed = requirements.filter(r => !r.ok).map(r => r.msg);
+    if (failed.length > 0) {
+      return res.status(400).json({ success: false, message: `New password must contain ${failed.join(', ')}.` });
     }
 
     if (!currentPassword || typeof currentPassword !== 'string') {

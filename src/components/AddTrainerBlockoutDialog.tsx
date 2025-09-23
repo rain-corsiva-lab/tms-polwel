@@ -79,11 +79,12 @@ export function AddTrainerBlockoutDialog({ isOpen, onClose, trainerId, onBlockou
 
       onBlockoutAdded(); // Refresh dashboard data
       onClose(); // Close dialog
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating blockout:", error);
+      const message = error?.message || "Failed to add blockout dates. Please try again.";
       toast({
-        title: "Error",
-        description: "Failed to add blockout dates. Please try again.",
+        title: "Unable to add blockout",
+        description: message,
         variant: "destructive",
       });
     }

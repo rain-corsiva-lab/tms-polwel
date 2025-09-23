@@ -43,6 +43,7 @@ model User {
   experience          String?             @db.Text
   rating              Float?
   employeeId          String?
+  isPrimaryCoordinator Boolean             @default(false)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   createdBy           String?

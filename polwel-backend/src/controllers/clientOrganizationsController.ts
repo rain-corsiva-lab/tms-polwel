@@ -442,6 +442,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
           email: true,
           designation: true,
           status: true,
+          isPrimaryCoordinator: true,
           lastLogin: true,
           createdAt: true,
           updatedAt: true
@@ -459,6 +460,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
       email: coordinator.email,
   designation: coordinator.designation || 'N/A',
   status: coordinator.status,
+      isPrimaryCoordinator: coordinator.isPrimaryCoordinator,
       lastActive: coordinator.lastLogin 
         ? new Date(coordinator.lastLogin).toISOString()
         : 'Never',
@@ -488,7 +490,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
 export const createOrganizationCoordinator = async (req: AuthenticatedRequest, res: Response) => {
   try {
   const { organizationId } = req.params;
-  const { name, email, designation, password } = req.body;
+  const { name, email, designation, password, isPrimary } = req.body;
 
     if (!organizationId) {
       return res.status(400).json({
@@ -534,29 +536,43 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
     const setupToken = crypto.randomBytes(32).toString('hex');
 
-    const coordinator = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: 'TRAINING_COORDINATOR',
-        organizationId,
-  designation: designation || null,
-        status: 'PENDING', // Set as PENDING for onboarding
-        resetToken: setupToken, // Use resetToken for account completion
-        resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-        emailVerified: false, // Will be verified during onboarding
-        createdBy: req.user?.userId || null
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        designation: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true
+    // Create coordinator, optionally setting as primary and clearing existing primary in a transaction
+    const coordinator = await prisma.$transaction(async (tx) => {
+      if (isPrimary === true) {
+        await tx.user.updateMany({
+          where: { organizationId, role: 'TRAINING_COORDINATOR', isPrimaryCoordinator: true },
+          data: { isPrimaryCoordinator: false }
+        });
       }
+
+      const created = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: 'TRAINING_COORDINATOR',
+          organizationId,
+          designation: designation || null,
+          status: 'PENDING',
+          resetToken: setupToken,
+          resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          emailVerified: false,
+          createdBy: req.user?.userId || null,
+          isPrimaryCoordinator: isPrimary === true
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          designation: true,
+          status: true,
+          isPrimaryCoordinator: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      return created;
     });
 
     // Send setup completion email
@@ -589,7 +605,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
 export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, res: Response) => {
   try {
   const { organizationId, coordinatorId } = req.params;
-  const { name, email, designation, status } = req.body;
+  const { name, email, designation, status, isPrimary } = req.body;
 
     if (!organizationId || !coordinatorId) {
       return res.status(400).json({
@@ -628,24 +644,37 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
       }
     }
 
-    const updatedCoordinator = await prisma.user.update({
-      where: { id: coordinatorId },
-      data: {
-        ...(name && { name }),
-        ...(email && { email }),
-        ...(designation !== undefined && { designation }),
-        ...(status && { status })
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        designation: true,
-        status: true,
-        lastLogin: true,
-        createdAt: true,
-        updatedAt: true,
+    const updatedCoordinator = await prisma.$transaction(async (tx) => {
+      if (isPrimary === true) {
+        await tx.user.updateMany({
+          where: { organizationId, role: 'TRAINING_COORDINATOR', NOT: { id: coordinatorId } },
+          data: { isPrimaryCoordinator: false }
+        });
       }
+
+      const updated = await tx.user.update({
+        where: { id: coordinatorId },
+        data: {
+          ...(name && { name }),
+          ...(email && { email }),
+          ...(designation !== undefined && { designation }),
+          ...(status && { status }),
+          ...(isPrimary !== undefined && { isPrimaryCoordinator: !!isPrimary })
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          designation: true,
+          status: true,
+          isPrimaryCoordinator: true,
+          lastLogin: true,
+          createdAt: true,
+          updatedAt: true,
+        }
+      });
+
+      return updated;
     });
 
     return res.json({
