@@ -142,7 +142,7 @@ const CourseForm: React.FC = () => {
       value = value
         .toUpperCase()
         .replace(/[^A-Z0-9_-]/g, "")
-        .slice(0, 20);
+        .slice(0, 5);
     }
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -179,8 +179,10 @@ const CourseForm: React.FC = () => {
       errors.push("Duration is required");
     }
 
-    if (formData.courseCode && formData.courseCode.trim().length < 3) {
-      errors.push("Course code must be at least 3 characters");
+    if (!formData.courseCode?.trim()) {
+      errors.push("Course code is required");
+    } else if (formData.courseCode.trim().length !== 5) {
+      errors.push("Course code must be exactly 5 characters");
     }
 
     if (errors.length > 0) {

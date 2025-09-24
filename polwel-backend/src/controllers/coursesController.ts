@@ -10,7 +10,7 @@ import sanitizeHtml from 'sanitize-html';
 // Validation schemas based on actual schema and frontend form
 const CourseCreateSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  courseCode: z.string().trim().min(3, "Course code must be at least 3 chars").max(50).optional(),
+  courseCode: z.string().trim().length(5, "Course code must be exactly 5 characters"),
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   objectives: z.union([z.array(z.string()), z.any()]).default([]),

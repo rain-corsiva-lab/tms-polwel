@@ -54,9 +54,15 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
           <Input id="title" value={formData.title} onChange={(e) => onInputChange("title", e.target.value)} placeholder="Enter course title" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="courseCode">Course Code</Label>
-          <Input id="courseCode" value={formData.courseCode || ""} onChange={(e) => onInputChange("courseCode", e.target.value)} placeholder="e.g. LDR-101" />
-          <p className="text-[10px] text-muted-foreground">Optional unique code (auto uppercased)</p>
+          <Label htmlFor="courseCode">Course Code *</Label>
+          <Input
+            id="courseCode"
+            value={formData.courseCode || ""}
+            onChange={(e) => onInputChange("courseCode", e.target.value)}
+            placeholder="e.g. LDR01"
+            maxLength={5}
+          />
+          <p className="text-[10px] text-muted-foreground">Must be exactly 5 characters (auto uppercased)</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="category">Course Category *</Label>
