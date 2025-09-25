@@ -27,6 +27,7 @@ const PERMISSIONS: Perm[] = [
   { name: 'courses.view', description: 'View courses', module: 'Course Management', action: 'read' },
   { name: 'courses.create', description: 'Create courses', module: 'Course Management', action: 'create' },
   { name: 'courses.edit', description: 'Edit courses', module: 'Course Management', action: 'update' },
+  { name: 'courses.approve', description: 'Approve course runs', module: 'Course Management', action: 'approve' },
   { name: 'courses.delete', description: 'Delete courses', module: 'Course Management', action: 'delete' },
 
   // Venues

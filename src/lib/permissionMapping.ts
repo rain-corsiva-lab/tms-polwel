@@ -18,6 +18,7 @@ const permissionNameMapping: Record<string, string> = {
   'course-runs-operations:view': 'courses.view',
   'course-runs-operations:create': 'courses.create',
   'course-runs-operations:edit': 'courses.edit',
+  'course-runs-operations:approve': 'courses.approve',
   'course-runs-operations:delete': 'courses.delete',
 
   'course-venue-setup:view': 'venues.view',

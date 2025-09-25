@@ -181,8 +181,8 @@ const CourseForm: React.FC = () => {
 
     if (!formData.courseCode?.trim()) {
       errors.push("Course code is required");
-    } else if (formData.courseCode.trim().length !== 5) {
-      errors.push("Course code must be exactly 5 characters");
+    } else if (formData.courseCode.trim().length > 5) {
+      errors.push("Course code must be at most 5 characters");
     }
 
     if (errors.length > 0) {

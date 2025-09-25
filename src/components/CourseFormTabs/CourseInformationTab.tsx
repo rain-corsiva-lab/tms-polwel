@@ -62,7 +62,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
             placeholder="e.g. LDR01"
             maxLength={5}
           />
-          <p className="text-[10px] text-muted-foreground">Must be exactly 5 characters (auto uppercased)</p>
+          <p className="text-[10px] text-muted-foreground">Maximum 5 characters (auto uppercased)</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="category">Course Category *</Label>

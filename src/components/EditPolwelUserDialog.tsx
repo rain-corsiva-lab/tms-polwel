@@ -16,7 +16,10 @@ interface ModulePermissions {
   create: boolean;
   edit: boolean;
   delete: boolean;
+  approve?: boolean;
 }
+
+// ...existing code...
 
 interface UserPermissions {
   "user-management-polwel": ModulePermissions;
@@ -67,7 +70,8 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
     "user-management-trainers": { view: false, create: false, edit: false, delete: false },
     "user-management-client-orgs": { view: false, create: false, edit: false, delete: false },
     "course-venue-setup": { view: false, create: false, edit: false, delete: false },
-    "course-runs-operations": { view: false, create: false, edit: false, delete: false },
+    // Approve exists only for course-runs
+    "course-runs-operations": { view: false, create: false, edit: false, delete: false, approve: false },
     "email-reporting-library": { view: false, create: false, edit: false, delete: false },
     "finance-activity": { view: false, create: false, edit: false, delete: false },
   });
@@ -93,6 +97,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
         create: "create",
         edit: "edit",
         delete: "delete",
+        approve: "approve",
       };
 
       user.permissions.forEach((perm) => {
@@ -237,6 +242,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Create</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Edit</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Delete</th>
+                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Approve</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">All</th>
                       </tr>
                     </thead>
@@ -255,17 +261,45 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
                         return (
                           <tr key={module} className="border-b hover:bg-muted/30">
                             <td className="p-3 font-medium text-foreground">{moduleDisplayNames[module] || module}</td>
-                            {Object.entries(modulePermissions).map(([permission, checked]) => (
-                              <td key={permission} className="p-3 text-center">
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).view)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "view" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).create)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "create" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).edit)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "edit" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).delete)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "delete" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              {module === "course-runs-operations" ? (
                                 <Checkbox
-                                  checked={checked as CheckedState}
-                                  onCheckedChange={(checkedState) =>
-                                    handlePermissionChange(module as keyof UserPermissions, permission as keyof ModulePermissions, checkedState)
-                                  }
+                                  checked={Boolean((modulePermissions as any).approve)}
+                                  onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "approve" as any, s)}
                                   className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                                 />
-                              </td>
-                            ))}
+                              ) : (
+                                <div />
+                              )}
+                            </td>
                             <td className="p-3 text-center">
                               <Checkbox
                                 checked={Object.values(modulePermissions).every((v) => v) as CheckedState}

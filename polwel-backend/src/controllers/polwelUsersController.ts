@@ -44,6 +44,7 @@ const permissionNameMapping: Record<string, string> = {
   'course-runs-operations:view': 'courses.view',
   'course-runs-operations:create': 'courses.create',
   'course-runs-operations:edit': 'courses.edit',
+  'course-runs-operations:approve': 'courses.approve',
   'course-runs-operations:update': 'courses.edit',
   'course-runs-operations:delete': 'courses.delete',
   
@@ -553,9 +554,34 @@ export const createPolwelUser = async (req: AuthenticatedRequest, res: Response)
   console.log('Requested permission candidates for creation:', requestedSet);
 
   // Resolve against permissions table to ensure only valid canonical names are stored
-  const dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
+  let dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
   const dbNames = dbPermissions.map(p => p.name);
-  mappedPermissions = requestedSet.filter(p => dbNames.includes(p));
+
+  // If some requested permissions are not present in DB, attempt to create them with safe defaults
+  const missing = requestedSet.filter(p => !dbNames.includes(p));
+  if (missing.length > 0) {
+    console.log('Missing permissions in DB, creating:', missing);
+    const toCreate = missing.map(name => ({ name, description: name, module: name.split('.')[0] || 'General', action: name.split('.')[1] || 'custom' }));
+    try {
+      // Use createMany with skipDuplicates where supported; fall back to individual upserts if needed
+      await prisma.permission.createMany({ data: toCreate, skipDuplicates: true });
+    } catch (e) {
+      // fallback: upsert each
+      for (const p of toCreate) {
+        try {
+          await prisma.permission.upsert({ where: { name: p.name }, update: { description: p.description, module: p.module, action: p.action }, create: p });
+        } catch (err) {
+          console.error('Failed to upsert permission:', p.name, err);
+        }
+      }
+    }
+
+    // Reload permissions
+    dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
+  }
+
+  const dbNamesFinal = dbPermissions.map(p => p.name);
+  mappedPermissions = requestedSet.filter(p => dbNamesFinal.includes(p));
   console.log('Normalized permission names for creation (validated against DB):', mappedPermissions);
     // if (validPermissions.length !== permissions.length) {
     //   return res.status(400).json({
@@ -722,9 +748,31 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
       // Normalize: dedupe + validate against DB permissions table
       const requestedSet = Array.from(new Set(mappedPermissions));
       console.log('Requested permission candidates for update:', requestedSet);
-      const dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
+      let dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
       const dbNames = dbPermissions.map(p => p.name);
-      mappedPermissions = requestedSet.filter(p => dbNames.includes(p));
+
+      // Auto-create missing permission definitions if necessary
+      const missing = requestedSet.filter(p => !dbNames.includes(p));
+      if (missing.length > 0) {
+        console.log('Missing permissions in DB for update, creating:', missing);
+        const toCreate = missing.map(name => ({ name, description: name, module: name.split('.')[0] || 'General', action: name.split('.')[1] || 'custom' }));
+        try {
+          await prisma.permission.createMany({ data: toCreate, skipDuplicates: true });
+        } catch (e) {
+          for (const p of toCreate) {
+            try {
+              await prisma.permission.upsert({ where: { name: p.name }, update: { description: p.description, module: p.module, action: p.action }, create: p });
+            } catch (err) {
+              console.error('Failed to upsert permission during update:', p.name, err);
+            }
+          }
+        }
+
+        dbPermissions = await prisma.permission.findMany({ where: { name: { in: requestedSet.map(String) } } });
+      }
+
+      const dbNamesFinal = dbPermissions.map(p => p.name);
+      mappedPermissions = requestedSet.filter(p => dbNamesFinal.includes(p));
       console.log('Normalized permission names for update (validated against DB):', mappedPermissions);
     }
 

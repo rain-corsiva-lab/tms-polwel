@@ -16,6 +16,7 @@ interface ModulePermissions {
   create: boolean;
   edit: boolean;
   delete: boolean;
+  approve?: boolean;
 }
 
 interface UserPermissions {
@@ -42,7 +43,8 @@ export function AddPolwelUserDialog() {
     "user-management-trainers": { view: false, create: false, edit: false, delete: false },
     "user-management-client-orgs": { view: false, create: false, edit: false, delete: false },
     "course-venue-setup": { view: false, create: false, edit: false, delete: false },
-    "course-runs-operations": { view: false, create: false, edit: false, delete: false },
+    // Only course-runs-operations includes approve
+    "course-runs-operations": { view: false, create: false, edit: false, delete: false, approve: false },
     "email-reporting-library": { view: false, create: false, edit: false, delete: false },
     "finance-activity": { view: false, create: false, edit: false, delete: false },
   });
@@ -105,13 +107,13 @@ export function AddPolwelUserDialog() {
       // Reset form and close dialog
       setFormData({ name: "", email: "" });
       setPermissions({
-        "user-management-polwel": { view: false, create: false, edit: false, delete: false },
-        "user-management-trainers": { view: false, create: false, edit: false, delete: false },
-        "user-management-client-orgs": { view: false, create: false, edit: false, delete: false },
-        "course-venue-setup": { view: false, create: false, edit: false, delete: false },
-        "course-runs-operations": { view: false, create: false, edit: false, delete: false },
-        "email-reporting-library": { view: false, create: false, edit: false, delete: false },
-        "finance-activity": { view: false, create: false, edit: false, delete: false },
+        "user-management-polwel": { view: false, create: false, edit: false, delete: false, approve: false },
+        "user-management-trainers": { view: false, create: false, edit: false, delete: false, approve: false },
+        "user-management-client-orgs": { view: false, create: false, edit: false, delete: false, approve: false },
+        "course-venue-setup": { view: false, create: false, edit: false, delete: false, approve: false },
+        "course-runs-operations": { view: false, create: false, edit: false, delete: false, approve: false },
+        "email-reporting-library": { view: false, create: false, edit: false, delete: false, approve: false },
+        "finance-activity": { view: false, create: false, edit: false, delete: false, approve: false },
       });
       setOpen(false);
 
@@ -185,6 +187,7 @@ export function AddPolwelUserDialog() {
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Create</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Edit</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Delete</th>
+                        <th className="text-center p-3 font-medium text-foreground min-w-[80px]">Approve</th>
                         <th className="text-center p-3 font-medium text-foreground min-w-[80px]">All</th>
                       </tr>
                     </thead>
@@ -203,17 +206,45 @@ export function AddPolwelUserDialog() {
                         return (
                           <tr key={module} className="border-b hover:bg-muted/30">
                             <td className="p-3 font-medium text-foreground">{moduleDisplayNames[module] || module}</td>
-                            {Object.entries(modulePermissions).map(([permission, checked]) => (
-                              <td key={permission} className="p-3 text-center">
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).view)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "view" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).create)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "create" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).edit)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "edit" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              <Checkbox
+                                checked={Boolean((modulePermissions as any).delete)}
+                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "delete" as keyof ModulePermissions, s)}
+                                className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                              />
+                            </td>
+                            <td className="p-3 text-center">
+                              {module === "course-runs-operations" ? (
                                 <Checkbox
-                                  checked={checked as CheckedState}
-                                  onCheckedChange={(checkedState) =>
-                                    handlePermissionChange(module as keyof UserPermissions, permission as keyof ModulePermissions, checkedState)
-                                  }
+                                  checked={Boolean((modulePermissions as any).approve)}
+                                  onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "approve" as any, s)}
                                   className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                                 />
-                              </td>
-                            ))}
+                              ) : (
+                                <div />
+                              )}
+                            </td>
                             {/* All checkbox for this module */}
                             <td className="p-3 text-center">
                               <Checkbox
