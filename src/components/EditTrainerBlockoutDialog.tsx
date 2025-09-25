@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { formatDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { TrainerBlockout } from "@/types/trainer";
 
@@ -129,7 +130,7 @@ export function EditTrainerBlockoutDialog({ blockout, onBlockoutUpdate, onClose 
                     className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground", errors.startDate && "border-red-500")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "MMM dd, yyyy") : "Start date"}
+                    {startDate ? formatDate(startDate) : "Start date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -164,7 +165,7 @@ export function EditTrainerBlockoutDialog({ blockout, onBlockoutUpdate, onClose 
                     className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground", errors.endDate && "border-red-500")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "MMM dd, yyyy") : "End date"}
+                    {endDate ? formatDate(endDate) : "End date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">

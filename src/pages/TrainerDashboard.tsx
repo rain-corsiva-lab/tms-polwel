@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatDate } from "../lib/date";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -311,7 +312,7 @@ export default function TrainerDashboard() {
                 )}
                 <div className="flex items-center space-x-3">
                   <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Joined {new Date(profile.createdAt).toLocaleDateString()}</span>
+                  <span className="text-sm">Joined {formatDate(profile.createdAt)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -397,14 +398,7 @@ export default function TrainerDashboard() {
             {/* Selected Date Events */}
             <Card>
               <CardHeader>
-                <CardTitle>
-                  {selectedDate.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </CardTitle>
+                <CardTitle>{formatDate(selectedDate)}</CardTitle>
               </CardHeader>
               <CardContent>
                 {selectedDateEvents.courseRuns.length > 0 || selectedDateEvents.blockouts.length > 0 ? (
@@ -627,7 +621,7 @@ export default function TrainerDashboard() {
                           </div>
                         </td>
                         <td className="p-2">
-                          {new Date(run.startDate).toLocaleDateString()} - {new Date(run.endDate).toLocaleDateString()}
+                          {formatDate(run.startDate)} - {formatDate(run.endDate)}
                         </td>
                         <td className="p-2">{run.startTime} - {run.endTime}</td>
                         <td className="p-2">{run.currentParticipants}/{run.maxParticipants}</td>

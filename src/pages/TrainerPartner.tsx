@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { formatDate } from "../lib/date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,7 @@ const TrainerPartner = () => {
                 </div>
                 <div className="flex items-center space-x-3">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Joined {new Date(trainerData.joinDate).toLocaleDateString()}</span>
+                  <span className="text-sm">Joined {formatDate(trainerData.joinDate)}</span>
                 </div>
               </div>
             </CardContent>

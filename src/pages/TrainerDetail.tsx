@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Mail, Phone, Calendar, Edit, Loader2 } from "lucide-react";
-import { formatDateDDMMYYYY } from "@/lib/utils";
+import { formatDate } from "@/lib/date";
 import TrainerCalendar from "@/components/TrainerCalendar";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { trainersApi, coursesApi } from "@/lib/api";
@@ -354,7 +354,7 @@ const TrainerDetail = () => {
             {trainer.onboardingDate && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{formatDateDDMMYYYY(trainer.onboardingDate)}</span>
+                <span className="text-sm">{formatDate(trainer.onboardingDate)}</span>
               </div>
             )}
           </CardContent>
@@ -464,7 +464,7 @@ const TrainerDetail = () => {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</CardTitle>
+            <CardTitle>{formatDate(selectedDate)}</CardTitle>
             <CardDescription>Events and blockouts for selected date</CardDescription>
           </CardHeader>
           <CardContent>

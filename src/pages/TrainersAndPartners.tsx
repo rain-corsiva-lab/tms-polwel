@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDate } from "../lib/date";
 import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -341,8 +342,8 @@ const TrainersAndPartners = () => {
                 Status: t.status,
                 Courses: t.courses.join("; "),
                 PartnerOrganization: t.partnerOrganization || "",
-                CreatedAt: new Date(t.createdAt).toISOString(),
-                UpdatedAt: new Date(t.updatedAt).toISOString(),
+                CreatedAt: formatDate(t.createdAt),
+                UpdatedAt: formatDate(t.updatedAt),
               }));
               const partnerRows = partners.map((p) => ({
                 PartnerName: p.partnerName,
@@ -351,8 +352,8 @@ const TrainersAndPartners = () => {
                 ContactNumber: p.contactNumber,
                 ContactDesignation: p.contactDesignation,
                 CoursesAssigned: p.coursesAssigned.join("; "),
-                CreatedAt: new Date(p.createdAt).toISOString(),
-                UpdatedAt: new Date(p.updatedAt).toISOString(),
+                CreatedAt: formatDate(p.createdAt),
+                UpdatedAt: formatDate(p.updatedAt),
               }));
               const wb = XLSX.utils.book_new();
               const trainerSheet = XLSX.utils.json_to_sheet(trainerRows);
@@ -454,7 +455,7 @@ const TrainersAndPartners = () => {
                           <div>
                             <p className="font-medium text-foreground">{trainer.name}</p>
                             <p className="text-sm text-muted-foreground">{trainer.email}</p>
-                            <p className="text-xs text-muted-foreground">Created: {new Date(trainer.createdAt).toLocaleDateString()}</p>
+                            <p className="text-xs text-muted-foreground">Created: {formatDate(trainer.createdAt)}</p>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Badge variant="outline" className="text-warning border-warning">

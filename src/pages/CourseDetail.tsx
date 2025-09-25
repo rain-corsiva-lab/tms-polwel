@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Clock, Users, MapPin, Award, Percent, GraduationCap, ClipboardCheck, User as UserIcon, Layers } from "lucide-react";
 import { coursesApi } from "@/lib/api";
+import { formatDate } from "../lib/date";
 import DOMPurify from "dompurify";
 import { useToast } from "@/hooks/use-toast";
 
@@ -398,11 +399,11 @@ const CourseDetail = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Created:</span>
-                <span className="text-sm font-medium">{course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "-"}</span>
+                <span className="text-sm font-medium">{course.createdAt ? formatDate(course.createdAt) : "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Last Updated:</span>
-                <span className="text-sm font-medium">{course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : "-"}</span>
+                <span className="text-sm font-medium">{course.updatedAt ? formatDate(course.updatedAt) : "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Course ID:</span>

@@ -6,6 +6,7 @@ import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/date";
 
 interface User {
   id: string;
@@ -101,7 +102,7 @@ const UserTable = ({ users, title }: UserTableProps) => {
                   <td className="py-3 px-4">
                     <div>
                       {user.role === "POLWEL" && user.auditTrail ? (
-                        <AuditTrailDialog userName={user.name} userEmail={user.email} auditTrail={user.auditTrail}>
+                        <AuditTrailDialog userId={user.id} userName={user.name} userEmail={user.email}>
                           <button className="text-left hover:text-primary transition-colors">
                             <div className="font-medium text-foreground underline decoration-dotted">{user.name}</div>
                             {user.organization && (
@@ -140,7 +141,7 @@ const UserTable = ({ users, title }: UserTableProps) => {
                   <td className="py-3 px-4">
                     <div className="text-muted-foreground text-sm">{user.passwordExpiry || "Not set"}</div>
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground">{user.lastLogin || "Never"}</td>
+                  <td className="py-3 px-4 text-muted-foreground">{user.lastLogin ? formatDate(user.lastLogin) : "Never"}</td>
                   <td className="py-3 px-4">
                     <SafeDropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -154,7 +155,7 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           View Details
                         </DropdownMenuItem>
                         {user.role === "POLWEL" && user.auditTrail && (
-                          <AuditTrailDialog userName={user.name} userEmail={user.email} auditTrail={user.auditTrail}>
+                          <AuditTrailDialog userId={user.id} userName={user.name} userEmail={user.email}>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               <History className="h-4 w-4 mr-2" />
                               View Audit Trail

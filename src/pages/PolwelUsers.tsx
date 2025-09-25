@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "../lib/date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -263,9 +264,9 @@ export default function PolwelUsers() {
                 Name: u.name,
                 Email: u.email,
                 Status: u.status,
-                LastLogin: u.lastLogin ? format(new Date(u.lastLogin), "dd/MM/yyyy") : "Never",
-                CreatedAt: format(new Date(u.createdAt), "dd/MM/yyyy"),
-                UpdatedAt: format(new Date(u.updatedAt), "dd/MM/yyyy"),
+                LastLogin: u.lastLogin ? formatDate(u.lastLogin) : "Never",
+                CreatedAt: formatDate(u.createdAt),
+                UpdatedAt: formatDate(u.updatedAt),
               }));
               const ws = XLSX.utils.json_to_sheet(rows);
               const wb = XLSX.utils.book_new();
@@ -384,7 +385,7 @@ export default function PolwelUsers() {
                           } catch (e) {
                             // Fallback to toLocaleDateString if parse fails
                             try {
-                              return new Date(user.lastLogin as string).toLocaleDateString();
+                              return formatDate(user.lastLogin);
                             } catch (ee) {
                               return "Invalid date";
                             }

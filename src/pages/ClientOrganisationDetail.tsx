@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatDate } from "../lib/date";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -654,7 +655,7 @@ const ClientOrganisationDetail = () => {
                         </TableCell>
                         <TableCell>{coordinator.email}</TableCell>
                         <TableCell>{coordinator.designation}</TableCell>
-                        <TableCell>{new Date(coordinator.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>{formatDate(coordinator.createdAt)}</TableCell>
                         <TableCell>
                           <DropdownMenu open={openMenuId === coordinator.id} onOpenChange={(next) => handleMenuOpenChange(next, next ? coordinator.id : null)}>
                             <DropdownMenuTrigger asChild>
