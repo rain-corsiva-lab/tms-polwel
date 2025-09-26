@@ -647,16 +647,20 @@ export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Respo
             address: true
           }
         },
-        trainer: {
+        courseRunTrainers: {
           select: {
-            id: true,
-            name: true,
-            email: true
+            trainer: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
           }
         }
       },
       orderBy: {
-        startDate: 'asc'
+        startDatetime: 'asc'
       }
     });
 

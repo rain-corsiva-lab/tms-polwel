@@ -8,59 +8,61 @@ datasource db {
 }
 
 model User {
-  id                  String              @id @default(cuid())
-  email               String?             @unique
-  password            String
-  name                String
-  role                UserRole
-  status              UserStatus          @default(PENDING)
-  emailVerified       Boolean             @default(false)
-  // mfaEnabled removed
-  mfaSecret           String?             @db.Text
-  lastLogin           DateTime?
-  passwordExpiry      DateTime?
-  failedLoginAttempts Int                 @default(0)
-  lockedUntil         DateTime?
-  refreshToken        String?             @db.Text
-  resetToken          String?             @db.Text
-  resetTokenExpiry    DateTime?
-  permissionLevel     String?
-  designation         String?
-  organizationId      String?
-  division            String?
-  buCostCentre        String?
-  buNumberRequired    Boolean?
-  paymentMode         PaymentMode?
-  contactNumber       String?
-  additionalEmails    Json?
-  availabilityStatus  AvailabilityStatus?
-  onboardingDate      DateTime?
-  partnerOrganization String?
-  bio                 String?             @db.Text
-  specializations     Json?
-  certifications      Json?
-  profileImage        String?
-  experience          String?             @db.Text
-  rating              Float?
-  employeeId          String?
-  isPrimaryCoordinator Boolean             @default(false)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  createdBy           String?
-  old_email           String?
-  auditLogs           AuditLog[]
-  bookingsCreated     Booking[]           @relation("BookingCreatedBy")
-  bookings            Booking[]           @relation("BookingUser")
-  courseRunsAssigned  CourseRun[]         @relation("CourseTrainer")
-  coursesCreated      Course[]            @relation("CourseCreator")
-  trainerBlockouts    TrainerBlockout[]
-  permissions         UserPermission[]
-  createdByUser       User?               @relation("UserCreatedBy", fields: [createdBy], references: [id])
-  usersCreated        User[]              @relation("UserCreatedBy")
-  organization        Organization?       @relation(fields: [organizationId], references: [id])
-  venuesCreated       Venue[]
-  trainerFeesCreated  TrainerFee[]        @relation("TrainerFeeCreatedBy")
-  trainerFees         TrainerFee[]
+  id                              String                          @id @default(cuid())
+  email                           String?                         @unique
+  password                        String
+  name                            String
+  role                            UserRole
+  status                          UserStatus                      @default(PENDING)
+  emailVerified                   Boolean                         @default(false)
+  mfaSecret                       String?                         @db.Text
+  lastLogin                       DateTime?
+  passwordExpiry                  DateTime?
+  failedLoginAttempts             Int                             @default(0)
+  lockedUntil                     DateTime?
+  refreshToken                    String?                         @db.Text
+  resetToken                      String?                         @db.Text
+  resetTokenExpiry                DateTime?
+  permissionLevel                 String?
+  organizationId                  String?
+  division                        String?
+  buCostCentre                    String?
+  buNumberRequired                Boolean?
+  paymentMode                     PaymentMode?
+  contactNumber                   String?
+  additionalEmails                Json?
+  availabilityStatus              AvailabilityStatus?
+  partnerOrganization             String?
+  bio                             String?                         @db.Text
+  specializations                 Json?
+  certifications                  Json?
+  profileImage                    String?
+  experience                      String?                         @db.Text
+  rating                          Float?
+  employeeId                      String?
+  createdAt                       DateTime                        @default(now())
+  updatedAt                       DateTime                        @updatedAt
+  createdBy                       String?
+  old_email                       String?
+  onboardingDate                  DateTime?
+  designation                     String?
+  isPrimaryCoordinator            Boolean                         @default(false)
+  auditLogs                       AuditLog[]
+  bookingsCreated                 Booking[]                       @relation("BookingCreatedBy")
+  bookings                        Booking[]                       @relation("BookingUser")
+  coursesCreated                  Course[]                        @relation("CourseCreator")
+  trainerBlockouts                TrainerBlockout[]
+  trainerFeesCreated              TrainerFee[]                    @relation("TrainerFeeCreatedBy")
+  trainerFees                     TrainerFee[]
+  permissions                     UserPermission[]
+  createdByUser                   User?                           @relation("UserCreatedBy", fields: [createdBy], references: [id])
+  usersCreated                    User[]                          @relation("UserCreatedBy")
+  organization                    Organization?                   @relation(fields: [organizationId], references: [id])
+  venuesCreated                   Venue[]
+  courseRunTrainers               CourseRunTrainer[]
+  learnersAsTrainingCoordinator   Learner[]
+  courseRunLearnerAttendanceEdits CourseRunLearnerAttendance[]
+  trainerAssignmentEmailHistory   TrainerAssignmentEmailHistory[]
 
   @@index([createdBy], map: "users_createdBy_fkey")
   @@index([organizationId], map: "users_organizationId_fkey")
@@ -68,94 +70,163 @@ model User {
 }
 
 model Organization {
-  id              String     @id @default(cuid())
-  name            String
-  // industry removed
-  address         String?
-  contactEmail    String?
-  contactPhone    String?
-  contactPerson   String?
-  buNumber        String?
+  id               String           @id @default(cuid())
+  name             String
+  address          String?
+  contactEmail     String?
+  contactPhone     String?
+  contactPerson    String?
+  buNumber         String?
+  status           UserStatus       @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   organizationType OrganizationType @default(POLWEL)
-  status          UserStatus @default(ACTIVE)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  bookings        Booking[]
-  users           User[]
+  bookings         Booking[]
+  users            User[]
+  learners         Learner[]
 
   @@map("organizations")
 }
 
 model Course {
-  id                String       @id @default(cuid())
-  title             String
-  courseCode        String?      @unique @db.VarChar(50) // New unique human-readable code (auto-uppercased in controller)
-  description       String?      @db.Text
-  objectives        Json?
-  duration          String
-  durationType      String       @default("days")
-  maxParticipants   Int          @default(25)
-  minParticipants   Int          @default(1)
-  category          String?
-  level             String?
-  prerequisites     Json?
-  materials         Json?
-  venueFee          Float        @default(0) // Renamed in UI as "Venue Expenses"
-  venueFeeType      String?      // Fee type suffix (/ venue or / head)
-  venue             String?
-  specifiedLocation String?      // Free-text location override when venue not sufficient
-  trainers          Json?
-  certificates      String       @default("polwel")
-  remarks           String?      @db.Text
-  courseOutline     Json?
-  targetAudience    String?      @db.Text
-  syllabus          String?      @db.Text
-  assessmentMethod  String?      @db.Text
-  certificationType String?
-  defaultCourseFee  Float        @default(0) // Base template fee
-  discounts         Json?        // Structured discounts array [{ id, name, percentage }]
-  billingRate       Float        @default(0) // Optional billing rate
-  contractsFeePayout Float       @default(0) // Contracts fee payout
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  createdBy         String?
-  bookings          Booking[]
-  runs              CourseRun[]
-  creator           User?        @relation("CourseCreator", fields: [createdBy], references: [id])
-  trainerFees       TrainerFee[]
+  id                 String       @id @default(cuid())
+  title              String
+  description        String?      @db.Text
+  objectives         Json?
+  duration           String
+  durationType       String       @default("days")
+  maxParticipants    Int          @default(25)
+  minParticipants    Int          @default(1)
+  category           String?
+  level              String?
+  prerequisites      Json?
+  materials          Json?
+  venueFee           Float        @default(0)
+  venue              String?
+  trainers           Json?
+  certificates       String       @default("polwel")
+  remarks            String?      @db.Text
+  courseOutline      Json?
+  targetAudience     String?      @db.Text
+  syllabus           String?      @db.Text
+  assessmentMethod   String?      @db.Text
+  certificationType  String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  createdBy          String?
+  courseCode         String?      @unique @db.VarChar(50)
+  specifiedLocation  String?
+  defaultCourseFee   Float        @default(0)
+  discounts          Json?
+  billingRate        Float        @default(0)
+  contractsFeePayout Float        @default(0)
+  venueFeeType       String?
+  bookings           Booking[]
+  runs               CourseRun[]
+  creator            User?        @relation("CourseCreator", fields: [createdBy], references: [id])
+  trainerFees        TrainerFee[]
+
   @@index([createdBy], map: "courses_createdBy_fkey")
   @@map("courses")
 }
 
 model CourseRun {
-  id                  String       @id @default(cuid())
-  courseId            String
-  startDate           DateTime
-  endDate             DateTime
-  startTime           String
-  endTime             String
-  timezone            String       @default("Asia/Singapore")
-  venueId             String?
-  trainerId           String?
-  externalTrainerName String?
-  maxParticipants     Int
-  currentParticipants Int          @default(0)
-  status              CourseStatus @default(DRAFT)
-  trainerFee          Float        @default(0)
-  venueFee            Float        @default(0)
-  totalCost           Float        @default(0)
-  notes               String?      @db.Text
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  bookings            Booking[]
-  course              Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  trainer             User?        @relation("CourseTrainer", fields: [trainerId], references: [id])
-  venue               Venue?       @relation(fields: [venueId], references: [id])
+  id                             String                          @id @default(cuid())
+  serialNumber                   String?
+  courseRunType                  CourseRunType?
+  courseId                       String
+  startDatetime                  DateTime?
+  endDatetime                    DateTime?
+  venueId                        String?
+  venueType                      VenueType?
+  specifiedLocation              String?
+  minClassSize                   Int?
+  maxClassSize                   Int?
+  individualRegistrationRequired Boolean                         @default(false)
+  remarks                        String?                         @db.Text
+  baseCourseFee                  Decimal?                        @db.Decimal(10, 2)
+  feeType                        FeeType?
+  venueFee                       Decimal?                        @db.Decimal(10, 2)
+  otherFee                       Decimal?                        @db.Decimal(10, 2)
+  adminFee                       Decimal?                        @db.Decimal(10, 2)
+  contingencyFee                 Decimal?                        @db.Decimal(10, 2)
+  status                         CourseStatus                    @default(DRAFT)
+  billingReportId                String?
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+  deletedAt                      DateTime?
+  bookings                       Booking[]
+  courseRunBilling               CourseRunBilling?
+  courseRunLearners              CourseRunLearner[]
+  courseRunTrainers              CourseRunTrainer[]
+  courseRunLearnerAttendances    CourseRunLearnerAttendance[]
+  trainerAssignmentEmailHistory  TrainerAssignmentEmailHistory[]
+  confirmationEmailHistory       ConfirmationEmailHistory[]
+  course                         Course                          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  venue                          Venue?                          @relation(fields: [venueId], references: [id])
+  billingReport                  BillingReport?                  @relation(fields: [billingReportId], references: [id])
 
   @@index([courseId], map: "course_runs_courseId_fkey")
-  @@index([trainerId], map: "course_runs_trainerId_fkey")
   @@index([venueId], map: "course_runs_venueId_fkey")
+  @@index([billingReportId], map: "course_runs_billingReportId_fkey")
   @@map("course_runs")
+}
+
+model CourseRunBilling {
+  id                      String                  @id @default(cuid())
+  courseRunId             String                  @unique
+  valueOfWorkDone         Int?
+  contractFeePBMSBENumber String?
+  contractPBMSInvoiceDate DateTime?
+  contractInvoiceAmount   Decimal?                @db.Decimal(10, 2)
+  venuePBMSBENumber       String?
+  venuePBMSInvoiceDate    DateTime?
+  venueInvoiceAmount      Decimal?                @db.Decimal(10, 2)
+  finalRemarks            String?                 @db.Text
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  deletedAt               DateTime?
+  courseRun               CourseRun               @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  courseRunBillingEntries CourseRunBillingEntry[]
+
+  @@map("course_run_billings")
+}
+
+model CourseRunBillingEntry {
+  id                 String             @id @default(cuid())
+  courseRunBillingId String
+  pbmsInvoiceNumber  String?
+  pbmsInvoiceDate    String?
+  invoiceAmount      Decimal?           @db.Decimal(10, 2)
+  remarks            String?            @db.Text
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+  courseRunBilling   CourseRunBilling   @relation(fields: [courseRunBillingId], references: [id], onDelete: Cascade)
+  courseRunLearners  CourseRunLearner[]
+
+  @@index([courseRunBillingId], map: "course_run_billing_entries_courseRunBillingId_idx")
+  @@map("course_run_billing_entries")
+}
+
+model CourseRunTrainer {
+  id                           String    @id @default(cuid())
+  courseRunId                  String
+  trainerId                    String
+  trainerBaseAmount            Decimal?  @db.Decimal(10, 2)
+  additionalCost               Decimal?  @db.Decimal(10, 2)
+  remarks                      String?   @db.Text
+  trainerAssignmentEmailStatus String?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+  deletedAt                    DateTime?
+  courseRun                    CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  trainer                      User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([courseRunId, trainerId])
+  @@index([courseRunId], map: "course_run_trainers_courseRunId_idx")
+  @@index([trainerId], map: "course_run_trainers_trainerId_idx")
+  @@map("course_run_trainers")
 }
 
 model Venue {
@@ -168,10 +239,12 @@ model Venue {
   contacts    Json?
   feeType     FeeType     @default(PER_VENUE)
   fee         Float       @default(0)
+  venueType   VenueType?
   status      VenueStatus @default(ACTIVE)
   remarks     String?     @db.Text
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
   createdBy   String?
   bookings    Booking[]
   courseRuns  CourseRun[]
@@ -227,12 +300,12 @@ model TrainerBlockout {
   trainerId        String
   startDate        DateTime
   endDate          DateTime
-  remarks          String?  @db.Text
   description      String?  @db.Text
   isRecurring      Boolean  @default(false)
   recurringPattern String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  remarks          String?  @db.Text
   trainer          User     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@index([trainerId], map: "trainer_blockouts_trainerId_fkey")
@@ -293,24 +366,164 @@ model SystemSetting {
   @@map("system_settings")
 }
 
-// Trainer specific per-course fee (template) records
 model TrainerFee {
-  id         String   @id @default(cuid())
-  trainerId  String
-  courseId   String
-  feePerRun  Float    @default(0)
-  remarks    String?  @db.Text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  createdBy  String?
-  trainer    User     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
-  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  creator    User?    @relation("TrainerFeeCreatedBy", fields: [createdBy], references: [id])
+  id        String   @id @default(cuid())
+  trainerId String
+  courseId  String
+  feePerRun Float    @default(0)
+  remarks   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator   User?    @relation("TrainerFeeCreatedBy", fields: [createdBy], references: [id])
+  trainer   User     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@unique([trainerId, courseId])
   @@index([trainerId])
   @@index([courseId])
+  @@index([createdBy])
   @@map("trainer_fees")
+}
+
+model Learner {
+  id                          String                       @id @default(cuid())
+  fullname                    String
+  designation                 String?
+  email                       String?
+  contact                     String?
+  clientOrganizationId        String?
+  paymentMode                 String?
+  departmentName              String?
+  trainingCoordinatorId       String?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  deletedAt                   DateTime?
+  clientOrganization          Organization?                @relation(fields: [clientOrganizationId], references: [id])
+  trainingCoordinator         User?                        @relation(fields: [trainingCoordinatorId], references: [id])
+  courseRunLearners           CourseRunLearner[]
+  courseRunLearnerAttendances CourseRunLearnerAttendance[]
+
+  @@index([clientOrganizationId], map: "learners_clientOrganizationId_idx")
+  @@index([trainingCoordinatorId], map: "learners_trainingCoordinatorId_idx")
+  @@map("learners")
+}
+
+model CourseRunLearner {
+  id                            String                     @id @default(cuid())
+  courseRunId                   String
+  learnerId                     String
+  currentDefaultCourseFee       Decimal?                   @db.Decimal(10, 2)
+  discountId                    String?
+  discountPercentage            Decimal?                   @db.Decimal(5, 2)
+  discountAmount                Decimal?                   @db.Decimal(10, 2)
+  totalFees                     Decimal?                   @db.Decimal(10, 2)
+  feesRemarks                   String?                    @db.Text
+  invoiceNumber                 String?
+  remarks                       String?                    @db.Text
+  attendanceStatus              AttendanceStatus?          @default(PRESENT)
+  enrollmentStatus              EnrollmentStatus?          @default(ENROLLED)
+  withdrawnReason               String?                    @db.Text
+  supportingDocumentWithdrawnId String?
+  courseRunBillingEntryId       String?
+  createdAt                     DateTime                   @default(now())
+  updatedAt                     DateTime                   @updatedAt
+  deletedAt                     DateTime?
+  courseRun                     CourseRun                  @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  learner                       Learner                    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  supportingDocumentWithdrawn   Media?                     @relation(fields: [supportingDocumentWithdrawnId], references: [id])
+  courseRunBillingEntry         CourseRunBillingEntry?     @relation(fields: [courseRunBillingEntryId], references: [id])
+  confirmationEmailHistory      ConfirmationEmailHistory[]
+
+  @@unique([courseRunId, learnerId])
+  @@index([courseRunId], map: "course_run_learners_courseRunId_idx")
+  @@index([learnerId], map: "course_run_learners_learnerId_idx")
+  @@index([courseRunBillingEntryId], map: "course_run_learners_courseRunBillingEntryId_idx")
+  @@map("course_run_learners")
+}
+
+model CourseRunLearnerAttendance {
+  id          String    @id @default(cuid())
+  courseRunId String
+  learnerId   String
+  day         Int
+  attendAM    Boolean   @default(false)
+  attendPM    Boolean   @default(false)
+  editedBy    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  courseRun   CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  learner     Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  editor      User?     @relation(fields: [editedBy], references: [id])
+
+  @@unique([courseRunId, learnerId, day])
+  @@index([courseRunId], map: "course_run_learner_attendance_courseRunId_idx")
+  @@index([learnerId], map: "course_run_learner_attendance_learnerId_idx")
+  @@map("course_run_learner_attendance")
+}
+
+model Media {
+  id                       String                     @id @default(cuid())
+  filename                 String
+  originalName             String?
+  mimeType                 String?
+  size                     Int?
+  path                     String
+  url                      String?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  deletedAt                DateTime?
+  courseRunLearners        CourseRunLearner[]
+  confirmationEmailHistory ConfirmationEmailHistory[]
+
+  @@map("media")
+}
+
+model BillingReport {
+  id         String      @id @default(cuid())
+  name       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  deletedAt  DateTime?
+  courseRuns CourseRun[]
+
+  @@map("billing_reports")
+}
+
+model TrainerAssignmentEmailHistory {
+  id                    String    @id @default(cuid())
+  trainerId             String
+  courseRunId           String
+  cc                    String?   @db.Text
+  additionalBodyContent String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
+  trainer               User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  courseRun             CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+
+  @@index([trainerId], map: "trainer_assignment_email_history_trainerId_idx")
+  @@index([courseRunId], map: "trainer_assignment_email_history_courseRunId_idx")
+  @@map("trainer_assignment_email_history")
+}
+
+model ConfirmationEmailHistory {
+  id                  String           @id @default(cuid())
+  courseRunLearnersId String
+  courseRunId         String
+  remarks             String?          @db.Text
+  attachmentId        String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  deletedAt           DateTime?
+  courseRunLearner    CourseRunLearner @relation(fields: [courseRunLearnersId], references: [id], onDelete: Cascade)
+  courseRun           CourseRun        @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  attachment          Media?           @relation(fields: [attachmentId], references: [id])
+
+  @@index([courseRunLearnersId], map: "confirmation_email_history_courseRunLearnersId_idx")
+  @@index([courseRunId], map: "confirmation_email_history_courseRunId_idx")
+  @@map("confirmation_email_history")
 }
 
 enum UserRole {
@@ -346,12 +559,17 @@ enum PaymentMode {
 
 enum CourseStatus {
   DRAFT
+  PENDING
+  CONFIRMED_PENDING_TA_APPROVAL
   ACTIVE
+  CONFIRMED
+  CONFIRMED_PENDING_CONFIRMATION_EMAILS
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
   ARCHIVED
   PUBLISHED
   ONGOING
-  COMPLETED
-  CANCELLED
 }
 
 enum BookingStatus {
@@ -390,4 +608,27 @@ enum OrganizationType {
   SPF
   PUBLIC_SECTOR
   PRIVATE_SECTOR
+}
+
+enum CourseRunType {
+  OPEN
+  DEDICATED
+  TALKS
+  CUSTOMIZED
+}
+
+enum VenueType {
+  HOTEL
+  ON_PREMISE
+  CLIENT_FACILITY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  WITHDRAWN
 }

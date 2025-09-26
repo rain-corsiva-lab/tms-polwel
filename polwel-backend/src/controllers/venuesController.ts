@@ -111,8 +111,8 @@ export const venuesController = {
           courseRuns: {
             select: {
               id: true,
-              startDate: true,
-              endDate: true,
+              startDatetime: true,
+              endDatetime: true,
               course: {
                 select: {
                   id: true,
@@ -121,7 +121,7 @@ export const venuesController = {
               }
             },
             orderBy: {
-              startDate: 'desc'
+              startDatetime: 'desc'
             },
             take: 5
           }

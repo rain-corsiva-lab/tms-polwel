@@ -288,8 +288,12 @@ export const trainerBlockoutController = {
       // Check for conflicting course schedules
       const conflictingCourses = await prisma.courseRun.findMany({
         where: {
-          trainerId: trainerId,
-          startDate: {
+          courseRunTrainers: {
+            some: {
+              trainerId: trainerId
+            }
+          },
+          startDatetime: {
             gte: start,
             lte: end
           },
@@ -311,8 +315,8 @@ export const trainerBlockoutController = {
           conflicts: conflictingCourses.map(c => ({
             id: c.id,
             courseTitle: c.course.title,
-            startDate: c.startDate.toISOString().split('T')[0],
-            endDate: c.endDate.toISOString().split('T')[0]
+            startDate: c.startDatetime?.toISOString().split('T')[0] || '',
+            endDate: c.endDatetime?.toISOString().split('T')[0] || ''
           }))
         });
       }

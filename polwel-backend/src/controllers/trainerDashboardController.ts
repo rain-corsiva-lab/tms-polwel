@@ -75,8 +75,12 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
     // Get trainer's scheduled course runs for the next 6 months
     const courseRuns = await prisma.courseRun.findMany({
       where: {
-        trainerId: trainerId,
-        startDate: {
+        courseRunTrainers: {
+          some: {
+            trainerId: trainerId
+          }
+        },
+        startDatetime: {
           gte: new Date(),
           lte: sixMonthsFromNow
         }
@@ -96,22 +100,30 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
         }
       },
       orderBy: {
-        startDate: 'asc'
+        startDatetime: 'asc'
       }
     });
 
     // Calculate training statistics
     const totalSessionsCompleted = await prisma.courseRun.count({
       where: {
-        trainerId: trainerId,
+        courseRunTrainers: {
+          some: {
+            trainerId: trainerId
+          }
+        },
         status: 'COMPLETED'
       }
     });
 
     const totalSessionsUpcoming = await prisma.courseRun.count({
       where: {
-        trainerId: trainerId,
-        startDate: {
+        courseRunTrainers: {
+          some: {
+            trainerId: trainerId
+          }
+        },
+        startDatetime: {
           gte: new Date()
         },
         status: {
@@ -120,13 +132,19 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
       }
     });
 
-    const totalLearnersTrained = await prisma.courseRun.aggregate({
+    const totalLearnersTrained = await prisma.courseRunLearner.aggregate({
       where: {
-        trainerId: trainerId,
-        status: 'COMPLETED'
+        courseRun: {
+          courseRunTrainers: {
+            some: {
+              trainerId: trainerId
+            }
+          },
+          status: 'COMPLETED'
+        }
       },
-      _sum: {
-        currentParticipants: true
+      _count: {
+        id: true
       }
     });
 
@@ -142,20 +160,20 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
       statistics: {
         totalSessionsCompleted,
         totalSessionsUpcoming,
-        totalLearnersTrained: totalLearnersTrained._sum.currentParticipants || 0,
+        totalLearnersTrained: totalLearnersTrained._count.id || 0,
         totalBlockouts: blockouts.length
       },
       upcomingCourseRuns: courseRuns.map(run => ({
         id: run.id,
         courseName: run.course?.title || 'Unknown Course',
         courseCategory: run.course?.category || 'General',
-        startDate: run.startDate,
-        endDate: run.endDate,
-        startTime: run.startTime,
-        endTime: run.endTime,
+        startDate: run.startDatetime,
+        endDate: run.endDatetime,
+        startTime: run.startDatetime ? run.startDatetime.toTimeString().split(' ')[0] : '',
+        endTime: run.endDatetime ? run.endDatetime.toTimeString().split(' ')[0] : '',
         status: run.status,
-        currentParticipants: run.currentParticipants,
-        maxParticipants: run.maxParticipants,
+        currentParticipants: 0, // Will be calculated from courseRunLearners
+        maxParticipants: run.maxClassSize,
         venue: run.venue ? {
           name: run.venue.name,
           address: run.venue.address
