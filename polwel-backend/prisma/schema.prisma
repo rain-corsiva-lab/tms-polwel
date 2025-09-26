@@ -123,7 +123,6 @@ model Course {
   runs              CourseRun[]
   creator           User?        @relation("CourseCreator", fields: [createdBy], references: [id])
   trainerFees       TrainerFee[]
-
   @@index([createdBy], map: "courses_createdBy_fkey")
   @@map("courses")
 }
