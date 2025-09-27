@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { authService } from "../lib/auth";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
-import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen, Filter } from "lucide-react";
+import PaginationControls from "../components/ui/pagination";
+import { courseRunsApi } from "../lib/api";
+import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen } from "lucide-react";
 
 // Raw shape from backend
 interface BackendCourseRun {
@@ -49,6 +49,8 @@ interface BackendCourseRunsResponse {
   success: boolean;
   courseRuns: BackendCourseRun[];
   pagination: BackendPagination;
+  error?: string;
+  message?: string;
 }
 
 // Normalized shape for UI
@@ -68,54 +70,53 @@ interface CourseRunUI {
   createdAt: Date;
 }
 
+interface PaginationState {
+  page: number;
+  total: number;
+  totalPages: number;
+  limit?: number;
+}
+
 const CourseRuns: React.FC = () => {
   const [courseRuns, setCourseRuns] = useState<CourseRunUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination and filtering state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-
-  // Search and filter state
-  const [searchQuery, setSearchQuery] = useState("");
-  // local debounced term to avoid firing request on every keystroke
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
-  // Fetch course runs data
-  const fetchCourseRuns = async () => {
+  const [perPage, setPerPage] = useState(10);
+  const [pagination, setPagination] = useState<PaginationState>({
+    page: 1,
+    total: 0,
+    totalPages: 1,
+    limit: 10,
+  });
+
+  const totalCount = pagination.total || courseRuns.length;
+
+  // Fetch course runs data mirroring client organisation list behaviour
+  const fetchCourseRuns = async (pageArg?: number, limitArg?: number) => {
     try {
       setLoading(true);
       setError(null);
-      // sanitize pagination values to reasonable integers
-      const pageNum = Number.isFinite(Number(currentPage)) && Number(currentPage) > 0 ? Math.floor(Number(currentPage)) : 1;
-      const limitNum = Number.isFinite(Number(itemsPerPage)) && Number(itemsPerPage) > 0 ? Math.min(1000, Math.floor(Number(itemsPerPage))) : 10;
 
-      const params = new URLSearchParams({
-        page: pageNum.toString(),
-        limit: limitNum.toString(),
+      const pageToUse = pageArg ?? pagination.page;
+      const limitToUse = Math.max(1, Math.min(1000, limitArg ?? perPage));
+
+      const response: BackendCourseRunsResponse = await courseRunsApi.getAll({
+        page: pageToUse,
+        limit: limitToUse,
+        search: searchTerm.trim() || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
       });
 
-      // prefer debouncedSearch (updated after a small delay) to avoid flooding server
-      if (debouncedSearch.trim()) {
-        params.append("search", debouncedSearch);
+      if (!response.success) {
+        throw new Error(response.error || response.message || "Failed to load course runs");
       }
 
-      if (statusFilter && statusFilter !== "all") {
-        params.append("status", statusFilter);
-      }
-
-      const data: BackendCourseRunsResponse = await authService.apiRequest(`/course-runs?${params}`);
-      if (!data || data.success === false) {
-        throw new Error((data as any)?.error || "Failed to load course runs");
-      }
-
-      // Transform backend runs to UI shape
-      const transformed: CourseRunUI[] = (data.courseRuns || []).map((run) => {
+      const transformed: CourseRunUI[] = (response.courseRuns || []).map((run) => {
         const start = run.startDatetime ? new Date(run.startDatetime) : null;
         const end = run.endDatetime ? new Date(run.endDatetime) : null;
         return {
@@ -128,7 +129,6 @@ const CourseRuns: React.FC = () => {
           start,
           end,
           status: run.status,
-          // backend provides count object already aggregated
           enrolled: run.currentParticipants ?? 0,
           minSize: run.minClassSize ?? null,
           maxSize: run.maxClassSize ?? null,
@@ -137,20 +137,36 @@ const CourseRuns: React.FC = () => {
       });
 
       setCourseRuns(transformed);
-      setTotalPages(data.pagination?.totalPages || 1);
-      setTotalCount(data.pagination?.total || transformed.length);
 
-      // Fetch status options separately if not loaded
+      if (response.pagination) {
+        setPagination(response.pagination);
+        if (typeof response.pagination.limit === "number") {
+          setPerPage(Math.max(1, Math.min(1000, response.pagination.limit)));
+        }
+      } else {
+        const total = transformed.length;
+        setPagination({
+          page: pageToUse,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limitToUse)),
+        });
+      }
+
+      // Fetch status options once
       if (statusOptions.length === 0) {
         try {
-          const statusResp = await authService.apiRequest(`/course-runs/status-options`);
-          if (statusResp?.statusOptions) setStatusOptions(statusResp.statusOptions);
+          const statusResp = await courseRunsApi.getStatusOptions();
+          if (Array.isArray(statusResp?.statusOptions)) {
+            setStatusOptions(statusResp.statusOptions);
+          }
         } catch (e) {
-          // silently ignore
+          // Ignore status option failures to avoid blocking list rendering
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      console.error("Error fetching course runs:", err);
+      setCourseRuns([]);
+      setError(err instanceof Error ? err.message : "Failed to load course runs");
     } finally {
       setLoading(false);
     }
@@ -159,30 +175,36 @@ const CourseRuns: React.FC = () => {
   // Effects
   useEffect(() => {
     fetchCourseRuns();
-  }, [currentPage, itemsPerPage, debouncedSearch, statusFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, statusFilter, perPage]);
 
-  // debounce search input: mirror approach used in ClientOrganisations.tsx
+  // Debounced search mirroring client organisation page
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    const t = setTimeout(() => {
+      setPagination((p) => ({ ...p, page: 1 }));
+      fetchCourseRuns(1);
+    }, 300);
     return () => clearTimeout(t);
-  }, [searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   // Handle search
   const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    setCurrentPage(1); // Reset to first page on search
+    setSearchTerm(value);
   };
 
-  // Handle status filter
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
-    setCurrentPage(1); // Reset to first page on filter
+    setPagination((p) => ({ ...p, page: 1 }));
   };
 
-  // Handle items per page change
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(Number(value));
-    setCurrentPage(1); // Reset to first page
+  const handlePageChange = (page: number) => {
+    setPagination((p) => ({ ...p, page }));
+  };
+
+  const handlePerPageChange = (value: number) => {
+    setPerPage(value);
+    setPagination((p) => ({ ...p, page: 1 }));
   };
 
   // Format date and time
@@ -227,8 +249,8 @@ const CourseRuns: React.FC = () => {
   const handleCancel = async (courseRun: CourseRunUI) => {
     if (window.confirm("Are you sure you want to cancel this course run?")) {
       try {
-        await authService.apiRequest(`/course-runs/${courseRun.id}/cancel`, { method: "POST" });
-        fetchCourseRuns(); // Refresh data
+        await courseRunsApi.cancel(courseRun.id);
+        fetchCourseRuns();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to cancel course run");
       }
@@ -238,8 +260,8 @@ const CourseRuns: React.FC = () => {
   const handleDelete = async (courseRun: CourseRunUI) => {
     if (window.confirm("Are you sure you want to delete this course run? This action cannot be undone.")) {
       try {
-        await authService.apiRequest(`/course-runs/${courseRun.id}`, { method: "DELETE" });
-        fetchCourseRuns(); // Refresh data
+        await courseRunsApi.delete(courseRun.id);
+        fetchCourseRuns();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to delete course run");
       }
@@ -281,7 +303,7 @@ const CourseRuns: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Search by course title, code, or venue..."
-                  value={searchQuery}
+                  value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="pl-10"
                 />
@@ -299,30 +321,12 @@ const CourseRuns: React.FC = () => {
                 onChange={(e) => handleStatusFilter(e.target.value)}
                 className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
               >
-                <option value="all">All Statuses</option>
+                <option value="ALL">All Statuses</option>
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
-                    {status.charAt(0) + status.slice(1).toLowerCase()}
+                    {status.replace(/_/g, " ")}
                   </option>
                 ))}
-              </select>
-            </div>
-
-            {/* Items per page (native select for stability) */}
-            <div className="w-full sm:w-32">
-              <label className="sr-only" htmlFor="perPageSelect">
-                Per page
-              </label>
-              <select
-                id="perPageSelect"
-                value={itemsPerPage.toString()}
-                onChange={(e) => handleItemsPerPageChange(e.target.value)}
-                className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
-              >
-                <option value="5">5 per page</option>
-                <option value="10">10 per page</option>
-                <option value="25">25 per page</option>
-                <option value="50">50 per page</option>
               </select>
             </div>
           </div>
@@ -347,7 +351,7 @@ const CourseRuns: React.FC = () => {
           <CardTitle className="flex items-center justify-between">
             <span>Course Runs ({totalCount})</span>
             <span className="text-sm font-normal text-gray-500">
-              Page {currentPage} of {totalPages}
+              Page {pagination.page} of {Math.max(1, pagination.totalPages || Math.ceil(Math.max(1, totalCount) / perPage))}
             </span>
           </CardTitle>
         </CardHeader>
@@ -373,7 +377,7 @@ const CourseRuns: React.FC = () => {
                         <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p className="text-lg font-medium mb-2">No course runs found</p>
                         <p className="text-sm">
-                          {searchQuery || statusFilter !== "all"
+                          {searchTerm || statusFilter !== "ALL"
                             ? "Try adjusting your search or filter criteria."
                             : "Create your first course run to get started."}
                         </p>
@@ -432,14 +436,14 @@ const CourseRuns: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleView(courseRun as any)}>View Details</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(courseRun as any)}>Edit Course Run</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleView(courseRun)}>View Details</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(courseRun)}>Edit Course Run</DropdownMenuItem>
                             {courseRun.status !== "CANCELLED" && courseRun.status !== "COMPLETED" && (
-                              <DropdownMenuItem onClick={() => handleCancel(courseRun as any)} className="text-orange-600">
+                              <DropdownMenuItem onClick={() => handleCancel(courseRun)} className="text-orange-600">
                                 Cancel Course Run
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={() => handleDelete(courseRun as any)} className="text-red-600">
+                            <DropdownMenuItem onClick={() => handleDelete(courseRun)} className="text-red-600">
                               Delete Course Run
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -452,45 +456,13 @@ const CourseRuns: React.FC = () => {
             </Table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-6">
-              <div className="text-sm text-gray-500">
-                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} course runs
-              </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-                  Previous
-                </Button>
-                <div className="flex space-x-1">
-                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                    const pageNum = Math.max(1, currentPage - 2) + i;
-                    if (pageNum > totalPages) return null;
-
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(pageNum)}
-                        className="w-8 h-8 p-0"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <PaginationControls
+            page={pagination.page}
+            perPage={perPage}
+            total={totalCount}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+          />
         </CardContent>
       </Card>
     </div>

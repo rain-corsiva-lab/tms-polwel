@@ -1025,6 +1025,47 @@ export const coursesApi = {
   },
 };
 
+// Course Runs API
+export const courseRunsApi = {
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/course-runs?${queryString}` : '/course-runs';
+
+    return apiRequest(endpoint);
+  },
+
+  getStatusOptions: async () => {
+    return apiRequest('/course-runs/status-options');
+  },
+
+  cancel: async (id: string) => {
+    return apiRequest(`/course-runs/${id}/cancel`, {
+      method: 'POST',
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest(`/course-runs/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 // Define venue interfaces
 export interface Contact {
   id: string;
@@ -1226,6 +1267,7 @@ export default {
   trainersApi,
   partnersApi,
   clientOrganizationsApi,
+  courseRunsApi,
   coursesApi,
   venuesApi,
   referencesApi,

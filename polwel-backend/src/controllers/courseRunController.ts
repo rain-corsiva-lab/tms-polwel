@@ -1,8 +1,23 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, CourseStatus } from '@prisma/client';
 import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const ALLOWED_COURSE_STATUSES: CourseStatus[] = [
+  'DRAFT',
+  'PENDING',
+  'CONFIRMED_PENDING_TA_APPROVAL',
+  'ACTIVE',
+  'CONFIRMED',
+  'CONFIRMED_PENDING_CONFIRMATION_EMAILS',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+  'ARCHIVED',
+  'PUBLISHED',
+  'ONGOING'
+];
 
 // Validation schemas
 const getCourseRunsSchema = z.object({
@@ -39,7 +54,7 @@ export const courseRunController = {
   // Get all course runs with pagination, search, and filters
   async getAll(req: Request, res: Response) {
     try {
-      const { page, limit, search, status } = getCourseRunsSchema.parse(req.query);
+  const { page, limit, search, status } = getCourseRunsSchema.parse(req.query);
       const skip = (page - 1) * limit;
 
       // Build where clause for filtering
@@ -76,8 +91,9 @@ export const courseRunController = {
       }
 
       // Add status filter
-      if (status && status !== 'All Status') {
-        where.status = status;
+      const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : undefined;
+      if (normalizedStatus && ALLOWED_COURSE_STATUSES.includes(normalizedStatus as CourseStatus)) {
+        where.status = normalizedStatus as CourseStatus;
       }
 
       // Get course runs with related data. Prisma's count() has trouble with some relation filters
@@ -486,20 +502,7 @@ export const courseRunController = {
   // Get status options for filters
   async getStatusOptions(req: Request, res: Response) {
     try {
-      const statusOptions = [
-        'DRAFT',
-        'PENDING',
-        'CONFIRMED_PENDING_TA_APPROVAL',
-        'ACTIVE',
-        'CONFIRMED',
-        'CONFIRMED_PENDING_CONFIRMATION_EMAILS',
-        'IN_PROGRESS',
-        'COMPLETED',
-        'CANCELLED',
-        'ARCHIVED',
-        'PUBLISHED',
-        'ONGOING',
-      ];
+      const statusOptions = ALLOWED_COURSE_STATUSES;
 
       res.json({
         success: true,

@@ -5,7 +5,7 @@ interface CliOptions {
   email: string;
   password: string;
   search: string;
-  status?: string;
+  status: string | undefined;
   limit: number;
   page: number;
 }
@@ -24,14 +24,13 @@ const parseNumberArg = (flag: string, fallback: number): number => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-async function resolveFetch(): Promise<typeof fetch> {
+const resolveFetch = async (): Promise<typeof fetch> => {
   if (typeof globalThis.fetch === 'function') {
     return globalThis.fetch.bind(globalThis) as typeof fetch;
   }
 
-  const mod = await import('node-fetch');
-  return (mod.default as unknown) as typeof fetch;
-}
+  throw new Error('Global fetch API is unavailable. Please run on Node 18+ or install a fetch polyfill.');
+};
 
 function resolveOptions(): CliOptions {
   const baseUrl = argValue('--base-url') ?? process.env.API_BASE_URL ?? 'http://localhost:3001';

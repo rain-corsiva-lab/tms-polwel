@@ -30,6 +30,18 @@ const permissionNameMapping: Record<string, string> = {
   'course-run:edit': 'courses.edit',
   'course-run:delete': 'courses.delete',
   'course-run:approve': 'courses.approve',
+  'course-run.view': 'courses.view',
+  'course-run.create': 'courses.create',
+  'course-run.edit': 'courses.edit',
+  'course-run.update': 'courses.edit',
+  'course-run.delete': 'courses.delete',
+  'course-run.approve': 'courses.approve',
+  'course.run.view': 'courses.view',
+  'course.run.create': 'courses.create',
+  'course.run.edit': 'courses.edit',
+  'course.run.update': 'courses.edit',
+  'course.run.delete': 'courses.delete',
+  'course.run.approve': 'courses.approve',
 
   // Venue module
   'venue:view': 'venues.view',

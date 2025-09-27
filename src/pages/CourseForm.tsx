@@ -72,7 +72,24 @@ const CourseForm: React.FC = () => {
   const [loading, setLoading] = useState<LoadingState>({ categories: false, trainers: false, venues: false, course: false, submitting: false });
   const [refs, setRefs] = useState<RefsState>({ categories: [], trainers: [], partners: [], venues: [] });
   const [formData, setFormData] = useState<FormState>(initialForm);
+  const [courseCodeManuallyEdited, setCourseCodeManuallyEdited] = useState(false);
+  const [lastAutoCourseCode, setLastAutoCourseCode] = useState("");
   // Removed financial calculations per new simplified requirements
+
+  const sanitizeCourseCode = (value: string) =>
+    value
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, "")
+      .slice(0, 5);
+
+  const generateCourseCodeFromTitle = (title: string) => {
+    if (!title) return "";
+    const words = title.trim().split(/\s+/).filter(Boolean);
+    const initials = words.map((word) => word[0] || "").join("");
+    const fallback = title.replace(/[^A-Za-z0-9]/g, "");
+    const raw = initials || fallback;
+    return sanitizeCourseCode(raw);
+  };
 
   // Load reference data
   useEffect(() => {
@@ -106,6 +123,7 @@ const CourseForm: React.FC = () => {
         const resp = await coursesApi.getById(id);
         const c: any = resp?.data?.course || resp?.data || resp;
         if (c) {
+          const generatedCode = generateCourseCodeFromTitle(c.title || "");
           setFormData((prev) => ({
             ...prev,
             courseCode: c.courseCode || "",
@@ -126,6 +144,10 @@ const CourseForm: React.FC = () => {
             billingRate: c.billingRate || 0,
             contractsFeePayout: c.contractsFeePayout || 0,
           }));
+          setLastAutoCourseCode(generatedCode);
+          if (c.courseCode) {
+            setCourseCodeManuallyEdited(c.courseCode !== generatedCode);
+          }
         }
       } catch {
         toast({ title: "Error", description: "Failed to load course", variant: "destructive" });
@@ -139,11 +161,34 @@ const CourseForm: React.FC = () => {
 
   const handleInputChange = (field: keyof FormState, value: any) => {
     if (field === "courseCode" && typeof value === "string") {
-      value = value
-        .toUpperCase()
-        .replace(/[^A-Z0-9_-]/g, "")
-        .slice(0, 5);
+      const sanitized = sanitizeCourseCode(value);
+      setFormData((prev) => ({ ...prev, courseCode: sanitized }));
+      const manuallyEdited = sanitized.length > 0 && sanitized !== lastAutoCourseCode;
+      setCourseCodeManuallyEdited(manuallyEdited);
+      if (!sanitized) {
+        setCourseCodeManuallyEdited(false);
+      }
+      return;
     }
+
+    if (field === "title" && typeof value === "string") {
+      const generated = generateCourseCodeFromTitle(value);
+      let shouldAutoApply = false;
+      setFormData((prev) => {
+        shouldAutoApply = !courseCodeManuallyEdited || !prev.courseCode || prev.courseCode === lastAutoCourseCode;
+        return {
+          ...prev,
+          title: value,
+          courseCode: shouldAutoApply ? generated : prev.courseCode,
+        };
+      });
+      setLastAutoCourseCode(generated);
+      if (shouldAutoApply) {
+        setCourseCodeManuallyEdited(false);
+      }
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

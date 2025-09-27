@@ -19,15 +19,7 @@ interface ModulePermissions {
   approve?: boolean;
 }
 
-type ModuleKey =
-  | "polwel-users"
-  | "trainers-partners"
-  | "client-organizations"
-  | "course"
-  | "course-run"
-  | "venue"
-  | "post-course-run"
-  | "billing-reports";
+type ModuleKey = "polwel-users" | "trainers-partners" | "client-organizations" | "course" | "course-run" | "venue" | "post-course-run" | "billing-reports";
 
 type UserPermissions = Record<ModuleKey, ModulePermissions>;
 
@@ -255,19 +247,24 @@ export function AddPolwelUserDialog() {
                             {/* All checkbox for this module */}
                             <td className="p-3 text-center">
                               <Checkbox
-                                checked={(Object.entries(modulePermissions) as [keyof ModulePermissions, boolean | undefined][])
-                                  .filter(([key]) => key !== "approve" || config.supportsApprove)
-                                  .every(([, value]) => value === true) as CheckedState}
+                                checked={
+                                  (Object.entries(modulePermissions) as [keyof ModulePermissions, boolean | undefined][])
+                                    .filter(([key]) => key !== "approve" || config.supportsApprove)
+                                    .every(([, value]) => value === true) as CheckedState
+                                }
                                 onCheckedChange={(checkedState) => {
                                   const setAll = checkedState === true;
                                   setPermissions((prev) => ({
                                     ...prev,
-                                    [moduleKey]: (Object.entries(prev[moduleKey]) as [keyof ModulePermissions, boolean | undefined][]).reduce((acc, [key, value]) => {
-                                      if (key === "approve" && !config.supportsApprove) {
-                                        return { ...acc, [key]: value };
-                                      }
-                                      return { ...acc, [key]: setAll };
-                                    }, {} as ModulePermissions),
+                                    [moduleKey]: (Object.entries(prev[moduleKey]) as [keyof ModulePermissions, boolean | undefined][]).reduce(
+                                      (acc, [key, value]) => {
+                                        if (key === "approve" && !config.supportsApprove) {
+                                          return { ...acc, [key]: value };
+                                        }
+                                        return { ...acc, [key]: setAll };
+                                      },
+                                      {} as ModulePermissions
+                                    ),
                                   }));
                                 }}
                               />

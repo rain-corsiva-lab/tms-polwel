@@ -72,7 +72,8 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
           _count: {
             select: {
               users: true,
-              bookings: true
+              bookings: true,
+              learners: true
             }
           },
           users: {
@@ -99,9 +100,10 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
         createdAt: org.createdAt,
         updatedAt: org.updatedAt,
         coordinatorsCount: org.users.filter(u => u.role === 'TRAINING_COORDINATOR').length,
-        learnersCount: org.users.filter(u => u.role === 'LEARNER').length,
+        learnersCount: org._count.learners,
         stats: {
           totalUsers: org._count.users,
+          totalLearners: org._count.learners,
           totalBookings: org._count.bookings
         }
       })),
@@ -747,8 +749,7 @@ export const deleteOrganizationCoordinator = async (req: AuthenticatedRequest, r
 export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { organizationId } = req.params;
-    const { page = 1, limit = 10, search, status } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = '1', limit = '10', search, status } = req.query;
 
     if (!organizationId) {
       return res.status(400).json({
@@ -757,63 +758,88 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
       });
     }
 
-    // Build where clause for learners
+    const rawPage = Number(page);
+    const rawLimit = Number(limit);
+    const pageNum = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+    const limitNum = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(1000, Math.floor(rawLimit)) : 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    const rawSearch = typeof search === 'string' ? search.trim() : undefined;
+    const normalizedSearch = rawSearch && rawSearch.length > 0 ? rawSearch.substring(0, 500) : undefined;
+    const rawStatus = typeof status === 'string' ? status.trim().toUpperCase() : undefined;
+
     const where: any = {
-      organizationId,
-      role: 'LEARNER'
+      clientOrganizationId: organizationId
     };
 
-    if (search) {
+    if (normalizedSearch) {
       where.OR = [
-        { name: { contains: search as string } },
-        { email: { contains: search as string } },
-        { department: { contains: search as string } }
+        { fullname: { contains: normalizedSearch, mode: 'insensitive' } },
+        { email: { contains: normalizedSearch, mode: 'insensitive' } },
+        { departmentName: { contains: normalizedSearch, mode: 'insensitive' } },
+        { designation: { contains: normalizedSearch, mode: 'insensitive' } },
+        { contact: { contains: normalizedSearch, mode: 'insensitive' } }
       ];
     }
 
-    if (status) {
-      where.status = status as UserStatus;
+    if (rawStatus === 'ACTIVE') {
+      where.deletedAt = null;
+    } else if (rawStatus === 'INACTIVE') {
+      where.deletedAt = { not: null };
     }
 
-    // Get learners with pagination (simplified select)
     const [learners, total] = await Promise.all([
-      prisma.user.findMany({
+      prisma.learner.findMany({
         where,
         select: {
           id: true,
-          name: true,
+          fullname: true,
           email: true,
           designation: true,
-          status: true,
+          departmentName: true,
+          clientOrganizationId: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          deletedAt: true,
+          courseRunLearners: {
+            where: { deletedAt: null },
+            select: {
+              enrollmentStatus: true
+            }
+          }
         },
         skip,
-        take: Number(limit),
+        take: limitNum,
         orderBy: { createdAt: 'desc' }
       }),
-      prisma.user.count({ where })
+      prisma.learner.count({ where })
     ]);
 
-    const formattedLearners = learners.map(learner => ({
-      id: learner.id,
-      name: learner.name,
-      email: learner.email,
-      designation: learner.designation || 'N/A',
-      status: learner.status,
-      enrolledCourses: 0,
-      completedCourses: 0,
-      createdAt: learner.createdAt,
-      updatedAt: learner.updatedAt
-    }));
+    const formattedLearners = learners.map(learner => {
+      const enrolledCourses = learner.courseRunLearners.length;
+      const completedCourses = 0;
+
+      return {
+        id: learner.id,
+        name: learner.fullname,
+        email: learner.email,
+        designation: learner.designation || learner.departmentName || 'N/A',
+        status: learner.deletedAt ? 'INACTIVE' : 'ACTIVE',
+        enrolledCourses,
+        completedCourses,
+        organizationId: learner.clientOrganizationId,
+        createdAt: learner.createdAt,
+        updatedAt: learner.updatedAt
+      };
+    });
 
     return res.json({
       learners: formattedLearners,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / Number(limit))
+        totalPages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
