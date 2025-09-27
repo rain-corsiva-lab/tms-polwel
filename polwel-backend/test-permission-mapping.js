@@ -6,45 +6,94 @@ async function checkPermissionMappings() {
     console.log('=== Frontend to Database Permission Mapping Test ===\n');
     
     const testPermissions = [
-      'user-management-polwel:view',
-      'user-management-polwel:create',
-      'user-management-polwel:edit',
-      'user-management-trainers:create',
-      'user-management-client-orgs:create',
-      'course-venue-setup:edit'
+      'polwel-users:view',
+      'trainers-partners:create',
+      'client-organizations:edit',
+      'course-run:approve',
+      'venue:delete',
+      'post-course-run:create',
+      'billing-reports:view',
+      // legacy key should still map
+      'user-management-polwel:view'
     ];
     
     // Permission name mapping
     const permissionNameMapping = {
-      // User Management - POLWEL
+      // New module keys
+      'polwel-users:view': 'users.view',
+      'polwel-users:create': 'users.create',
+      'polwel-users:edit': 'users.edit',
+      'polwel-users:update': 'users.edit',
+      'polwel-users:delete': 'users.delete',
+
+      'trainers-partners:view': 'trainers.view',
+      'trainers-partners:create': 'trainers.create',
+      'trainers-partners:edit': 'trainers.edit',
+      'trainers-partners:update': 'trainers.edit',
+      'trainers-partners:delete': 'trainers.delete',
+
+      'client-organizations:view': 'clients.view',
+      'client-organizations:create': 'clients.create',
+      'client-organizations:edit': 'clients.edit',
+      'client-organizations:update': 'clients.edit',
+      'client-organizations:delete': 'clients.delete',
+
+      'course:view': 'courses.view',
+      'course:create': 'courses.create',
+      'course:edit': 'courses.edit',
+      'course:update': 'courses.edit',
+      'course:delete': 'courses.delete',
+
+      'course-run:view': 'courses.view',
+      'course-run:create': 'courses.create',
+      'course-run:edit': 'courses.edit',
+      'course-run:update': 'courses.edit',
+      'course-run:delete': 'courses.delete',
+      'course-run:approve': 'courses.approve',
+
+      'venue:view': 'venues.view',
+      'venue:create': 'venues.create',
+      'venue:edit': 'venues.edit',
+      'venue:update': 'venues.edit',
+      'venue:delete': 'venues.delete',
+
+      'post-course-run:view': 'reports.view',
+      'post-course-run:create': 'reports.create',
+      'post-course-run:edit': 'reports.edit',
+      'post-course-run:update': 'reports.edit',
+      'post-course-run:delete': 'reports.delete',
+
+      'billing-reports:view': 'bookings.view',
+      'billing-reports:create': 'bookings.create',
+      'billing-reports:edit': 'bookings.edit',
+      'billing-reports:update': 'bookings.edit',
+      'billing-reports:delete': 'bookings.delete',
+
+      // Legacy keys - keep for compatibility
       'user-management-polwel:view': 'users.view',
-      'user-management-polwel:create': 'users.create', 
+      'user-management-polwel:create': 'users.create',
       'user-management-polwel:edit': 'users.edit',
       'user-management-polwel:update': 'users.edit',
       'user-management-polwel:delete': 'users.delete',
-      
-      // User Management - Trainers
+
       'user-management-trainers:view': 'trainers.view',
       'user-management-trainers:create': 'trainers.create',
       'user-management-trainers:edit': 'trainers.edit',
       'user-management-trainers:update': 'trainers.edit',
       'user-management-trainers:delete': 'trainers.delete',
-      
-      // User Management - Client Organizations
+
       'user-management-client-orgs:view': 'clients.view',
       'user-management-client-orgs:create': 'clients.create',
       'user-management-client-orgs:edit': 'clients.edit',
       'user-management-client-orgs:update': 'clients.edit',
       'user-management-client-orgs:delete': 'clients.delete',
-      
-      // Course Management
+
       'course-management:view': 'courses.view',
       'course-management:create': 'courses.create',
       'course-management:edit': 'courses.edit',
-      'course-management:update': 'courses.edit', 
+      'course-management:update': 'courses.edit',
       'course-management:delete': 'courses.delete',
-      
-      // Course & Venue Setup
+
       'course-venue-setup:view': 'venues.view',
       'course-venue-setup:create': 'venues.create',
       'course-venue-setup:edit': 'venues.edit',

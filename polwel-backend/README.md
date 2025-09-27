@@ -134,7 +134,22 @@ npm run db:migrate    # Run database migrations
 npm run db:seed       # Seed database with sample data
 npm run db:reset      # Reset database (careful!)
 npm run db:studio     # Open Prisma Studio (database GUI)
+npm run debug:course-run-search -- --query "Emergency"  # Test course run search with auth
 ```
+
+### Authenticated Course Run Search Helper
+
+Use the helper script to validate the course-run AJAX search end-to-end (login → authorised fetch):
+
+```powershell
+# Uses defaults (http://localhost:3001, john.tan@polwel.org / password123)
+npm run debug:course-run-search
+
+# Override credentials, base URL, query, or page size
+npm run debug:course-run-search -- --base-url "https://staging.polwel.org" --email "john.tan@polwel.org" --password "password123" --query "Investigation" --limit 10
+```
+
+Environment variables can also be used (`API_BASE_URL`, `TEST_EMAIL`, `TEST_PASSWORD`, `TEST_SEARCH`, `TEST_STATUS`, `TEST_LIMIT`, `TEST_PAGE`).
 
 ## Environment Variables
 

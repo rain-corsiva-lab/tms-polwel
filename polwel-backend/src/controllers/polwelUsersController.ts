@@ -12,90 +12,136 @@ import { UserValidationService } from '../utils/userValidation';
 
 // Permission name mapping - converts frontend permission names to database permission names
 const permissionNameMapping: Record<string, string> = {
-  // User Management - POLWEL
+  // === Current frontend module keys ===
+  'polwel-users:view': 'users.view',
+  'polwel-users:create': 'users.create',
+  'polwel-users:edit': 'users.edit',
+  'polwel-users:update': 'users.edit',
+  'polwel-users:delete': 'users.delete',
+
+  'trainers-partners:view': 'trainers.view',
+  'trainers-partners:create': 'trainers.create',
+  'trainers-partners:edit': 'trainers.edit',
+  'trainers-partners:update': 'trainers.edit',
+  'trainers-partners:delete': 'trainers.delete',
+
+  'client-organizations:view': 'clients.view',
+  'client-organizations:create': 'clients.create',
+  'client-organizations:edit': 'clients.edit',
+  'client-organizations:update': 'clients.edit',
+  'client-organizations:delete': 'clients.delete',
+
+  'course:view': 'courses.view',
+  'course:create': 'courses.create',
+  'course:edit': 'courses.edit',
+  'course:update': 'courses.edit',
+  'course:delete': 'courses.delete',
+
+  'course-run:view': 'courses.view',
+  'course-run:create': 'courses.create',
+  'course-run:edit': 'courses.edit',
+  'course-run:update': 'courses.edit',
+  'course-run:delete': 'courses.delete',
+  'course-run:approve': 'courses.approve',
+
+  'venue:view': 'venues.view',
+  'venue:create': 'venues.create',
+  'venue:edit': 'venues.edit',
+  'venue:update': 'venues.edit',
+  'venue:delete': 'venues.delete',
+
+  'post-course-run:view': 'reports.view',
+  'post-course-run:create': 'reports.create',
+  'post-course-run:edit': 'reports.edit',
+  'post-course-run:update': 'reports.edit',
+  'post-course-run:delete': 'reports.delete',
+
+  'billing-reports:view': 'bookings.view',
+  'billing-reports:create': 'bookings.create',
+  'billing-reports:edit': 'bookings.edit',
+  'billing-reports:update': 'bookings.edit',
+  'billing-reports:delete': 'bookings.delete',
+
+  // Optional calendar support (front may send legacy key)
+  'calendar:view': 'calendar.view',
+  'calendar:create': 'calendar.create',
+  'calendar:edit': 'calendar.edit',
+  'calendar:update': 'calendar.edit',
+  'calendar:delete': 'calendar.delete',
+
+  // === Legacy frontend keys for backward compatibility ===
   'user-management-polwel:view': 'users.view',
-  'user-management-polwel:create': 'users.create', 
+  'user-management-polwel:create': 'users.create',
   'user-management-polwel:edit': 'users.edit',
   'user-management-polwel:update': 'users.edit',
   'user-management-polwel:delete': 'users.delete',
-  
-  // User Management - Trainers
+
   'user-management-trainers:view': 'trainers.view',
   'user-management-trainers:create': 'trainers.create',
   'user-management-trainers:edit': 'trainers.edit',
   'user-management-trainers:update': 'trainers.edit',
   'user-management-trainers:delete': 'trainers.delete',
-  
-  // User Management - Client Organisations
+
   'user-management-client-orgs:view': 'clients.view',
   'user-management-client-orgs:create': 'clients.create',
   'user-management-client-orgs:edit': 'clients.edit',
   'user-management-client-orgs:update': 'clients.edit',
   'user-management-client-orgs:delete': 'clients.delete',
-  
-  // Course Management
+
   'course-management:view': 'courses.view',
   'course-management:create': 'courses.create',
   'course-management:edit': 'courses.edit',
-  'course-management:update': 'courses.edit', 
+  'course-management:update': 'courses.edit',
   'course-management:delete': 'courses.delete',
 
-  // Course Runs & Operations (frontend uses a different key)
   'course-runs-operations:view': 'courses.view',
   'course-runs-operations:create': 'courses.create',
   'course-runs-operations:edit': 'courses.edit',
-  'course-runs-operations:approve': 'courses.approve',
   'course-runs-operations:update': 'courses.edit',
   'course-runs-operations:delete': 'courses.delete',
-  
-  // Course & Venue Setup
+  'course-runs-operations:approve': 'courses.approve',
+
   'course-venue-setup:view': 'venues.view',
   'course-venue-setup:create': 'venues.create',
   'course-venue-setup:edit': 'venues.edit',
   'course-venue-setup:update': 'venues.edit',
   'course-venue-setup:delete': 'venues.delete',
-  
-  // Venue Management
+
   'venue-management:view': 'venues.view',
   'venue-management:create': 'venues.create',
   'venue-management:edit': 'venues.edit',
   'venue-management:update': 'venues.edit',
   'venue-management:delete': 'venues.delete',
-  
-  // Booking Management
+
   'booking-management:view': 'bookings.view',
   'booking-management:create': 'bookings.create',
   'booking-management:edit': 'bookings.edit',
   'booking-management:update': 'bookings.edit',
   'booking-management:delete': 'bookings.delete',
-  
-  // Training Calendar
+
   'training-calendar:view': 'calendar.view',
   'training-calendar:create': 'calendar.create',
   'training-calendar:edit': 'calendar.edit',
   'training-calendar:update': 'calendar.edit',
   'training-calendar:delete': 'calendar.delete',
-  
-  // Reports & Analytics
+
   'reports-analytics:view': 'reports.view',
   'reports-analytics:create': 'reports.create',
   'reports-analytics:edit': 'reports.edit',
   'reports-analytics:update': 'reports.edit',
-  'reports-analytics:delete': 'reports.delete'
+  'reports-analytics:delete': 'reports.delete',
 
-  // Email, Reporting and Resource Library (frontend key)
-  , 'email-reporting-library:view': 'reports.view'
-  , 'email-reporting-library:create': 'reports.create'
-  , 'email-reporting-library:edit': 'reports.edit'
-  , 'email-reporting-library:update': 'reports.edit'
-  , 'email-reporting-library:delete': 'reports.delete'
+  'email-reporting-library:view': 'reports.view',
+  'email-reporting-library:create': 'reports.create',
+  'email-reporting-library:edit': 'reports.edit',
+  'email-reporting-library:update': 'reports.edit',
+  'email-reporting-library:delete': 'reports.delete',
 
-  // Finance and Activity (map to bookings permissions for financial actions)
-  , 'finance-activity:view': 'bookings.view'
-  , 'finance-activity:create': 'bookings.create'
-  , 'finance-activity:edit': 'bookings.edit'
-  , 'finance-activity:update': 'bookings.edit'
-  , 'finance-activity:delete': 'bookings.delete'
+  'finance-activity:view': 'bookings.view',
+  'finance-activity:create': 'bookings.create',
+  'finance-activity:edit': 'bookings.edit',
+  'finance-activity:update': 'bookings.edit',
+  'finance-activity:delete': 'bookings.delete'
 };
 
 // Helper function to map frontend permission names to database permission names

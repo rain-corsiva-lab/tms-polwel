@@ -33,6 +33,7 @@ import referencesRoutes from './routes/references';
 import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import trainerDashboardRoutes from './routes/trainerDashboard';
 import profileRoutes from './routes/profile';
+import courseRunsRoutes from './routes/courseRuns';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -150,6 +151,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', authenticate, userRoutes);
 app.use('/api/courses', authenticate, courseRoutes);
+app.use('/api/course-runs', courseRunsRoutes);
 app.use('/api/venues', authenticate, venueRoutes);
 app.use('/api/bookings', authenticate, bookingRoutes);
 app.use('/api/organizations', authenticate, organizationRoutes);

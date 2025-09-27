@@ -25,6 +25,7 @@ const clientOrgsItems = [
 
 const courseManagementItems = [
   { name: "Course Creation", href: "/course-creation", icon: BookOpen, permission: "courses.view" },
+  { name: "Course Run Management", href: "/course-runs", icon: Calendar, permission: "courses.view" },
   { name: "Venue Management", href: "/venue-setup", icon: Building2, permission: "venues.view" },
 ];
 

@@ -19,17 +19,39 @@ interface ModulePermissions {
   approve?: boolean;
 }
 
-// ...existing code...
+type ModuleKey =
+  | "polwel-users"
+  | "trainers-partners"
+  | "client-organizations"
+  | "course"
+  | "course-run"
+  | "venue"
+  | "post-course-run"
+  | "billing-reports";
 
-interface UserPermissions {
-  "user-management-polwel": ModulePermissions;
-  "user-management-trainers": ModulePermissions;
-  "user-management-client-orgs": ModulePermissions;
-  "course-venue-setup": ModulePermissions;
-  "course-runs-operations": ModulePermissions;
-  "email-reporting-library": ModulePermissions;
-  "finance-activity": ModulePermissions;
-}
+type UserPermissions = Record<ModuleKey, ModulePermissions>;
+
+const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean }> = {
+  "polwel-users": { label: "POLWEL Users" },
+  "trainers-partners": { label: "Trainers & Partners" },
+  "client-organizations": { label: "Client Organisations" },
+  course: { label: "Course" },
+  "course-run": { label: "Course Run", supportsApprove: true },
+  venue: { label: "Venue" },
+  "post-course-run": { label: "Post Course Run" },
+  "billing-reports": { label: "Billing Reports" },
+};
+
+const createDefaultPermissions = (): UserPermissions => ({
+  "polwel-users": { view: false, create: false, edit: false, delete: false },
+  "trainers-partners": { view: false, create: false, edit: false, delete: false },
+  "client-organizations": { view: false, create: false, edit: false, delete: false },
+  course: { view: false, create: false, edit: false, delete: false },
+  "course-run": { view: false, create: false, edit: false, delete: false, approve: false },
+  venue: { view: false, create: false, edit: false, delete: false },
+  "post-course-run": { view: false, create: false, edit: false, delete: false },
+  "billing-reports": { view: false, create: false, edit: false, delete: false },
+});
 
 interface PolwelUser {
   id: string;
@@ -65,32 +87,24 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
     // department and permissionLevel removed
   });
 
-  const [permissions, setPermissions] = useState<UserPermissions>({
-    "user-management-polwel": { view: false, create: false, edit: false, delete: false },
-    "user-management-trainers": { view: false, create: false, edit: false, delete: false },
-    "user-management-client-orgs": { view: false, create: false, edit: false, delete: false },
-    "course-venue-setup": { view: false, create: false, edit: false, delete: false },
-    // Approve exists only for course-runs
-    "course-runs-operations": { view: false, create: false, edit: false, delete: false, approve: false },
-    "email-reporting-library": { view: false, create: false, edit: false, delete: false },
-    "finance-activity": { view: false, create: false, edit: false, delete: false },
-  });
+  const [permissions, setPermissions] = useState<UserPermissions>(createDefaultPermissions());
 
   const { toast } = useToast();
 
   // Load user permissions when dialog opens
   useEffect(() => {
     if (open && user.permissions) {
-      const updatedPermissions = { ...permissions };
+      const updatedPermissions = createDefaultPermissions();
 
-      const moduleMapping: Record<string, keyof UserPermissions> = {
-        users: "user-management-polwel",
-        trainers: "user-management-trainers",
-        clients: "user-management-client-orgs",
-        courses: "course-runs-operations",
-        venues: "course-venue-setup",
-        bookings: "finance-activity",
-        reports: "email-reporting-library",
+      const moduleMapping: Record<string, ModuleKey | undefined> = {
+        users: "polwel-users",
+        trainers: "trainers-partners",
+        clients: "client-organizations",
+        courses: "course",
+        "course-runs": "course-run",
+        venues: "venue",
+        bookings: "billing-reports",
+        reports: "post-course-run",
       };
       const actionMapping: Record<string, keyof ModulePermissions> = {
         view: "view",
@@ -104,8 +118,19 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
         const raw = typeof perm === "string" ? perm : perm?.permissionName;
         if (!raw) return;
         const [permissionModule, permissionAction] = raw.split(".");
-        const frontendModule = moduleMapping[permissionModule];
+        let frontendModule = moduleMapping[permissionModule];
         const frontendAction = actionMapping[permissionAction];
+
+        // Legacy course permissions map to both course and course run; approve should map to course run only
+        if (!frontendModule && permissionModule === "courses") {
+          frontendModule = permissionAction === "approve" ? "course-run" : "course";
+        }
+
+        // Ensure course permissions also light up course-run for legacy data
+        if (permissionModule === "courses" && frontendAction && permissionAction !== "approve") {
+          updatedPermissions["course-run"][frontendAction] = true;
+        }
+
         if (
           frontendModule &&
           frontendAction &&
@@ -175,14 +200,21 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
     }
   };
 
-  const handlePermissionChange = (module: keyof UserPermissions, permission: keyof ModulePermissions, checked: CheckedState) => {
-    setPermissions((prev) => ({
-      ...prev,
-      [module]: {
-        ...prev[module],
-        [permission]: checked === true,
-      },
-    }));
+  const handlePermissionChange = (module: ModuleKey, permission: keyof ModulePermissions, checked: CheckedState) => {
+    setPermissions((prev) => {
+      const modulePermissions = prev[module];
+      if (permission === "approve" && typeof modulePermissions.approve === "undefined") {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [module]: {
+          ...modulePermissions,
+          [permission]: checked === true,
+        },
+      };
+    });
   };
 
   return (
@@ -247,67 +279,67 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(permissions).map(([module, modulePermissions]) => {
-                        const moduleDisplayNames: Record<string, string> = {
-                          "user-management-polwel": "User Management - POLWEL Users",
-                          "user-management-trainers": "User Management - Trainers & Partners",
-                          "user-management-client-orgs": "User Management - Client Organisations",
-                          "course-venue-setup": "Course & Venue Setup",
-                          "course-runs-operations": "Course Runs & Operations",
-                          "email-reporting-library": "Email, Reporting and Resource Library",
-                          "finance-activity": "Finance and Activity",
-                        };
+                      {(Object.keys(moduleConfig) as ModuleKey[]).map((moduleKey) => {
+                        const config = moduleConfig[moduleKey];
+                        const modulePermissions = permissions[moduleKey];
 
                         return (
-                          <tr key={module} className="border-b hover:bg-muted/30">
-                            <td className="p-3 font-medium text-foreground">{moduleDisplayNames[module] || module}</td>
+                          <tr key={moduleKey} className="border-b hover:bg-muted/30">
+                            <td className="p-3 font-medium text-foreground">{config.label}</td>
                             <td className="p-3 text-center">
                               <Checkbox
-                                checked={Boolean((modulePermissions as any).view)}
-                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "view" as keyof ModulePermissions, s)}
+                                checked={modulePermissions.view}
+                                onCheckedChange={(s) => handlePermissionChange(moduleKey, "view", s)}
                                 className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                               />
                             </td>
                             <td className="p-3 text-center">
                               <Checkbox
-                                checked={Boolean((modulePermissions as any).create)}
-                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "create" as keyof ModulePermissions, s)}
+                                checked={modulePermissions.create}
+                                onCheckedChange={(s) => handlePermissionChange(moduleKey, "create", s)}
                                 className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                               />
                             </td>
                             <td className="p-3 text-center">
                               <Checkbox
-                                checked={Boolean((modulePermissions as any).edit)}
-                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "edit" as keyof ModulePermissions, s)}
+                                checked={modulePermissions.edit}
+                                onCheckedChange={(s) => handlePermissionChange(moduleKey, "edit", s)}
                                 className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                               />
                             </td>
                             <td className="p-3 text-center">
                               <Checkbox
-                                checked={Boolean((modulePermissions as any).delete)}
-                                onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "delete" as keyof ModulePermissions, s)}
+                                checked={modulePermissions.delete}
+                                onCheckedChange={(s) => handlePermissionChange(moduleKey, "delete", s)}
                                 className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                               />
                             </td>
                             <td className="p-3 text-center">
-                              {module === "course-runs-operations" ? (
+                              {config.supportsApprove ? (
                                 <Checkbox
-                                  checked={Boolean((modulePermissions as any).approve)}
-                                  onCheckedChange={(s) => handlePermissionChange(module as keyof UserPermissions, "approve" as any, s)}
+                                  checked={Boolean(modulePermissions.approve)}
+                                  onCheckedChange={(s) => handlePermissionChange(moduleKey, "approve", s)}
                                   className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                                 />
                               ) : (
-                                <div />
+                                <span className="text-sm text-muted-foreground">—</span>
                               )}
                             </td>
                             <td className="p-3 text-center">
                               <Checkbox
-                                checked={Object.values(modulePermissions).every((v) => v) as CheckedState}
+                                checked={(Object.entries(modulePermissions) as [keyof ModulePermissions, boolean | undefined][])
+                                  .filter(([key]) => key !== "approve" || config.supportsApprove)
+                                  .every(([, value]) => value === true) as CheckedState}
                                 onCheckedChange={(checkedState) => {
                                   const setAll = checkedState === true;
                                   setPermissions((prev) => ({
                                     ...prev,
-                                    [module]: Object.keys(prev[module]).reduce((acc, key) => ({ ...acc, [key]: setAll }), {} as any),
+                                    [moduleKey]: (Object.entries(prev[moduleKey]) as [keyof ModulePermissions, boolean | undefined][]).reduce((acc, [key, value]) => {
+                                      if (key === "approve" && !config.supportsApprove) {
+                                        return { ...acc, [key]: value };
+                                      }
+                                      return { ...acc, [key]: setAll };
+                                    }, {} as ModulePermissions),
                                   }));
                                 }}
                               />

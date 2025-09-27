@@ -15,13 +15,24 @@ async function checkPermissionsMapping() {
     console.log('\nTotal permissions:', permissions.length);
     
     // Test mapping
-    const frontendPerms = ['user-management-polwel:view', 'user-management-polwel:create', 'user-management-polwel:edit'];
+    const frontendPerms = ['polwel-users:view', 'course-run:approve', 'billing-reports:edit'];
     const mapping = {
-      'user-management-polwel:view': 'users.view',
-      'user-management-polwel:create': 'users.create',
-      'user-management-polwel:edit': 'users.edit',
-      'user-management-polwel:update': 'users.edit',
-      'user-management-polwel:delete': 'users.delete'
+      'polwel-users:view': 'users.view',
+      'polwel-users:create': 'users.create',
+      'polwel-users:edit': 'users.edit',
+      'polwel-users:update': 'users.edit',
+      'polwel-users:delete': 'users.delete',
+      'course-run:approve': 'courses.approve',
+      'course-run:view': 'courses.view',
+      'course-run:create': 'courses.create',
+      'course-run:edit': 'courses.edit',
+      'course-run:update': 'courses.edit',
+      'course-run:delete': 'courses.delete',
+      'billing-reports:view': 'bookings.view',
+      'billing-reports:create': 'bookings.create',
+      'billing-reports:edit': 'bookings.edit',
+      'billing-reports:update': 'bookings.edit',
+      'billing-reports:delete': 'bookings.delete'
     };
     
     console.log('\nTesting mapping:');

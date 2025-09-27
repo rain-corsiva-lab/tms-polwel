@@ -21,6 +21,7 @@ import OrganizationDashboard from "./pages/OrganizationDashboard";
 import CourseArchive from "./pages/CourseArchive";
 import CourseForm from "./pages/CourseForm";
 import CourseDetail from "./pages/CourseDetail";
+import CourseRuns from "./pages/CourseRuns";
 import VenueArchive from "./pages/VenueArchive";
 import VenueForm from "./pages/VenueForm";
 import VenueDetail from "./pages/VenueDetail";
@@ -178,6 +179,16 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredPermissions={["courses.view"]}>
                     <CourseDetail />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Course Run Management */}
+              <Route
+                path="course-runs"
+                element={
+                  <ProtectedRoute requiredPermissions={["courses.view"]}>
+                    <CourseRuns />
                   </ProtectedRoute>
                 }
               />

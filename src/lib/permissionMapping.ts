@@ -1,40 +1,53 @@
 // Frontend helper to map UI permission keys (module:action) to canonical dot-style names
 const permissionNameMapping: Record<string, string> = {
-  'user-management-polwel:view': 'users.view',
-  'user-management-polwel:create': 'users.create',
-  'user-management-polwel:edit': 'users.edit',
-  'user-management-polwel:delete': 'users.delete',
+  // POLWEL users module
+  'polwel-users:view': 'users.view',
+  'polwel-users:create': 'users.create',
+  'polwel-users:edit': 'users.edit',
+  'polwel-users:delete': 'users.delete',
 
-  'user-management-trainers:view': 'trainers.view',
-  'user-management-trainers:create': 'trainers.create',
-  'user-management-trainers:edit': 'trainers.edit',
-  'user-management-trainers:delete': 'trainers.delete',
+  // Trainers & partners module
+  'trainers-partners:view': 'trainers.view',
+  'trainers-partners:create': 'trainers.create',
+  'trainers-partners:edit': 'trainers.edit',
+  'trainers-partners:delete': 'trainers.delete',
 
-  'user-management-client-orgs:view': 'clients.view',
-  'user-management-client-orgs:create': 'clients.create',
-  'user-management-client-orgs:edit': 'clients.edit',
-  'user-management-client-orgs:delete': 'clients.delete',
+  // Client organisations module
+  'client-organizations:view': 'clients.view',
+  'client-organizations:create': 'clients.create',
+  'client-organizations:edit': 'clients.edit',
+  'client-organizations:delete': 'clients.delete',
 
-  'course-runs-operations:view': 'courses.view',
-  'course-runs-operations:create': 'courses.create',
-  'course-runs-operations:edit': 'courses.edit',
-  'course-runs-operations:approve': 'courses.approve',
-  'course-runs-operations:delete': 'courses.delete',
+  // Course module
+  'course:view': 'courses.view',
+  'course:create': 'courses.create',
+  'course:edit': 'courses.edit',
+  'course:delete': 'courses.delete',
 
-  'course-venue-setup:view': 'venues.view',
-  'course-venue-setup:create': 'venues.create',
-  'course-venue-setup:edit': 'venues.edit',
-  'course-venue-setup:delete': 'venues.delete',
+  // Course run module (shares backend permissions with courses)
+  'course-run:view': 'courses.view',
+  'course-run:create': 'courses.create',
+  'course-run:edit': 'courses.edit',
+  'course-run:delete': 'courses.delete',
+  'course-run:approve': 'courses.approve',
 
-  'email-reporting-library:view': 'reports.view',
-  'email-reporting-library:create': 'reports.create',
-  'email-reporting-library:edit': 'reports.edit',
-  'email-reporting-library:delete': 'reports.delete',
+  // Venue module
+  'venue:view': 'venues.view',
+  'venue:create': 'venues.create',
+  'venue:edit': 'venues.edit',
+  'venue:delete': 'venues.delete',
 
-  'finance-activity:view': 'bookings.view',
-  'finance-activity:create': 'bookings.create',
-  'finance-activity:edit': 'bookings.edit',
-  'finance-activity:delete': 'bookings.delete',
+  // Post course run module (maps to reporting)
+  'post-course-run:view': 'reports.view',
+  'post-course-run:create': 'reports.create',
+  'post-course-run:edit': 'reports.edit',
+  'post-course-run:delete': 'reports.delete',
+
+  // Billing reports module (maps to finance/bookings)
+  'billing-reports:view': 'bookings.view',
+  'billing-reports:create': 'bookings.create',
+  'billing-reports:edit': 'bookings.edit',
+  'billing-reports:delete': 'bookings.delete',
 };
 
 export function mapFrontendPermissions(frontendPerms: string[]) {
