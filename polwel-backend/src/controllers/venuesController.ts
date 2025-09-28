@@ -31,7 +31,16 @@ export const venuesController = {
   // Get all venues
   getVenues: async (req: Request, res: Response) => {
     try {
+      const { venueType } = req.query;
+      
+      // Build where clause for filtering
+      const where: any = {};
+      if (venueType && typeof venueType === 'string') {
+        where.venueType = venueType.toUpperCase();
+      }
+      
       const venues = await prisma.venue.findMany({
+        where,
         include: {
           creator: {
             select: {
@@ -63,7 +72,7 @@ export const venuesController = {
 
       res.json({
         success: true,
-        data: transformedVenues
+        venues: transformedVenues
       });
     } catch (error) {
       console.error('Error fetching venues:', error);

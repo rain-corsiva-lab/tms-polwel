@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
@@ -78,8 +79,10 @@ interface PaginationState {
 }
 
 const CourseRuns: React.FC = () => {
+  const navigate = useNavigate();
   const [courseRuns, setCourseRuns] = useState<CourseRunUI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -169,6 +172,7 @@ const CourseRuns: React.FC = () => {
       setError(err instanceof Error ? err.message : "Failed to load course runs");
     } finally {
       setLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -268,7 +272,7 @@ const CourseRuns: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (isInitialLoad && loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -287,7 +291,7 @@ const CourseRuns: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Course Run Management</h1>
           <p className="text-gray-600">Manage and monitor course run schedules and enrollments</p>
         </div>
-        <Button>
+        <Button onClick={() => navigate("/course-runs/new")}>
           <Plus className="h-4 w-4 mr-2" />
           Create Course Run
         </Button>
@@ -356,7 +360,7 @@ const CourseRuns: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -454,6 +458,12 @@ const CourseRuns: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+            {loading && !isInitialLoad && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                <p className="text-sm text-gray-600">Refreshing course runs&hellip;</p>
+              </div>
+            )}
           </div>
 
           <PaginationControls

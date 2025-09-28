@@ -1049,6 +1049,24 @@ export const courseRunsApi = {
     return apiRequest(endpoint);
   },
 
+  getById: async (id: string) => {
+    return apiRequest(`/course-runs/${id}`);
+  },
+
+  create: async (courseRunData: any) => {
+    return apiRequest('/course-runs', {
+      method: 'POST',
+      body: JSON.stringify(courseRunData),
+    });
+  },
+
+  update: async (id: string, courseRunData: any) => {
+    return apiRequest(`/course-runs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(courseRunData),
+    });
+  },
+
   getStatusOptions: async () => {
     return apiRequest('/course-runs/status-options');
   },

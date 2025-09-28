@@ -4,6 +4,25 @@ import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
+const SOURCE_FILE = 'src/controllers/courseRunController.ts';
+
+const buildErrorResponse = (method: string, userMessage: string, error: unknown) => {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  const stack = error instanceof Error ? error.stack : undefined;
+  const stackSnippet = stack?.split('\n').find((line) => line.includes('courseRunController'))?.trim();
+
+  return {
+    success: false,
+    error: userMessage,
+    details: {
+      message: errorMessage,
+      sourceFile: SOURCE_FILE,
+      method,
+      stack: stackSnippet ?? stack,
+    },
+  };
+};
+
 const ALLOWED_COURSE_STATUSES: CourseStatus[] = [
   'DRAFT',
   'PENDING',
@@ -62,28 +81,57 @@ export const courseRunController = {
         deletedAt: null, // Only get non-deleted course runs
       };
 
-      // Add search functionality
-      if (search) {
+      // Add search functionality across serial number, course details, and venue metadata
+      const searchTerm = typeof search === 'string' ? search.trim() : '';
+      if (searchTerm) {
         where.OR = [
           {
             serialNumber: {
-              contains: search,
-              mode: 'insensitive',
+              contains: searchTerm,
             },
           },
           {
             course: {
-              title: {
-                contains: search,
-                mode: 'insensitive',
+              is: {
+                title: {
+                  contains: searchTerm,
+                },
               },
             },
           },
           {
             course: {
-              courseCode: {
-                contains: search,
-                mode: 'insensitive',
+              is: {
+                courseCode: {
+                  contains: searchTerm,
+                },
+              },
+            },
+          },
+          {
+            course: {
+              is: {
+                category: {
+                  contains: searchTerm,
+                },
+              },
+            },
+          },
+          {
+            venue: {
+              is: {
+                name: {
+                  contains: searchTerm,
+                },
+              },
+            },
+          },
+          {
+            venue: {
+              is: {
+                address: {
+                  contains: searchTerm,
+                },
               },
             },
           },
@@ -199,10 +247,7 @@ export const courseRunController = {
       });
     } catch (error) {
       console.error('Error fetching course runs:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch course runs',
-      });
+      res.status(500).json(buildErrorResponse('courseRunController.getAll', 'Failed to fetch course runs', error));
     }
   },
 
@@ -272,10 +317,7 @@ export const courseRunController = {
       });
     } catch (error) {
       console.error('Error fetching course run:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch course run',
-      });
+      res.status(500).json(buildErrorResponse('courseRunController.getById', 'Failed to fetch course run', error));
     }
   },
 
@@ -317,10 +359,7 @@ export const courseRunController = {
       });
     } catch (error) {
       console.error('Error creating course run:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create course run',
-      });
+      res.status(500).json(buildErrorResponse('courseRunController.create', 'Failed to create course run', error));
     }
   },
 
@@ -389,10 +428,7 @@ export const courseRunController = {
       });
     } catch (error) {
       console.error('Error updating course run:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update course run',
-      });
+      res.status(500).json(buildErrorResponse('courseRunController.update', 'Failed to update course run', error));
     }
   },
 
@@ -441,10 +477,7 @@ export const courseRunController = {
       });
     } catch (error) {
       console.error('Error cancelling course run:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to cancel course run',
-      });
+      res.status(500).json(buildErrorResponse('courseRunController.cancel', 'Failed to cancel course run', error));
     }
   },
 
@@ -492,10 +525,7 @@ export const courseRunController = {
       });
     } catch (error) {
       console.error('Error deleting course run:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to delete course run',
-      });
+      res.status(500).json(buildErrorResponse('courseRunController.delete', 'Failed to delete course run', error));
     }
   },
 
@@ -510,10 +540,7 @@ export const courseRunController = {
       });
     } catch (error) {
       console.error('Error fetching status options:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch status options',
-      });
+      res.status(500).json(buildErrorResponse('courseRunController.getStatusOptions', 'Failed to fetch status options', error));
     }
   },
 };

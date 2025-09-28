@@ -108,15 +108,13 @@ export const coursesController = {
 
       return res.json({
         success: true,
-        data: {
-          courses: coursesWithMetrics,
-          pagination: {
-            currentPage: pageNum,
-            totalPages,
-            totalCourses,
-            hasNext: pageNum < totalPages,
-            hasPrev: pageNum > 1
-          }
+        courses: coursesWithMetrics,
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          totalCourses,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1
         }
       });
     } catch (error) {
