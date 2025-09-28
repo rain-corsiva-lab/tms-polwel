@@ -11,7 +11,7 @@ import { venuesApi, type Venue } from "@/lib/api";
 const VenueArchive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,9 +23,9 @@ const VenueArchive = () => {
     try {
       setLoading(true);
       const response = await venuesApi.getAll();
-      
+
       if (response.success) {
-        setVenues(response.data || []);
+        setVenues(response.venues || []);
       } else {
         toast({
           title: "Error",
@@ -34,7 +34,7 @@ const VenueArchive = () => {
         });
       }
     } catch (error) {
-      console.error('Error loading venues:', error);
+      console.error("Error loading venues:", error);
       toast({
         title: "Error",
         description: "Failed to load venues",
@@ -52,7 +52,7 @@ const VenueArchive = () => {
 
     try {
       const response = await venuesApi.delete(id);
-      
+
       if (response.success) {
         toast({
           title: "Success",
@@ -67,7 +67,7 @@ const VenueArchive = () => {
         });
       }
     } catch (error) {
-      console.error('Error deleting venue:', error);
+      console.error("Error deleting venue:", error);
       toast({
         title: "Error",
         description: "Failed to delete venue",
@@ -117,7 +117,7 @@ const VenueArchive = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">Venue Management</h1>
-        <Button onClick={() => navigate('/venue-setup/new')}>
+        <Button onClick={() => navigate("/venue-setup/new")}>
           <Plus className="h-4 w-4 mr-2" />
           Add New Venue
         </Button>
@@ -131,7 +131,7 @@ const VenueArchive = () => {
           {venues.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No venues found</p>
-              <Button onClick={() => navigate('/venue-setup/new')}>
+              <Button onClick={() => navigate("/venue-setup/new")}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add First Venue
               </Button>
@@ -152,33 +152,19 @@ const VenueArchive = () => {
                 {venues.map((venue) => (
                   <TableRow key={venue.id}>
                     <TableCell className="font-medium">{venue.name}</TableCell>
-                    <TableCell>{venue.capacity || 'Not specified'}</TableCell>
-                    <TableCell>
-                      {getFeeTypeBadge(venue.feeType)}
-                    </TableCell>
+                    <TableCell>{venue.capacity || "Not specified"}</TableCell>
+                    <TableCell>{getFeeTypeBadge(venue.feeType)}</TableCell>
                     <TableCell>${venue.fee}</TableCell>
-                    <TableCell>{getStatusBadge(venue.status || 'ACTIVE')}</TableCell>
+                    <TableCell>{getStatusBadge(venue.status || "ACTIVE")}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/venue-detail/${venue.id}`)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/venue-detail/${venue.id}`)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/venue-setup/edit/${venue.id}`)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/venue-setup/edit/${venue.id}`)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(venue.id, venue.name)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(venue.id, venue.name)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

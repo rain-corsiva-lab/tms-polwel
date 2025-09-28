@@ -242,7 +242,7 @@ const CourseRuns: React.FC = () => {
   // Action handlers
   const handleView = (courseRun: CourseRunUI) => {
     // Navigate to course run detail page
-    console.log("View course run:", courseRun.id);
+    navigate(`/course-runs/${courseRun.id}`);
   };
 
   const handleEdit = (courseRun: CourseRunUI) => {
@@ -440,16 +440,12 @@ const CourseRuns: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleView(courseRun)}>View Details</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(courseRun)}>Edit Course Run</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleView(courseRun)}>Manage</DropdownMenuItem>
                             {courseRun.status !== "CANCELLED" && courseRun.status !== "COMPLETED" && (
                               <DropdownMenuItem onClick={() => handleCancel(courseRun)} className="text-orange-600">
-                                Cancel Course Run
+                                Cancel Run
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={() => handleDelete(courseRun)} className="text-red-600">
-                              Delete Course Run
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </SafeDropdownMenu>
                       </TableCell>

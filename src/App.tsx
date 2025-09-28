@@ -23,6 +23,7 @@ import CourseForm from "./pages/CourseForm";
 import CourseDetail from "./pages/CourseDetail";
 import CourseRuns from "./pages/CourseRuns";
 import CourseRunForm from "./pages/CourseRunForm";
+import CourseRunDetail from "./pages/CourseRunDetail";
 import VenueArchive from "./pages/VenueArchive";
 import VenueForm from "./pages/VenueForm";
 import VenueDetail from "./pages/VenueDetail";
@@ -206,6 +207,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredPermissions={["courses.edit"]}>
                     <CourseRunForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="course-runs/:id"
+                element={
+                  <ProtectedRoute requiredPermissions={["courses.view"]}>
+                    <CourseRunDetail />
                   </ProtectedRoute>
                 }
               />

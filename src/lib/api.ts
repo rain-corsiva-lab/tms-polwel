@@ -1104,6 +1104,7 @@ export interface Venue {
   address?: string;
   description?: string;
   facilities?: string[];
+  venueType?: string;
   createdAt?: string;
   updatedAt?: string;
   creator?: {
@@ -1126,6 +1127,7 @@ export interface VenueCreateRequest {
   fee: number;
   status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   remarks?: string;
+  venueType?: "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY";
 }
 
 // Venues API

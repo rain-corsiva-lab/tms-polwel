@@ -20,10 +20,10 @@ router.get('/:id', requirePermissions('courses.view'), courseRunController.getBy
 router.post('/', requirePermissions('courses.create'), courseRunController.create);
 
 // PUT /api/course-runs/:id - Update course run
-router.put('/:id', requirePermissions('courses.update'), courseRunController.update);
+router.put('/:id', requirePermissions('courses.edit'), courseRunController.update);
 
 // POST /api/course-runs/:id/cancel - Cancel course run
-router.post('/:id/cancel', requirePermissions('courses.update'), courseRunController.cancel);
+router.post('/:id/cancel', requirePermissions('courses.edit'), courseRunController.cancel);
 
 // DELETE /api/course-runs/:id - Delete course run (soft delete)
 router.delete('/:id', requirePermissions('courses.delete'), courseRunController.delete);

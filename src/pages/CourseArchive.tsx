@@ -53,9 +53,11 @@ const CourseArchive = () => {
         const coursesResponse = await coursesApi.getAll();
         console.log("Courses API response:", coursesResponse);
 
-        // Handle the correct API response structure: { success: true, data: { courses: [...] } }
+        // Handle the correct API response structure: { success: true, courses: [...] }
         let coursesData = [];
-        if (coursesResponse.success && coursesResponse.data && Array.isArray(coursesResponse.data.courses)) {
+        if (coursesResponse.success && Array.isArray(coursesResponse.courses)) {
+          coursesData = coursesResponse.courses;
+        } else if (coursesResponse.data && Array.isArray(coursesResponse.data.courses)) {
           coursesData = coursesResponse.data.courses;
         } else if (Array.isArray(coursesResponse.data)) {
           coursesData = coursesResponse.data;

@@ -21,6 +21,7 @@ interface VenueCreateRequest {
   fee: number;
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   remarks?: string;
+  venueType?: 'HOTEL' | 'ON_PREMISE' | 'CLIENT_FACILITY';
 }
 
 interface VenueUpdateRequest extends VenueCreateRequest {
@@ -206,6 +207,7 @@ export const venuesController = {
         feeType: venueData.feeType || 'PER_VENUE',
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',
+        venueType: venueData.venueType || 'HOTEL',
         createdBy: userId,
         ...(venueData.address && { address: venueData.address.trim() }),
         ...(venueData.description && { description: venueData.description.trim() }),
@@ -307,6 +309,7 @@ export const venuesController = {
         feeType: venueData.feeType || 'PER_VENUE',
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',
+        venueType: venueData.venueType || 'HOTEL',
         ...(venueData.address !== undefined && { address: venueData.address?.trim() || null }),
         ...(venueData.description !== undefined && { description: venueData.description?.trim() || null }),
         ...(venueData.facilities !== undefined && { facilities: venueData.facilities || [] }),

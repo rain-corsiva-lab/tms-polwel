@@ -20,6 +20,7 @@ console.log(`🔧 DATABASE_URL env var:`, process.env.DATABASE_URL?.replace(/:[^
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import courseRoutes from './routes/courses';
+import courseRunsRoutes from './routes/courseRuns';
 import venueRoutes from './routes/venues';
 import bookingRoutes from './routes/bookings';
 import organizationRoutes from './routes/organizations';
@@ -33,7 +34,6 @@ import referencesRoutes from './routes/references';
 import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import trainerDashboardRoutes from './routes/trainerDashboard';
 import profileRoutes from './routes/profile';
-import courseRunsRoutes from './routes/courseRuns';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';

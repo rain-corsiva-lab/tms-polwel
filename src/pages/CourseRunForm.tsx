@@ -8,6 +8,9 @@ import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
+import DateInput from "../components/ui/date-input";
+import TimeInput from "../components/ui/time-input";
+import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, Users } from "lucide-react";
 import { coursesApi, venuesApi, trainersApi, courseRunsApi } from "../lib/api";
 import Swal from "sweetalert2";
@@ -201,13 +204,7 @@ const CourseRunForm: React.FC = () => {
   // Handle venue type change
   const handleVenueTypeChange = (venueType: string) => {
     setFormData({ ...formData, venueType, venueId: "" });
-
-    // For hotel type, filter and load venues from API
-    if (venueType === "HOTEL") {
-      loadVenuesByType("HOTEL");
-    } else {
-      setAvailableVenues([]);
-    }
+    loadVenuesByType(venueType);
   };
 
   // Load venues by type
@@ -215,9 +212,8 @@ const CourseRunForm: React.FC = () => {
     try {
       const response = await venuesApi.getAll();
       if (response.success) {
-        // Filter venues by type - assuming venues have a venueType field
-        const filtered = (response.venues || []).filter((venue: Venue) => venue.venueType?.toUpperCase() === venueType.toUpperCase());
-        setAvailableVenues(filtered);
+        const list = (response.venues || []).filter((v: Venue) => v.venueType?.toUpperCase() === venueType.toUpperCase());
+        setAvailableVenues(list);
       }
     } catch (error) {
       console.error("Error loading venues by type:", error);
@@ -306,7 +302,7 @@ const CourseRunForm: React.FC = () => {
         remarks: formData.remarks,
         baseCourseFee: formData.baseAmount,
         otherFee: formData.additionalCosts,
-        status: isDraft ? "DRAFT" : "PUBLISHED",
+        status: isDraft ? "DRAFT" : "ACTIVE",
       };
 
       const response = await courseRunsApi.create(submissionData);
@@ -438,11 +434,10 @@ const CourseRunForm: React.FC = () => {
                   {/* Start Date */}
                   <div>
                     <Label htmlFor="startDate">Start Date *</Label>
-                    <Input
+                    <DateInput
                       id="startDate"
-                      type="date"
                       value={formData.startDate}
-                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      onChange={(date) => handleStartDateChange(date || "")}
                       className={errors.startDate ? "border-red-500" : ""}
                     />
                     {errors.startDate && <p className="text-sm text-red-500 mt-1">{errors.startDate}</p>}
@@ -451,11 +446,10 @@ const CourseRunForm: React.FC = () => {
                   {/* Start Time */}
                   <div>
                     <Label htmlFor="startTime">Start Time *</Label>
-                    <Input
+                    <TimeInput
                       id="startTime"
-                      type="time"
                       value={formData.startTime}
-                      onChange={(e) => handleFieldChange("startTime", e.target.value)}
+                      onChange={(time) => handleFieldChange("startTime", time || "")}
                       className={errors.startTime ? "border-red-500" : ""}
                     />
                     {errors.startTime && <p className="text-sm text-red-500 mt-1">{errors.startTime}</p>}
@@ -464,11 +458,10 @@ const CourseRunForm: React.FC = () => {
                   {/* End Date */}
                   <div>
                     <Label htmlFor="endDate">End Date *</Label>
-                    <Input
+                    <DateInput
                       id="endDate"
-                      type="date"
                       value={formData.endDate}
-                      onChange={(e) => handleFieldChange("endDate", e.target.value)}
+                      onChange={(date) => handleFieldChange("endDate", date || "")}
                       className={errors.endDate ? "border-red-500" : ""}
                     />
                     {errors.endDate && <p className="text-sm text-red-500 mt-1">{errors.endDate}</p>}
@@ -477,11 +470,10 @@ const CourseRunForm: React.FC = () => {
                   {/* End Time */}
                   <div>
                     <Label htmlFor="endTime">End Time *</Label>
-                    <Input
+                    <TimeInput
                       id="endTime"
-                      type="time"
                       value={formData.endTime}
-                      onChange={(e) => handleFieldChange("endTime", e.target.value)}
+                      onChange={(time) => handleFieldChange("endTime", time || "")}
                       className={errors.endTime ? "border-red-500" : ""}
                     />
                     {errors.endTime && <p className="text-sm text-red-500 mt-1">{errors.endTime}</p>}
@@ -510,12 +502,14 @@ const CourseRunForm: React.FC = () => {
                     </div>
 
                     {/* Conditional Venue Selection */}
-                    {formData.venueType === "HOTEL" && (
+                    {formData.venueType && availableVenues.length > 0 && (
                       <div>
-                        <Label htmlFor="venue">Hotel</Label>
+                        <Label htmlFor="venue">
+                          {formData.venueType === "HOTEL" ? "Hotel" : formData.venueType === "ON_PREMISE" ? "On Premise Venue" : "Client Facility Venue"}
+                        </Label>
                         <Select value={formData.venueId || ""} onValueChange={(value) => handleFieldChange("venueId", value)}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select hotel" />
+                            <SelectValue placeholder={`Select ${formData.venueType.toLowerCase().replace("_", " ")}`} />
                           </SelectTrigger>
                           <SelectContent>
                             {availableVenues.map((venue) => (

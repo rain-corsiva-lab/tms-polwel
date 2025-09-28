@@ -19,6 +19,7 @@ interface VenueFormData {
   contacts: Contact[];
   remarks: string;
   status: string;
+  venueType: string;
 }
 
 const VenueForm = () => {
@@ -35,6 +36,7 @@ const VenueForm = () => {
     contacts: [{ id: "temp-1", name: "", number: "", email: "" }],
     remarks: "",
     status: "ACTIVE",
+    venueType: "HOTEL",
   });
 
   const [loading, setLoading] = useState(false);
@@ -62,6 +64,7 @@ const VenueForm = () => {
           contacts: venue.contacts && venue.contacts.length > 0 ? venue.contacts : [{ id: "temp-1", name: "", number: "", email: "" }],
           remarks: venue.remarks || "",
           status: venue.status || "ACTIVE",
+          venueType: venue.venueType || "HOTEL",
         });
       } else {
         toast({
@@ -193,6 +196,7 @@ const VenueForm = () => {
         contacts: validContacts,
         remarks: formData.remarks.trim(),
         status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE",
+        venueType: formData.venueType as "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY",
       };
 
       let response;
@@ -282,6 +286,20 @@ const VenueForm = () => {
                   placeholder="e.g., 50-60 pax"
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="venueType">Venue Type *</Label>
+                <Select value={formData.venueType} onValueChange={(value) => handleInputChange("venueType", value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="HOTEL">Hotel</SelectItem>
+                    <SelectItem value="ON_PREMISE">On Premise</SelectItem>
+                    <SelectItem value="CLIENT_FACILITY">Client Facility</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
