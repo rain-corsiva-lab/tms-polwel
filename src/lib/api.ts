@@ -498,6 +498,11 @@ export const polwelUsersApi = {
       method: 'POST',
     });
   },
+
+  // Get all learners for an organization
+  getLearners: async (organizationId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/learners`);
+  },
 };
 
 // Trainers API
@@ -926,6 +931,19 @@ export const clientOrganizationsApi = {
   },
 };
 
+// Organizations API (general)
+export const organizationsApi = {
+  // Get all organizations
+  list: async () => {
+    return apiRequest('/organizations');
+  },
+
+  // Get training coordinators for an organization
+  getTrainingCoordinators: async (organizationId: string) => {
+    return apiRequest(`/organizations/${organizationId}/training-coordinators`);
+  },
+};
+
 // Course related types
 export interface CourseDiscount { id?: string; name: string; percentage: number; }
 export interface Course {
@@ -1080,6 +1098,35 @@ export const courseRunsApi = {
   delete: async (id: string) => {
     return apiRequest(`/course-runs/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  // Enroll single learner (backend expects /enroll-learner)
+  enrollLearner: async (courseRunId: string, enrollmentData: any) => {
+    return apiRequest(`/course-runs/${courseRunId}/enroll-learner`, {
+      method: 'POST',
+      body: JSON.stringify(enrollmentData),
+    });
+  },
+
+  // Enroll multiple learners (group) (backend expects /enroll-learners)
+  enrollLearners: async (courseRunId: string, enrollmentData: any) => {
+    return apiRequest(`/course-runs/${courseRunId}/enroll-learners`, {
+      method: 'POST',
+      body: JSON.stringify(enrollmentData),
+    });
+  },
+
+  // Get enrolled learners for a course run
+  getLearners: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/learners`);
+  },
+
+  // Update learner enrollment
+  updateEnrollment: async (courseRunId: string, learnerId: string, payload: any) => {
+    return apiRequest(`/course-runs/${courseRunId}/learners/${learnerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
     });
   },
 };
@@ -1287,6 +1334,7 @@ export default {
   trainersApi,
   partnersApi,
   clientOrganizationsApi,
+  organizationsApi,
   courseRunsApi,
   coursesApi,
   venuesApi,

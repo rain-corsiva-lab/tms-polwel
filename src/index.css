@@ -148,3 +148,7 @@
 body.swal2-shown [data-radix-portal] {
   pointer-events: none !important;
 }
+
+button.relative.flex.items-center.rounded-sm{
+  width: 100%;
+}

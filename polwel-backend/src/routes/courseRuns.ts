@@ -28,4 +28,16 @@ router.post('/:id/cancel', requirePermissions('courses.edit'), courseRunControll
 // DELETE /api/course-runs/:id - Delete course run (soft delete)
 router.delete('/:id', requirePermissions('courses.delete'), courseRunController.delete);
 
+// POST /api/course-runs/:id/enroll-learner - Enroll single learner
+router.post('/:id/enroll-learner', requirePermissions('courses.edit'), courseRunController.enrollLearner);
+
+// POST /api/course-runs/:id/enroll-learners - Enroll multiple learners
+router.post('/:id/enroll-learners', requirePermissions('courses.edit'), courseRunController.enrollLearners);
+
+// GET /api/course-runs/:id/learners - Get enrolled learners
+router.get('/:id/learners', requirePermissions('courses.view'), courseRunController.getLearners);
+
+// PUT /api/course-runs/:id/learners/:learnerId - Update learner enrollment
+router.put('/:id/learners/:learnerId', requirePermissions('courses.edit'), courseRunController.updateEnrollment);
+
 export default router;

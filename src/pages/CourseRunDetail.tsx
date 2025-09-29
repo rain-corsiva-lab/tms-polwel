@@ -9,6 +9,9 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../components/ui/select";
+import DateInput from "../components/ui/date-input";
+import TimeInput from "../components/ui/time-input";
 import {
   ArrowLeft,
   Calendar,
@@ -32,6 +35,8 @@ import { courseRunsApi, coursesApi, venuesApi } from "../lib/api";
 import { toast } from "sonner";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
+import { AddLearnersDialog } from "../components/AddLearnersDialog";
+import { EditLearnerDialog } from "../components/EditLearnerDialog";
 
 interface CourseRunDetailData {
   id: string;
@@ -103,7 +108,11 @@ const CourseRunDetail: React.FC = () => {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editData, setEditData] = useState<any>(null);
   const [courses, setCourses] = useState<any[]>([]);
-  const [venues, setVenues] = useState<any[]>([]);
+  const [venues, setVenues] = useState<any[]>([]); // all venues
+  const [filteredVenues, setFilteredVenues] = useState<any[]>([]); // by venueType
+  const [addLearnersDialogOpen, setAddLearnersDialogOpen] = useState(false);
+  const [editLearnerDialogOpen, setEditLearnerDialogOpen] = useState(false);
+  const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
 
   const currency = (v: number | null | undefined) => {
     if (v === null || v === undefined || isNaN(Number(v))) return "$0.00";
@@ -112,14 +121,28 @@ const CourseRunDetail: React.FC = () => {
 
   const safeNumber = (v: number | null | undefined, fallback = 0) => (v === null || v === undefined || isNaN(Number(v)) ? fallback : Number(v));
 
+  const generateSerialNumber = (courseCode: string, startDate: string) => {
+    if (!courseCode || !startDate) return "";
+    const date = new Date(startDate);
+    if (isNaN(date.getTime())) return "";
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${courseCode}${day}${month}${year}`;
+  };
+
   const initEditData = useCallback((cr: CourseRunDetailData) => {
+    const start = cr.startDatetime ? new Date(cr.startDatetime) : null;
+    const end = cr.endDatetime ? new Date(cr.endDatetime) : null;
     setEditData({
       serialNumber: cr.serialNumber || "",
       courseRunType: cr.courseRunType || "",
       courseId: cr.course?.id || "",
       courseCode: cr.course?.courseCode || "",
-      startDate: cr.startDatetime ? new Date(cr.startDatetime).toISOString().substring(0, 10) : "",
-      endDate: cr.endDatetime ? new Date(cr.endDatetime).toISOString().substring(0, 10) : "",
+      startDate: start ? start.toISOString().substring(0, 10) : "",
+      startTime: start ? start.toISOString().substring(11, 16) : "",
+      endDate: end ? end.toISOString().substring(0, 10) : "",
+      endTime: end ? end.toISOString().substring(11, 16) : "",
       venueType: cr.venueType || "",
       venueId: cr.venue?.id || "",
       specifiedLocation: cr.specifiedLocation || "",
@@ -161,6 +184,13 @@ const CourseRunDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEnrollmentSuccess = () => {
+    // Refresh the course run data to show newly enrolled learners
+    loadCourseRunDetail();
+    setAddLearnersDialogOpen(false);
+    toast.success("Learners enrolled successfully!");
   };
 
   const formatDateTime = (dateTime: string | null) => {
@@ -237,9 +267,16 @@ const CourseRunDetail: React.FC = () => {
     if (!isEditing) {
       // entering edit mode: load supporting data
       try {
-        const [cRes, vRes] = await Promise.all([coursesApi.getAll({ limit: 500 }), venuesApi.getAll()]);
+        const [cRes, vRes] = await Promise.all([coursesApi.getAll({ limit: 1000 }), venuesApi.getAll()]);
         if (cRes.success) setCourses(cRes.courses || []);
-        if (vRes.success) setVenues(vRes.venues || []);
+        if (vRes.success) {
+          setVenues(vRes.venues || []);
+          // Prefilter for existing venueType
+          if (courseRun.venueType) {
+            const list = (vRes.venues || []).filter((v: any) => v.venueType?.toUpperCase() === courseRun.venueType?.toUpperCase());
+            setFilteredVenues(list);
+          }
+        }
       } catch (e) {
         console.warn("Failed loading auxiliary data", e);
       }
@@ -253,19 +290,83 @@ const CourseRunDetail: React.FC = () => {
   };
 
   const handleEditField = (field: string, value: any) => {
-    setEditData((prev: any) => ({ ...prev, [field]: value }));
+    setEditData((prev: any) => {
+      const updated = { ...prev, [field]: value };
+      // Auto update serialNumber when course or startDate changes
+      if ((field === "courseId" || field === "startDate") && (updated.courseCode || updated.courseId)) {
+        const theCourse = courses.find((c) => c.id === updated.courseId);
+        if (theCourse) {
+          updated.courseCode = theCourse.courseCode;
+          updated.serialNumber = generateSerialNumber(theCourse.courseCode, updated.startDate);
+        }
+      }
+      if (field === "venueType") {
+        const list = venues.filter((v: any) => v.venueType?.toUpperCase() === value.toUpperCase());
+        setFilteredVenues(list);
+        updated.venueId = ""; // reset
+      }
+      if (field === "venueId") {
+        const venue = filteredVenues.find((v: any) => v.id === value);
+        if (venue && venue.feeType) {
+          const raw = String(venue.feeType).toUpperCase();
+          if (raw === "PER_HEAD" || raw === "PER_VENUE") {
+            updated.feeType = raw;
+          } else {
+            // backend might send lowercase
+            if (raw === "PER_HEAD".toLowerCase()) updated.feeType = "PER_HEAD";
+            if (raw === "PER_VENUE".toLowerCase()) updated.feeType = "PER_VENUE";
+          }
+        }
+      }
+      return updated;
+    });
   };
 
   const handleSave = async () => {
     if (!courseRun) return;
     setEditSubmitting(true);
     try {
+      // Simple validation
+      if (editData.minClassSize && editData.maxClassSize && Number(editData.minClassSize) > Number(editData.maxClassSize)) {
+        toast.error("Min class size cannot exceed max class size");
+        setEditSubmitting(false);
+        return;
+      }
+
+      // Required fields list (excluding optional ones specified by user)
+      const requiredFields: { key: string; label: string }[] = [
+        { key: "serialNumber", label: "Serial Number" },
+        { key: "courseRunType", label: "Course Run Type" },
+        { key: "courseId", label: "Course" },
+        { key: "startDate", label: "Start Date" },
+        { key: "startTime", label: "Start Time" },
+        { key: "endDate", label: "End Date" },
+        { key: "endTime", label: "End Time" },
+        { key: "venueType", label: "Venue Type" },
+        { key: "minClassSize", label: "Min Class Size" },
+        { key: "baseCourseFee", label: "Course Fee" },
+        { key: "feeType", label: "Fee Type" },
+      ];
+
+      const missing = requiredFields.filter((f) => {
+        const val = editData[f.key];
+        return val === undefined || val === null || val === "";
+      });
+      if (missing.length > 0) {
+        toast.error(`Missing required: ${missing.map((m) => m.label).join(", ")}`);
+        setEditSubmitting(false);
+        return;
+      }
+
+      const startDatetime = editData.startDate && editData.startTime ? new Date(`${editData.startDate}T${editData.startTime}`).toISOString() : null;
+      const endDatetime = editData.endDate && editData.endTime ? new Date(`${editData.endDate}T${editData.endTime}`).toISOString() : null;
+
       const payload: any = {
         serialNumber: editData.serialNumber || undefined,
         courseRunType: editData.courseRunType || undefined,
         courseId: editData.courseId || undefined,
-        startDatetime: editData.startDate ? new Date(editData.startDate).toISOString() : null,
-        endDatetime: editData.endDate ? new Date(editData.endDate).toISOString() : null,
+        startDatetime,
+        endDatetime,
         venueId: editData.venueId || null,
         venueType: editData.venueType || null,
         specifiedLocation: editData.specifiedLocation || null,
@@ -349,11 +450,11 @@ const CourseRunDetail: React.FC = () => {
             <TabsContent value="course-info" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Course Run Details</h3>
-                {!isEditing && (
+                {/* {!isEditing && (
                   <Button variant="outline" size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleToggleEdit}>
                     Edit Course Run
                   </Button>
-                )}
+                )} */}
               </div>
 
               <div className="space-y-6">
@@ -367,35 +468,50 @@ const CourseRunDetail: React.FC = () => {
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Course Run Code</Label>
-                      <Input
-                        value={isEditing ? editData?.serialNumber : courseRun.serialNumber || ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("serialNumber", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
+                      <Label className="text-sm font-medium">Serial Number</Label>
+                      <Input value={isEditing ? editData?.serialNumber : courseRun.serialNumber || ""} disabled className="bg-gray-50" />
+                      <p className="text-xs text-gray-500">Auto-generated from Course Code + Start Date</p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Course Code (Max 5 chars)</Label>
-                      <Input
-                        value={isEditing ? editData?.courseCode : courseRun.course?.courseCode || ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("courseCode", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
+                      <Label className="text-sm font-medium">Course Code</Label>
+                      <Input value={isEditing ? editData?.courseCode : courseRun.course?.courseCode || ""} disabled className="bg-gray-50" />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label className="text-sm font-medium">Course Title</Label>
-                      <Input value={isEditing ? editData?.courseTitle : courseRun.course?.title || ""} disabled className="bg-gray-50" />
+                      <Label className="text-sm font-medium">Course</Label>
+                      {isEditing ? (
+                        <Select value={editData?.courseId} onValueChange={(v) => handleEditField("courseId", v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select course" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {courses.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={courseRun.course?.title || "Untitled"} disabled className="bg-gray-50" />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Course Run Type</Label>
-                      <Input
-                        value={isEditing ? editData?.courseRunType : courseRun.courseRunType || ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("courseRunType", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
+                      {isEditing ? (
+                        <Select value={editData?.courseRunType} onValueChange={(v) => handleEditField("courseRunType", v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="OPEN">Open</SelectItem>
+                            <SelectItem value="DEDICATED">Dedicated</SelectItem>
+                            <SelectItem value="TALKS">Talks</SelectItem>
+                            <SelectItem value="CUSTOMIZED">Customized</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={courseRun.courseRunType || ""} disabled className="bg-gray-50" />
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -411,39 +527,95 @@ const CourseRunDetail: React.FC = () => {
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Start Date</Label>
-                      <Input
-                        value={isEditing ? editData?.startDate : courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB") : ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("startDate", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
+                      {isEditing ? (
+                        <DateInput value={editData?.startDate} onChange={(d) => handleEditField("startDate", d || "")} />
+                      ) : (
+                        <Input
+                          value={courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB") : ""}
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Start Time</Label>
+                      {isEditing ? (
+                        <TimeInput value={editData?.startTime} onChange={(t) => handleEditField("startTime", t || "")} />
+                      ) : (
+                        <Input
+                          value={
+                            courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""
+                          }
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">End Date</Label>
-                      <Input
-                        value={isEditing ? editData?.endDate : courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB") : ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("endDate", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
+                      {isEditing ? (
+                        <DateInput value={editData?.endDate} onChange={(d) => handleEditField("endDate", d || "")} />
+                      ) : (
+                        <Input
+                          value={courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB") : ""}
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">End Time</Label>
+                      {isEditing ? (
+                        <TimeInput value={editData?.endTime} onChange={(t) => handleEditField("endTime", t || "")} />
+                      ) : (
+                        <Input
+                          value={
+                            courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""
+                          }
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Venue Type</Label>
+                      {isEditing ? (
+                        <Select value={editData?.venueType} onValueChange={(v) => handleEditField("venueType", v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select venue type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HOTEL">Hotel</SelectItem>
+                            <SelectItem value="ON_PREMISE">On Premise</SelectItem>
+                            <SelectItem value="CLIENT_FACILITY">Client Facility</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={courseRun.venueType || ""} disabled className="bg-gray-50" />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Venue</Label>
-                      <Input
-                        value={isEditing ? editData?.venueType : courseRun.venueType || ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("venueType", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Venue ({courseRun.venueType})</Label>
-                      <Input
-                        value={isEditing ? editData?.venueId : courseRun.venue?.name || courseRun.specifiedLocation || ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("venueId", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
+                      {isEditing ? (
+                        filteredVenues.length > 0 ? (
+                          <Select value={editData?.venueId} onValueChange={(v) => handleEditField("venueId", v)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select venue" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {filteredVenues.map((v) => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  {v.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input value="No venues" disabled className="bg-gray-50" />
+                        )
+                      ) : (
+                        <Input value={courseRun.venue?.name || courseRun.specifiedLocation || ""} disabled className="bg-gray-50" />
+                      )}
                     </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label className="text-sm font-medium">Specified Location</Label>
@@ -469,6 +641,8 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Minimum Class Size</Label>
                       <Input
+                        type="number"
+                        min={0}
                         value={isEditing ? editData?.minClassSize : courseRun.minClassSize?.toString() || ""}
                         disabled={!isEditing}
                         onChange={(e) => handleEditField("minClassSize", e.target.value)}
@@ -478,6 +652,8 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Maximum Class Size</Label>
                       <Input
+                        type="number"
+                        min={0}
                         value={isEditing ? editData?.maxClassSize : courseRun.maxClassSize?.toString() || ""}
                         disabled={!isEditing}
                         onChange={(e) => handleEditField("maxClassSize", e.target.value)}
@@ -559,9 +735,9 @@ const CourseRunDetail: React.FC = () => {
                     <Upload className="h-4 w-4 mr-2" />
                     Attendance List
                   </Button>
-                  <Button size="sm">
+                  <Button size="sm" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Learner
+                    Add Learners
                   </Button>
                 </div>
               </div>
@@ -569,9 +745,9 @@ const CourseRunDetail: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Enrolled Learners ({courseRun.courseRunLearners?.length || 0})</CardTitle>
-                  <Button variant="outline" size="sm" className="ml-auto">
+                  <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Learner
+                    Add Learners
                   </Button>
                 </CardHeader>
                 <CardContent>
@@ -618,7 +794,14 @@ const CourseRunDetail: React.FC = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedEnrollment(learnerRecord);
+                                        setEditLearnerDialogOpen(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem>Remove</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </SafeDropdownMenu>
@@ -751,9 +934,9 @@ const CourseRunDetail: React.FC = () => {
             <TabsContent value="fees-expenses" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Fees & Expenses</h3>
-                <Button variant="outline" size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
+                {/* <Button variant="outline" size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
                   Edit Fees & Expenses
-                </Button>
+                </Button> */}
               </div>
 
               <div className="space-y-6">
@@ -769,6 +952,8 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Course Fee ($)</Label>
                       <Input
+                        type="number"
+                        step="0.01"
                         value={isEditing ? editData?.baseCourseFee : courseRun.baseCourseFee ?? ""}
                         disabled={!isEditing}
                         onChange={(e) => handleEditField("baseCourseFee", e.target.value)}
@@ -778,12 +963,8 @@ const CourseRunDetail: React.FC = () => {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Fee Type</Label>
-                      <Input
-                        value={isEditing ? editData?.feeType : courseRun.feeType || ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("feeType", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
+                      <Input value={isEditing ? editData?.feeType || courseRun.feeType || "" : courseRun.feeType || ""} disabled className="bg-gray-50" />
+                      <p className="text-xs text-gray-500">Derived from selected venue (PER_HEAD / PER_VENUE)</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -797,6 +978,8 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Venue Fee ($) — per venue</Label>
                       <Input
+                        type="number"
+                        step="0.01"
                         value={isEditing ? editData?.venueFee : courseRun.venueFee ?? ""}
                         disabled={!isEditing}
                         onChange={(e) => handleEditField("venueFee", e.target.value)}
@@ -806,6 +989,8 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Other Fees ($)</Label>
                       <Input
+                        type="number"
+                        step="0.01"
                         value={isEditing ? editData?.otherFee : courseRun.otherFee ?? ""}
                         disabled={!isEditing}
                         onChange={(e) => handleEditField("otherFee", e.target.value)}
@@ -815,6 +1000,8 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Admin Fees ($)</Label>
                       <Input
+                        type="number"
+                        step="0.01"
                         value={isEditing ? editData?.adminFee : courseRun.adminFee ?? ""}
                         disabled={!isEditing}
                         onChange={(e) => handleEditField("adminFee", e.target.value)}
@@ -824,6 +1011,8 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Contingency Fees ($)</Label>
                       <Input
+                        type="number"
+                        step="0.01"
                         value={isEditing ? editData?.contingencyFee : courseRun.contingencyFee ?? ""}
                         disabled={!isEditing}
                         onChange={(e) => handleEditField("contingencyFee", e.target.value)}
@@ -837,6 +1026,25 @@ const CourseRunDetail: React.FC = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Add Learners Dialog */}
+      <AddLearnersDialog
+        open={addLearnersDialogOpen}
+        onOpenChange={setAddLearnersDialogOpen}
+        courseRun={courseRun as any}
+        courseRunId={id!}
+        baseCourseFee={courseRun?.baseCourseFee || 0}
+        onSuccess={handleEnrollmentSuccess}
+      />
+      <EditLearnerDialog
+        open={editLearnerDialogOpen}
+        onOpenChange={setEditLearnerDialogOpen}
+        courseRunId={id!}
+        enrollment={selectedEnrollment}
+        baseCourseFee={courseRun?.baseCourseFee || 0}
+        discounts={courseRun?.course?.discounts || []}
+        onSuccess={handleEnrollmentSuccess}
+      />
     </div>
   );
 };

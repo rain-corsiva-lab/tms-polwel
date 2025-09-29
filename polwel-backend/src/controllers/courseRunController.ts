@@ -543,4 +543,310 @@ export const courseRunController = {
       res.status(500).json(buildErrorResponse('courseRunController.getStatusOptions', 'Failed to fetch status options', error));
     }
   },
+
+  // Enroll single learner
+  async enrollLearner(req: Request, res: Response): Promise<void> {
+    try {
+      // Support either :courseRunId or legacy :id param
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+      const { mode, data } = req.body;
+
+      if (!courseRunId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      if (mode !== 'single') {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid enrollment mode',
+        });
+        return;
+      }
+
+      // Create or find learner
+      let learner;
+      if (data.selectedLearnerId) {
+        learner = await prisma.learner.findUnique({
+          where: { id: data.selectedLearnerId },
+        });
+      } else {
+        // Create new learner
+        learner = await prisma.learner.create({
+          data: {
+            fullname: data.fullName,
+            designation: data.designation,
+            email: data.email,
+            contact: data.contactNumber,
+            clientOrganizationId: data.division,
+            departmentName: data.departmentName,
+            paymentMode: data.paymentMode,
+            trainingCoordinatorId: data.trainingCoordinatorId,
+          },
+        });
+      }
+
+      if (!learner) {
+        res.status(404).json({
+          success: false,
+          error: 'Learner not found',
+        });
+        return;
+      }
+
+      // Check if already enrolled
+      const existingEnrollment = await prisma.courseRunLearner.findUnique({
+        where: {
+          courseRunId_learnerId: {
+            courseRunId,
+            learnerId: learner.id,
+          },
+        },
+      });
+
+      if (existingEnrollment) {
+        res.status(400).json({
+          success: false,
+          error: 'Learner is already enrolled in this course run',
+        });
+        return;
+      }
+
+      // Create enrollment
+      const enrollment = await prisma.courseRunLearner.create({
+        data: {
+          courseRunId,
+          learnerId: learner.id,
+          currentDefaultCourseFee: data.currentDefaultCourseFee,
+          discountId: data.discountId,
+          discountPercentage: data.discountPercentage,
+          discountAmount: data.currentDefaultCourseFee * (data.discountPercentage / 100),
+          totalFees: data.totalFees,
+          feesRemarks: data.feesRemarks,
+          invoiceNumber: data.invoiceNumber,
+          remarks: data.remarks,
+          enrollmentStatus: 'ENROLLED',
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Learner enrolled successfully',
+        enrollment,
+        learner,
+      });
+    } catch (error) {
+      console.error('Error enrolling learner:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.enrollLearner', 'Failed to enroll learner', error));
+    }
+  },
+
+  // Enroll multiple learners (group)
+  async enrollLearners(req: Request, res: Response): Promise<void> {
+    try {
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+      const { mode, data } = req.body;
+
+      if (!courseRunId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      if (mode !== 'group') {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid enrollment mode',
+        });
+        return;
+      }
+
+      const enrollments = [];
+      const createdLearners = [];
+
+      for (const learnerData of data.learners) {
+        // Create or find learner
+        let learner;
+        if (learnerData.selectedLearnerId) {
+          learner = await prisma.learner.findUnique({
+            where: { id: learnerData.selectedLearnerId },
+          });
+        } else {
+          // Create new learner
+          learner = await prisma.learner.create({
+            data: {
+              fullname: learnerData.fullName,
+              designation: learnerData.designation,
+              email: learnerData.email,
+              contact: learnerData.contactNumber,
+              clientOrganizationId: data.division,
+              departmentName: data.departmentName,
+              paymentMode: data.paymentMode,
+              trainingCoordinatorId: data.trainingCoordinatorId,
+            },
+          });
+          createdLearners.push(learner);
+        }
+
+        if (!learner) {
+          continue; // Skip if learner not found/created
+        }
+
+        // Check if already enrolled
+        const existingEnrollment = await prisma.courseRunLearner.findUnique({
+          where: {
+            courseRunId_learnerId: {
+              courseRunId,
+              learnerId: learner.id,
+            },
+          },
+        });
+
+        if (existingEnrollment) {
+          continue; // Skip if already enrolled
+        }
+
+        // Create enrollment
+        const enrollment = await prisma.courseRunLearner.create({
+          data: {
+            courseRunId,
+            learnerId: learner.id,
+            currentDefaultCourseFee: learnerData.currentDefaultCourseFee,
+            discountId: learnerData.discountId,
+            discountPercentage: learnerData.discountPercentage,
+            discountAmount: learnerData.currentDefaultCourseFee * (learnerData.discountPercentage / 100),
+            totalFees: learnerData.totalFees,
+            feesRemarks: learnerData.feesRemarks,
+            invoiceNumber: learnerData.invoiceNumber,
+            remarks: data.remarks,
+            enrollmentStatus: 'ENROLLED',
+          },
+        });
+
+        enrollments.push(enrollment);
+      }
+
+      res.json({
+        success: true,
+        message: `${enrollments.length} learners enrolled successfully`,
+        enrollments,
+        createdLearners,
+      });
+    } catch (error) {
+      console.error('Error enrolling learners:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.enrollLearners', 'Failed to enroll learners', error));
+    }
+  },
+
+  // Get enrolled learners for a course run
+  async getLearners(req: Request, res: Response): Promise<void> {
+    try {
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+
+      if (!courseRunId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      const enrollments = await prisma.courseRunLearner.findMany({
+        where: {
+          courseRunId,
+          deletedAt: null,
+        },
+        include: {
+          learner: {
+            include: {
+              clientOrganization: true,
+              trainingCoordinator: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+
+      res.json({
+        success: true,
+        learners: enrollments,
+      });
+    } catch (error) {
+      console.error('Error fetching course run learners:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.getLearners', 'Failed to fetch learners', error));
+    }
+  },
+
+  // Update learner + enrollment
+  async updateEnrollment(req: Request, res: Response): Promise<void> {
+    try {
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+      const { learnerId } = req.params as any;
+      const { learnerData, enrollmentData } = req.body || {};
+
+      if (!courseRunId || !learnerId) {
+        res.status(400).json({ success: false, error: 'Course run ID and learner ID are required' });
+        return;
+      }
+
+      // Verify enrollment exists
+      const existing = await prisma.courseRunLearner.findUnique({
+        where: { courseRunId_learnerId: { courseRunId, learnerId } },
+        include: { learner: true },
+      });
+      if (!existing) {
+        res.status(404).json({ success: false, error: 'Enrollment not found' });
+        return;
+      }
+
+      // Update learner (partial)
+      if (learnerData && Object.keys(learnerData).length) {
+        await prisma.learner.update({
+          where: { id: learnerId },
+          data: {
+            fullname: learnerData.fullName ?? existing.learner.fullname,
+            designation: learnerData.designation ?? existing.learner.designation,
+            email: learnerData.email ?? existing.learner.email,
+            contact: learnerData.contactNumber ?? existing.learner.contact,
+            departmentName: learnerData.departmentName ?? existing.learner.departmentName,
+            clientOrganizationId: learnerData.division || existing.learner.clientOrganizationId,
+            trainingCoordinatorId: learnerData.trainingCoordinatorId ?? existing.learner.trainingCoordinatorId,
+          },
+        });
+      }
+
+      // Update enrollment (partial)
+      if (enrollmentData && Object.keys(enrollmentData).length) {
+        await prisma.courseRunLearner.update({
+          where: { courseRunId_learnerId: { courseRunId, learnerId } },
+          data: {
+            discountId: enrollmentData.discountId ?? existing.discountId,
+            discountPercentage: typeof enrollmentData.discountPercentage === 'number' ? enrollmentData.discountPercentage : existing.discountPercentage,
+            currentDefaultCourseFee: typeof enrollmentData.currentDefaultCourseFee === 'number' ? enrollmentData.currentDefaultCourseFee : existing.currentDefaultCourseFee,
+            totalFees: typeof enrollmentData.totalFees === 'number' ? enrollmentData.totalFees : existing.totalFees,
+            feesRemarks: enrollmentData.feesRemarks ?? existing.feesRemarks,
+            invoiceNumber: enrollmentData.invoiceNumber ?? existing.invoiceNumber,
+            remarks: enrollmentData.remarks ?? existing.remarks,
+          },
+        });
+      }
+
+      const updated = await prisma.courseRunLearner.findUnique({
+        where: { courseRunId_learnerId: { courseRunId, learnerId } },
+        include: { learner: true },
+      });
+
+      res.json({ success: true, message: 'Enrollment updated', enrollment: updated });
+    } catch (error) {
+      console.error('Error updating enrollment:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.updateEnrollment', 'Failed to update enrollment', error));
+    }
+  },
 };
