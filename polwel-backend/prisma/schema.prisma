@@ -421,6 +421,7 @@ model CourseRunLearner {
   feesRemarks                   String?                    @db.Text
   invoiceNumber                 String?
   remarks                       String?                    @db.Text
+  departmentName                String?
   attendanceStatus              AttendanceStatus?          @default(PRESENT)
   enrollmentStatus              EnrollmentStatus?          @default(ENROLLED)
   withdrawnReason               String?                    @db.Text

@@ -294,6 +294,26 @@ export const courseRunController = {
                   fullname: true,
                   email: true,
                   designation: true,
+                  contact: true,
+                  departmentName: true,
+                  clientOrganizationId: true,
+                  paymentMode: true,
+                  trainingCoordinatorId: true,
+                  clientOrganization: {
+                    select: {
+                      id: true,
+                      name: true,
+                      buNumber: true,
+                    },
+                  },
+                  trainingCoordinator: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      contactNumber: true,
+                    },
+                  },
                 },
               },
             },
@@ -311,9 +331,43 @@ export const courseRunController = {
         return;
       }
 
+      const transformedCourseRun = {
+        ...courseRun,
+        courseRunLearners: courseRun.courseRunLearners.map((enrollment) => {
+          const learner = enrollment.learner;
+          const clientOrganization = learner?.clientOrganization || null;
+          const coordinator = learner?.trainingCoordinator || null;
+
+          return {
+            ...enrollment,
+            departmentName: enrollment.departmentName ?? learner?.departmentName ?? null,
+            learner: learner
+              ? {
+                  ...learner,
+                  contactNumber: learner.contact || null,
+                  contact: learner.contact || null,
+                  departmentName: learner.departmentName ?? enrollment.departmentName ?? null,
+                  clientOrganizationId: learner.clientOrganizationId || null,
+                  clientOrganization,
+                  clientOrganizationName: clientOrganization?.name || null,
+                  clientOrganizationBuNumber: clientOrganization?.buNumber || null,
+                  paymentMode: learner.paymentMode || null,
+                  trainingCoordinatorId: learner.trainingCoordinatorId || null,
+                  trainingCoordinator: coordinator
+                    ? {
+                        ...coordinator,
+                        contactNumber: coordinator.contactNumber || null,
+                      }
+                    : null,
+                }
+              : null,
+          };
+        }),
+      };
+
       res.json({
         success: true,
-        courseRun,
+        courseRun: transformedCourseRun,
       });
     } catch (error) {
       console.error('Error fetching course run:', error);
@@ -628,6 +682,7 @@ export const courseRunController = {
           feesRemarks: data.feesRemarks,
           invoiceNumber: data.invoiceNumber,
           remarks: data.remarks,
+          departmentName: data.departmentName || learner.departmentName || null,
           enrollmentStatus: 'ENROLLED',
         },
       });
@@ -724,6 +779,7 @@ export const courseRunController = {
             feesRemarks: learnerData.feesRemarks,
             invoiceNumber: learnerData.invoiceNumber,
             remarks: data.remarks,
+            departmentName: learnerData.departmentName || data.departmentName || learner.departmentName || null,
             enrollmentStatus: 'ENROLLED',
           },
         });
@@ -763,9 +819,31 @@ export const courseRunController = {
         },
         include: {
           learner: {
-            include: {
-              clientOrganization: true,
-              trainingCoordinator: true,
+            select: {
+              id: true,
+              fullname: true,
+              email: true,
+              designation: true,
+              contact: true,
+              departmentName: true,
+              clientOrganizationId: true,
+              paymentMode: true,
+              trainingCoordinatorId: true,
+              clientOrganization: {
+                select: {
+                  id: true,
+                  name: true,
+                  buNumber: true,
+                },
+              },
+              trainingCoordinator: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  contactNumber: true,
+                },
+              },
             },
           },
         },
@@ -774,9 +852,40 @@ export const courseRunController = {
         },
       });
 
+      const normalizedEnrollments = enrollments.map((enrollment) => {
+        const learner = enrollment.learner;
+        const clientOrganization = learner?.clientOrganization || null;
+        const coordinator = learner?.trainingCoordinator || null;
+
+        return {
+          ...enrollment,
+          departmentName: enrollment.departmentName ?? learner?.departmentName ?? null,
+          learner: learner
+            ? {
+                ...learner,
+                contactNumber: learner.contact || null,
+                contact: learner.contact || null,
+                departmentName: learner.departmentName ?? enrollment.departmentName ?? null,
+                clientOrganizationId: learner.clientOrganizationId || null,
+                clientOrganization,
+                clientOrganizationName: clientOrganization?.name || null,
+                clientOrganizationBuNumber: clientOrganization?.buNumber || null,
+                paymentMode: learner.paymentMode || null,
+                trainingCoordinatorId: learner.trainingCoordinatorId || null,
+                trainingCoordinator: coordinator
+                  ? {
+                      ...coordinator,
+                      contactNumber: coordinator.contactNumber || null,
+                    }
+                  : null,
+              }
+            : null,
+        };
+      });
+
       res.json({
         success: true,
-        learners: enrollments,
+        learners: normalizedEnrollments,
       });
     } catch (error) {
       console.error('Error fetching course run learners:', error);
@@ -817,6 +926,7 @@ export const courseRunController = {
             contact: learnerData.contactNumber ?? existing.learner.contact,
             departmentName: learnerData.departmentName ?? existing.learner.departmentName,
             clientOrganizationId: learnerData.division || existing.learner.clientOrganizationId,
+            paymentMode: learnerData.paymentMode ?? existing.learner.paymentMode,
             trainingCoordinatorId: learnerData.trainingCoordinatorId ?? existing.learner.trainingCoordinatorId,
           },
         });
@@ -834,6 +944,10 @@ export const courseRunController = {
             feesRemarks: enrollmentData.feesRemarks ?? existing.feesRemarks,
             invoiceNumber: enrollmentData.invoiceNumber ?? existing.invoiceNumber,
             remarks: enrollmentData.remarks ?? existing.remarks,
+            departmentName:
+              (learnerData && learnerData.departmentName !== undefined ? learnerData.departmentName : undefined) ??
+              (enrollmentData && enrollmentData.departmentName !== undefined ? enrollmentData.departmentName : undefined) ??
+              existing.departmentName,
           },
         });
       }

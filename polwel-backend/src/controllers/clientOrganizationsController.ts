@@ -1,10 +1,49 @@
 import { Response } from 'express';
 import { UserStatus } from '@prisma/client';
+import path from 'path';
 import { AuthenticatedRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import EmailService from '../services/emailService';
+
+const extractErrorSource = (stack?: string) => {
+  if (!stack) return null;
+  const lines = stack.split('\n').map((line) => line.trim()).slice(1);
+  for (const line of lines) {
+    const match = line.match(/\((.*):(\d+):(\d+)\)$/) || line.match(/at (.*):(\d+):(\d+)/);
+    if (!match) continue;
+    const [, absolutePath, lineNumber, columnNumber] = match;
+    if (!absolutePath || absolutePath.includes('node_modules')) {
+      continue;
+    }
+    return {
+      file: path.relative(process.cwd(), absolutePath),
+      line: Number(lineNumber),
+      column: Number(columnNumber),
+    };
+  }
+  return null;
+};
+
+const errorResponse = (
+  res: Response,
+  status: number,
+  message: string,
+  extra: Record<string, unknown> = {}
+) => {
+  const err = new Error(message);
+  if ((Error as any).captureStackTrace) {
+    (Error as any).captureStackTrace(err, errorResponse);
+  }
+  const source = extractErrorSource(err.stack);
+  return res.status(status).json({
+    success: false,
+    message,
+    ...(source ? { source } : {}),
+    ...extra,
+  });
+};
 
 
 
@@ -116,10 +155,7 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
     });
   } catch (error) {
     console.error('Get client organizations error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -129,10 +165,7 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
     const { id } = req.params;
 
     if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID is required'
-      });
+      return errorResponse(res, 400, 'Organization ID is required');
     }
 
     const organization = await prisma.organization.findUnique({
@@ -158,10 +191,7 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
     });
 
     if (!organization) {
-      return res.status(404).json({
-        success: false,
-        message: 'Organization not found'
-      });
+      return errorResponse(res, 404, 'Organization not found');
     }
 
     return res.json({
@@ -173,10 +203,7 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
     });
   } catch (error) {
     console.error('Get client organization by ID error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -195,10 +222,7 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
 
     // Validation
     if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization name is required'
-      });
+      return errorResponse(res, 400, 'Organization name is required');
     }
 
     // Check if organization already exists
@@ -211,10 +235,7 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
     });
 
     if (existingOrganization) {
-      return res.status(409).json({
-        success: false,
-        message: 'Organization with this name already exists'
-      });
+      return errorResponse(res, 409, 'Organization with this name already exists');
     }
 
     // Validate organizationType
@@ -236,10 +257,7 @@ export const createClientOrganization = async (req: AuthenticatedRequest, res: R
     return res.status(201).json(organization);
   } catch (error) {
     console.error('Create client organization error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -260,10 +278,7 @@ export const updateClientOrganization = async (req: AuthenticatedRequest, res: R
     } = req.body;
 
     if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID is required'
-      });
+      return errorResponse(res, 400, 'Organization ID is required');
     }
 
     // Check if organization exists
@@ -272,10 +287,7 @@ export const updateClientOrganization = async (req: AuthenticatedRequest, res: R
     });
 
     if (!existingOrganization) {
-      return res.status(404).json({
-        success: false,
-        message: 'Organization not found'
-      });
+      return errorResponse(res, 404, 'Organization not found');
     }
 
     const organization = await prisma.organization.update({
@@ -297,10 +309,7 @@ export const updateClientOrganization = async (req: AuthenticatedRequest, res: R
     return res.json(organization);
   } catch (error) {
     console.error('Update client organization error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -310,10 +319,7 @@ export const deleteClientOrganization = async (req: AuthenticatedRequest, res: R
     const { id } = req.params;
 
     if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID is required'
-      });
+      return errorResponse(res, 400, 'Organization ID is required');
     }
 
     // Check if organization exists
@@ -322,10 +328,7 @@ export const deleteClientOrganization = async (req: AuthenticatedRequest, res: R
     });
 
     if (!existingOrganization) {
-      return res.status(404).json({
-        success: false,
-        message: 'Organization not found'
-      });
+      return errorResponse(res, 404, 'Organization not found');
     }
 
     // Soft delete by setting status to INACTIVE
@@ -342,10 +345,7 @@ export const deleteClientOrganization = async (req: AuthenticatedRequest, res: R
     });
   } catch (error) {
     console.error('Delete client organization error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -380,10 +380,7 @@ export const getOrganizationStats = async (req: AuthenticatedRequest, res: Respo
     });
   } catch (error) {
     console.error('Get organization stats error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -394,10 +391,7 @@ export const getIndustries = async (req: AuthenticatedRequest, res: Response) =>
   return res.json({ industries: [] });
   } catch (error) {
     console.error('Get industries error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -411,10 +405,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
     const skip = (Number(page) - 1) * Number(limit);
 
     if (!organizationId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID is required'
-      });
+      return errorResponse(res, 400, 'Organization ID is required');
     }
 
     // Build where clause
@@ -481,10 +472,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
     });
   } catch (error) {
     console.error('Get organization coordinators error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -495,18 +483,12 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
   const { name, email, designation, password, isPrimary } = req.body;
 
     if (!organizationId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID is required'
-      });
+      return errorResponse(res, 400, 'Organization ID is required');
     }
 
     // Validation
     if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, email, and password are required'
-      });
+      return errorResponse(res, 400, 'Name, email, and password are required');
     }
 
     // Check if organization exists
@@ -515,10 +497,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
 
     if (!organization) {
-      return res.status(404).json({
-        success: false,
-        message: 'Organization not found'
-      });
+      return errorResponse(res, 404, 'Organization not found');
     }
 
     // Check if user already exists
@@ -527,10 +506,11 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
 
     if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`
-      });
+      return errorResponse(
+        res,
+        409,
+        `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`
+      );
     }
 
     // Generate temporary password and setup token
@@ -596,10 +576,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
   } catch (error) {
     console.error('Create organization coordinator error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -610,10 +587,7 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
   const { name, email, designation, status, isPrimary } = req.body;
 
     if (!organizationId || !coordinatorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID and Coordinator ID are required'
-      });
+      return errorResponse(res, 400, 'Organization ID and Coordinator ID are required');
     }
 
     // Check if coordinator exists and belongs to organization
@@ -626,10 +600,7 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
 
     if (!existingCoordinator) {
-      return res.status(404).json({
-        success: false,
-        message: 'Coordinator not found or does not belong to this organization'
-      });
+      return errorResponse(res, 404, 'Coordinator not found or does not belong to this organization');
     }
 
     // If email is being changed, check if new email already exists
@@ -639,10 +610,11 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
       });
 
       if (emailExists) {
-        return res.status(409).json({
-          success: false,
-          message: `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`
-        });
+        return errorResponse(
+          res,
+          409,
+          `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`
+        );
       }
     }
 
@@ -687,10 +659,7 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
   } catch (error) {
     console.error('Update organization coordinator error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -700,10 +669,7 @@ export const deleteOrganizationCoordinator = async (req: AuthenticatedRequest, r
     const { organizationId, coordinatorId } = req.params;
 
     if (!organizationId || !coordinatorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID and Coordinator ID are required'
-      });
+      return errorResponse(res, 400, 'Organization ID and Coordinator ID are required');
     }
 
     // Check if coordinator exists and belongs to organization
@@ -716,10 +682,7 @@ export const deleteOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
 
     if (!existingCoordinator) {
-      return res.status(404).json({
-        success: false,
-        message: 'Coordinator not found or does not belong to this organization'
-      });
+      return errorResponse(res, 404, 'Coordinator not found or does not belong to this organization');
     }
 
     // Soft delete by setting status to INACTIVE
@@ -736,14 +699,130 @@ export const deleteOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
   } catch (error) {
     console.error('Delete organization coordinator error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
 // ============ LEARNERS MANAGEMENT ============
+
+// Get all learners across organizations (POLWEL only)
+export const getAllLearners = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { page = "1", limit = "20", search, status, organizationId } = req.query;
+
+    const rawPage = Number(page);
+    const rawLimit = Number(limit);
+    const pageNum = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+    const limitNum = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(1000, Math.floor(rawLimit)) : 20;
+    const skip = (pageNum - 1) * limitNum;
+
+    const rawSearch = typeof search === "string" ? search.trim() : undefined;
+    const normalizedSearch = rawSearch && rawSearch.length > 0 ? rawSearch.substring(0, 500) : undefined;
+    const rawStatus = typeof status === "string" ? status.trim().toUpperCase() : undefined;
+    const rawOrganizationId = typeof organizationId === "string" ? organizationId.trim() : undefined;
+
+    const where: any = {};
+
+    if (rawOrganizationId) {
+      where.clientOrganizationId = rawOrganizationId;
+    }
+
+    if (normalizedSearch) {
+      where.OR = [
+        { fullname: { contains: normalizedSearch, mode: "insensitive" } },
+        { email: { contains: normalizedSearch, mode: "insensitive" } },
+        { departmentName: { contains: normalizedSearch, mode: "insensitive" } },
+        { designation: { contains: normalizedSearch, mode: "insensitive" } },
+        { contact: { contains: normalizedSearch, mode: "insensitive" } },
+      ];
+    }
+
+    if (rawStatus === "ACTIVE") {
+      where.deletedAt = null;
+    } else if (rawStatus === "INACTIVE") {
+      where.deletedAt = { not: null };
+    }
+
+    const [learners, total] = await Promise.all([
+      prisma.learner.findMany({
+        where,
+        select: {
+          id: true,
+          fullname: true,
+          email: true,
+          designation: true,
+          departmentName: true,
+          contact: true,
+          clientOrganizationId: true,
+          paymentMode: true,
+          trainingCoordinatorId: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true,
+          clientOrganization: {
+            select: {
+              id: true,
+              name: true,
+              buNumber: true,
+            },
+          },
+          trainingCoordinator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              contactNumber: true,
+            },
+          },
+          courseRunLearners: {
+            where: { deletedAt: null },
+            select: {
+              id: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum,
+      }),
+      prisma.learner.count({ where }),
+    ]);
+
+    const formattedLearners = learners.map((learner) => ({
+      id: learner.id,
+      fullname: learner.fullname,
+      email: learner.email,
+      designation: learner.designation || learner.departmentName || "",
+      departmentName: learner.departmentName,
+      contact: learner.contact,
+      clientOrganizationId: learner.clientOrganizationId,
+      clientOrganizationName: learner.clientOrganization?.name || null,
+      clientOrganizationBuNumber: learner.clientOrganization?.buNumber || null,
+      paymentMode: learner.paymentMode,
+      trainingCoordinatorId: learner.trainingCoordinatorId,
+      trainingCoordinatorName: learner.trainingCoordinator?.name || null,
+      trainingCoordinatorEmail: learner.trainingCoordinator?.email || null,
+      trainingCoordinatorPhone: learner.trainingCoordinator?.contactNumber || null,
+      status: learner.deletedAt ? "INACTIVE" : "ACTIVE",
+      enrolledCourses: learner.courseRunLearners.length,
+      createdAt: learner.createdAt,
+      updatedAt: learner.updatedAt,
+    }));
+
+    return res.json({
+      learners: formattedLearners,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    console.error("Get all learners error:", error);
+    return errorResponse(res, 500, "Internal server error");
+  }
+};
 
 // Get learners for an organization
 export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Response) => {
@@ -752,10 +831,7 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
     const { page = '1', limit = '10', search, status } = req.query;
 
     if (!organizationId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID is required'
-      });
+      return errorResponse(res, 400, 'Organization ID is required');
     }
 
     const rawPage = Number(page);
@@ -844,10 +920,7 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
     });
   } catch (error) {
     console.error('Get organization learners error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return errorResponse(res, 500, 'Internal server error');
   }
 };
 
@@ -857,10 +930,7 @@ export const resendCoordinatorSetup = async (req: AuthenticatedRequest, res: Res
     const { organizationId, coordinatorId } = req.params;
 
     if (!organizationId || !coordinatorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Organization ID and Coordinator ID are required'
-      });
+        return errorResponse(res, 400, 'Organization ID and Coordinator ID are required');
     }
 
     // Find the coordinator and organization
@@ -887,24 +957,15 @@ export const resendCoordinatorSetup = async (req: AuthenticatedRequest, res: Res
     ]);
 
     if (!coordinator) {
-      return res.status(404).json({
-        success: false,
-        message: 'Coordinator not found or account already active'
-      });
+        return errorResponse(res, 404, 'Coordinator not found or account already active');
     }
 
     if (!organization) {
-      return res.status(404).json({
-        success: false,
-        message: 'Organization not found'
-      });
+        return errorResponse(res, 404, 'Organization not found');
     }
 
     if (!coordinator.email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Coordinator email not found'
-      });
+        return errorResponse(res, 400, 'Coordinator email not found');
     }
 
     // Generate new setup token
@@ -935,17 +996,11 @@ export const resendCoordinatorSetup = async (req: AuthenticatedRequest, res: Res
 
     } catch (emailError) {
       console.error('Failed to resend coordinator setup email:', emailError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send setup email. Please try again.'
-      });
+        return errorResponse(res, 500, 'Failed to send setup email. Please try again.');
     }
 
   } catch (error) {
     console.error('Resend coordinator setup error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+      return errorResponse(res, 500, 'Internal server error');
   }
 };

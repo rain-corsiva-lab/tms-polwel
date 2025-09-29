@@ -12,6 +12,7 @@ import {
   createOrganizationCoordinator,
   updateOrganizationCoordinator,
   deleteOrganizationCoordinator,
+  getAllLearners,
   getOrganizationLearners,
   resendCoordinatorSetup
 } from '../controllers/clientOrganizationsController';
@@ -27,6 +28,7 @@ router.get('/industries', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getI
 
 // Client Organisations routes
 router.get('/', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('clients.view'), getClientOrganizations);
+router.get('/learners', authorizeRoles('POLWEL'), requirePermissions('clients.view'), getAllLearners);
 router.get('/:id', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), authorizeOrganization, requirePermissions('clients.view'), getClientOrganizationById);
 router.post('/', authorizeRoles('POLWEL'), requirePermissions('clients.create'), createClientOrganization);
 router.put('/:id', authorizeRoles('POLWEL'), requirePermissions('clients.edit'), updateClientOrganization);

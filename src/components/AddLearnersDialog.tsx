@@ -46,7 +46,15 @@ interface Learner {
   email?: string;
   contact?: string;
   clientOrganizationId?: string;
+  clientOrganizationName?: string;
+  clientOrganizationBuNumber?: string;
   departmentName?: string;
+  status?: string;
+  paymentMode?: string;
+  trainingCoordinatorId?: string;
+  trainingCoordinatorName?: string;
+  trainingCoordinatorEmail?: string;
+  trainingCoordinatorPhone?: string;
 }
 
 interface SingleRegistrationData {
@@ -227,6 +235,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
   const [mode, setMode] = useState<"single" | "group">("single");
   const [loading, setLoading] = useState(false);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [allLearners, setAllLearners] = useState<Learner[]>([]);
   const [learners, setLearners] = useState<Learner[]>([]);
   const [coordinators, setCoordinators] = useState<TrainingCoordinator[]>([]);
   const { toast } = useToast();
@@ -281,10 +290,11 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
   // Load initial data
   useEffect(() => {
-    if (dialogOpen && organizations.length === 0) {
+    if (dialogOpen) {
       loadOrganizations();
+      loadAllLearners();
     }
-  }, [dialogOpen, organizations.length]);
+  }, [dialogOpen]);
 
   const loadOrganizations = async () => {
     try {
@@ -303,31 +313,55 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     }
   };
 
-  const loadLearners = async (organizationId: string) => {
-    if (!organizationId) {
-      setLearners([]);
-      return;
-    }
-
+  const loadAllLearners = async () => {
     try {
-      const response = await clientOrganizationsApi.getLearners(organizationId, { limit: 1000 });
-      const learnerList = Array.isArray(response?.learners) ? response.learners : [];
-      setLearners(
-        learnerList.map((learner: any) => ({
-          id: learner.id,
-          fullname: learner.fullname || learner.name || "",
-          designation: learner.designation || "",
-          email: learner.email || "",
-          contact: learner.contact || "",
-          clientOrganizationId: learner.clientOrganizationId || learner.organizationId,
-          departmentName: learner.departmentName || "",
-        }))
-      );
+      const response = await clientOrganizationsApi.getAllLearners({ limit: 1000 });
+      const learnerList = Array.isArray(response?.learners) ? response.learners : Array.isArray(response?.data?.learners) ? response.data.learners : [];
+
+      const mappedLearners: Learner[] = learnerList.map((learner: any) => ({
+        id: learner.id,
+        fullname: learner.fullname || learner.name || "",
+        designation: learner.designation || learner.departmentName || "",
+        email: learner.email || "",
+        contact: learner.contact || learner.phone || "",
+        clientOrganizationId: learner.clientOrganizationId || learner.organizationId,
+        clientOrganizationName: learner.clientOrganizationName || learner.organizationName || learner.clientOrganization?.name || "",
+        clientOrganizationBuNumber: learner.clientOrganizationBuNumber || learner.clientOrganization?.buNumber || learner.buNumber || "",
+        departmentName: learner.departmentName || "",
+        status: learner.status || (learner.deletedAt ? "INACTIVE" : "ACTIVE"),
+        paymentMode: learner.paymentMode || "",
+        trainingCoordinatorId: learner.trainingCoordinatorId || learner.trainingCoordinator?.id,
+        trainingCoordinatorName: learner.trainingCoordinatorName || learner.trainingCoordinator?.name || "",
+        trainingCoordinatorEmail: learner.trainingCoordinatorEmail || learner.trainingCoordinator?.email || "",
+        trainingCoordinatorPhone:
+          learner.trainingCoordinatorPhone || learner.trainingCoordinator?.contactNumber || learner.trainingCoordinator?.phoneNumber || "",
+      }));
+
+      setAllLearners(mappedLearners);
+      setLearners(mappedLearners);
     } catch (error) {
       console.error("Failed to load learners:", error);
+      setAllLearners([]);
       setLearners([]);
+      const message = error instanceof Error ? error.message : "Unable to load learners. Please try again.";
+      toast({
+        variant: "destructive",
+        title: "Learners unavailable",
+        description: message,
+      });
     }
   };
+
+  useEffect(() => {
+    const activeDivision = mode === "single" ? singleData.division : groupData.division;
+
+    if (activeDivision) {
+      setLearners(allLearners.filter((learner) => learner.clientOrganizationId === activeDivision));
+    } else {
+      setLearners(allLearners);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLearners, mode, singleData.division, groupData.division]);
 
   const loadCoordinators = async (organizationId: string) => {
     if (!organizationId) {
@@ -378,24 +412,29 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
   };
 
   // Handle organization change
-  const handleOrganizationChange = (organizationId: string) => {
+  const handleOrganizationChange = (organizationId: string, options: { preserveCoordinator?: boolean } = {}) => {
+    const shouldResetCoordinator = !options.preserveCoordinator;
     const org = organizations.find((o) => o.id === organizationId);
-    if (org) {
-      if (mode === "single") {
-        setSingleData((prev) => ({
-          ...prev,
-          division: organizationId,
-          buNumber: org.buNumber || "",
-        }));
-      } else {
-        setGroupData((prev) => ({
-          ...prev,
-          division: organizationId,
-          buNumber: org.buNumber || "",
-        }));
-      }
+    if (mode === "single") {
+      setSingleData((prev) => ({
+        ...prev,
+        division: organizationId,
+        buNumber: org?.buNumber || "",
+        ...(shouldResetCoordinator ? { trainingCoordinatorId: "", trainingCoordinatorEmail: "", trainingCoordinatorPhone: "" } : {}),
+      }));
+    } else {
+      setGroupData((prev) => ({
+        ...prev,
+        division: organizationId,
+        buNumber: org?.buNumber || "",
+        ...(shouldResetCoordinator ? { trainingCoordinatorId: "", trainingCoordinatorEmail: "", trainingCoordinatorPhone: "" } : {}),
+      }));
+    }
+
+    if (organizationId) {
       loadCoordinators(organizationId);
-      loadLearners(organizationId);
+    } else {
+      setCoordinators([]);
     }
   };
 
@@ -454,7 +493,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       return;
     }
 
-    const learner = learners.find((l) => l.id === learnerId);
+    const learner = allLearners.find((l) => l.id === learnerId);
     if (learner) {
       if (mode === "single") {
         setSingleData((prev) => ({
@@ -465,11 +504,17 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           email: learner.email || "",
           contactNumber: learner.contact || "",
           departmentName: learner.departmentName || "",
+          division: learner.clientOrganizationId || prev.division,
+          buNumber: learner.clientOrganizationBuNumber || prev.buNumber,
+          paymentMode: learner.paymentMode || prev.paymentMode,
+          trainingCoordinatorId: learner.trainingCoordinatorId || prev.trainingCoordinatorId || "",
+          trainingCoordinatorEmail: learner.trainingCoordinatorEmail || prev.trainingCoordinatorEmail || "",
+          trainingCoordinatorPhone: learner.trainingCoordinatorPhone || prev.trainingCoordinatorPhone || "",
         }));
 
         // Load organization data if learner has one
         if (learner.clientOrganizationId) {
-          handleOrganizationChange(learner.clientOrganizationId);
+          handleOrganizationChange(learner.clientOrganizationId, { preserveCoordinator: !!learner.trainingCoordinatorId });
         }
       } else if (learnerIndex !== undefined) {
         setGroupData((prev) => ({
@@ -794,7 +839,7 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
   const learnerOptions: SearchableSelectOption[] = (learners || []).map((learner) => ({
     value: learner.id,
     label: learner.fullname,
-    description: learner.email,
+    description: [learner.email, learner.clientOrganizationName].filter(Boolean).join(" • "),
   }));
 
   const organizationOptions: SearchableSelectOption[] = (organizations || []).map((org) => ({
@@ -889,64 +934,62 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
         <CardHeader>
           <CardTitle>Organization Information</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Division *</Label>
-            <SearchableSelect
-              value={data.division}
-              onValueChange={onOrganizationChange}
-              options={organizationOptions}
-              placeholder="Select division"
-              disabled={isFieldDisabled("division")}
-            />
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Division *</Label>
+              <SearchableSelect
+                value={data.division}
+                onValueChange={onOrganizationChange}
+                options={organizationOptions}
+                placeholder="Select division"
+                disabled={isFieldDisabled("division")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Input
+                value={data.departmentName}
+                onChange={(e) => setData((prev) => ({ ...prev, departmentName: e.target.value }))}
+                placeholder="Department name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>BU Number</Label>
+              <Input value={data.buNumber} disabled className="bg-gray-50" />
+            </div>
+            <div className="space-y-2">
+              <Label>Payment Mode *</Label>
+              <SearchableSelect
+                value={data.paymentMode}
+                onValueChange={(value) => setData((prev) => ({ ...prev, paymentMode: value }))}
+                options={paymentModeOptions}
+                placeholder="Select payment mode"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Department</Label>
-            <Input
-              value={data.departmentName}
-              onChange={(e) => setData((prev) => ({ ...prev, departmentName: e.target.value }))}
-              placeholder="Department name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>BU Number</Label>
-            <Input value={data.buNumber} disabled className="bg-gray-50" />
-          </div>
-          <div className="space-y-2">
-            <Label>Payment Mode *</Label>
-            <SearchableSelect
-              value={data.paymentMode}
-              onValueChange={(value) => setData((prev) => ({ ...prev, paymentMode: value }))}
-              options={paymentModeOptions}
-              placeholder="Select payment mode"
-            />
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Training Coordinator */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Training Coordinator</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Coordinator Name</Label>
-            <SearchableSelect
-              value={data.trainingCoordinatorId}
-              onValueChange={onCoordinatorChange}
-              options={coordinatorOptions}
-              placeholder="Select coordinator"
-              emptyMessage={organizationOptions.length === 0 ? "Select a division first" : "No coordinators found"}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Coordinator Email</Label>
-            <Input value={data.trainingCoordinatorEmail} disabled className="bg-gray-50" />
-          </div>
-          <div className="space-y-2">
-            <Label>Coordinator Phone</Label>
-            <Input value={data.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+          <div className="border-t pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Coordinator Name</Label>
+                <SearchableSelect
+                  value={data.trainingCoordinatorId}
+                  onValueChange={onCoordinatorChange}
+                  options={coordinatorOptions}
+                  placeholder="Select coordinator"
+                  emptyMessage={organizationOptions.length === 0 ? "Select a division first" : "No coordinators found"}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Coordinator Email</Label>
+                <Input value={data.trainingCoordinatorEmail} disabled className="bg-gray-50" />
+              </div>
+              <div className="space-y-2">
+                <Label>Coordinator Phone</Label>
+                <Input value={data.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1056,7 +1099,7 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
   const learnerOptions: SearchableSelectOption[] = (learners || []).map((learner) => ({
     value: learner.id,
     label: learner.fullname,
-    description: learner.email,
+    description: [learner.email, learner.clientOrganizationName].filter(Boolean).join(" • "),
   }));
 
   const discountOptions: SearchableSelectOption[] = (courseRun.course.discounts || []).map((discount) => ({

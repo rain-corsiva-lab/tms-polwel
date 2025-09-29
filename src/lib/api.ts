@@ -795,6 +795,24 @@ export const clientOrganizationsApi = {
     return apiRequest(`/client-organizations?${queryParams}`);
   },
 
+  // Get all learners irrespective of organization
+  getAllLearners: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    organizationId?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    return apiRequest(`/client-organizations/learners?${queryParams}`);
+  },
+
   // Get organization by ID
   getById: async (id: string) => {
     return apiRequest(`/client-organizations/${id}`);
