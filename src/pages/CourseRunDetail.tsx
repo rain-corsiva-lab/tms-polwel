@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { AddLearnersDialog } from "../components/AddLearnersDialog";
+import { ImportLearnersDialog } from "../components/ImportLearnersDialog";
 import { EditLearnerDialog } from "../components/EditLearnerDialog";
 import { AttendanceListDialog } from "../components/AttendanceListDialog";
 
@@ -118,6 +119,7 @@ const CourseRunDetail: React.FC = () => {
   const [venues, setVenues] = useState<any[]>([]); // all venues
   const [filteredVenues, setFilteredVenues] = useState<any[]>([]); // by venueType
   const [addLearnersDialogOpen, setAddLearnersDialogOpen] = useState(false);
+  const [importLearnersDialogOpen, setImportLearnersDialogOpen] = useState(false);
   const [editLearnerDialogOpen, setEditLearnerDialogOpen] = useState(false);
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
@@ -199,6 +201,10 @@ const CourseRunDetail: React.FC = () => {
     loadCourseRunDetail();
     setAddLearnersDialogOpen(false);
     toast.success("Learners enrolled successfully!");
+  };
+
+  const handleImportSuccess = () => {
+    loadCourseRunDetail();
   };
 
   const formatDateTime = (dateTime: string | null) => {
@@ -735,7 +741,7 @@ const CourseRunDetail: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Learner Management</h3>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => setImportLearnersDialogOpen(true)}>
                     <Download className="h-4 w-4 mr-2" />
                     Import CSV
                   </Button>
@@ -1043,6 +1049,13 @@ const CourseRunDetail: React.FC = () => {
         courseRunId={id!}
         baseCourseFee={courseRun?.baseCourseFee || 0}
         onSuccess={handleEnrollmentSuccess}
+      />
+      <ImportLearnersDialog
+        open={importLearnersDialogOpen}
+        onOpenChange={setImportLearnersDialogOpen}
+        courseRunId={id!}
+        baseCourseFee={courseRun?.baseCourseFee || 0}
+        onSuccess={handleImportSuccess}
       />
       <AttendanceListDialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen} courseRunId={id!} onSaved={loadCourseRunDetail} />
       <EditLearnerDialog
