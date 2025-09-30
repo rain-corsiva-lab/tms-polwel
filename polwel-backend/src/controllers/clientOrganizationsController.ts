@@ -437,6 +437,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
           status: true,
           isPrimaryCoordinator: true,
           lastLogin: true,
+          contactNumber: true,
           createdAt: true,
           updatedAt: true
         },
@@ -454,6 +455,7 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
   designation: coordinator.designation || 'N/A',
   status: coordinator.status,
       isPrimaryCoordinator: coordinator.isPrimaryCoordinator,
+      contactNumber: coordinator.contactNumber || null,
       lastActive: coordinator.lastLogin 
         ? new Date(coordinator.lastLogin).toISOString()
         : 'Never',
@@ -480,15 +482,17 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
 export const createOrganizationCoordinator = async (req: AuthenticatedRequest, res: Response) => {
   try {
   const { organizationId } = req.params;
-  const { name, email, designation, password, isPrimary } = req.body;
+  const { name, email, designation, password, isPrimary, contactNumber } = req.body;
 
     if (!organizationId) {
       return errorResponse(res, 400, 'Organization ID is required');
     }
 
     // Validation
-    if (!name || !email || !password) {
-      return errorResponse(res, 400, 'Name, email, and password are required');
+    const normalizedContactNumber = typeof contactNumber === 'string' ? contactNumber.trim() : '';
+
+    if (!name || !email || !password || !normalizedContactNumber) {
+      return errorResponse(res, 400, 'Name, email, password, and contact number are required');
     }
 
     // Check if organization exists
@@ -540,7 +544,8 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
           resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
           emailVerified: false,
           createdBy: req.user?.userId || null,
-          isPrimaryCoordinator: isPrimary === true
+          isPrimaryCoordinator: isPrimary === true,
+          contactNumber: normalizedContactNumber,
         },
         select: {
           id: true,
@@ -549,6 +554,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
           designation: true,
           status: true,
           isPrimaryCoordinator: true,
+          contactNumber: true,
           createdAt: true,
           updatedAt: true
         }
@@ -584,7 +590,7 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
 export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, res: Response) => {
   try {
   const { organizationId, coordinatorId } = req.params;
-  const { name, email, designation, status, isPrimary } = req.body;
+  const { name, email, designation, status, isPrimary, contactNumber } = req.body;
 
     if (!organizationId || !coordinatorId) {
       return errorResponse(res, 400, 'Organization ID and Coordinator ID are required');
@@ -618,6 +624,13 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
       }
     }
 
+    const normalizedContactNumber =
+      contactNumber === undefined
+        ? undefined
+        : typeof contactNumber === 'string' && contactNumber.trim().length > 0
+          ? contactNumber.trim()
+          : null;
+
     const updatedCoordinator = await prisma.$transaction(async (tx) => {
       if (isPrimary === true) {
         await tx.user.updateMany({
@@ -633,7 +646,8 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
           ...(email && { email }),
           ...(designation !== undefined && { designation }),
           ...(status && { status }),
-          ...(isPrimary !== undefined && { isPrimaryCoordinator: !!isPrimary })
+          ...(isPrimary !== undefined && { isPrimaryCoordinator: !!isPrimary }),
+          ...(normalizedContactNumber !== undefined && { contactNumber: normalizedContactNumber })
         },
         select: {
           id: true,
@@ -642,6 +656,7 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
           designation: true,
           status: true,
           isPrimaryCoordinator: true,
+          contactNumber: true,
           lastLogin: true,
           createdAt: true,
           updatedAt: true,

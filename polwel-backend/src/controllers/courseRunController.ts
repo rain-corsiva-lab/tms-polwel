@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, CourseStatus } from '@prisma/client';
+import { PrismaClient, CourseStatus, UserRole, Organization, User, Learner } from '@prisma/client';
 import { z } from 'zod';
 
 const prisma = new PrismaClient();
@@ -38,6 +38,194 @@ const ALLOWED_COURSE_STATUSES: CourseStatus[] = [
   'ONGOING'
 ];
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const calculateCourseRunDayCount = (courseRun: {
+  startDatetime: Date | null;
+  endDatetime: Date | null;
+  course?: { duration?: string | null; durationType?: string | null } | null;
+}): number => {
+  let derivedFromSchedule = 0;
+  const { startDatetime, endDatetime } = courseRun;
+
+  if (startDatetime && endDatetime) {
+    const start = new Date(startDatetime);
+    const end = new Date(endDatetime);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end >= start) {
+      derivedFromSchedule = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
+    }
+  }
+
+  const rawDuration = courseRun.course?.duration ? Number.parseFloat(courseRun.course.duration) : NaN;
+  const durationType = courseRun.course?.durationType?.toLowerCase();
+  let derivedFromCourse = 0;
+
+  if (!Number.isNaN(rawDuration) && rawDuration > 0) {
+    if (durationType?.startsWith('day')) {
+      derivedFromCourse = Math.ceil(rawDuration);
+    } else if (durationType?.startsWith('week')) {
+      derivedFromCourse = Math.ceil(rawDuration * 7);
+    } else if (durationType?.startsWith('month')) {
+      derivedFromCourse = Math.ceil(rawDuration * 30);
+    } else {
+      // For hours or unspecified units, default to at least 1 instructional day
+      derivedFromCourse = 1;
+    }
+  }
+
+  const computed = Math.max(derivedFromSchedule, derivedFromCourse, 1);
+  return computed;
+};
+
+type AttendanceDayRecord = {
+  day: number;
+  attendAM: boolean;
+  attendPM: boolean;
+  updatedAt: string | null;
+  editedBy: string | null;
+  attendanceId: string | null;
+};
+
+type AttendanceLearnerRecord = {
+  courseRunLearnerId: string;
+  learnerId: string;
+  fullName: string;
+  email: string | null;
+  contactNumber: string | null;
+  departmentName: string | null;
+  attendanceStatus: string | null;
+  attendance: AttendanceDayRecord[];
+};
+
+type AttendanceSnapshot = {
+  courseRunId: string;
+  totalDays: number;
+  days: Array<{ day: number; label: string }>;
+  learners: AttendanceLearnerRecord[];
+};
+
+const loadAttendanceSnapshot = async (courseRunId: string, editorId: string | null): Promise<AttendanceSnapshot | null> => {
+  const courseRun = await prisma.courseRun.findUnique({
+    where: { id: courseRunId, deletedAt: null },
+    include: {
+      course: {
+        select: {
+          duration: true,
+          durationType: true,
+        },
+      },
+    },
+  });
+
+  if (!courseRun) {
+    return null;
+  }
+
+  const baseDayCount = calculateCourseRunDayCount(courseRun);
+
+  const enrollments = await prisma.courseRunLearner.findMany({
+    where: {
+      courseRunId,
+      deletedAt: null,
+      enrollmentStatus: 'ENROLLED',
+    },
+    include: {
+      learner: {
+        select: {
+          id: true,
+          fullname: true,
+          email: true,
+          contact: true,
+          departmentName: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const activeLearnerIds = enrollments.map((enrollment) => enrollment.learnerId);
+
+  if (activeLearnerIds.length > 0) {
+    await prisma.courseRunLearnerAttendance.updateMany({
+      where: {
+        courseRunId,
+        deletedAt: null,
+        learnerId: {
+          notIn: activeLearnerIds,
+        },
+      },
+      data: {
+        deletedAt: new Date(),
+        editedBy: editorId ?? null,
+      },
+    });
+  } else {
+    await prisma.courseRunLearnerAttendance.updateMany({
+      where: { courseRunId, deletedAt: null },
+      data: {
+        deletedAt: new Date(),
+        editedBy: editorId ?? null,
+      },
+    });
+  }
+
+  const attendanceRecords = await prisma.courseRunLearnerAttendance.findMany({
+    where: {
+      courseRunId,
+      deletedAt: null,
+    },
+  });
+
+  const recordedMaxDay = attendanceRecords.reduce((max, record) => Math.max(max, record.day), 0);
+  const totalDays = Math.max(baseDayCount, recordedMaxDay, 1);
+
+  const attendanceMap = new Map<string, typeof attendanceRecords[number]>();
+  for (const record of attendanceRecords) {
+    attendanceMap.set(`${record.learnerId}-${record.day}`, record);
+  }
+
+  const learners: AttendanceLearnerRecord[] = enrollments.map((enrollment) => {
+    const learner = enrollment.learner;
+    const attendance: AttendanceDayRecord[] = [];
+
+    for (let day = 1; day <= totalDays; day += 1) {
+      const key = `${enrollment.learnerId}-${day}`;
+      const record = attendanceMap.get(key);
+      attendance.push({
+        day,
+        attendAM: record?.attendAM ?? false,
+        attendPM: record?.attendPM ?? false,
+        updatedAt: record?.updatedAt ? record.updatedAt.toISOString() : null,
+        editedBy: record?.editedBy ?? null,
+        attendanceId: record?.id ?? null,
+      });
+    }
+
+    return {
+      courseRunLearnerId: enrollment.id,
+      learnerId: enrollment.learnerId,
+      fullName: learner?.fullname ?? 'Unknown Learner',
+      email: learner?.email ?? null,
+      contactNumber: learner?.contact ?? null,
+      departmentName: enrollment.departmentName ?? learner?.departmentName ?? null,
+      attendanceStatus: enrollment.attendanceStatus ?? null,
+      attendance,
+    };
+  });
+
+  const days = Array.from({ length: totalDays }, (_, index) => ({
+    day: index + 1,
+    label: `Day ${index + 1}`,
+  }));
+
+  return {
+    courseRunId,
+    totalDays,
+    days,
+    learners,
+  };
+};
+
 // Validation schemas
 const getCourseRunsSchema = z.object({
   page: z.string().optional().transform(val => val ? parseInt(val) : 1),
@@ -67,6 +255,19 @@ const createCourseRunSchema = z.object({
   contingencyFee: z.number().optional(),
   status: z.enum(['DRAFT', 'PENDING', 'CONFIRMED_PENDING_TA_APPROVAL', 'ACTIVE', 'CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'PUBLISHED', 'ONGOING']).optional(),
   billingReportId: z.string().optional(),
+});
+
+const saveAttendanceSchema = z.object({
+  day: z.coerce.number().int().min(1),
+  records: z
+    .array(
+      z.object({
+        learnerId: z.string().min(1),
+        attendAM: z.boolean().optional(),
+        attendPM: z.boolean().optional(),
+      })
+    )
+    .min(1, 'At least one learner attendance record is required'),
 });
 
 export const courseRunController = {
@@ -799,6 +1000,302 @@ export const courseRunController = {
     }
   },
 
+  async importLearners(req: Request, res: Response): Promise<void> {
+    try {
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+      const { rows } = req.body ?? {};
+
+      if (!courseRunId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'No learner rows were provided for import',
+        });
+        return;
+      }
+
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id: courseRunId },
+        include: {
+          course: true,
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({
+          success: false,
+          error: 'Course run not found',
+        });
+        return;
+      }
+
+      const course = courseRun.course;
+      const baseCourseFee = courseRun.baseCourseFee !== null && courseRun.baseCourseFee !== undefined
+        ? Number(courseRun.baseCourseFee)
+        : course?.defaultCourseFee ?? 0;
+
+      const discountMap = new Map<string, { id: string | null; percentage: number }>();
+      if (course?.discounts) {
+        let discountSource: unknown = course.discounts;
+        if (typeof discountSource === 'string') {
+          try {
+            discountSource = JSON.parse(discountSource);
+          } catch (error) {
+            console.warn('Failed to parse course discounts JSON:', error);
+          }
+        }
+
+        if (Array.isArray(discountSource)) {
+          for (const discount of discountSource) {
+            if (!discount) continue;
+            const name = typeof discount.name === 'string' ? discount.name.trim() : '';
+            if (!name) continue;
+            const key = name.toLowerCase();
+            const percentage = typeof discount.percentage === 'number'
+              ? discount.percentage
+              : typeof discount.discountPercentage === 'number'
+                ? discount.discountPercentage
+                : 0;
+            const id = typeof discount.id === 'string' ? discount.id : null;
+            discountMap.set(key, { id, percentage });
+          }
+        }
+      }
+
+  const organizationCache = new Map<string, Organization>();
+  const coordinatorCache = new Map<string, User>();
+  const learnerCache = new Map<string, Learner>();
+      const newlyEnrolledLearnerIds = new Set<string>();
+
+      const successes: Array<{ row: number; learnerId: string; learnerName: string }> = [];
+      const errors: Array<{ row: number; email?: string; name?: string; reason: string }> = [];
+
+      const getOrganizationByName = async (name: string) => {
+        const normalized = name.toLowerCase();
+        if (organizationCache.has(normalized)) {
+          return organizationCache.get(normalized)!;
+        }
+
+        const organization = await prisma.organization.findFirst({
+          where: {
+            name: {
+              equals: name,
+            },
+          },
+        });
+
+        if (organization) {
+          organizationCache.set(normalized, organization);
+        }
+
+        return organization ?? null;
+      };
+
+      const getCoordinatorByEmail = async (email: string) => {
+        const normalized = email.toLowerCase();
+        if (coordinatorCache.has(normalized)) {
+          return coordinatorCache.get(normalized)!;
+        }
+
+        const coordinator = await prisma.user.findFirst({
+          where: {
+            role: UserRole.TRAINING_COORDINATOR,
+            email: {
+              equals: email,
+            },
+          },
+        });
+
+        if (coordinator) {
+          coordinatorCache.set(normalized, coordinator);
+        }
+
+        return coordinator ?? null;
+      };
+
+      const getLearnerByEmail = async (email: string) => {
+        const normalized = email.toLowerCase();
+        if (learnerCache.has(normalized)) {
+          return learnerCache.get(normalized)!;
+        }
+
+        const learner = await prisma.learner.findFirst({
+          where: {
+            email: {
+              equals: email,
+            },
+          },
+        });
+
+        if (learner) {
+          learnerCache.set(normalized, learner);
+        }
+
+        return learner ?? null;
+      };
+
+      const normalizeString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+      for (let index = 0; index < rows.length; index += 1) {
+        const rawRow = rows[index] ?? {};
+        const name = normalizeString(rawRow.name ?? rawRow.Name);
+        const email = normalizeString(rawRow.email ?? rawRow.Email);
+        const contact = normalizeString(rawRow.contact ?? rawRow.Contact);
+        const designation = normalizeString(rawRow.designation ?? rawRow.Designation);
+        const organizationName = normalizeString(rawRow.clientOrganizationName ?? rawRow['Client Organization Name']);
+        const department = normalizeString(rawRow.department ?? rawRow.Department);
+        const paymentMethod = normalizeString(rawRow.paymentMethod ?? rawRow['Payment Method']);
+        const coordinatorEmail = normalizeString(rawRow.coordinatorEmail ?? rawRow['Coordinator email']);
+        const discountName = normalizeString(rawRow.discountName ?? rawRow['discount name'] ?? rawRow['Discount Name']);
+        const feesRemarks = normalizeString(rawRow.feesRemarks ?? rawRow['fees remarks'] ?? rawRow['Fees Remarks']);
+        const invoiceRemarks = normalizeString(rawRow.invoiceRemarks ?? rawRow['invoice remarks'] ?? rawRow['Invoice Remarks']);
+        const remarks = normalizeString(rawRow.remarks ?? rawRow.Remarks);
+
+        if (!name) {
+          errors.push({ row: index + 1, reason: 'Learner name is required' });
+          continue;
+        }
+
+        if (!email) {
+          errors.push({ row: index + 1, name, reason: 'Email is required' });
+          continue;
+        }
+
+        if (!organizationName) {
+          errors.push({ row: index + 1, name, email, reason: 'Client organization name is required' });
+          continue;
+        }
+
+        const organization = await getOrganizationByName(organizationName);
+        if (!organization) {
+          errors.push({ row: index + 1, name, email, reason: `Client organization "${organizationName}" was not found` });
+          continue;
+        }
+
+        let coordinatorId: string | null = null;
+        if (coordinatorEmail) {
+          const coordinator = await getCoordinatorByEmail(coordinatorEmail);
+          if (!coordinator) {
+            errors.push({ row: index + 1, name, email, reason: `Training coordinator with email "${coordinatorEmail}" was not found` });
+            continue;
+          }
+          coordinatorId = coordinator.id;
+        }
+
+        let discountId: string | null = null;
+        let discountPercentage = 0;
+        if (discountName) {
+          const discount = discountMap.get(discountName.toLowerCase());
+          if (!discount) {
+            errors.push({ row: index + 1, name, email, reason: `Discount "${discountName}" was not found for this course` });
+            continue;
+          }
+          discountId = discount.id ?? null;
+          discountPercentage = discount.percentage ?? 0;
+        }
+
+        const resolvedBaseFee = Number.isFinite(baseCourseFee) ? baseCourseFee : 0;
+        const discountAmount = resolvedBaseFee * (discountPercentage / 100);
+        const totalFees = Math.max(resolvedBaseFee - discountAmount, 0);
+
+        let learner = await getLearnerByEmail(email);
+
+        if (!learner) {
+          learner = await prisma.learner.create({
+            data: {
+              fullname: name,
+              email,
+              contact: contact || null,
+              designation: designation || null,
+              clientOrganizationId: organization.id,
+              departmentName: department || null,
+              paymentMode: paymentMethod || null,
+              trainingCoordinatorId: coordinatorId,
+            },
+          });
+          learnerCache.set(email.toLowerCase(), learner);
+        } else {
+          const updateData: any = {};
+          if (name && name !== learner.fullname) updateData.fullname = name;
+          if (designation) updateData.designation = designation;
+          if (contact) updateData.contact = contact;
+          updateData.clientOrganizationId = organization.id;
+          if (department) updateData.departmentName = department;
+          if (paymentMethod) updateData.paymentMode = paymentMethod;
+          if (coordinatorId) updateData.trainingCoordinatorId = coordinatorId;
+
+          if (Object.keys(updateData).length > 0) {
+            learner = await prisma.learner.update({
+              where: { id: learner.id },
+              data: updateData,
+            });
+            learnerCache.set(email.toLowerCase(), learner);
+          }
+        }
+
+        if (newlyEnrolledLearnerIds.has(learner.id)) {
+          errors.push({ row: index + 1, name, email, reason: 'Duplicate learner entry in import file' });
+          continue;
+        }
+
+        const existingEnrollment = await prisma.courseRunLearner.findUnique({
+          where: {
+            courseRunId_learnerId: {
+              courseRunId,
+              learnerId: learner.id,
+            },
+          },
+        });
+
+        if (existingEnrollment) {
+          errors.push({ row: index + 1, name, email, reason: 'Learner is already enrolled in this course run' });
+          continue;
+        }
+
+        const enrollment = await prisma.courseRunLearner.create({
+          data: {
+            courseRunId,
+            learnerId: learner.id,
+            currentDefaultCourseFee: resolvedBaseFee,
+            discountId,
+            discountPercentage,
+            discountAmount,
+            totalFees,
+            feesRemarks: feesRemarks || null,
+            invoiceNumber: invoiceRemarks || null,
+            remarks: remarks || null,
+            departmentName: department || learner.departmentName || null,
+            enrollmentStatus: 'ENROLLED',
+          },
+        });
+
+        newlyEnrolledLearnerIds.add(learner.id);
+        successes.push({ row: index + 1, learnerId: learner.id, learnerName: learner.fullname ?? name });
+      }
+
+      res.json({
+        success: true,
+        imported: successes.length,
+        failed: errors.length,
+        baseCourseFee: baseCourseFee,
+        results: {
+          successes,
+          errors,
+        },
+      });
+    } catch (error) {
+      console.error('Error importing learners:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.importLearners', 'Failed to import learners', error));
+    }
+  },
+
   // Get enrolled learners for a course run
   async getLearners(req: Request, res: Response): Promise<void> {
     try {
@@ -961,6 +1458,226 @@ export const courseRunController = {
     } catch (error) {
       console.error('Error updating enrollment:', error);
       res.status(500).json(buildErrorResponse('courseRunController.updateEnrollment', 'Failed to update enrollment', error));
+    }
+  },
+
+  async getAttendance(req: Request, res: Response): Promise<void> {
+    try {
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+
+      if (!courseRunId) {
+        res.status(400).json({ success: false, error: 'Course run ID is required' });
+        return;
+      }
+
+      const userId = (req as any)?.user?.userId ?? null;
+      const snapshot = await loadAttendanceSnapshot(courseRunId, userId);
+
+      if (!snapshot) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      res.json({
+        success: true,
+        attendance: snapshot,
+      });
+    } catch (error) {
+      console.error('Error fetching course run attendance:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.getAttendance', 'Failed to fetch attendance', error));
+    }
+  },
+
+  async saveAttendance(req: Request, res: Response): Promise<void> {
+    try {
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+
+      if (!courseRunId) {
+        res.status(400).json({ success: false, error: 'Course run ID is required' });
+        return;
+      }
+
+      const parseResult = saveAttendanceSchema.safeParse(req.body ?? {});
+
+      if (!parseResult.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid attendance payload',
+          details: parseResult.error.flatten(),
+        });
+        return;
+      }
+
+      const { day, records } = parseResult.data;
+      const recordMap = new Map<string, { attendAM: boolean; attendPM: boolean }>();
+      records.forEach((record) => {
+        recordMap.set(record.learnerId, {
+          attendAM: !!record.attendAM,
+          attendPM: !!record.attendPM,
+        });
+      });
+
+      if (recordMap.size === 0) {
+        res.status(400).json({ success: false, error: 'No attendance records provided' });
+        return;
+      }
+
+      const learnerIds = Array.from(recordMap.keys());
+
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id: courseRunId, deletedAt: null },
+        include: {
+          course: {
+            select: {
+              duration: true,
+              durationType: true,
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      const totalDays = calculateCourseRunDayCount(courseRun);
+      const effectiveDayBoundary = Math.max(totalDays, day);
+      const userId = (req as any)?.user?.userId ?? null;
+
+      try {
+        await prisma.$transaction(async (tx) => {
+          const enrollments = await tx.courseRunLearner.findMany({
+            where: {
+              courseRunId,
+              learnerId: { in: learnerIds },
+              deletedAt: null,
+              enrollmentStatus: 'ENROLLED',
+            },
+            select: { learnerId: true },
+          });
+
+          const validLearnerIds = new Set(enrollments.map((enrollment) => enrollment.learnerId));
+          const missingLearners = learnerIds.filter((id) => !validLearnerIds.has(id));
+
+          if (missingLearners.length > 0) {
+            const errorDetails = new Error('One or more learners are not enrolled in this course run');
+            (errorDetails as any).meta = { missingLearners };
+            throw errorDetails;
+          }
+
+          for (const [learnerId, attendance] of recordMap.entries()) {
+            await tx.courseRunLearnerAttendance.upsert({
+              where: {
+                courseRunId_learnerId_day: {
+                  courseRunId,
+                  learnerId,
+                  day,
+                },
+              },
+              update: {
+                attendAM: attendance.attendAM,
+                attendPM: attendance.attendPM,
+                editedBy: userId ?? null,
+                deletedAt: null,
+              },
+              create: {
+                courseRunId,
+                learnerId,
+                day,
+                attendAM: attendance.attendAM,
+                attendPM: attendance.attendPM,
+                editedBy: userId ?? null,
+              },
+            });
+          }
+
+          const allActiveEnrollments = await tx.courseRunLearner.findMany({
+            where: {
+              courseRunId,
+              deletedAt: null,
+              enrollmentStatus: 'ENROLLED',
+            },
+            select: { learnerId: true },
+          });
+
+          const allActiveLearnerIds = allActiveEnrollments.map((enrollment) => enrollment.learnerId);
+
+          const learnerAttendance = await tx.courseRunLearnerAttendance.findMany({
+            where: {
+              courseRunId,
+              learnerId: { in: allActiveLearnerIds },
+              deletedAt: null,
+            },
+          });
+
+          const attendanceByLearner = new Map<string, typeof learnerAttendance[number][]>();
+          for (const record of learnerAttendance) {
+            const existing = attendanceByLearner.get(record.learnerId);
+            if (existing) {
+              existing.push(record);
+            } else {
+              attendanceByLearner.set(record.learnerId, [record]);
+            }
+          }
+
+          const maxRecordedDay = learnerAttendance.reduce((max, record) => Math.max(max, record.day), effectiveDayBoundary);
+          const evaluationDayLimit = Math.max(effectiveDayBoundary, maxRecordedDay, 1);
+
+          for (const learnerId of allActiveLearnerIds) {
+            const recordsForLearner = attendanceByLearner.get(learnerId) ?? [];
+            const attendanceMapForLearner = new Map<number, boolean>();
+            for (const record of recordsForLearner) {
+              attendanceMapForLearner.set(record.day, (record.attendAM ?? false) || (record.attendPM ?? false));
+            }
+
+            let isPresentEveryDay = true;
+            for (let currentDay = 1; currentDay <= evaluationDayLimit; currentDay += 1) {
+              const attended = attendanceMapForLearner.get(currentDay) ?? false;
+              if (!attended) {
+                isPresentEveryDay = false;
+                break;
+              }
+            }
+
+            await tx.courseRunLearner.update({
+              where: {
+                courseRunId_learnerId: {
+                  courseRunId,
+                  learnerId,
+                },
+              },
+              data: {
+                attendanceStatus: isPresentEveryDay ? 'PRESENT' : 'ABSENT',
+              },
+            });
+          }
+        });
+      } catch (transactionError) {
+        if ((transactionError as any)?.meta?.missingLearners) {
+          res.status(400).json({
+            success: false,
+            error: 'Some learners are no longer enrolled in this course run',
+            details: {
+              missingLearnerIds: (transactionError as any).meta.missingLearners,
+            },
+          });
+          return;
+        }
+
+        throw transactionError;
+      }
+
+      const snapshot = await loadAttendanceSnapshot(courseRunId, userId);
+
+      res.json({
+        success: true,
+        message: 'Attendance saved successfully',
+        attendance: snapshot,
+      });
+    } catch (error) {
+      console.error('Error saving course run attendance:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.saveAttendance', 'Failed to save attendance', error));
     }
   },
 };

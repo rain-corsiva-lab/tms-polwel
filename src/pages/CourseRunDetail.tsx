@@ -37,6 +37,7 @@ import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { AddLearnersDialog } from "../components/AddLearnersDialog";
 import { EditLearnerDialog } from "../components/EditLearnerDialog";
+import { AttendanceListDialog } from "../components/AttendanceListDialog";
 
 interface CourseRunDetailData {
   id: string;
@@ -47,6 +48,12 @@ interface CourseRunDetailData {
     title: string | null;
     courseCode: string | null;
     category: string | null;
+    discounts?: Array<{
+      id: string;
+      name?: string | null;
+      discountPercentage?: number | null;
+      discountAmount?: number | null;
+    }> | null;
   } | null;
   startDatetime: string | null;
   endDatetime: string | null;
@@ -112,6 +119,7 @@ const CourseRunDetail: React.FC = () => {
   const [filteredVenues, setFilteredVenues] = useState<any[]>([]); // by venueType
   const [addLearnersDialogOpen, setAddLearnersDialogOpen] = useState(false);
   const [editLearnerDialogOpen, setEditLearnerDialogOpen] = useState(false);
+  const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
 
   const currency = (v: number | null | undefined) => {
@@ -731,7 +739,7 @@ const CourseRunDetail: React.FC = () => {
                     <Download className="h-4 w-4 mr-2" />
                     Import CSV
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => setAttendanceDialogOpen(true)}>
                     <Upload className="h-4 w-4 mr-2" />
                     Attendance List
                   </Button>
@@ -1036,6 +1044,7 @@ const CourseRunDetail: React.FC = () => {
         baseCourseFee={courseRun?.baseCourseFee || 0}
         onSuccess={handleEnrollmentSuccess}
       />
+      <AttendanceListDialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen} courseRunId={id!} onSaved={loadCourseRunDetail} />
       <EditLearnerDialog
         open={editLearnerDialogOpen}
         onOpenChange={setEditLearnerDialogOpen}

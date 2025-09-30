@@ -888,13 +888,17 @@ export const clientOrganizationsApi = {
   },
 
   // Create coordinator for an organization
-  createCoordinator: async (organizationId: string, coordinatorData: {
-    name: string;
-    email: string;
-  designation?: string;
-    password: string;
-  isPrimary?: boolean;
-  }) => {
+  createCoordinator: async (
+    organizationId: string,
+    coordinatorData: {
+      name: string;
+      email: string;
+      contactNumber: string;
+      designation?: string;
+      password: string;
+      isPrimary?: boolean;
+    }
+  ) => {
     return apiRequest(`/client-organizations/${organizationId}/coordinators`, {
       method: 'POST',
       body: JSON.stringify(coordinatorData),
@@ -902,13 +906,18 @@ export const clientOrganizationsApi = {
   },
 
   // Update coordinator
-  updateCoordinator: async (organizationId: string, coordinatorId: string, coordinatorData: {
-    name?: string;
-    email?: string;
-  designation?: string;
-    status?: string;
-  isPrimary?: boolean;
-  }) => {
+  updateCoordinator: async (
+    organizationId: string,
+    coordinatorId: string,
+    coordinatorData: {
+      name?: string;
+      email?: string;
+      contactNumber?: string | null;
+      designation?: string;
+      status?: string;
+      isPrimary?: boolean;
+    }
+  ) => {
     return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}`, {
       method: 'PUT',
       body: JSON.stringify(coordinatorData),
@@ -1135,9 +1144,36 @@ export const courseRunsApi = {
     });
   },
 
+  // Import learners from uploaded file
+  importLearners: async (courseRunId: string, payload: any) => {
+    return apiRequest(`/course-runs/${courseRunId}/import-learners`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Get enrolled learners for a course run
   getLearners: async (courseRunId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/learners`);
+  },
+
+  // Get attendance snapshot for a course run
+  getAttendance: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/attendance`);
+  },
+
+  // Save attendance for a specific day
+  saveAttendance: async (
+    courseRunId: string,
+    payload: {
+      day: number;
+      records: Array<{ learnerId: string; attendAM?: boolean; attendPM?: boolean }>;
+    }
+  ) => {
+    return apiRequest(`/course-runs/${courseRunId}/attendance`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
   },
 
   // Update learner enrollment

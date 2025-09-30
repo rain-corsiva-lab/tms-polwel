@@ -9,7 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
 
 interface AddCoordinatorDialogProps {
-  onCoordinatorAdd: (coordinatorData: { name: string; email: string; designation: string; password: string; isPrimary?: boolean }) => Promise<void>;
+  onCoordinatorAdd: (coordinatorData: {
+    name: string;
+    email: string;
+    contactNumber: string;
+    designation: string;
+    password: string;
+    isPrimary?: boolean;
+  }) => Promise<void>;
 }
 
 export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogProps) {
@@ -41,9 +48,10 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
       const tempPassword = Math.random().toString(36).slice(-8);
 
       await onCoordinatorAdd({
-        name: formData.name,
-        email: formData.email,
-        designation: formData.designation,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        contactNumber: formData.contactNumber.trim(),
+        designation: formData.designation.trim(),
         password: tempPassword,
         isPrimary: formData.isPrimary || false,
       });

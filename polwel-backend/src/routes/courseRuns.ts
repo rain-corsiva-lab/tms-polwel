@@ -34,8 +34,17 @@ router.post('/:id/enroll-learner', requirePermissions('courses.edit'), courseRun
 // POST /api/course-runs/:id/enroll-learners - Enroll multiple learners
 router.post('/:id/enroll-learners', requirePermissions('courses.edit'), courseRunController.enrollLearners);
 
+// POST /api/course-runs/:id/import-learners - Bulk import learners from file
+router.post('/:id/import-learners', requirePermissions('courses.edit'), courseRunController.importLearners);
+
 // GET /api/course-runs/:id/learners - Get enrolled learners
 router.get('/:id/learners', requirePermissions('courses.view'), courseRunController.getLearners);
+
+// GET /api/course-runs/:id/attendance - Get attendance records for a course run
+router.get('/:id/attendance', requirePermissions('courses.view'), courseRunController.getAttendance);
+
+// PUT /api/course-runs/:id/attendance - Save attendance for a specific day
+router.put('/:id/attendance', requirePermissions('courses.edit'), courseRunController.saveAttendance);
 
 // PUT /api/course-runs/:id/learners/:learnerId - Update learner enrollment
 router.put('/:id/learners/:learnerId', requirePermissions('courses.edit'), courseRunController.updateEnrollment);

@@ -15,6 +15,7 @@ interface TrainingCoordinator {
   designation: string;
   status: string;
   isPrimaryCoordinator?: boolean;
+  contactNumber?: string | null;
 }
 
 interface EditCoordinatorDialogProps {
@@ -26,6 +27,7 @@ interface EditCoordinatorDialogProps {
     coordinatorData: {
       name?: string;
       email?: string;
+      contactNumber?: string | null;
       designation?: string;
       status?: string;
       isPrimary?: boolean;
@@ -37,6 +39,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    contactNumber: "",
     designation: "",
     status: "ACTIVE",
     isPrimary: false,
@@ -51,6 +54,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
+        contactNumber: coordinator.contactNumber || "",
         designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
         isPrimary: !!coordinator.isPrimaryCoordinator,
@@ -61,7 +65,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!coordinator || !formData.name || !formData.email || !formData.designation) {
+    if (!coordinator || !formData.name || !formData.email || !formData.designation || !formData.contactNumber) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -73,10 +77,13 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
     try {
       setLoading(true);
 
+      const sanitizedContact = formData.contactNumber.trim();
+
       await onCoordinatorUpdate(coordinator.id, {
-        name: formData.name,
-        email: formData.email,
-        designation: formData.designation,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        contactNumber: sanitizedContact || null,
+        designation: formData.designation.trim(),
         status: formData.status,
         isPrimary: formData.isPrimary,
       });
@@ -101,6 +108,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
+        contactNumber: coordinator.contactNumber || "",
         designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
         isPrimary: !!coordinator.isPrimaryCoordinator,
@@ -151,6 +159,17 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
               value={formData.email}
               onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="Enter email address"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="coordinatorContact">Contact Number *</Label>
+            <Input
+              id="coordinatorContact"
+              value={formData.contactNumber}
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
+              placeholder="Enter contact number"
               disabled={loading}
             />
           </div>

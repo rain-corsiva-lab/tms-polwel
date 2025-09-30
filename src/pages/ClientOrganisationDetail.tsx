@@ -28,6 +28,7 @@ interface TrainingCoordinator {
   organizationId: string;
   createdAt: string;
   isPrimaryCoordinator?: boolean;
+  contactNumber?: string | null;
 }
 
 interface Learner {
@@ -345,7 +346,14 @@ const ClientOrganisationDetail = () => {
     }
   };
 
-  const handleCoordinatorAdd = async (coordinatorData: { name: string; email: string; designation: string; password: string; isPrimary?: boolean }) => {
+  const handleCoordinatorAdd = async (coordinatorData: {
+    name: string;
+    email: string;
+    contactNumber: string;
+    designation: string;
+    password: string;
+    isPrimary?: boolean;
+  }) => {
     if (!id) return;
 
     try {
@@ -361,7 +369,7 @@ const ClientOrganisationDetail = () => {
 
   const handleCoordinatorEdit = async (
     coordinatorId: string,
-    coordinatorData: { name?: string; email?: string; designation?: string; status?: string; isPrimary?: boolean }
+    coordinatorData: { name?: string; email?: string; contactNumber?: string | null; designation?: string; status?: string; isPrimary?: boolean }
   ) => {
     if (!id) return;
 
@@ -623,6 +631,7 @@ const ClientOrganisationDetail = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Contact</TableHead>
                     <TableHead>Designation</TableHead>
                     <TableHead>Last Active</TableHead>
                     <TableHead>Actions</TableHead>
@@ -654,6 +663,7 @@ const ClientOrganisationDetail = () => {
                           </div>
                         </TableCell>
                         <TableCell>{coordinator.email}</TableCell>
+                        <TableCell>{coordinator.contactNumber || "N/A"}</TableCell>
                         <TableCell>{coordinator.designation}</TableCell>
                         <TableCell>{formatDate(coordinator.createdAt)}</TableCell>
                         <TableCell>
