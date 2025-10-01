@@ -74,17 +74,17 @@ const permissionNameMapping: Record<string, string> = {
   'venue:update': 'venues.edit',
   'venue:delete': 'venues.delete',
 
-  'post-course-run:view': 'reports.view',
-  'post-course-run:create': 'reports.create',
-  'post-course-run:edit': 'reports.edit',
-  'post-course-run:update': 'reports.edit',
-  'post-course-run:delete': 'reports.delete',
+  'post-course-run:view': 'post-course-run.view',
+  'post-course-run:create': 'post-course-run.create',
+  'post-course-run:edit': 'post-course-run.edit',
+  'post-course-run:update': 'post-course-run.edit',
+  'post-course-run:delete': 'post-course-run.delete',
 
-  'billing-reports:view': 'bookings.view',
-  'billing-reports:create': 'bookings.create',
-  'billing-reports:edit': 'bookings.edit',
-  'billing-reports:update': 'bookings.edit',
-  'billing-reports:delete': 'bookings.delete',
+  'billing-reports:view': 'reports.view',
+  'billing-reports:create': 'reports.create',
+  'billing-reports:edit': 'reports.edit',
+  'billing-reports:update': 'reports.edit',
+  'billing-reports:delete': 'reports.delete',
 
   // Optional calendar support (front may send legacy key)
   'calendar:view': 'calendar.view',

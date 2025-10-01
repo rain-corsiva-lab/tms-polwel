@@ -36,29 +36,18 @@ export const PERMISSIONS: Perm[] = [
   { name: 'course-run.delete', description: 'Delete course runs', module: 'Course Run', action: 'delete' },
   { name: 'course-run.approve', description: 'Approve course runs', module: 'Course Run', action: 'approve' },
 
-  // Venues
-  { name: 'venues.view', description: 'View venues', module: 'Venue', action: 'read' },
-  { name: 'venues.create', description: 'Create venues', module: 'Venue', action: 'create' },
-  { name: 'venues.edit', description: 'Edit venues', module: 'Venue', action: 'update' },
-  { name: 'venues.delete', description: 'Delete venues', module: 'Venue', action: 'delete' },
+  // Billing & Reports module → reports.* permissions
+  { name: 'reports.view', description: 'View billing & reports', module: 'Billing & Reports', action: 'read' },
+  { name: 'reports.create', description: 'Create billing & reports entries', module: 'Billing & Reports', action: 'create' },
+  { name: 'reports.edit', description: 'Edit billing & reports entries', module: 'Billing & Reports', action: 'update' },
+  { name: 'reports.delete', description: 'Delete billing & reports entries', module: 'Billing & Reports', action: 'delete' },
 
-  // Bookings / Finance
-  { name: 'bookings.view', description: 'View billing & finance', module: 'Billing & Reports', action: 'read' },
-  { name: 'bookings.create', description: 'Create billing & finance entries', module: 'Billing & Reports', action: 'create' },
-  { name: 'bookings.edit', description: 'Edit billing & finance entries', module: 'Billing & Reports', action: 'update' },
-  { name: 'bookings.delete', description: 'Delete billing & finance entries', module: 'Billing & Reports', action: 'delete' },
+  // Post Course Run module → post-course-run.* permissions
+  { name: 'post-course-run.view', description: 'View post course run artefacts', module: 'Post Course Run', action: 'read' },
+  { name: 'post-course-run.create', description: 'Create post course run artefacts', module: 'Post Course Run', action: 'create' },
+  { name: 'post-course-run.edit', description: 'Edit post course run artefacts', module: 'Post Course Run', action: 'update' },
+  { name: 'post-course-run.delete', description: 'Delete post course run artefacts', module: 'Post Course Run', action: 'delete' },
 
-  // Reports / Library / Email
-  { name: 'reports.view', description: 'View post course run artefacts', module: 'Post Course Run', action: 'read' },
-  { name: 'reports.create', description: 'Create post course run artefacts', module: 'Post Course Run', action: 'create' },
-  { name: 'reports.edit', description: 'Edit post course run artefacts', module: 'Post Course Run', action: 'update' },
-  { name: 'reports.delete', description: 'Delete post course run artefacts', module: 'Post Course Run', action: 'delete' },
-
-  // Calendar
-  { name: 'calendar.view', description: 'View training calendar', module: 'Calendar', action: 'read' },
-  { name: 'calendar.create', description: 'Create calendar entries', module: 'Calendar', action: 'create' },
-  { name: 'calendar.edit', description: 'Edit calendar entries', module: 'Calendar', action: 'update' },
-  { name: 'calendar.delete', description: 'Delete calendar entries', module: 'Calendar', action: 'delete' },
 ];
 
 async function main() {

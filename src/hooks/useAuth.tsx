@@ -1,10 +1,13 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode, useMemo } from "react";
 import { authService, User, AuthResponse } from "@/lib/auth";
 import { toast } from "sonner";
+import { createAbility, type AppAbility } from "@/lib/casl";
+import { AbilityContext } from "@/lib/casl";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  ability: AppAbility;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -19,6 +22,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Create CASL ability from user
+  const ability = useMemo(() => {
+    return createAbility(user);
+  }, [user]);
 
   // Check authentication status on mount and set up session monitoring
   useEffect(() => {
@@ -128,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         isAuthenticated,
         user,
+        ability,
         login,
         logout,
         loading,
@@ -136,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         apiRequest,
       }}
     >
-      {children}
+      <AbilityContext.Provider value={ability}>{children}</AbilityContext.Provider>
     </AuthContext.Provider>
   );
 }

@@ -16,8 +16,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:grant-john": "ts-node scripts/seedGrantAllPermissionsToJohn.ts",
-  "db:permissions:upsert": "ts-node scripts/upsertMissingPermissions.ts",
-  "debug:course-run-search": "ts-node scripts/testCourseRunSearch.ts",
+    "db:permissions:upsert": "ts-node scripts/upsertMissingPermissions.ts",
+    "debug:course-run-search": "ts-node scripts/testCourseRunSearch.ts",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -27,6 +27,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@casl/ability": "^6.7.3",
     "@prisma/client": "^6.13.0",
     "@types/bcrypt": "^6.0.0",
     "@types/nodemailer": "^6.4.17",

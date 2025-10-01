@@ -50,7 +50,11 @@ model User {
   auditLogs                       AuditLog[]
   bookingsCreated                 Booking[]                       @relation("BookingCreatedBy")
   bookings                        Booking[]                       @relation("BookingUser")
+  courseRunLearnerAttendanceEdits CourseRunLearnerAttendance[]
+  courseRunTrainers               CourseRunTrainer[]
   coursesCreated                  Course[]                        @relation("CourseCreator")
+  learnersAsTrainingCoordinator   Learner[]
+  trainerAssignmentEmailHistory   TrainerAssignmentEmailHistory[]
   trainerBlockouts                TrainerBlockout[]
   trainerFeesCreated              TrainerFee[]                    @relation("TrainerFeeCreatedBy")
   trainerFees                     TrainerFee[]
@@ -59,10 +63,6 @@ model User {
   usersCreated                    User[]                          @relation("UserCreatedBy")
   organization                    Organization?                   @relation(fields: [organizationId], references: [id])
   venuesCreated                   Venue[]
-  courseRunTrainers               CourseRunTrainer[]
-  learnersAsTrainingCoordinator   Learner[]
-  courseRunLearnerAttendanceEdits CourseRunLearnerAttendance[]
-  trainerAssignmentEmailHistory   TrainerAssignmentEmailHistory[]
 
   @@index([createdBy], map: "users_createdBy_fkey")
   @@index([organizationId], map: "users_organizationId_fkey")
@@ -70,17 +70,17 @@ model User {
 }
 
 model Partner {
-  id                 String      @id @default(cuid())
+  id                 String     @id @default(cuid())
   name               String
-  status             UserStatus  @default(ACTIVE)
+  status             UserStatus @default(ACTIVE)
   pointOfContact     String?
   contactNumber      String?
   contactDesignation String?
   coursesAssigned    Json?
   onboardingDate     DateTime?
-  notes              String?     @db.Text
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  notes              String?    @db.Text
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   @@map("partners")
 }
@@ -98,8 +98,8 @@ model Organization {
   updatedAt        DateTime         @updatedAt
   organizationType OrganizationType @default(POLWEL)
   bookings         Booking[]
-  users            User[]
   learners         Learner[]
+  users            User[]
 
   @@map("organizations")
 }
@@ -148,39 +148,39 @@ model Course {
 
 model CourseRun {
   id                             String                          @id @default(cuid())
-  serialNumber                   String?
-  courseRunType                  CourseRunType?
   courseId                       String
-  startDatetime                  DateTime?
-  endDatetime                    DateTime?
   venueId                        String?
-  venueType                      VenueType?
-  specifiedLocation              String?
-  minClassSize                   Int?
-  maxClassSize                   Int?
-  individualRegistrationRequired Boolean                         @default(false)
-  remarks                        String?                         @db.Text
-  baseCourseFee                  Decimal?                        @db.Decimal(10, 2)
-  feeType                        FeeType?
-  venueFee                       Decimal?                        @db.Decimal(10, 2)
-  otherFee                       Decimal?                        @db.Decimal(10, 2)
-  adminFee                       Decimal?                        @db.Decimal(10, 2)
-  contingencyFee                 Decimal?                        @db.Decimal(10, 2)
   status                         CourseStatus                    @default(DRAFT)
-  billingReportId                String?
+  venueFee                       Decimal?                        @db.Decimal(10, 2)
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
+  adminFee                       Decimal?                        @db.Decimal(10, 2)
+  baseCourseFee                  Decimal?                        @db.Decimal(10, 2)
+  billingReportId                String?
+  contingencyFee                 Decimal?                        @db.Decimal(10, 2)
+  courseRunType                  CourseRunType?
   deletedAt                      DateTime?
+  endDatetime                    DateTime?
+  feeType                        FeeType?
+  individualRegistrationRequired Boolean                         @default(false)
+  maxClassSize                   Int?
+  minClassSize                   Int?
+  otherFee                       Decimal?                        @db.Decimal(10, 2)
+  remarks                        String?                         @db.Text
+  serialNumber                   String?
+  specifiedLocation              String?
+  startDatetime                  DateTime?
+  venueType                      VenueType?
   bookings                       Booking[]
+  confirmationEmailHistory       ConfirmationEmailHistory[]
   courseRunBilling               CourseRunBilling?
+  courseRunLearnerAttendances    CourseRunLearnerAttendance[]
   courseRunLearners              CourseRunLearner[]
   courseRunTrainers              CourseRunTrainer[]
-  courseRunLearnerAttendances    CourseRunLearnerAttendance[]
-  trainerAssignmentEmailHistory  TrainerAssignmentEmailHistory[]
-  confirmationEmailHistory       ConfirmationEmailHistory[]
+  billingReport                  BillingReport?                  @relation(fields: [billingReportId], references: [id])
   course                         Course                          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   venue                          Venue?                          @relation(fields: [venueId], references: [id])
-  billingReport                  BillingReport?                  @relation(fields: [billingReportId], references: [id])
+  trainerAssignmentEmailHistory  TrainerAssignmentEmailHistory[]
 
   @@index([courseId], map: "course_runs_courseId_fkey")
   @@index([venueId], map: "course_runs_venueId_fkey")
@@ -202,8 +202,8 @@ model CourseRunBilling {
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   deletedAt               DateTime?
-  courseRun               CourseRun               @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
   courseRunBillingEntries CourseRunBillingEntry[]
+  courseRun               CourseRun               @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
 
   @@map("course_run_billings")
 }
@@ -221,7 +221,7 @@ model CourseRunBillingEntry {
   courseRunBilling   CourseRunBilling   @relation(fields: [courseRunBillingId], references: [id], onDelete: Cascade)
   courseRunLearners  CourseRunLearner[]
 
-  @@index([courseRunBillingId], map: "course_run_billing_entries_courseRunBillingId_idx")
+  @@index([courseRunBillingId])
   @@map("course_run_billing_entries")
 }
 
@@ -240,8 +240,8 @@ model CourseRunTrainer {
   trainer                      User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@unique([courseRunId, trainerId])
-  @@index([courseRunId], map: "course_run_trainers_courseRunId_idx")
-  @@index([trainerId], map: "course_run_trainers_trainerId_idx")
+  @@index([courseRunId])
+  @@index([trainerId])
   @@map("course_run_trainers")
 }
 
@@ -255,13 +255,13 @@ model Venue {
   contacts    Json?
   feeType     FeeType     @default(PER_VENUE)
   fee         Float       @default(0)
-  venueType   VenueType?
   status      VenueStatus @default(ACTIVE)
   remarks     String?     @db.Text
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  deletedAt   DateTime?
   createdBy   String?
+  deletedAt   DateTime?
+  venueType   VenueType?
   bookings    Booking[]
   courseRuns  CourseRun[]
   creator     User?       @relation(fields: [createdBy], references: [id])
@@ -415,13 +415,13 @@ model Learner {
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
   deletedAt                   DateTime?
+  courseRunLearnerAttendances CourseRunLearnerAttendance[]
+  courseRunLearners           CourseRunLearner[]
   clientOrganization          Organization?                @relation(fields: [clientOrganizationId], references: [id])
   trainingCoordinator         User?                        @relation(fields: [trainingCoordinatorId], references: [id])
-  courseRunLearners           CourseRunLearner[]
-  courseRunLearnerAttendances CourseRunLearnerAttendance[]
 
-  @@index([clientOrganizationId], map: "learners_clientOrganizationId_idx")
-  @@index([trainingCoordinatorId], map: "learners_trainingCoordinatorId_idx")
+  @@index([clientOrganizationId])
+  @@index([trainingCoordinatorId])
   @@map("learners")
 }
 
@@ -437,7 +437,6 @@ model CourseRunLearner {
   feesRemarks                   String?                    @db.Text
   invoiceNumber                 String?
   remarks                       String?                    @db.Text
-  departmentName                String?
   attendanceStatus              AttendanceStatus?          @default(PRESENT)
   enrollmentStatus              EnrollmentStatus?          @default(ENROLLED)
   withdrawnReason               String?                    @db.Text
@@ -446,16 +445,18 @@ model CourseRunLearner {
   createdAt                     DateTime                   @default(now())
   updatedAt                     DateTime                   @updatedAt
   deletedAt                     DateTime?
+  departmentName                String?
+  confirmationEmailHistory      ConfirmationEmailHistory[]
+  courseRunBillingEntry         CourseRunBillingEntry?     @relation(fields: [courseRunBillingEntryId], references: [id])
   courseRun                     CourseRun                  @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
   learner                       Learner                    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
   supportingDocumentWithdrawn   Media?                     @relation(fields: [supportingDocumentWithdrawnId], references: [id])
-  courseRunBillingEntry         CourseRunBillingEntry?     @relation(fields: [courseRunBillingEntryId], references: [id])
-  confirmationEmailHistory      ConfirmationEmailHistory[]
 
   @@unique([courseRunId, learnerId])
-  @@index([courseRunId], map: "course_run_learners_courseRunId_idx")
-  @@index([learnerId], map: "course_run_learners_learnerId_idx")
-  @@index([courseRunBillingEntryId], map: "course_run_learners_courseRunBillingEntryId_idx")
+  @@index([courseRunId])
+  @@index([learnerId])
+  @@index([courseRunBillingEntryId])
+  @@index([supportingDocumentWithdrawnId], map: "course_run_learners_supportingDocumentWithdrawnId_fkey")
   @@map("course_run_learners")
 }
 
@@ -471,12 +472,13 @@ model CourseRunLearnerAttendance {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
   courseRun   CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
-  learner     Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
   editor      User?     @relation(fields: [editedBy], references: [id])
+  learner     Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
 
   @@unique([courseRunId, learnerId, day])
-  @@index([courseRunId], map: "course_run_learner_attendance_courseRunId_idx")
-  @@index([learnerId], map: "course_run_learner_attendance_learnerId_idx")
+  @@index([courseRunId])
+  @@index([learnerId])
+  @@index([editedBy], map: "course_run_learner_attendance_editedBy_fkey")
   @@map("course_run_learner_attendance")
 }
 
@@ -491,8 +493,8 @@ model Media {
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
   deletedAt                DateTime?
-  courseRunLearners        CourseRunLearner[]
   confirmationEmailHistory ConfirmationEmailHistory[]
+  courseRunLearners        CourseRunLearner[]
 
   @@map("media")
 }
@@ -517,11 +519,11 @@ model TrainerAssignmentEmailHistory {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   deletedAt             DateTime?
-  trainer               User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   courseRun             CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  trainer               User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
-  @@index([trainerId], map: "trainer_assignment_email_history_trainerId_idx")
-  @@index([courseRunId], map: "trainer_assignment_email_history_courseRunId_idx")
+  @@index([trainerId])
+  @@index([courseRunId])
   @@map("trainer_assignment_email_history")
 }
 
@@ -534,12 +536,13 @@ model ConfirmationEmailHistory {
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   deletedAt           DateTime?
-  courseRunLearner    CourseRunLearner @relation(fields: [courseRunLearnersId], references: [id], onDelete: Cascade)
-  courseRun           CourseRun        @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
   attachment          Media?           @relation(fields: [attachmentId], references: [id])
+  courseRun           CourseRun        @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  courseRunLearner    CourseRunLearner @relation(fields: [courseRunLearnersId], references: [id], onDelete: Cascade)
 
-  @@index([courseRunLearnersId], map: "confirmation_email_history_courseRunLearnersId_idx")
-  @@index([courseRunId], map: "confirmation_email_history_courseRunId_idx")
+  @@index([courseRunLearnersId])
+  @@index([courseRunId])
+  @@index([attachmentId], map: "confirmation_email_history_attachmentId_fkey")
   @@map("confirmation_email_history")
 }
 

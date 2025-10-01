@@ -13,7 +13,7 @@ declare global {
         email: string;
         role: string;
         organizationId?: string;
-        permissions?: Set<string>;
+        permissions?: Set<string> | any[];
       };
     }
   }
@@ -25,7 +25,7 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     organizationId?: string;
-    permissions?: Set<string>;
+    permissions?: Set<string> | any[];
   };
 }
 
@@ -208,8 +208,15 @@ export const requirePermissions = (required: string | string[]) => {
 
       const userPerms = req.user.permissions || new Set<string>();
 
+      // Convert to Set if it's an array
+      const userPermsSet = userPerms instanceof Set ? userPerms : new Set(
+        Array.isArray(userPerms) 
+          ? userPerms.map((p: any) => typeof p === 'string' ? p : p?.permissionName).filter(Boolean)
+          : []
+      );
+
       // Check for any match
-      const hasPermission = normalizedRequired.some((perm) => userPerms.has(perm));
+      const hasPermission = normalizedRequired.some((perm) => userPermsSet.has(perm));
       if (!hasPermission) {
         res.status(403).json({
           error: 'Forbidden - insufficient permissions',

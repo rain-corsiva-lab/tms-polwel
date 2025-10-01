@@ -43,17 +43,17 @@ const permissionNameMapping: Record<string, string> = {
   'venue:edit': 'course-venue.edit',
   'venue:delete': 'course-venue.delete',
 
-  // Post course run module (maps to reporting)
-  'post-course-run:view': 'reports.view',
-  'post-course-run:create': 'reports.create',
-  'post-course-run:edit': 'reports.edit',
-  'post-course-run:delete': 'reports.delete',
+  // Post course run module → post-course-run.* permissions
+  'post-course-run:view': 'post-course-run.view',
+  'post-course-run:create': 'post-course-run.create',
+  'post-course-run:edit': 'post-course-run.edit',
+  'post-course-run:delete': 'post-course-run.delete',
 
-  // Billing reports module (maps to finance/bookings)
-  'billing-reports:view': 'bookings.view',
-  'billing-reports:create': 'bookings.create',
-  'billing-reports:edit': 'bookings.edit',
-  'billing-reports:delete': 'bookings.delete',
+  // Billing reports module → reports.* permissions
+  'billing-reports:view': 'reports.view',
+  'billing-reports:create': 'reports.create',
+  'billing-reports:edit': 'reports.edit',
+  'billing-reports:delete': 'reports.delete',
 };
 
 export function mapFrontendPermissions(frontendPerms: string[]) {

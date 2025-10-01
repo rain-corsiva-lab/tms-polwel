@@ -1,64 +1,80 @@
 import { NavLink } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Users, UserCheck, GraduationCap, Building2, BarChart3, Settings, Shield, ChevronDown, ChevronRight, BookOpen, Calendar } from "lucide-react";
+import { Users, UserCheck, GraduationCap, Building2, Shield, ChevronDown, ChevronRight, BookOpen, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { usePermission } from "@/hooks/usePermission";
+import { Can } from "../lib/casl/Can";
+import type { Subject } from "@/lib/casl/types";
 
 interface SidebarProps {
   className?: string;
 }
 
-const navigation = [
-  // Dashboard and Settings removed
+interface MenuItem {
+  name: string;
+  href: string;
+  icon: any;
+  subject: Subject;
+}
+
+const userManagementItems: MenuItem[] = [
+  { name: "POLWEL Users", href: "/polwel-users", icon: Shield, subject: "User" },
+  { name: "Associate Trainers & Training Partners", href: "/trainers", icon: GraduationCap, subject: "Trainer" },
+  // i need to fill CLients also in here and remove from below
+  { name: "Client Organisations", href: "/client-organisations", icon: Building2, subject: "Client" },
 ];
 
-const userManagementItems = [
-  { name: "POLWEL Users", href: "/polwel-users", icon: Shield, permission: "users.view" },
-  { name: "Associate Trainers & Training Partners", href: "/trainers", icon: GraduationCap, permission: "trainers.view" },
-];
-
-const clientOrgsItems = [
-  { name: "Training Coordinators", href: "/training-coordinators", icon: UserCheck, permission: "clients.view" },
-  { name: "Learners", href: "/learners", icon: Users, permission: "clients.view" },
-];
-
-const courseManagementItems = [
-  { name: "Course Creation", href: "/course-creation", icon: BookOpen, permission: "course-venue.view" },
-  { name: "Course Run Management", href: "/course-runs", icon: Calendar, permission: "course-run.view" },
-  { name: "Venue Management", href: "/venue-setup", icon: Building2, permission: "course-venue.view" },
+const courseManagementItems: MenuItem[] = [
+  { name: "Course Creation", href: "/course-creation", icon: BookOpen, subject: "CourseVenue" },
+  // { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Venue Management", href: "/venue-setup", icon: Building2, subject: "CourseVenue" },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {
   const [userManagementOpen, setUserManagementOpen] = useState(false);
-  const [clientOrgsOpen, setClientOrgsOpen] = useState(false);
   const [courseManagementOpen, setCourseManagementOpen] = useState(false);
-  const { user, isAuthenticated, loading } = useAuth();
-  const { hasAny, list } = usePermission();
+  const { user, isAuthenticated, loading, ability } = useAuth();
 
-  // Determine visibility for top-level groups
-  // POLWEL users should see all menus regardless of specific permissions
-  const isPolwelUser = user?.role === "POLWEL";
-  const userManagementVisible = user?.role === "TRAINER" ? false : isPolwelUser || hasAny(["users.view", "trainers.view", "clients.view"]);
-
-  const courseManagementVisible = user?.role === "TRAINER" ? false : isPolwelUser || hasAny(["course-venue.view", "course-run.view"]);
-
-  // Debug logging for staging troubleshooting
-  useEffect(() => {
-    if (!loading && isAuthenticated) {
-      console.debug("🔍 [SIDEBAR] Debug info:", {
-        userRole: user?.role,
-        isPolwelUser,
-        isAuthenticated,
-        loading,
-        permissionsCount: user?.permissions?.length || 0,
-        permissions: list(),
-        userManagementVisible,
-        courseManagementVisible,
-        environment: import.meta.env.MODE,
-      });
+  // Local helper that uses the CASL ability from AuthProvider
+  const can = (action: string, subject: Subject) => {
+    try {
+      return Boolean(ability?.can(action as any, subject));
+    } catch (e) {
+      // If ability is not ready or invalid, default to false
+      return false;
     }
-  }, [loading, isAuthenticated, user, isPolwelUser, userManagementVisible, courseManagementVisible, list]);
+  };
+
+  // Explicit role checks
+  const isPolwelUser = user?.role === "POLWEL";
+  const isTrainer = user?.role === "TRAINER";
+
+  // Compute group visibility using CASL
+  const userManagementVisible = isPolwelUser || can("view", "User") || can("view", "Trainer") || can("view", "Client");
+
+  const courseManagementVisible = isPolwelUser || can("view", "CourseVenue") || can("view", "CourseRun");
+
+  // Debug logging
+  useEffect(() => {
+    if (!loading && isAuthenticated && import.meta.env.MODE === "development") {
+      console.group("🔍 [SIDEBAR CASL] Debug Info");
+      console.log("User Role:", user?.role);
+      console.log("Is POLWEL:", isPolwelUser);
+      console.log("Is Trainer:", isTrainer);
+      console.log("Permissions:", user?.permissions);
+      console.log("---");
+      console.log("Ability Rules:", ability.rules);
+      console.log("---");
+      console.log("User Management Visible:", userManagementVisible);
+      console.log("  can('view', 'User'):", can("view", "User"));
+      console.log("  can('view', 'Trainer'):", can("view", "Trainer"));
+      console.log("  can('view', 'Client'):", can("view", "Client"));
+      console.log("Course Management Visible:", courseManagementVisible);
+      console.log("  can('view', 'CourseVenue'):", can("view", "CourseVenue"));
+      console.log("  can('view', 'CourseRun'):", can("view", "CourseRun"));
+      console.groupEnd();
+    }
+  }, [loading, isAuthenticated, user, isPolwelUser, isTrainer, ability, userManagementVisible, courseManagementVisible, can]);
 
   return (
     <aside
@@ -105,11 +121,10 @@ const Sidebar = ({ className }: SidebarProps) => {
 
             {userManagementOpen && (
               <div className="ml-6 space-y-1">
-                {userManagementItems
-                  .filter((item) => !item.permission || isPolwelUser || hasAny([item.permission]))
-                  .map((item) => (
+                {/* Conditionally render items using CASL Can component */}
+                {userManagementItems.map((item) => (
+                  <Can key={item.name} I="view" a={item.subject}>
                     <NavLink
-                      key={item.name}
                       to={item.href}
                       className={({ isActive }) =>
                         cn(
@@ -121,23 +136,8 @@ const Sidebar = ({ className }: SidebarProps) => {
                       <item.icon className="mr-3 h-4 w-4" />
                       {item.name}
                     </NavLink>
-                  ))}
-
-                {/* Client Organisations as direct link (show only if has clients.view) */}
-                {(isPolwelUser || hasAny(["clients.view"])) && (
-                  <NavLink
-                    to="/client-organisations"
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                        isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                      )
-                    }
-                  >
-                    <Building2 className="mr-3 h-4 w-4" />
-                    Clients
-                  </NavLink>
-                )}
+                  </Can>
+                ))}
               </div>
             )}
           </div>
@@ -157,11 +157,10 @@ const Sidebar = ({ className }: SidebarProps) => {
 
             {courseManagementOpen && (
               <div className="ml-6 space-y-1">
-                {courseManagementItems
-                  .filter((item) => !item.permission || isPolwelUser || hasAny([item.permission]))
-                  .map((item) => (
+                {/* Conditionally render items using CASL Can component */}
+                {courseManagementItems.map((item) => (
+                  <Can key={item.name} I="view" a={item.subject}>
                     <NavLink
-                      key={item.name}
                       to={item.href}
                       className={({ isActive }) =>
                         cn(
@@ -173,7 +172,8 @@ const Sidebar = ({ className }: SidebarProps) => {
                       <item.icon className="mr-3 h-4 w-4" />
                       {item.name}
                     </NavLink>
-                  ))}
+                  </Can>
+                ))}
               </div>
             )}
           </div>

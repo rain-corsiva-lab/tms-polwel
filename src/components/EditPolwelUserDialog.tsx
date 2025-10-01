@@ -83,55 +83,66 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
 
   // Load user permissions when dialog opens
   useEffect(() => {
-    if (open && user.permissions) {
-      const updatedPermissions = createDefaultPermissions();
-
-      const moduleMapping: Record<string, ModuleKey | undefined> = {
-        users: "polwel-users",
-        trainers: "trainers-partners",
-        clients: "client-organizations",
-        "course-venue": "course-venue",
-        "course-run": "course-run",
-        courses: "course-venue", // legacy canonical
-        "course-runs": "course-run",
-        venues: "course-venue", // legacy canonical
-        bookings: "billing-reports",
-        reports: "post-course-run",
-      };
-      const actionMapping: Record<string, keyof ModulePermissions> = {
-        view: "view",
-        create: "create",
-        edit: "edit",
-        delete: "delete",
-        approve: "approve",
-      };
-
-      user.permissions.forEach((perm) => {
-        const raw = typeof perm === "string" ? perm : perm?.permissionName;
-        if (!raw) return;
-        const [permissionModule, permissionAction] = raw.split(".");
-        let frontendModule = moduleMapping[permissionModule];
-        const frontendAction = actionMapping[permissionAction];
-
-        // Legacy course permissions map approve to course-run only
-        if (permissionModule === "courses" && permissionAction === "approve") {
-          frontendModule = "course-run";
-        } else if (!frontendModule && (permissionModule === "courses" || permissionModule === "course-venue" || permissionModule === "venues")) {
-          frontendModule = "course-venue";
-        }
-
-        if (
-          frontendModule &&
-          frontendAction &&
-          updatedPermissions[frontendModule] &&
-          typeof updatedPermissions[frontendModule][frontendAction] !== "undefined"
-        ) {
-          updatedPermissions[frontendModule][frontendAction] = true;
-        }
-      });
-
-      setPermissions(updatedPermissions);
+    if (!open || !user.permissions) {
+      return;
     }
+
+    const updatedPermissions = createDefaultPermissions();
+
+    const moduleMapping: Record<string, ModuleKey | undefined> = {
+      users: "polwel-users",
+      trainers: "trainers-partners",
+      clients: "client-organizations",
+      "course-venue": "course-venue",
+      "course-run": "course-run",
+      courses: "course-venue", // legacy canonical
+      "course-runs": "course-run",
+      venues: "course-venue", // legacy canonical
+      reports: "billing-reports", // Billing & Reports module uses reports.* permissions
+      "post-course-run": "post-course-run", // Post Course Run module uses post-course-run.* permissions
+      "billing-reports": "billing-reports", // Also support direct billing-reports key
+      // Handle malformed database entries:
+      post: "post-course-run", // DB has "post.course.run.*" malformed entries
+    };
+    const actionMapping: Record<string, keyof ModulePermissions> = {
+      view: "view",
+      create: "create",
+      edit: "edit",
+      delete: "delete",
+      approve: "approve",
+    };
+
+    user.permissions.forEach((perm) => {
+      const raw = typeof perm === "string" ? perm : perm?.permissionName;
+      if (!raw) return;
+
+      // Normalize malformed "post.course.run.*" to "post-course-run.*"
+      let normalized = raw.toLowerCase().trim();
+      normalized = normalized.replace(/^post\.course\.run\./i, "post-course-run.");
+
+      // Support both canonical ("module.action") and frontend mapping ("module:action")
+      const parts = normalized.includes(":") ? normalized.split(":") : normalized.split(".");
+      const [permissionModule, permissionAction] = parts;
+      let frontendModule = moduleMapping[permissionModule];
+      const frontendAction = actionMapping[permissionAction];
+
+      // Legacy course permissions map approve to course-run only
+      if (permissionModule === "courses" && permissionAction === "approve") {
+        frontendModule = "course-run";
+      } else if (!frontendModule && (permissionModule === "courses" || permissionModule === "course-venue" || permissionModule === "venues")) {
+        frontendModule = "course-venue";
+      }
+
+      if (frontendModule && frontendAction && updatedPermissions[frontendModule] && typeof updatedPermissions[frontendModule][frontendAction] !== "undefined") {
+        updatedPermissions[frontendModule][frontendAction] = true;
+      }
+    });
+
+    // Schedule state update asynchronously to avoid flushSync warning
+    // Use queueMicrotask to defer until after current render cycle
+    queueMicrotask(() => {
+      setPermissions(updatedPermissions);
+    });
   }, [open, user.permissions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
