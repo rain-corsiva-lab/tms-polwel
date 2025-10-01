@@ -751,7 +751,7 @@ const TrainersAndPartners = () => {
                                       <Ban className="h-4 w-4 mr-2" />
                                       Delete Partner
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem
+                                    {/* <DropdownMenuItem
                                       onClick={() => {
                                         // Handle password reset
                                         toast({
@@ -762,7 +762,7 @@ const TrainersAndPartners = () => {
                                     >
                                       <Mail className="h-4 w-4 mr-2" />
                                       Send Password Reset Link
-                                    </DropdownMenuItem>
+                                    </DropdownMenuItem> */}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
