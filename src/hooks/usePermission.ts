@@ -16,8 +16,8 @@ export function usePermission() {
         'users.view', 'users.create', 'users.edit', 'users.delete',
         'trainers.view', 'trainers.create', 'trainers.edit', 'trainers.delete',
         'clients.view', 'clients.create', 'clients.edit', 'clients.delete',
-        'courses.view', 'courses.create', 'courses.edit', 'courses.delete',
-        'venues.view', 'venues.create', 'venues.edit', 'venues.delete',
+  'course-venue.view', 'course-venue.create', 'course-venue.edit', 'course-venue.delete',
+  'course-run.view', 'course-run.create', 'course-run.edit', 'course-run.delete', 'course-run.approve',
         'bookings.view', 'bookings.create', 'bookings.edit', 'bookings.delete',
         'reports.view', 'reports.create', 'reports.edit', 'reports.delete',
         'calendar.view', 'calendar.create', 'calendar.edit', 'calendar.delete'

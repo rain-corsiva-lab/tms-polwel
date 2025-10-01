@@ -38,18 +38,18 @@ async function checkPermissionMappings() {
       'client-organizations:update': 'clients.edit',
       'client-organizations:delete': 'clients.delete',
 
-      'course:view': 'courses.view',
-      'course:create': 'courses.create',
-      'course:edit': 'courses.edit',
-      'course:update': 'courses.edit',
-      'course:delete': 'courses.delete',
+  'course:view': 'course-venue.view',
+  'course:create': 'course-venue.create',
+  'course:edit': 'course-venue.edit',
+  'course:update': 'course-venue.edit',
+  'course:delete': 'course-venue.delete',
 
-      'course-run:view': 'courses.view',
-      'course-run:create': 'courses.create',
-      'course-run:edit': 'courses.edit',
-      'course-run:update': 'courses.edit',
-      'course-run:delete': 'courses.delete',
-      'course-run:approve': 'courses.approve',
+  'course-run:view': 'course-run.view',
+  'course-run:create': 'course-run.create',
+  'course-run:edit': 'course-run.edit',
+  'course-run:update': 'course-run.edit',
+  'course-run:delete': 'course-run.delete',
+  'course-run:approve': 'course-run.approve',
 
       'venue:view': 'venues.view',
       'venue:create': 'venues.create',
@@ -88,17 +88,17 @@ async function checkPermissionMappings() {
       'user-management-client-orgs:update': 'clients.edit',
       'user-management-client-orgs:delete': 'clients.delete',
 
-      'course-management:view': 'courses.view',
-      'course-management:create': 'courses.create',
-      'course-management:edit': 'courses.edit',
-      'course-management:update': 'courses.edit',
-      'course-management:delete': 'courses.delete',
+  'course-management:view': 'course-venue.view',
+  'course-management:create': 'course-venue.create',
+  'course-management:edit': 'course-venue.edit',
+  'course-management:update': 'course-venue.edit',
+  'course-management:delete': 'course-venue.delete',
 
-      'course-venue-setup:view': 'venues.view',
-      'course-venue-setup:create': 'venues.create',
-      'course-venue-setup:edit': 'venues.edit',
-      'course-venue-setup:update': 'venues.edit',
-      'course-venue-setup:delete': 'venues.delete'
+  'course-venue-setup:view': 'course-venue.view',
+  'course-venue-setup:create': 'course-venue.create',
+  'course-venue-setup:edit': 'course-venue.edit',
+  'course-venue-setup:update': 'course-venue.edit',
+  'course-venue-setup:delete': 'course-venue.delete'
     };
     
     console.log('Testing permission mappings:');

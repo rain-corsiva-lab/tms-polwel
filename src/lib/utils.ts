@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function digitsOnly(value: string) {
+  return value.replace(/\D+/g, "")
+}
+
 export function formatDateDDMMYYYY(dateLike?: string | Date | null) {
   if (!dateLike) return "";
   const d = typeof dateLike === "string" ? new Date(dateLike) : dateLike;
@@ -22,7 +26,8 @@ export function parseDDMMYYYYToISO(value?: string | null) {
   // Accept separators like / or - or . or space
   const parts = s.split(/[^0-9]+/).filter(Boolean);
   if (parts.length !== 3) return null;
-  let [d, m, y] = parts;
+  const [d, m, initialY] = parts;
+  let y = initialY;
   // normalize year
   if (y.length === 2) {
     const yy = parseInt(y, 10);

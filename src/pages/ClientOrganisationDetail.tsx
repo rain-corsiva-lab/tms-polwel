@@ -17,6 +17,7 @@ import { EditCoordinatorDialog } from "@/components/EditCoordinatorDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { clientOrganizationsApi } from "@/lib/api";
+import { digitsOnly } from "@/lib/utils";
 import Swal from "sweetalert2";
 
 interface TrainingCoordinator {
@@ -217,7 +218,7 @@ const ClientOrganisationDetail = () => {
       setFormData({
         name: data.name || "",
         contactEmail: data.contactEmail || "",
-        contactPhone: data.contactPhone || "",
+        contactPhone: digitsOnly(data.contactPhone || ""),
         contactPerson: data.contactPerson || "",
         address: data.address || "",
         buNumber: data.buNumber || "",
@@ -309,11 +310,12 @@ const ClientOrganisationDetail = () => {
 
     try {
       setSaving(true);
+      const sanitizedPhone = digitsOnly(formData.contactPhone);
       await clientOrganizationsApi.update(id, {
         name: formData.name,
         address: formData.address,
         contactEmail: formData.contactEmail,
-        contactPhone: formData.contactPhone,
+        contactPhone: sanitizedPhone,
         contactPerson: formData.contactPerson,
         buNumber: formData.buNumber,
       });
@@ -323,7 +325,7 @@ const ClientOrganisationDetail = () => {
         ...organization,
         name: formData.name,
         contactEmail: formData.contactEmail,
-        contactPhone: formData.contactPhone,
+        contactPhone: sanitizedPhone,
         contactPerson: formData.contactPerson,
         address: formData.address,
         buNumber: formData.buNumber,
@@ -587,7 +589,14 @@ const ClientOrganisationDetail = () => {
                     <Input
                       id="phoneNumber"
                       value={formData.contactPhone}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, contactPhone: e.target.value }))}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          contactPhone: digitsOnly(e.target.value),
+                        }))
+                      }
                     />
                   ) : (
                     <p className="mt-1 text-sm text-muted-foreground">{organization?.contactPhone || "N/A"}</p>

@@ -415,12 +415,25 @@ export const polwelUsersApi = {
     limit?: number;
     search?: string;
     status?: string;
+    all?: boolean;
+    export?: boolean;
   } = {}) => {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        queryParams.append(key, value.toString());
+      if (value === undefined || value === null) {
+        return;
       }
+      if (typeof value === 'boolean') {
+        if (value) {
+          queryParams.append(key, 'true');
+        }
+        return;
+      }
+      const stringValue = value.toString();
+      if (stringValue.length === 0) {
+        return;
+      }
+      queryParams.append(key, stringValue);
     });
     
     return apiRequest(`/polwel-users?${queryParams}`);
@@ -513,13 +526,26 @@ export const trainersApi = {
     limit?: number;
     search?: string;
     status?: string;
+    all?: boolean;
+    export?: boolean;
   // availabilityStatus deprecated; do not provide
   } = {}) => {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        queryParams.append(key, value.toString());
+      if (value === undefined || value === null) {
+        return;
       }
+      if (typeof value === 'boolean') {
+        if (value) {
+          queryParams.append(key, 'true');
+        }
+        return;
+      }
+      const stringValue = value.toString();
+      if (stringValue.length === 0) {
+        return;
+      }
+      queryParams.append(key, stringValue);
     });
     
     return apiRequest(`/trainers?${queryParams}`);
@@ -717,12 +743,25 @@ export const partnersApi = {
     limit?: number;
     search?: string;
     status?: string;
+    all?: boolean;
+    export?: boolean;
   } = {}) => {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        queryParams.append(key, value.toString());
+      if (value === undefined || value === null) {
+        return;
       }
+      if (typeof value === 'boolean') {
+        if (value) {
+          queryParams.append(key, 'true');
+        }
+        return;
+      }
+      const stringValue = value.toString();
+      if (stringValue.length === 0) {
+        return;
+      }
+      queryParams.append(key, stringValue);
     });
     
     return apiRequest(`/partners?${queryParams}`);
@@ -740,6 +779,9 @@ export const partnersApi = {
     pointOfContact?: string;
     contactNumber?: string;
     contactDesignation?: string;
+    onboardingDate?: string;
+    status?: string;
+    notes?: string;
   }) => {
     return apiRequest('/partners', {
       method: 'POST',
@@ -755,6 +797,8 @@ export const partnersApi = {
     contactNumber?: string;
     contactDesignation?: string;
     status?: string;
+    onboardingDate?: string;
+    notes?: string;
   }) => {
     return apiRequest(`/partners/${id}`, {
       method: 'PUT',
@@ -784,12 +828,25 @@ export const clientOrganizationsApi = {
     search?: string;
     status?: string;
   organizationType?: string;
+  all?: boolean;
+  export?: boolean;
   } = {}) => {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        queryParams.append(key, value.toString());
+      if (value === undefined || value === null) {
+        return;
       }
+      if (typeof value === 'boolean') {
+        if (value) {
+          queryParams.append(key, 'true');
+        }
+        return;
+      }
+      const stringValue = value.toString();
+      if (stringValue.length === 0) {
+        return;
+      }
+      queryParams.append(key, stringValue);
     });
     
     return apiRequest(`/client-organizations?${queryParams}`);

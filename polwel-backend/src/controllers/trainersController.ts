@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { UserRole, UserStatus } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
@@ -15,8 +15,22 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
   console.log(`👨‍🏫 [TRAINERS] Get trainers request started`);
   
   try {
-  const { page = 1, limit = 10, search, status } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+  const rawPage = typeof req.query.page === 'string' ? req.query.page : undefined;
+  const parsedPage = rawPage ? Number(rawPage) : undefined;
+  const pageNum = parsedPage && Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+
+  const rawLimit = typeof req.query.limit === 'string' ? req.query.limit : undefined;
+  const exportAll = req.query.export === 'true' || req.query.all === 'true' || rawLimit === 'all';
+  let limitNum = 10;
+  if (!exportAll && rawLimit !== undefined) {
+    const parsedLimit = Number(rawLimit);
+    if (Number.isFinite(parsedLimit) && parsedLimit > 0) {
+      limitNum = Math.floor(parsedLimit);
+    }
+  }
+    const skip = exportAll ? undefined : (pageNum - 1) * limitNum;
+    const take = exportAll ? undefined : limitNum;
+    const { search, status } = req.query;
 
     // Build where clause
     const where: any = {
@@ -60,8 +74,8 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
           createdAt: true,
           updatedAt: true
         },
-        skip,
-        take: Number(limit),
+        ...(skip !== undefined ? { skip } : {}),
+        ...(take !== undefined ? { take } : {}),
         orderBy: { name: 'asc' }
       }),
       prisma.user.count({ where })
@@ -70,10 +84,10 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
     return res.json({
       trainers,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: exportAll ? 1 : pageNum,
+        limit: exportAll ? total : limitNum,
         total,
-        totalPages: Math.ceil(total / Number(limit))
+        totalPages: exportAll ? 1 : Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -550,50 +564,53 @@ export const deleteTrainerBlockout = async (req: AuthenticatedRequest, res: Resp
 // Get partner organizations
 export const getPartnerOrganizations = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+  const pageParam = typeof req.query.page === 'string' ? req.query.page : undefined;
+  const pageNum = pageParam ? Number(pageParam) : 1;
+  const normalizedPage = Number.isFinite(pageNum) && pageNum > 0 ? Math.floor(pageNum) : 1;
 
-    // Build where clause for trainers with partner organizations
-    const where: any = {
-      role: 'TRAINER',
-      partnerOrganization: {
-        not: null
-      }
+  const limitParam = typeof req.query.limit === 'string' ? req.query.limit : undefined;
+  const limitNum = limitParam ? Number(limitParam) : 10;
+  const normalizedLimit = Number.isFinite(limitNum) && limitNum > 0 ? Math.floor(limitNum) : 10;
+    const skip = (normalizedPage - 1) * normalizedLimit;
+
+    const where: Prisma.PartnerWhereInput = {
+      status: { not: UserStatus.INACTIVE }
     };
 
-    if (search) {
-      where.partnerOrganization = {
-        contains: search as string,
-        
+    const searchTerm = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    if (searchTerm) {
+      where.name = {
+        contains: searchTerm
       };
     }
 
-    // Get unique partner organizations
-    const trainers = await prisma.user.findMany({
-      where,
-      select: {
-        partnerOrganization: true
-      },
-      skip,
-      take: Number(limit)
-    });
+    const [partners, total] = await Promise.all([
+      prisma.partner.findMany({
+        where,
+        select: {
+          id: true,
+          name: true
+        },
+        skip,
+        take: normalizedLimit,
+        orderBy: {
+          name: 'asc'
+        }
+      }),
+      prisma.partner.count({ where })
+    ]);
 
-    // Get total count
-    const total = await prisma.user.count({
-      where
-    });
-
-    const partnerOrganizations = trainers
-      .map(trainer => trainer.partnerOrganization)
-      .filter(org => org !== null);
+    const partnerOrganizations = partners
+      .map(partner => partner.name?.trim())
+      .filter((name): name is string => Boolean(name));
 
     return res.json({
       partnerOrganizations,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: normalizedPage,
+        limit: normalizedLimit,
         total,
-        totalPages: Math.ceil(total / Number(limit))
+        totalPages: Math.ceil(total / normalizedLimit)
       }
     });
   } catch (error) {
@@ -618,16 +635,38 @@ export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Respo
       });
     }
 
-    let whereClause: any = {
-      trainerId: id
+    const whereClause: Prisma.CourseRunWhereInput = {
+      courseRunTrainers: {
+        some: { trainerId: id }
+      }
     };
 
-    // Add date filtering if provided
-    if (startDate && endDate) {
-      whereClause.startDate = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string)
-      };
+    if (startDate || endDate) {
+      const start = typeof startDate === 'string' ? new Date(startDate) : undefined;
+      const end = typeof endDate === 'string' ? new Date(endDate) : undefined;
+
+      if (start && !Number.isNaN(start.getTime())) {
+        start.setHours(0, 0, 0, 0);
+      }
+
+      if (end && !Number.isNaN(end.getTime())) {
+        end.setHours(23, 59, 59, 999);
+      }
+
+      if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+        whereClause.startDatetime = {
+          gte: start,
+          lte: end
+        };
+      } else if (start && !Number.isNaN(start.getTime())) {
+        whereClause.startDatetime = {
+          gte: start
+        };
+      } else if (end && !Number.isNaN(end.getTime())) {
+        whereClause.startDatetime = {
+          lte: end
+        };
+      }
     }
 
     const courseRuns = await prisma.courseRun.findMany({
@@ -636,8 +675,7 @@ export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Respo
         course: {
           select: {
             id: true,
-            title: true,
-            description: true
+            title: true
           }
         },
         venue: {
@@ -657,6 +695,11 @@ export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Respo
               }
             }
           }
+        },
+        _count: {
+          select: {
+            courseRunLearners: true
+          }
         }
       },
       orderBy: {
@@ -664,10 +707,56 @@ export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Respo
       }
     });
 
+    const formatDate = (value?: Date | null) => {
+      if (!value) return '';
+      return value.toISOString().split('T')[0];
+    };
+
+    const formatTime = (value?: Date | null) => {
+      if (!value) return '';
+      return value.toTimeString().split(' ')[0];
+    };
+
+    const transformedRuns = courseRuns
+      .map(run => {
+        const start = run.startDatetime;
+        if (!start) {
+          return null;
+        }
+
+        const startDate = formatDate(start);
+        const endDate = formatDate(run.endDatetime);
+        const startTime = formatTime(start);
+        const endTime = formatTime(run.endDatetime);
+
+        return {
+          id: run.id,
+          courseId: run.courseId,
+          startDate,
+          endDate,
+          startTime,
+          endTime,
+          status: run.status,
+          course: {
+            title: run.course?.title || 'Untitled Course'
+          },
+          venue: run.venue
+            ? {
+                id: run.venue.id,
+                name: run.venue.name,
+                address: run.venue.address
+              }
+            : undefined,
+          currentParticipants: run._count?.courseRunLearners ?? 0,
+          maxParticipants: run.maxClassSize ?? 0
+        };
+      })
+      .filter((run): run is NonNullable<typeof run> => run !== null);
+
     return res.json({
       success: true,
-      runs: courseRuns,
-      message: `Found ${courseRuns.length} course run(s) for trainer`
+      runs: transformedRuns,
+      message: `Found ${transformedRuns.length} course run(s) for trainer`
     });
 
   } catch (error) {

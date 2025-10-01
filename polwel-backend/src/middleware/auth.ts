@@ -170,7 +170,7 @@ export const authorize = (...roles: string[]) => {
 };
 
 // Permission-based authorization middleware
-// required can be a single permission (e.g., 'courses.view') or array
+// required can be a single permission (e.g., 'course-venue.view') or array
 export const requirePermissions = (required: string | string[]) => {
   const requiredList = Array.isArray(required) ? required : [required];
   const normalizedRequired = requiredList

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
+import { digitsOnly } from "@/lib/utils";
 
 interface TrainingCoordinator {
   id: string;
@@ -54,7 +55,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
-        contactNumber: coordinator.contactNumber || "",
+        contactNumber: digitsOnly(coordinator.contactNumber || ""),
         designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
         isPrimary: !!coordinator.isPrimaryCoordinator,
@@ -65,7 +66,9 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!coordinator || !formData.name || !formData.email || !formData.designation || !formData.contactNumber) {
+    const sanitizedContact = digitsOnly(formData.contactNumber);
+
+    if (!coordinator || !formData.name || !formData.email || !formData.designation || !sanitizedContact) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -76,8 +79,6 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
 
     try {
       setLoading(true);
-
-      const sanitizedContact = formData.contactNumber.trim();
 
       await onCoordinatorUpdate(coordinator.id, {
         name: formData.name.trim(),
@@ -108,7 +109,7 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
-        contactNumber: coordinator.contactNumber || "",
+        contactNumber: digitsOnly(coordinator.contactNumber || ""),
         designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
         isPrimary: !!coordinator.isPrimaryCoordinator,
@@ -168,7 +169,9 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
             <Input
               id="coordinatorContact"
               value={formData.contactNumber}
-              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: digitsOnly(e.target.value) }))}
               placeholder="Enter contact number"
               disabled={loading}
             />

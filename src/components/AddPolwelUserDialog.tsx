@@ -19,7 +19,7 @@ interface ModulePermissions {
   approve?: boolean;
 }
 
-type ModuleKey = "polwel-users" | "trainers-partners" | "client-organizations" | "course" | "course-run" | "venue" | "post-course-run" | "billing-reports";
+type ModuleKey = "polwel-users" | "trainers-partners" | "client-organizations" | "course-venue" | "course-run" | "post-course-run" | "billing-reports";
 
 type UserPermissions = Record<ModuleKey, ModulePermissions>;
 
@@ -27,9 +27,8 @@ const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean
   "polwel-users": { label: "POLWEL Users" },
   "trainers-partners": { label: "Trainers & Partners" },
   "client-organizations": { label: "Client Organisations" },
-  course: { label: "Course" },
+  "course-venue": { label: "Course & Venue" },
   "course-run": { label: "Course Run", supportsApprove: true },
-  venue: { label: "Venue" },
   "post-course-run": { label: "Post Course Run" },
   "billing-reports": { label: "Billing Reports" },
 };
@@ -38,9 +37,8 @@ const createDefaultPermissions = (): UserPermissions => ({
   "polwel-users": { view: false, create: false, edit: false, delete: false },
   "trainers-partners": { view: false, create: false, edit: false, delete: false },
   "client-organizations": { view: false, create: false, edit: false, delete: false },
-  course: { view: false, create: false, edit: false, delete: false },
+  "course-venue": { view: false, create: false, edit: false, delete: false },
   "course-run": { view: false, create: false, edit: false, delete: false, approve: false },
-  venue: { view: false, create: false, edit: false, delete: false },
   "post-course-run": { view: false, create: false, edit: false, delete: false },
   "billing-reports": { view: false, create: false, edit: false, delete: false },
 });

@@ -19,7 +19,7 @@ interface ModulePermissions {
   approve?: boolean;
 }
 
-type ModuleKey = "polwel-users" | "trainers-partners" | "client-organizations" | "course" | "course-run" | "venue" | "post-course-run" | "billing-reports";
+type ModuleKey = "polwel-users" | "trainers-partners" | "client-organizations" | "course-venue" | "course-run" | "post-course-run" | "billing-reports";
 
 type UserPermissions = Record<ModuleKey, ModulePermissions>;
 
@@ -27,9 +27,8 @@ const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean
   "polwel-users": { label: "POLWEL Users" },
   "trainers-partners": { label: "Trainers & Partners" },
   "client-organizations": { label: "Client Organisations" },
-  course: { label: "Course" },
+  "course-venue": { label: "Course & Venue" },
   "course-run": { label: "Course Run", supportsApprove: true },
-  venue: { label: "Venue" },
   "post-course-run": { label: "Post Course Run" },
   "billing-reports": { label: "Billing Reports" },
 };
@@ -38,9 +37,8 @@ const createDefaultPermissions = (): UserPermissions => ({
   "polwel-users": { view: false, create: false, edit: false, delete: false },
   "trainers-partners": { view: false, create: false, edit: false, delete: false },
   "client-organizations": { view: false, create: false, edit: false, delete: false },
-  course: { view: false, create: false, edit: false, delete: false },
+  "course-venue": { view: false, create: false, edit: false, delete: false },
   "course-run": { view: false, create: false, edit: false, delete: false, approve: false },
-  venue: { view: false, create: false, edit: false, delete: false },
   "post-course-run": { view: false, create: false, edit: false, delete: false },
   "billing-reports": { view: false, create: false, edit: false, delete: false },
 });
@@ -92,9 +90,11 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
         users: "polwel-users",
         trainers: "trainers-partners",
         clients: "client-organizations",
-        courses: "course",
+        "course-venue": "course-venue",
+        "course-run": "course-run",
+        courses: "course-venue", // legacy canonical
         "course-runs": "course-run",
-        venues: "venue",
+        venues: "course-venue", // legacy canonical
         bookings: "billing-reports",
         reports: "post-course-run",
       };
@@ -113,16 +113,11 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
         let frontendModule = moduleMapping[permissionModule];
         const frontendAction = actionMapping[permissionAction];
 
-        // Legacy course permissions map to both course and course run; approve should map to course run only
+        // Legacy course permissions map approve to course-run only
         if (permissionModule === "courses" && permissionAction === "approve") {
           frontendModule = "course-run";
-        } else if (!frontendModule && permissionModule === "courses") {
-          frontendModule = "course";
-        }
-
-        // Ensure course permissions also light up course-run for legacy data
-        if (permissionModule === "courses" && frontendAction && permissionAction !== "approve") {
-          updatedPermissions["course-run"][frontendAction] = true;
+        } else if (!frontendModule && (permissionModule === "courses" || permissionModule === "course-venue" || permissionModule === "venues")) {
+          frontendModule = "course-venue";
         }
 
         if (

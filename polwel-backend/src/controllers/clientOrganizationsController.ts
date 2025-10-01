@@ -51,12 +51,23 @@ const errorResponse = (
 export const getClientOrganizations = async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Parse and sanitize query parameters
-    const rawPage = Number(req.query.page || 1);
-    const rawLimit = Number(req.query.limit || 10);
-    // Cap values to prevent heavy queries
-    const pageNum = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
-    const limitNum = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(1000, Math.floor(rawLimit)) : 10;
-    const skip = (pageNum - 1) * limitNum;
+    const rawPage = typeof req.query.page === 'string' ? req.query.page : undefined;
+    const parsedPage = rawPage ? Number(rawPage) : undefined;
+    const pageNum = parsedPage && Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+
+    const rawLimit = typeof req.query.limit === 'string' ? req.query.limit : undefined;
+    const exportAll = req.query.export === 'true' || req.query.all === 'true' || rawLimit === 'all';
+    let limitNum = 10;
+    if (!exportAll && rawLimit !== undefined) {
+      const parsedLimit = Number(rawLimit);
+      if (Number.isFinite(parsedLimit) && parsedLimit > 0) {
+        limitNum = Math.min(1000, Math.floor(parsedLimit));
+      }
+    } else if (!exportAll) {
+      limitNum = 10;
+    }
+    const skip = exportAll ? undefined : (pageNum - 1) * limitNum;
+    const take = exportAll ? undefined : limitNum;
 
     const rawSearch = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
     // Limit search length to avoid excessively long patterns
@@ -119,8 +130,8 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
             select: { role: true },
           },
         },
-  skip,
-  take: limitNum,
+  ...(skip !== undefined ? { skip } : {}),
+  ...(take !== undefined ? { take } : {}),
         orderBy: { createdAt: 'desc' }
       }),
       prisma.organization.count({ where })
@@ -147,10 +158,10 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
         }
       })),
       pagination: {
-        page: pageNum,
-        limit: limitNum,
+        page: exportAll ? 1 : pageNum,
+        limit: exportAll ? total : limitNum,
         total,
-        totalPages: Math.ceil(total / limitNum)
+        totalPages: exportAll ? 1 : Math.ceil(total / limitNum)
       }
     });
   } catch (error) {

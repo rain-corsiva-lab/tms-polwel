@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Search } from "lucide-react";
+import { Building2, Search, Download, Loader2 } from "lucide-react";
+import * as XLSX from "xlsx";
 // native select used for status/org-type to avoid portal scroll-jump
 import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
 import { clientOrganizationsApi } from "@/lib/api";
@@ -32,6 +33,7 @@ const ClientOrganisations = () => {
     totalPages: 0,
   });
   const [perPage, setPerPage] = useState(10);
+  const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
 
   // No dummy data: always fetch from server. In case of error we show an empty list and surface a toast.
@@ -97,6 +99,54 @@ const ClientOrganisations = () => {
     setSearchTerm(value);
   };
 
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const response = await clientOrganizationsApi.getAll({
+        search: searchTerm || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
+        organizationType: orgTypeFilter !== "ALL_TYPES" ? orgTypeFilter : undefined,
+        all: true,
+      });
+
+      const rows = (response.organizations || []).map((org: any) => ({
+        Name: org.name ?? "",
+        OrganisationType:
+          org.organizationType === "PUBLIC_SECTOR"
+            ? "Public Sector"
+            : org.organizationType === "PRIVATE_SECTOR"
+            ? "Private Sector"
+            : org.organizationType ?? "",
+        Status: org.status ?? "",
+        Coordinators: org.coordinatorsCount ?? 0,
+        Learners: org.learnersCount ?? 0,
+        ContactEmail: org.contactEmail ?? "",
+        ContactPhone: org.contactPhone ?? "",
+        BUNumber: org.buNumber ?? "",
+        CreatedAt: org.createdAt ?? "",
+        UpdatedAt: org.updatedAt ?? "",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Client Organisations");
+      XLSX.writeFile(workbook, "client_organisations.xlsx");
+      toast({
+        title: "Exported",
+        description: `Exported ${rows.length} client organisation${rows.length === 1 ? "" : "s"}.`,
+      });
+    } catch (error) {
+      console.error("Error exporting client organisations:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't export the client organisations. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const orgTypeOptions = useMemo(
     () => [
       { value: "ALL_TYPES", label: "All Types" },
@@ -115,7 +165,13 @@ const ClientOrganisations = () => {
           <h1 className="text-3xl font-bold text-foreground">Client Organisation</h1>
           <p className="text-muted-foreground">Manage client organisations and their training programs</p>
         </div>
-        <AddOrganisationDialog onOrganisationCreated={fetchClientOrgs} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+          <AddOrganisationDialog onOrganisationCreated={fetchClientOrgs} />
+        </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">

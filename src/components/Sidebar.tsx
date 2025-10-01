@@ -24,9 +24,9 @@ const clientOrgsItems = [
 ];
 
 const courseManagementItems = [
-  { name: "Course Creation", href: "/course-creation", icon: BookOpen, permission: "courses.view" },
-  { name: "Course Run Management", href: "/course-runs", icon: Calendar, permission: "courses.view" },
-  { name: "Venue Management", href: "/venue-setup", icon: Building2, permission: "venues.view" },
+  { name: "Course Creation", href: "/course-creation", icon: BookOpen, permission: "course-venue.view" },
+  { name: "Course Run Management", href: "/course-runs", icon: Calendar, permission: "course-run.view" },
+  { name: "Venue Management", href: "/venue-setup", icon: Building2, permission: "course-venue.view" },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {
@@ -41,7 +41,7 @@ const Sidebar = ({ className }: SidebarProps) => {
   const isPolwelUser = user?.role === "POLWEL";
   const userManagementVisible = user?.role === "TRAINER" ? false : isPolwelUser || hasAny(["users.view", "trainers.view", "clients.view"]);
 
-  const courseManagementVisible = user?.role === "TRAINER" ? false : isPolwelUser || hasAny(["courses.view", "venues.view"]);
+  const courseManagementVisible = user?.role === "TRAINER" ? false : isPolwelUser || hasAny(["course-venue.view", "course-run.view"]);
 
   // Debug logging for staging troubleshooting
   useEffect(() => {

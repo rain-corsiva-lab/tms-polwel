@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Edit, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi } from "@/lib/api";
+import { digitsOnly } from "@/lib/utils";
 import { errorHandlers } from "@/lib/errorHandler";
 
 interface Trainer {
@@ -45,7 +46,7 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
     name: trainer.name,
     email: trainer.email,
     status: trainer.status,
-    contactNumber: (trainer as any).contactNumber || "",
+    contactNumber: digitsOnly((trainer as any).contactNumber || ""),
     onboardingDate: (trainer as any).onboardingDate ? String((trainer as any).onboardingDate).split("T")[0] : "",
     partnerOrganization: trainer.partnerOrganization || "",
     bio: trainer.bio || "",
@@ -101,9 +102,10 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
   };
 
   const handleInputChange = (field: string, value: string) => {
+    const nextValue = field === "contactNumber" ? digitsOnly(value) : value;
     setFormData((prev) => ({
       ...prev,
-      [field]: value,
+      [field]: nextValue,
     }));
   };
 
@@ -183,6 +185,8 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
               <Input
                 id="contactNumber"
                 value={(formData as any).contactNumber}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 onChange={(e) => handleInputChange("contactNumber", e.target.value)}
                 placeholder="Mobile or office number"
               />

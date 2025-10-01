@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
+import { digitsOnly } from "@/lib/utils";
 
 interface AddCoordinatorDialogProps {
   onCoordinatorAdd: (coordinatorData: {
@@ -34,7 +35,9 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.contactNumber || !formData.designation) {
+    const sanitizedContact = digitsOnly(formData.contactNumber);
+
+    if (!formData.name || !formData.email || !sanitizedContact || !formData.designation) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -50,7 +53,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
       await onCoordinatorAdd({
         name: formData.name.trim(),
         email: formData.email.trim(),
-        contactNumber: formData.contactNumber.trim(),
+        contactNumber: sanitizedContact,
         designation: formData.designation.trim(),
         password: tempPassword,
         isPrimary: formData.isPrimary || false,
@@ -131,7 +134,9 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
             <Input
               id="coordinatorContact"
               value={formData.contactNumber}
-              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: digitsOnly(e.target.value) }))}
               placeholder="Enter contact number"
             />
           </div>

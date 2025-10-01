@@ -16,18 +16,18 @@ async function checkPermissionsMapping() {
     
     // Test mapping
     const frontendPerms = ['polwel-users:view', 'course-run:approve', 'billing-reports:edit'];
-    const mapping = {
+  const mapping = {
       'polwel-users:view': 'users.view',
       'polwel-users:create': 'users.create',
       'polwel-users:edit': 'users.edit',
       'polwel-users:update': 'users.edit',
       'polwel-users:delete': 'users.delete',
-      'course-run:approve': 'courses.approve',
-      'course-run:view': 'courses.view',
-      'course-run:create': 'courses.create',
-      'course-run:edit': 'courses.edit',
-      'course-run:update': 'courses.edit',
-      'course-run:delete': 'courses.delete',
+  'course-run:approve': 'course-run.approve',
+  'course-run:view': 'course-run.view',
+  'course-run:create': 'course-run.create',
+  'course-run:edit': 'course-run.edit',
+  'course-run:update': 'course-run.edit',
+  'course-run:delete': 'course-run.delete',
       'billing-reports:view': 'bookings.view',
       'billing-reports:create': 'bookings.create',
       'billing-reports:edit': 'bookings.edit',

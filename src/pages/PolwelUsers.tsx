@@ -8,7 +8,7 @@ import { formatDate } from "../lib/date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail, RefreshCw, X } from "lucide-react";
+import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail, RefreshCw, X, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
@@ -48,6 +48,7 @@ export default function PolwelUsers() {
     totalPages: 0,
   });
   const [perPage, setPerPage] = useState(10);
+  const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -229,6 +230,42 @@ export default function PolwelUsers() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const response = await polwelUsersApi.getAll({
+        search: searchQuery || undefined,
+        status: statusFilter || undefined,
+        all: true,
+      });
+
+      const dataset: PolwelUser[] = response.users || [];
+      const rows = dataset.map((u) => ({
+        Name: u.name,
+        Email: u.email,
+        Status: u.status,
+        LastLogin: u.lastLogin ? formatDate(u.lastLogin) : "Never",
+        CreatedAt: formatDate(u.createdAt),
+        UpdatedAt: formatDate(u.updatedAt),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "POLWEL_Users");
+      XLSX.writeFile(wb, "polwel_users.xlsx");
+      toast({ title: "Exported", description: `Exported ${rows.length} POLWEL user${rows.length === 1 ? "" : "s"}.` });
+    } catch (error) {
+      console.error("Error exporting POLWEL users:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't export the POLWEL users. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Compute stats from real data
   const totalUsers = users.length;
   const activeUsers = users.filter((user) => user.status === "ACTIVE").length;
@@ -255,28 +292,9 @@ export default function PolwelUsers() {
           <p className="text-muted-foreground">Manage POLWEL staff accounts, permissions, and access controls</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // Build worksheet
-              const rows = users.map((u) => ({
-                Name: u.name,
-                Email: u.email,
-                Status: u.status,
-                LastLogin: u.lastLogin ? formatDate(u.lastLogin) : "Never",
-                CreatedAt: formatDate(u.createdAt),
-                UpdatedAt: formatDate(u.updatedAt),
-              }));
-              const ws = XLSX.utils.json_to_sheet(rows);
-              const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, "POLWEL_Users");
-              XLSX.writeFile(wb, "polwel_users.xlsx");
-              toast({ title: "Exported", description: "POLWEL users exported to polwel_users.xlsx" });
-            }}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {exporting ? "Exporting..." : "Export"}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setFilterOpen((o) => !o)}>
             <Filter className="h-4 w-4 mr-2" />

@@ -31,30 +31,42 @@ const permissionNameMapping: Record<string, string> = {
   'client-organizations:update': 'clients.edit',
   'client-organizations:delete': 'clients.delete',
 
-  'course:view': 'courses.view',
-  'course:create': 'courses.create',
-  'course:edit': 'courses.edit',
-  'course:update': 'courses.edit',
-  'course:delete': 'courses.delete',
+  'course:view': 'course-venue.view',
+  'course:create': 'course-venue.create',
+  'course:edit': 'course-venue.edit',
+  'course:update': 'course-venue.edit',
+  'course:delete': 'course-venue.delete',
 
-  'course-run:view': 'courses.view',
-  'course-run:create': 'courses.create',
-  'course-run:edit': 'courses.edit',
-  'course-run:update': 'courses.edit',
-  'course-run:delete': 'courses.delete',
-  'course-run:approve': 'courses.approve',
-  'course-run.view': 'courses.view',
-  'course-run.create': 'courses.create',
-  'course-run.edit': 'courses.edit',
-  'course-run.update': 'courses.edit',
-  'course-run.delete': 'courses.delete',
-  'course-run.approve': 'courses.approve',
-  'course.run.view': 'courses.view',
-  'course.run.create': 'courses.create',
-  'course.run.edit': 'courses.edit',
-  'course.run.update': 'courses.edit',
-  'course.run.delete': 'courses.delete',
-  'course.run.approve': 'courses.approve',
+  // New canonical combined Course & Venue module
+  'course-venue:view': 'course-venue.view',
+  'course-venue:create': 'course-venue.create',
+  'course-venue:edit': 'course-venue.edit',
+  'course-venue:update': 'course-venue.edit',
+  'course-venue:delete': 'course-venue.delete',
+  'course-venue.view': 'course-venue.view',
+  'course-venue.create': 'course-venue.create',
+  'course-venue.edit': 'course-venue.edit',
+  'course-venue.delete': 'course-venue.delete',
+
+  // Course-run actions: keep course-run as its own canonical namespace (including CRUD and approve)
+  'course-run:view': 'course-run.view',
+  'course-run:create': 'course-run.create',
+  'course-run:edit': 'course-run.edit',
+  'course-run:update': 'course-run.edit',
+  'course-run:delete': 'course-run.delete',
+  'course-run:approve': 'course-run.approve',
+  'course-run.view': 'course-run.view',
+  'course-run.create': 'course-run.create',
+  'course-run.edit': 'course-run.edit',
+  'course-run.update': 'course-run.edit',
+  'course-run.delete': 'course-run.delete',
+  'course-run.approve': 'course-run.approve',
+  'course.run.view': 'course-run.view',
+  'course.run.create': 'course-run.create',
+  'course.run.edit': 'course-run.edit',
+  'course.run.update': 'course-run.edit',
+  'course.run.delete': 'course-run.delete',
+  'course.run.approve': 'course-run.approve',
 
   'venue:view': 'venues.view',
   'venue:create': 'venues.create',
@@ -100,30 +112,30 @@ const permissionNameMapping: Record<string, string> = {
   'user-management-client-orgs:update': 'clients.edit',
   'user-management-client-orgs:delete': 'clients.delete',
 
-  'course-management:view': 'courses.view',
-  'course-management:create': 'courses.create',
-  'course-management:edit': 'courses.edit',
-  'course-management:update': 'courses.edit',
-  'course-management:delete': 'courses.delete',
+  'course-management:view': 'course-venue.view',
+  'course-management:create': 'course-venue.create',
+  'course-management:edit': 'course-venue.edit',
+  'course-management:update': 'course-venue.edit',
+  'course-management:delete': 'course-venue.delete',
 
-  'course-runs-operations:view': 'courses.view',
-  'course-runs-operations:create': 'courses.create',
-  'course-runs-operations:edit': 'courses.edit',
-  'course-runs-operations:update': 'courses.edit',
-  'course-runs-operations:delete': 'courses.delete',
-  'course-runs-operations:approve': 'courses.approve',
+  'course-runs-operations:view': 'course-run.view',
+  'course-runs-operations:create': 'course-run.create',
+  'course-runs-operations:edit': 'course-run.edit',
+  'course-runs-operations:update': 'course-run.edit',
+  'course-runs-operations:delete': 'course-run.delete',
+  'course-runs-operations:approve': 'course-run.approve',
 
-  'course-venue-setup:view': 'venues.view',
-  'course-venue-setup:create': 'venues.create',
-  'course-venue-setup:edit': 'venues.edit',
-  'course-venue-setup:update': 'venues.edit',
-  'course-venue-setup:delete': 'venues.delete',
+  'course-venue-setup:view': 'course-venue.view',
+  'course-venue-setup:create': 'course-venue.create',
+  'course-venue-setup:edit': 'course-venue.edit',
+  'course-venue-setup:update': 'course-venue.edit',
+  'course-venue-setup:delete': 'course-venue.delete',
 
-  'venue-management:view': 'venues.view',
-  'venue-management:create': 'venues.create',
-  'venue-management:edit': 'venues.edit',
-  'venue-management:update': 'venues.edit',
-  'venue-management:delete': 'venues.delete',
+  'venue-management:view': 'course-venue.view',
+  'venue-management:create': 'course-venue.create',
+  'venue-management:edit': 'course-venue.edit',
+  'venue-management:update': 'course-venue.edit',
+  'venue-management:delete': 'course-venue.delete',
 
   'booking-management:view': 'bookings.view',
   'booking-management:create': 'bookings.create',
@@ -444,8 +456,22 @@ export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Respo
 // Get all POLWEL users with pagination and filtering
 export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { page = 1, limit = 10, search, status } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const rawPage = typeof req.query.page === 'string' ? req.query.page : undefined;
+    const parsedPage = rawPage ? Number(rawPage) : undefined;
+    const pageNum = parsedPage && Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+
+    const rawLimit = typeof req.query.limit === 'string' ? req.query.limit : undefined;
+    const exportAll = req.query.export === 'true' || req.query.all === 'true' || rawLimit === 'all';
+    let limitNum = 10;
+    if (!exportAll && rawLimit !== undefined) {
+      const parsedLimit = Number(rawLimit);
+      if (Number.isFinite(parsedLimit) && parsedLimit > 0) {
+        limitNum = Math.floor(parsedLimit);
+      }
+    }
+    const skip = exportAll ? undefined : (pageNum - 1) * limitNum;
+    const take = exportAll ? undefined : limitNum;
+    const { search, status } = req.query;
 
     // Build where clause
     const where: any = {
@@ -486,8 +512,8 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
             }
           }
         },
-        skip,
-        take: Number(limit),
+        ...(skip !== undefined ? { skip } : {}),
+        ...(take !== undefined ? { take } : {}),
         orderBy: { createdAt: 'desc' }
       }),
       prisma.user.count({ where })
@@ -496,10 +522,10 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
     return res.json({
       users,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: exportAll ? 1 : pageNum,
+        limit: exportAll ? total : limitNum,
         total,
-        totalPages: Math.ceil(total / Number(limit))
+        totalPages: exportAll ? 1 : Math.ceil(total / limitNum)
       }
     });
   } catch (error) {

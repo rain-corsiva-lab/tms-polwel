@@ -9,7 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Plus, GraduationCap, Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, digitsOnly } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi } from "@/lib/api";
 import { errorHandlers } from "@/lib/errorHandler";
@@ -183,7 +183,12 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
             <Input
               id="contactNumber"
               value={formData.contactNumber}
-              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: e.target.value }))}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              onChange={(e) => {
+                const nextValue = digitsOnly(e.target.value);
+                setFormData((prev) => ({ ...prev, contactNumber: nextValue }));
+              }}
               placeholder="Trainer contact number"
             />
           </div>

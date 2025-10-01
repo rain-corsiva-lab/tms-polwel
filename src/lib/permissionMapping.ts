@@ -18,36 +18,30 @@ const permissionNameMapping: Record<string, string> = {
   'client-organizations:edit': 'clients.edit',
   'client-organizations:delete': 'clients.delete',
 
-  // Course module
-  'course:view': 'courses.view',
-  'course:create': 'courses.create',
-  'course:edit': 'courses.edit',
-  'course:delete': 'courses.delete',
+  // Combined course & venue module (new canonical)
+  'course-venue:view': 'course-venue.view',
+  'course-venue:create': 'course-venue.create',
+  'course-venue:edit': 'course-venue.edit',
+  'course-venue:delete': 'course-venue.delete',
 
-  // Course run module (shares backend permissions with courses)
-  'course-run:view': 'courses.view',
-  'course-run:create': 'courses.create',
-  'course-run:edit': 'courses.edit',
-  'course-run:delete': 'courses.delete',
-  'course-run:approve': 'courses.approve',
-  'course-run.view': 'courses.view',
-  'course-run.create': 'courses.create',
-  'course-run.edit': 'courses.edit',
-  'course-run.update': 'courses.edit',
-  'course-run.delete': 'courses.delete',
-  'course-run.approve': 'courses.approve',
-  'course.run.view': 'courses.view',
-  'course.run.create': 'courses.create',
-  'course.run.edit': 'courses.edit',
-  'course.run.update': 'courses.edit',
-  'course.run.delete': 'courses.delete',
-  'course.run.approve': 'courses.approve',
+  // Course run module (distinct canonical permissions)
+  'course-run:view': 'course-run.view',
+  'course-run:create': 'course-run.create',
+  'course-run:edit': 'course-run.edit',
+  'course-run:delete': 'course-run.delete',
+  'course-run:approve': 'course-run.approve',
 
-  // Venue module
-  'venue:view': 'venues.view',
-  'venue:create': 'venues.create',
-  'venue:edit': 'venues.edit',
-  'venue:delete': 'venues.delete',
+  // Legacy course module keys -> map to combined canonical
+  'course:view': 'course-venue.view',
+  'course:create': 'course-venue.create',
+  'course:edit': 'course-venue.edit',
+  'course:delete': 'course-venue.delete',
+
+  // Legacy venue module keys -> map to combined canonical
+  'venue:view': 'course-venue.view',
+  'venue:create': 'course-venue.create',
+  'venue:edit': 'course-venue.edit',
+  'venue:delete': 'course-venue.delete',
 
   // Post course run module (maps to reporting)
   'post-course-run:view': 'reports.view',

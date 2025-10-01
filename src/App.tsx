@@ -139,7 +139,7 @@ const App = () => (
               <Route
                 path="course-creation"
                 element={
-                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["courses.view"]}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["course-venue.view"]}>
                     <CourseArchive />
                   </ProtectedRoute>
                 }
@@ -147,7 +147,7 @@ const App = () => (
               <Route
                 path="course-creation/new"
                 element={
-                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["courses.create"]}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["course-venue.create"]}>
                     <CourseForm />
                   </ProtectedRoute>
                 }
@@ -155,7 +155,7 @@ const App = () => (
               <Route
                 path="course-creation/edit/:id"
                 element={
-                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["courses.edit"]}>
+                  <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["course-venue.edit"]}>
                     <CourseForm />
                   </ProtectedRoute>
                 }
@@ -163,7 +163,7 @@ const App = () => (
               <Route
                 path="course-creation/view/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["courses.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <CourseForm />
                   </ProtectedRoute>
                 }
@@ -171,7 +171,7 @@ const App = () => (
               <Route
                 path="course-creation/detail/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["courses.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <CourseDetail />
                   </ProtectedRoute>
                 }
@@ -179,7 +179,7 @@ const App = () => (
               <Route
                 path="course-detail/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["courses.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <CourseDetail />
                   </ProtectedRoute>
                 }
@@ -189,7 +189,7 @@ const App = () => (
               <Route
                 path="course-runs"
                 element={
-                  <ProtectedRoute requiredPermissions={["courses.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-run.view"]}>
                     <CourseRuns />
                   </ProtectedRoute>
                 }
@@ -197,7 +197,7 @@ const App = () => (
               <Route
                 path="course-runs/new"
                 element={
-                  <ProtectedRoute requiredPermissions={["courses.create"]}>
+                  <ProtectedRoute requiredPermissions={["course-run.create"]}>
                     <CourseRunForm />
                   </ProtectedRoute>
                 }
@@ -205,7 +205,7 @@ const App = () => (
               <Route
                 path="course-runs/edit/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["courses.edit"]}>
+                  <ProtectedRoute requiredPermissions={["course-run.edit"]}>
                     <CourseRunForm />
                   </ProtectedRoute>
                 }
@@ -213,7 +213,7 @@ const App = () => (
               <Route
                 path="course-runs/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["courses.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-run.view"]}>
                     <CourseRunDetail />
                   </ProtectedRoute>
                 }
@@ -223,7 +223,7 @@ const App = () => (
               <Route
                 path="venue-setup"
                 element={
-                  <ProtectedRoute requiredPermissions={["venues.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <VenueArchive />
                   </ProtectedRoute>
                 }
@@ -231,7 +231,7 @@ const App = () => (
               <Route
                 path="venue-setup/new"
                 element={
-                  <ProtectedRoute requiredPermissions={["venues.create"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.create"]}>
                     <VenueForm />
                   </ProtectedRoute>
                 }
@@ -239,7 +239,7 @@ const App = () => (
               <Route
                 path="venue-setup/edit/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["venues.edit"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.edit"]}>
                     <VenueForm />
                   </ProtectedRoute>
                 }
@@ -247,7 +247,7 @@ const App = () => (
               <Route
                 path="venue-setup/view/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["venues.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <VenueForm />
                   </ProtectedRoute>
                 }
@@ -255,7 +255,7 @@ const App = () => (
               <Route
                 path="venue-detail/:id"
                 element={
-                  <ProtectedRoute requiredPermissions={["venues.view"]}>
+                  <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <VenueDetail />
                   </ProtectedRoute>
                 }

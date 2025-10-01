@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { UserRole } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import prisma from '../lib/prisma';
 
 
@@ -52,25 +52,21 @@ export const referencesController = {
   // Get all partner organizations
   async getPartners(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
-      const partners = await prisma.user.findMany({
+      const partners = await prisma.partner.findMany({
         where: {
-          role: UserRole.TRAINER,
-          partnerOrganization: {
-            not: null
-          },
-          status: 'ACTIVE'
+          status: UserStatus.ACTIVE
         },
         select: {
-          partnerOrganization: true
+          name: true
         },
-        distinct: ['partnerOrganization']
+        orderBy: {
+          name: 'asc'
+        }
       });
 
-      const uniquePartners = [...new Set(
-        partners
-          .map(p => p.partnerOrganization)
-          .filter(Boolean)
-      )].sort();
+      const uniquePartners = partners
+        .map(p => p.name?.trim())
+        .filter((name): name is string => Boolean(name));
 
       return res.json({
         success: true,

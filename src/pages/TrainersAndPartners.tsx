@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
@@ -51,6 +51,8 @@ interface Partner {
   contactDesignation: string;
   createdAt: string;
   updatedAt: string;
+  onboardingDate?: string;
+  notes?: string;
 }
 
 interface TrainerBlockout {
@@ -70,6 +72,7 @@ const TrainersAndPartners = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [partnersLoading, setPartnersLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -318,6 +321,65 @@ const TrainersAndPartners = () => {
       description: "The trainer blockout has been removed",
     });
   };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const [trainerResponse, partnerResponse] = await Promise.all([
+        trainersApi.getAll({
+          search: searchQuery || undefined,
+          status: statusFilter || undefined,
+          all: true,
+        }),
+        partnersApi.getAll({
+          search: searchQuery || undefined,
+          status: statusFilter || undefined,
+          all: true,
+        }),
+      ]);
+
+      const trainerRows = (trainerResponse.trainers || []).map((t: any) => ({
+        Name: t.name,
+        Email: t.email,
+        Status: t.status,
+        Courses: Array.isArray(t.specializations) ? t.specializations.join("; ") : Array.isArray(t.courses) ? t.courses.join("; ") : "",
+        PartnerOrganization: t.partnerOrganization || "",
+        CreatedAt: formatDate(t.createdAt),
+        UpdatedAt: formatDate(t.updatedAt),
+      }));
+
+      const partnerRows = (partnerResponse.partners || []).map((p: any) => ({
+        PartnerName: p.partnerName,
+        Status: p.status,
+        PointOfContact: p.pointOfContact || "",
+        ContactNumber: p.contactNumber || "",
+        ContactDesignation: p.contactDesignation || "",
+        CoursesAssigned: Array.isArray(p.coursesAssigned) ? p.coursesAssigned.join("; ") : "",
+        CreatedAt: formatDate(p.createdAt),
+        UpdatedAt: formatDate(p.updatedAt),
+      }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(trainerRows), "Associate Trainers");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(partnerRows), "Training Partners");
+      XLSX.writeFile(wb, "associate_trainers_training_partners.xlsx");
+      toast({
+        title: "Exported",
+        description: `Exported ${trainerRows.length} trainer${trainerRows.length === 1 ? "" : "s"} and ${partnerRows.length} partner${
+          partnerRows.length === 1 ? "" : "s"
+        }.`,
+      });
+    } catch (error) {
+      console.error("Error exporting trainers/partners:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't export the trainers and partners. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -333,38 +395,9 @@ const TrainersAndPartners = () => {
             <Filter className="h-4 w-4 mr-2" />
             {filterOpen ? "Hide Filters" : "Filter"}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              const trainerRows = trainers.map((t) => ({
-                Name: t.name,
-                Email: t.email,
-                Status: t.status,
-                Courses: t.courses.join("; "),
-                PartnerOrganization: t.partnerOrganization || "",
-                CreatedAt: formatDate(t.createdAt),
-                UpdatedAt: formatDate(t.updatedAt),
-              }));
-              const partnerRows = partners.map((p) => ({
-                PartnerName: p.partnerName,
-                Status: p.status,
-                PointOfContact: p.pointOfContact,
-                ContactNumber: p.contactNumber,
-                ContactDesignation: p.contactDesignation,
-                CoursesAssigned: p.coursesAssigned.join("; "),
-                CreatedAt: formatDate(p.createdAt),
-                UpdatedAt: formatDate(p.updatedAt),
-              }));
-              const wb = XLSX.utils.book_new();
-              const trainerSheet = XLSX.utils.json_to_sheet(trainerRows);
-              const partnerSheet = XLSX.utils.json_to_sheet(partnerRows);
-              XLSX.utils.book_append_sheet(wb, trainerSheet, "Associate Trainers");
-              XLSX.utils.book_append_sheet(wb, partnerSheet, "Training Partners");
-              XLSX.writeFile(wb, "associate_trainers_training_partners.xlsx");
-            }}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {exporting ? "Exporting..." : "Export"}
           </Button>
           <AddPartnerDialog onPartnerCreated={fetchPartners} />
           <AddTrainerDialog onTrainerCreated={fetchTrainers} />

@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 type Perm = { name: string; description: string; module: string; action: string };
 
-const PERMISSIONS: Perm[] = [
+export const PERMISSIONS: Perm[] = [
   // Users
   { name: 'users.view', description: 'View POLWEL users', module: 'POLWEL Users', action: 'read' },
   { name: 'users.create', description: 'Create POLWEL users', module: 'POLWEL Users', action: 'create' },
@@ -23,12 +23,18 @@ const PERMISSIONS: Perm[] = [
   { name: 'clients.edit', description: 'Edit client organisations & users', module: 'Client Organisations', action: 'update' },
   { name: 'clients.delete', description: 'Delete client organisations & users', module: 'Client Organisations', action: 'delete' },
 
-  // Courses
-  { name: 'courses.view', description: 'View courses', module: 'Course', action: 'read' },
-  { name: 'courses.create', description: 'Create courses', module: 'Course', action: 'create' },
-  { name: 'courses.edit', description: 'Edit courses', module: 'Course', action: 'update' },
-  { name: 'courses.approve', description: 'Approve course runs', module: 'Course Run', action: 'approve' },
-  { name: 'courses.delete', description: 'Delete courses', module: 'Course', action: 'delete' },
+  // Canonical Course & Venue combined (new)
+  { name: 'course-venue.view', description: 'View courses and venues', module: 'Course & Venue', action: 'read' },
+  { name: 'course-venue.create', description: 'Create courses and venues', module: 'Course & Venue', action: 'create' },
+  { name: 'course-venue.edit', description: 'Edit courses and venues', module: 'Course & Venue', action: 'update' },
+  { name: 'course-venue.delete', description: 'Delete courses and venues', module: 'Course & Venue', action: 'delete' },
+
+  // Course Runs (distinct from course-venue) - CRUD mapping if needed, plus approve
+  { name: 'course-run.view', description: 'View course runs', module: 'Course Run', action: 'read' },
+  { name: 'course-run.create', description: 'Create course runs', module: 'Course Run', action: 'create' },
+  { name: 'course-run.edit', description: 'Edit course runs', module: 'Course Run', action: 'update' },
+  { name: 'course-run.delete', description: 'Delete course runs', module: 'Course Run', action: 'delete' },
+  { name: 'course-run.approve', description: 'Approve course runs', module: 'Course Run', action: 'approve' },
 
   // Venues
   { name: 'venues.view', description: 'View venues', module: 'Venue', action: 'read' },
@@ -56,7 +62,17 @@ const PERMISSIONS: Perm[] = [
 ];
 
 async function main() {
-  console.log('🔐 Upserting missing permissions...');
+  console.log('� Syncing permissions...');
+
+  const desiredNames = new Set(PERMISSIONS.map((p) => p.name));
+  const existing = await prisma.permission.findMany({ select: { name: true } });
+  const toRemove = existing.filter((p) => !desiredNames.has(p.name)).map((p) => p.name);
+
+  if (toRemove.length > 0) {
+    console.log('🗑️ Removing obsolete permissions:', toRemove);
+    await prisma.permission.deleteMany({ where: { name: { in: toRemove } } });
+  }
+
   let upserts = 0;
   for (const p of PERMISSIONS) {
     await prisma.permission.upsert({
@@ -69,11 +85,13 @@ async function main() {
   console.log(`✅ Upserted ${upserts} permissions.`);
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Error upserting permissions:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error('❌ Error upserting permissions:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

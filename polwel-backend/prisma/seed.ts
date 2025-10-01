@@ -26,6 +26,7 @@ async function main() {
   await prisma.course.deleteMany();
   await prisma.venue.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.partner.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.billingReport.deleteMany();
 
@@ -266,6 +267,41 @@ async function main() {
   });
 
   console.log('👥 Created users');
+
+  // Create Training Partners
+  await prisma.partner.createMany({
+    data: [
+      {
+        name: 'Excellence Training Partners',
+        status: UserStatus.ACTIVE,
+        pointOfContact: 'John Smith',
+        contactNumber: '+65 9123 4567',
+        contactDesignation: 'Training Manager',
+        coursesAssigned: ['Leadership Development', 'Team Building', 'Management Training'],
+        onboardingDate: new Date('2020-01-15T00:00:00Z')
+      },
+      {
+        name: 'Professional Development Corp',
+        status: UserStatus.ACTIVE,
+        pointOfContact: 'Sarah Lee',
+        contactNumber: '+65 8765 4321',
+        contactDesignation: 'Operations Director',
+        coursesAssigned: ['Communication Skills', 'Presentation Skills', 'Customer Service'],
+        onboardingDate: new Date('2021-03-20T00:00:00Z')
+      },
+      {
+        name: 'Training Solutions Ltd',
+        status: UserStatus.PENDING,
+        pointOfContact: 'Michael Wong',
+        contactNumber: '+65 6543 2109',
+        contactDesignation: 'Business Development Manager',
+        coursesAssigned: ['Project Management', 'Leadership'],
+        onboardingDate: new Date('2024-08-01T00:00:00Z')
+      }
+    ]
+  });
+
+  console.log('🤝 Created training partners');
 
   // Create Venues
   const orchardHotel = await prisma.venue.create({
@@ -655,13 +691,17 @@ async function main() {
     { name: 'users.create', description: 'Create users', module: 'User Management', action: 'create' },
     { name: 'users.edit', description: 'Edit users', module: 'User Management', action: 'update' },
     { name: 'users.delete', description: 'Delete users', module: 'User Management', action: 'delete' },
-    { name: 'courses.view', description: 'View courses', module: 'Course Management', action: 'read' },
-    { name: 'courses.create', description: 'Create courses', module: 'Course Management', action: 'create' },
-    { name: 'courses.edit', description: 'Edit courses', module: 'Course Management', action: 'update' },
-  { name: 'courses.delete', description: 'Delete courses', module: 'Course Management', action: 'delete' },
-  { name: 'courses.approve', description: 'Approve course runs', module: 'Course Management', action: 'approve' },
-    { name: 'venues.view', description: 'View venues', module: 'Venue Management', action: 'read' },
-    { name: 'venues.create', description: 'Create venues', module: 'Venue Management', action: 'create' },
+  // Canonical combined Course & Venue permissions
+  { name: 'course-venue.view', description: 'View courses & venues', module: 'Course & Venue', action: 'read' },
+  { name: 'course-venue.create', description: 'Create courses & venues', module: 'Course & Venue', action: 'create' },
+  { name: 'course-venue.edit', description: 'Edit courses & venues', module: 'Course & Venue', action: 'update' },
+  { name: 'course-venue.delete', description: 'Delete courses & venues', module: 'Course & Venue', action: 'delete' },
+
+  // Course-run specific actions (approve kept under course-run)
+  { name: 'course-run.approve', description: 'Approve course runs', module: 'Course Run', action: 'approve' },
+
+    { name: 'venues.view', description: 'View venues (legacy)', module: 'Venue Management', action: 'read' },
+    { name: 'venues.create', description: 'Create venues (legacy)', module: 'Venue Management', action: 'create' },
     { name: 'bookings.view', description: 'View bookings', module: 'Booking Management', action: 'read' },
     { name: 'bookings.create', description: 'Create bookings', module: 'Booking Management', action: 'create' },
   ];

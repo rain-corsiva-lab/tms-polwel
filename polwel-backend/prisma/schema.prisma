@@ -69,6 +69,22 @@ model User {
   @@map("users")
 }
 
+model Partner {
+  id                 String      @id @default(cuid())
+  name               String
+  status             UserStatus  @default(ACTIVE)
+  pointOfContact     String?
+  contactNumber      String?
+  contactDesignation String?
+  coursesAssigned    Json?
+  onboardingDate     DateTime?
+  notes              String?     @db.Text
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@map("partners")
+}
+
 model Organization {
   id               String           @id @default(cuid())
   name             String

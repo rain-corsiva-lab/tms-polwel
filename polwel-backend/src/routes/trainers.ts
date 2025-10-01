@@ -41,7 +41,7 @@ router.post('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), 
 router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.edit'), deleteTrainerBlockout);
 
 // Trainer course runs
-router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('courses.view'), getTrainerCourseRuns);
+router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('course-run.view'), getTrainerCourseRuns);
 
 // Trainer onboarding
 router.post('/:id/resend-setup', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), resendTrainerSetup);

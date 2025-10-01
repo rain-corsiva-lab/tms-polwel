@@ -8,7 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Building2, Edit, X, Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, digitsOnly } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { partnersApi } from "@/lib/api";
 import { errorHandlers } from "@/lib/errorHandler";
@@ -76,7 +76,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
         partnerName: partner.partnerName || "",
         coursesAssigned: partner.coursesAssigned || [],
         pointOfContact: partner.pointOfContact || "",
-        contactNumber: partner.contactNumber || "",
+        contactNumber: digitsOnly(partner.contactNumber || ""),
         contactDesignation: partner.contactDesignation || "",
         onboardingDate: partner.onboardingDate || "",
       });
@@ -96,21 +96,26 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       return;
     }
 
+    const payload = {
+      ...formData,
+      contactNumber: digitsOnly(formData.contactNumber),
+    };
+
     setLoading(true);
     try {
       if (isEditMode && partner?.id) {
         // Update existing partner
-        await partnersApi.update(partner.id, formData);
+        await partnersApi.update(partner.id, payload);
         toast({
           title: "Partner Updated",
-          description: `Partner "${formData.partnerName}" has been updated successfully.`,
+          description: `Partner "${payload.partnerName}" has been updated successfully.`,
         });
       } else {
         // Create new partner
-        await partnersApi.create(formData);
+        await partnersApi.create(payload);
         toast({
           title: "Partner Created",
-          description: `Partner "${formData.partnerName}" has been created successfully.`,
+          description: `Partner "${payload.partnerName}" has been created successfully.`,
         });
       }
 
@@ -253,7 +258,9 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
             <Input
               id="contactNumber"
               value={formData.contactNumber}
-              onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              onChange={(e) => setFormData({ ...formData, contactNumber: digitsOnly(e.target.value) })}
               placeholder="Enter contact number"
             />
           </div>

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { PERMISSIONS } from './upsertMissingPermissions';
 
 const prisma = new PrismaClient();
 
@@ -12,10 +13,19 @@ async function main() {
     process.exit(1);
   }
 
-  const perms = await prisma.permission.findMany();
+  const canonicalNames = new Set(PERMISSIONS.map((p) => p.name));
+  const perms = await prisma.permission.findMany({
+    where: { name: { in: Array.from(canonicalNames) } },
+    orderBy: { name: 'asc' }
+  });
   if (!perms || perms.length === 0) {
     console.error('No permissions found in DB. Run seedPermissions first.');
     process.exit(1);
+  }
+
+  const missing = Array.from(canonicalNames).filter((name) => !perms.some((p) => p.name === name));
+  if (missing.length > 0) {
+    console.warn('⚠️ Missing canonical permissions in DB, please run upsertMissingPermissions:', missing);
   }
 
   // Delete existing userPermission rows for the user to avoid duplicates
