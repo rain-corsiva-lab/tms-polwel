@@ -18,6 +18,7 @@
     "db:seed:grant-john": "ts-node scripts/seedGrantAllPermissionsToJohn.ts",
     "db:permissions:upsert": "ts-node scripts/upsertMissingPermissions.ts",
     "debug:course-run-search": "ts-node scripts/testCourseRunSearch.ts",
+    "pm2:restart:staging": "pm2 restart ecosystem.config.js --only polwel-backend-staging --env staging",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "test": "echo \"Error: no test specified\" && exit 1"

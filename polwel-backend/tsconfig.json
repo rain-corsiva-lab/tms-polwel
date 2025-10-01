@@ -33,7 +33,8 @@
     "isolatedModules": true,
     "noEmitOnError": true,
     "preserveConstEnums": true,
-    "baseUrl": "./src",
+  "baseUrl": "./src",
+  "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": ["*"],
       "@/controllers/*": ["controllers/*"],

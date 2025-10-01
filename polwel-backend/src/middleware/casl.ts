@@ -5,7 +5,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../prisma';
+import prisma from '../lib/prisma';
 import { defineAbilityFor, type AppAbility } from '../lib/casl';
 import type { Action, Subject } from '../lib/casl/types';
 
