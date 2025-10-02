@@ -367,26 +367,20 @@ const CourseDetail = () => {
               <CardTitle>Assigned Trainers</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {course.trainers && course.trainers.length > 0 ? (
-                course.trainers.map((trainer, index) => (
+              {course.courseTrainers && course.courseTrainers.length > 0 ? (
+                course.courseTrainers.map((ct, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
-                      {typeof trainer === "string" ? trainer.charAt(0) : (trainer.name || "T").charAt(0)}
+                      {ct.trainer?.name ? ct.trainer.name.charAt(0) : "T"}
                     </div>
-                    <div className="font-medium">{typeof trainer === "string" ? trainer : trainer.name || "Unknown Trainer"}</div>
+                    <div>
+                      <div className="font-medium">{ct.trainer?.name || "Unknown Trainer"}</div>
+                      {ct.trainer?.partnerOrganization && <div className="text-xs text-gray-500">{ct.trainer.partnerOrganization}</div>}
+                    </div>
                   </div>
                 ))
               ) : (
-                <>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">JS</div>
-                    <div className="font-medium">John Smith</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">SJ</div>
-                    <div className="font-medium">Sarah Johnson</div>
-                  </div>
-                </>
+                <div className="text-sm text-gray-500">No trainers assigned</div>
               )}
             </CardContent>
           </Card>

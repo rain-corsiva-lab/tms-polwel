@@ -38,6 +38,7 @@ import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../c
 import { AddLearnersDialog } from "../components/AddLearnersDialog";
 import { ImportLearnersDialog } from "../components/ImportLearnersDialog";
 import { EditLearnerDialog } from "../components/EditLearnerDialog";
+import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
 import { AttendanceListDialog } from "../components/AttendanceListDialog";
 
 interface CourseRunDetailData {
@@ -124,6 +125,14 @@ const CourseRunDetail: React.FC = () => {
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
 
+  // Trainer Assignment Edit Mode
+  const [isEditingTrainers, setIsEditingTrainers] = useState(false);
+  const [availableTrainers, setAvailableTrainers] = useState<any[]>([]);
+  const [trainerAssignments, setTrainerAssignments] = useState<{
+    [trainerId: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null };
+  }>({});
+  const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+
   const currency = (v: number | null | undefined) => {
     if (v === null || v === undefined || isNaN(Number(v))) return "$0.00";
     return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD", minimumFractionDigits: 2 }).format(Number(v));
@@ -205,6 +214,94 @@ const CourseRunDetail: React.FC = () => {
 
   const handleImportSuccess = () => {
     loadCourseRunDetail();
+  };
+
+  // Trainer Assignment Functions
+  const handleEditTrainers = async () => {
+    if (!courseRun) return;
+
+    try {
+      // Fetch available trainers from the course
+      const courseResponse = await coursesApi.getById(courseRun.course?.id || "");
+      const course = courseResponse?.data?.course || courseResponse?.data || courseResponse;
+
+      if (course && Array.isArray(course.courseTrainers)) {
+        setAvailableTrainers(course.courseTrainers.map((ct: any) => ct.trainer));
+      }
+
+      // Initialize trainer assignments from current courseRunTrainers
+      const assignments: { [key: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null } } = {};
+      courseRun.courseRunTrainers?.forEach((crt) => {
+        assignments[crt.trainer.id] = {
+          selected: true,
+          baseFee: crt.trainerBaseAmount === null || crt.trainerBaseAmount === undefined ? null : Number(crt.trainerBaseAmount),
+          additionalCost: crt.additionalCost === null || crt.additionalCost === undefined ? null : Number(crt.additionalCost),
+        };
+      });
+
+      setTrainerAssignments(assignments);
+      setIsEditingTrainers(true);
+    } catch (error) {
+      console.error("Error loading trainers:", error);
+      toast.error("Failed to load trainers");
+    }
+  };
+
+  const handleSaveTrainerAssignments = async () => {
+    if (!courseRun) return;
+
+    try {
+      // Prepare trainer assignments data
+      const selectedTrainers = Object.entries(trainerAssignments)
+        .filter(([_, data]) => data.selected)
+        .map(([trainerId, data]) => ({
+          trainerId,
+          trainerBaseAmount: data.baseFee === null || data.baseFee === undefined ? null : Number(data.baseFee),
+          additionalCost: data.additionalCost === null || data.additionalCost === undefined ? null : Number(data.additionalCost),
+        }));
+
+      // Call API to update trainer assignments
+      await courseRunsApi.updateTrainerAssignments(courseRun.id, selectedTrainers);
+
+      toast.success("Trainer assignments updated successfully!");
+      setIsEditingTrainers(false);
+      loadCourseRunDetail();
+    } catch (error: any) {
+      console.error("Error saving trainer assignments:", error);
+      toast.error(error?.response?.data?.message || "Failed to update trainer assignments");
+    }
+  };
+
+  const handleCancelTrainerEdit = () => {
+    setIsEditingTrainers(false);
+    setTrainerAssignments({});
+  };
+
+  const toggleTrainerSelection = (trainerId: string) => {
+    setTrainerAssignments((prev) => ({
+      ...prev,
+      [trainerId]: {
+        selected: !prev[trainerId]?.selected,
+        baseFee: prev[trainerId]?.baseFee === undefined ? null : prev[trainerId]?.baseFee ?? null,
+        additionalCost: prev[trainerId]?.additionalCost === undefined ? null : prev[trainerId]?.additionalCost ?? null,
+      },
+    }));
+  };
+
+  const updateTrainerFee = (trainerId: string, field: "baseFee" | "additionalCost", value: number | null) => {
+    setTrainerAssignments((prev) => ({
+      ...prev,
+      [trainerId]: {
+        ...(prev[trainerId] || { selected: false, baseFee: null, additionalCost: null }),
+        [field]: value === null || value === undefined ? null : Number(value),
+      },
+    }));
+  };
+
+  const calculateTotalTrainerFees = () => {
+    return Object.entries(trainerAssignments)
+      .filter(([_, data]) => data.selected)
+      .reduce((sum, [_, data]) => sum + safeNumber(data.baseFee, 0) + safeNumber(data.additionalCost, 0), 0);
   };
 
   const formatDateTime = (dateTime: string | null) => {
@@ -845,11 +942,31 @@ const CourseRunDetail: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Trainer Assignment</h3>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSendEmailDialogOpen(true)}
+                    disabled={!courseRun.courseRunTrainers || courseRun.courseRunTrainers.length === 0}
+                  >
                     <Mail className="h-4 w-4 mr-2" />
                     Send Trainer Assignment Email
                   </Button>
-                  <Button size="sm">Edit Trainer Assignment</Button>
+                  {!isEditingTrainers ? (
+                    <Button size="sm" onClick={handleEditTrainers}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Trainer Assignment
+                    </Button>
+                  ) : (
+                    <>
+                      <Button variant="outline" size="sm" onClick={handleCancelTrainerEdit}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleSaveTrainerAssignments}>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -858,87 +975,207 @@ const CourseRunDetail: React.FC = () => {
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Users className="h-5 w-5 mr-2" />
-                      Trainer Assignment
+                      {isEditingTrainers ? "Select & Configure Trainers" : "Trainer Assignment"}
                     </div>
-                    <div className="text-sm text-gray-500">{courseRun.courseRunTrainers?.length || 0} trainer(s) selected</div>
+                    <div className="text-sm text-gray-500">
+                      {isEditingTrainers
+                        ? `${Object.values(trainerAssignments).filter((a) => a.selected).length} trainer(s) selected`
+                        : `${courseRun.courseRunTrainers?.length || 0} trainer(s) selected`}
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {courseRun.courseRunTrainers?.length > 0 ? (
-                    courseRun.courseRunTrainers.map((assignment) => (
-                      <Card key={assignment.id} className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Users className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{assignment.trainer.name}</h4>
-                              <p className="text-sm text-gray-500">{assignment.trainer.partnerOrganization || "Internal Trainer"}</p>
-                            </div>
-                          </div>
-                          <Badge variant="default">Selected</Badge>
+                  {isEditingTrainers ? (
+                    // EDIT MODE - Accordion style with checkboxes and fee inputs
+                    <>
+                      {availableTrainers.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Users className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
+                          <p className="text-lg font-medium mb-2 text-gray-600">No trainers available</p>
+                          <p className="text-sm text-gray-500">Please add trainers to the course first.</p>
                         </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {availableTrainers.map((trainer) => {
+                            const assignment = trainerAssignments[trainer.id] || { selected: false, baseFee: 0, additionalCost: 0 };
+                            const isSelected = assignment.selected;
 
-                        <div className="mt-4 space-y-3">
-                          <div>
-                            <Label className="text-sm font-medium">Trainer Fees</Label>
-                            <div className="mt-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm">Base Fee</span>
-                                <span className="text-sm font-medium">{currency(assignment.trainerBaseAmount || 0)}</span>
+                            return (
+                              <Card key={trainer.id} className={`p-4 ${isSelected ? "border-blue-500 border-2" : ""}`}>
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => toggleTrainerSelection(trainer.id)}
+                                      className="rounded h-5 w-5 mt-1"
+                                    />
+                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                      <Users className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium">{trainer.name}</h4>
+                                      <p className="text-sm text-gray-500">{trainer.partnerOrganization || "Internal Trainer"}</p>
+                                    </div>
+                                  </div>
+                                  <Badge variant={isSelected ? "default" : "secondary"}>{isSelected ? "Selected" : "Available"}</Badge>
+                                </div>
+
+                                {isSelected && (
+                                  <div className="mt-4 space-y-3 pl-14">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <Label className="text-sm font-medium">Base Fee ($)</Label>
+                                        <Input
+                                          id={`trainer-base-${trainer.id}`}
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={assignment.baseFee ?? ""}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            updateTrainerFee(trainer.id, "baseFee", val === "" ? null : parseFloat(val));
+                                          }}
+                                          placeholder="0.00"
+                                          className="mt-1"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium">Additional Cost ($)</Label>
+                                        <Input
+                                          id={`trainer-add-${trainer.id}`}
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={assignment.additionalCost ?? ""}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            updateTrainerFee(trainer.id, "additionalCost", val === "" ? null : parseFloat(val));
+                                          }}
+                                          placeholder="0.00"
+                                          className="mt-1"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="border-t pt-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">Total for this trainer:</span>
+                                        <span className="font-medium text-lg text-blue-600">
+                                          {currency(safeNumber(assignment.baseFee, 0) + safeNumber(assignment.additionalCost, 0))}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {Object.values(trainerAssignments).some((a) => a.selected) && (
+                        <Card className="bg-blue-50 border-blue-200 mt-4">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-lg font-medium text-blue-800">Assignment Summary</span>
+                              <div className="text-right">
+                                <div className="text-sm text-blue-600">
+                                  {Object.values(trainerAssignments).filter((a) => a.selected).length} trainer(s) assigned
+                                </div>
+                                <div className="text-2xl font-bold text-blue-800">{currency(calculateTotalTrainerFees())}</div>
+                                <div className="text-sm text-blue-600">Total Trainer Fees</div>
                               </div>
-                              {assignment.additionalCost > 0 && (
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Additional Cost</span>
-                                  <span className="text-sm font-medium">{currency(assignment.additionalCost || 0)}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  ) : (
+                    // READ-ONLY MODE
+                    <>
+                      {courseRun.courseRunTrainers?.length > 0 ? (
+                        courseRun.courseRunTrainers.map((assignment) => (
+                          <Card key={assignment.id} className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <Users className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">{assignment.trainer.name}</h4>
+                                  <p className="text-sm text-gray-500">{assignment.trainer.partnerOrganization || "Internal Trainer"}</p>
+                                </div>
+                              </div>
+                              <Badge variant="default">Selected</Badge>
+                            </div>
+
+                            <div className="mt-4 space-y-3">
+                              <div>
+                                <Label className="text-sm font-medium">Trainer Fees</Label>
+                                <div className="mt-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm">Base Fee</span>
+                                    <span className="text-sm font-medium">{currency(assignment.trainerBaseAmount || 0)}</span>
+                                  </div>
+                                  {assignment.additionalCost > 0 && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm">Additional Cost</span>
+                                      <span className="text-sm font-medium">{currency(assignment.additionalCost || 0)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {assignment.remarks && (
+                                <div>
+                                  <Label className="text-sm font-medium">Remarks</Label>
+                                  <p className="text-sm text-gray-600 mt-1">{assignment.remarks}</p>
+                                  <p className="text-xs text-gray-500 mt-1">Remarks cannot be edited</p>
                                 </div>
                               )}
+
+                              <div className="border-t pt-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium">Total for this trainer:</span>
+                                  <span className="font-medium">
+                                    {currency(safeNumber(assignment.trainerBaseAmount, 0) + safeNumber(assignment.additionalCost, 0))}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          </Card>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <Users className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
+                          <p className="text-lg font-medium mb-2 text-gray-600">No trainers assigned</p>
+                          <p className="text-sm text-gray-500">Assign trainers to this course run.</p>
+                        </div>
+                      )}
 
-                          <div>
-                            <Label className="text-sm font-medium">Remarks</Label>
-                            <p className="text-sm text-gray-600 mt-1">{assignment.remarks || "Preferred for technical courses."}</p>
-                            <p className="text-xs text-gray-500 mt-1">Remarks cannot be edited</p>
-                          </div>
-
-                          <div className="border-t pt-3">
+                      {courseRun.courseRunTrainers?.length > 0 && (
+                        <Card className="bg-blue-50 border-blue-200">
+                          <CardContent className="p-4">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">Total for this trainer:</span>
-                              <span className="font-medium">
-                                {currency(safeNumber(assignment.trainerBaseAmount, 0) + safeNumber(assignment.additionalCost, 0))}
-                              </span>
+                              <span className="text-lg font-medium text-blue-800">Assignment Summary</span>
+                              <div className="text-right">
+                                <div className="text-sm text-blue-600">{courseRun.courseRunTrainers.length} trainer(s) assigned</div>
+                                <div className="text-2xl font-bold text-blue-800">
+                                  {currency(
+                                    courseRun.courseRunTrainers.reduce(
+                                      (sum, t) => sum + safeNumber(t.trainerBaseAmount, 0) + safeNumber(t.additionalCost, 0),
+                                      0
+                                    )
+                                  )}
+                                </div>
+                                <div className="text-sm text-blue-600">Total Trainer Fees</div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
-                      <p className="text-lg font-medium mb-2 text-gray-600">No trainers assigned</p>
-                      <p className="text-sm text-gray-500">Assign trainers to this course run.</p>
-                    </div>
-                  )}
-
-                  {courseRun.courseRunTrainers?.length > 0 && (
-                    <Card className="bg-blue-50 border-blue-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-medium text-blue-800">Assignment Summary</span>
-                          <div className="text-right">
-                            <div className="text-sm text-blue-600">{courseRun.courseRunTrainers.length} trainer(s) assigned</div>
-                            <div className="text-2xl font-bold text-blue-800">
-                              {currency(
-                                courseRun.courseRunTrainers.reduce((sum, t) => sum + safeNumber(t.trainerBaseAmount, 0) + safeNumber(t.additionalCost, 0), 0)
-                              )}
-                            </div>
-                            <div className="text-sm text-blue-600">Total Trainer Fees</div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -1064,8 +1301,32 @@ const CourseRunDetail: React.FC = () => {
         courseRunId={id!}
         enrollment={selectedEnrollment}
         baseCourseFee={courseRun?.baseCourseFee || 0}
-        discounts={courseRun?.course?.discounts || []}
+        discounts={(courseRun?.course?.discounts || []).map((d: any) => ({ id: d.id, name: d.name || "", percentage: d.discountPercentage ?? 0 }))}
         onSuccess={handleEnrollmentSuccess}
+      />
+
+      {/* Send Trainer Assignment Email Dialog */}
+      <SendTrainerEmailDialog
+        open={sendEmailDialogOpen}
+        onOpenChange={setSendEmailDialogOpen}
+        courseRunId={id!}
+        trainers={
+          courseRun.courseRunTrainers?.map((crt) => ({
+            id: crt.trainer.id,
+            name: crt.trainer.name,
+            email: crt.trainer.email,
+            baseFee: crt.trainerBaseAmount || 0,
+            additionalCost: crt.additionalCost || 0,
+          })) || []
+        }
+        courseRunDetails={{
+          serialNumber: courseRun.serialNumber || "",
+          courseName: courseRun.course?.title || "",
+          startDate: formatDateTime(courseRun.startDatetime),
+          endDate: formatDateTime(courseRun.endDatetime),
+          venue: courseRun.venue?.name || courseRun.specifiedLocation || "TBD",
+        }}
+        onSuccess={loadCourseRunDetail}
       />
     </div>
   );

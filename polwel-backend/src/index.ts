@@ -55,8 +55,8 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-// CORS configuration
-const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'https://polwel-pdms.customized3.corsivalab.xyz,http://localhost:8080,http://localhost:8081')
+// CORS configuration8081
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'https://polwel-pdms.customized3.corsivalab.xyz,http://localhost:8080')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);

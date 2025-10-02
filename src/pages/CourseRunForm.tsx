@@ -35,6 +35,7 @@ interface Trainer {
   name: string;
   email: string;
   specializations?: string[];
+  partnerOrganization?: string | null;
 }
 
 interface CourseRunFormData {
@@ -78,6 +79,7 @@ const CourseRunForm: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [availableTrainers, setAvailableTrainers] = useState<Trainer[]>([]); // Filtered trainers based on course
   const [availableVenues, setAvailableVenues] = useState<Venue[]>([]);
 
   // Form state
@@ -160,13 +162,14 @@ const CourseRunForm: React.FC = () => {
   };
 
   // Handle course selection
-  const handleCourseChange = (selectedCourseId: string) => {
+  const handleCourseChange = async (selectedCourseId: string) => {
     const selectedCourse = courses.find((c) => c.id === selectedCourseId);
     if (selectedCourse) {
       const newFormData = {
         ...formData,
         courseId: selectedCourseId,
         courseCode: selectedCourse.courseCode || "",
+        selectedTrainers: [], // Clear selected trainers when course changes
       };
 
       // Regenerate serial number if start date exists
@@ -176,18 +179,33 @@ const CourseRunForm: React.FC = () => {
 
       setFormData(newFormData);
 
-      // Filter trainers based on course category/specialization
-      filterTrainersByCourse(selectedCourse);
+      // Filter trainers based on course
+      await filterTrainersByCourse(selectedCourseId);
     }
   };
 
-  // Filter trainers based on course
-  const filterTrainersByCourse = (course: Course) => {
-    // This would filter trainers based on course category or specializations
-    // For now, showing all trainers - implement filtering logic as needed
-    // const filteredTrainers = trainers.filter(trainer =>
-    //   trainer.specializations?.includes(course.category || "")
-    // );
+  // Filter trainers based on course - only show trainers connected to this course
+  const filterTrainersByCourse = async (courseId: string) => {
+    try {
+      // Fetch course details including courseTrainers
+      const response = await coursesApi.getById(courseId);
+      const course = response?.data?.course || response?.data || response;
+
+      if (course && Array.isArray(course.courseTrainers)) {
+        // Extract trainer IDs from courseTrainers pivot table
+        const courseTrainerIds = course.courseTrainers.map((ct: any) => ct.trainerId);
+
+        // Filter trainers to only those connected to this course
+        const filtered = trainers.filter((trainer) => courseTrainerIds.includes(trainer.id));
+        setAvailableTrainers(filtered);
+      } else {
+        // If no courseTrainers found, show no trainers
+        setAvailableTrainers([]);
+      }
+    } catch (error) {
+      console.error("Error filtering trainers by course:", error);
+      setAvailableTrainers([]);
+    }
   };
 
   // Handle start date change to regenerate serial number
@@ -609,28 +627,40 @@ const CourseRunForm: React.FC = () => {
             <TabsContent value="trainer-assignment" className="space-y-6 mt-6">
               <div>
                 <h3 className="text-lg font-medium mb-4">Select Trainers</h3>
-                <div className="space-y-3">
-                  {trainers.map((trainer) => (
-                    <div key={trainer.id} className="flex items-center space-x-2 p-3 border rounded-lg">
-                      <input
-                        type="checkbox"
-                        id={`trainer-${trainer.id}`}
-                        checked={formData.selectedTrainers.includes(trainer.id)}
-                        onChange={(e) => {
-                          const updatedTrainers = e.target.checked
-                            ? [...formData.selectedTrainers, trainer.id]
-                            : formData.selectedTrainers.filter((id) => id !== trainer.id);
-                          handleFieldChange("selectedTrainers", updatedTrainers);
-                        }}
-                        className="rounded"
-                      />
-                      <label htmlFor={`trainer-${trainer.id}`} className="flex-1 cursor-pointer">
-                        <div className="font-medium">{trainer.name}</div>
-                        <div className="text-sm text-gray-500">{trainer.email}</div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
+                {!formData.courseId ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Please select a course first to see available trainers.</p>
+                  </div>
+                ) : availableTrainers.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No trainers are assigned to this course.</p>
+                    <p className="text-sm mt-2">Please add trainers to the course first.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {availableTrainers.map((trainer) => (
+                      <div key={trainer.id} className="flex items-center space-x-2 p-3 border rounded-lg">
+                        <input
+                          type="checkbox"
+                          id={`trainer-${trainer.id}`}
+                          checked={formData.selectedTrainers.includes(trainer.id)}
+                          onChange={(e) => {
+                            const updatedTrainers = e.target.checked
+                              ? [...formData.selectedTrainers, trainer.id]
+                              : formData.selectedTrainers.filter((id) => id !== trainer.id);
+                            handleFieldChange("selectedTrainers", updatedTrainers);
+                          }}
+                          className="rounded"
+                        />
+                        <label htmlFor={`trainer-${trainer.id}`} className="flex-1 cursor-pointer">
+                          <div className="font-medium">{trainer.name}</div>
+                          <div className="text-sm text-gray-500">{trainer.email}</div>
+                          {trainer.partnerOrganization && <div className="text-sm text-gray-400">{trainer.partnerOrganization}</div>}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

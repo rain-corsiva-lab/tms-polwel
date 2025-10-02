@@ -1680,4 +1680,273 @@ export const courseRunController = {
       res.status(500).json(buildErrorResponse('courseRunController.saveAttendance', 'Failed to save attendance', error));
     }
   },
+
+  // Update trainer assignments for a course run
+  async updateTrainerAssignments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { trainers } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      if (!Array.isArray(trainers)) {
+        res.status(400).json({
+          success: false,
+          error: 'Trainers must be an array',
+        });
+        return;
+      }
+
+      // Verify course run exists
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id },
+        include: { course: true },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({
+          success: false,
+          error: 'Course run not found',
+        });
+        return;
+      }
+
+      // Delete existing trainer assignments and create new ones
+      await prisma.$transaction(async (tx) => {
+        // Delete all existing trainer assignments
+        await tx.courseRunTrainer.deleteMany({
+          where: { courseRunId: id },
+        });
+
+        // Create new trainer assignments
+        if (trainers.length > 0) {
+          await tx.courseRunTrainer.createMany({
+            data: trainers.map((t: any) => ({
+              courseRunId: id,
+              trainerId: t.trainerId,
+              trainerBaseAmount: t.trainerBaseAmount || 0,
+              additionalCost: t.additionalCost || 0,
+              remarks: t.remarks || null,
+            })),
+          });
+        }
+      });
+
+      // Fetch updated course run with trainers
+      const updated = await prisma.courseRun.findUnique({
+        where: { id },
+        include: {
+          courseRunTrainers: {
+            include: {
+              trainer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  partnerOrganization: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Trainer assignments updated successfully',
+        courseRun: updated,
+      });
+    } catch (error) {
+      console.error('Error updating trainer assignments:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.updateTrainerAssignments', 'Failed to update trainer assignments', error));
+    }
+  },
+
+  // Send trainer assignment email
+  async sendTrainerAssignmentEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { ccEmails, additionalBody } = req.body;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      // Fetch course run with all necessary details
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id },
+        include: {
+          course: {
+            select: {
+              title: true,
+              courseCode: true,
+            },
+          },
+          venue: {
+            select: {
+              name: true,
+              address: true,
+            },
+          },
+          courseRunTrainers: {
+            include: {
+              trainer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  partnerOrganization: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({
+          success: false,
+          error: 'Course run not found',
+        });
+        return;
+      }
+
+      if (!courseRun.courseRunTrainers || courseRun.courseRunTrainers.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'No trainers assigned to this course run',
+        });
+        return;
+      }
+
+      // Format dates
+      const formatDate = (date: Date | null) => {
+        if (!date) return 'TBD';
+        return new Intl.DateTimeFormat('en-SG', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }).format(date);
+      };
+
+      const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(amount);
+      };
+
+      // Prepare email transporter if SMTP configured
+      let transporter: any = null;
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined;
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+      const emailFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || `no-reply@${process.env.FRONTEND_URL?.replace(/^https?:\/\//, '') || 'polwel.local'}`;
+
+      try {
+        if (smtpHost && smtpPort && smtpUser && smtpPass) {
+          // Lazy require so service isn't mandatory
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const nodemailer = require('nodemailer');
+          transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465, // true for 465, false for other ports
+            auth: {
+              user: smtpUser,
+              pass: smtpPass,
+            },
+          });
+          // verify transporter
+          try {
+            await transporter.verify();
+            console.log('SMTP transporter verified');
+          } catch (verifyErr) {
+            console.warn('SMTP verify failed, emails will be logged not sent:', (verifyErr as any)?.message || verifyErr);
+            transporter = null;
+          }
+        } else {
+          console.log('SMTP not fully configured; skipping actual send and logging emails instead');
+        }
+      } catch (err) {
+        console.error('Failed to setup SMTP transporter:', err);
+        transporter = null;
+      }
+
+      // Use EmailService to send trainer assignment emails
+      // Lazy-import to avoid circular deps
+      const EmailService = require('../services/emailService').default;
+
+      const emailTasks = courseRun.courseRunTrainers.map(async (assignment) => {
+        const baseFee = Number(assignment.trainerBaseAmount || 0);
+        const additional = Number(assignment.additionalCost || 0);
+
+        const result = await EmailService.sendTrainerAssignmentEmail(
+          assignment.trainer.email,
+          assignment.trainer.name,
+          {
+            course: courseRun.course?.title || null,
+            serialNumber: courseRun.serialNumber || null,
+            startDate: courseRun.startDatetime || null,
+            endDate: courseRun.endDatetime || null,
+            venue: courseRun.venue?.name || courseRun.specifiedLocation || null,
+          },
+          baseFee,
+          additional,
+          Array.isArray(ccEmails) ? ccEmails : null,
+          additionalBody || null
+        );
+
+        // create history record
+        try {
+          await prisma.trainerAssignmentEmailHistory.create({
+            data: {
+              courseRunId: id,
+              trainerId: assignment.trainer.id,
+              cc: Array.isArray(ccEmails) && ccEmails.length > 0 ? ccEmails.join(', ') : null,
+              additionalBodyContent: additionalBody || null,
+            },
+          });
+        } catch (histErr) {
+          console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
+        }
+
+        // update assignment status
+        try {
+          await prisma.courseRunTrainer.update({
+            where: { id: assignment.id },
+            data: {
+              trainerAssignmentEmailStatus: result.success ? 'SENT' : 'FAILED',
+            },
+          });
+        } catch (updateErr) {
+          console.warn('Failed to update courseRunTrainer status:', (updateErr as any)?.message || updateErr);
+        }
+
+        return result;
+      });
+
+      await Promise.all(emailTasks);
+
+      res.json({
+        success: true,
+        message: 'Trainer assignment emails sent successfully',
+        emailsSent: courseRun.courseRunTrainers.length,
+      });
+    } catch (error) {
+      console.error('Error sending trainer assignment emails:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.sendTrainerAssignmentEmail', 'Failed to send trainer assignment emails', error));
+    }
+  },
 };

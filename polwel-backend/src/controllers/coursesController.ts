@@ -26,7 +26,6 @@ const CourseCreateSchema = z.object({
   level: z.string().optional(),
   venue: z.string().optional(),
   specifiedLocation: z.string().optional(),
-  trainers: z.union([z.array(z.string()), z.any()]).default([]),
   remarks: z.string().optional(),
   courseOutline: z.any().optional(), // JSON
   syllabus: z.string().optional(),
@@ -148,6 +147,19 @@ export const coursesController = {
               name: true,
               email: true
             }
+          },
+          courseTrainers: {
+            include: {
+              trainer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  partnerOrganization: true,
+                  specializations: true
+                }
+              }
+            }
           }
         }
       });
@@ -234,7 +246,6 @@ export const coursesController = {
       if (data.level !== undefined) courseData.level = data.level;
       if (data.venue !== undefined) courseData.venue = data.venue;
   if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
-      if (data.trainers !== undefined) courseData.trainers = data.trainers;
       if (data.remarks !== undefined) courseData.remarks = data.remarks;
       if (data.courseOutline !== undefined) courseData.courseOutline = data.courseOutline;
       if (data.syllabus !== undefined) courseData.syllabus = data.syllabus;
@@ -260,6 +271,19 @@ export const coursesController = {
           }
         }
       });
+
+      // Handle trainers via pivot table if provided
+      if (req.body.trainers && Array.isArray(req.body.trainers) && req.body.trainers.length > 0) {
+        const trainerConnections = req.body.trainers.map((trainerId: string) => ({
+          courseId: course.id,
+          trainerId: trainerId
+        }));
+
+        await prisma.courseTrainer.createMany({
+          data: trainerConnections,
+          skipDuplicates: true
+        });
+      }
 
       // Log audit trail
       if (req.user?.userId) {
@@ -367,6 +391,27 @@ export const coursesController = {
           }
         }
       });
+
+      // Handle trainers via pivot table if provided
+      if (req.body.trainers && Array.isArray(req.body.trainers)) {
+        // Delete existing trainer associations
+        await prisma.courseTrainer.deleteMany({
+          where: { courseId: id }
+        });
+
+        // Create new associations
+        if (req.body.trainers.length > 0) {
+          const trainerConnections = req.body.trainers.map((trainerId: string) => ({
+            courseId: id,
+            trainerId: trainerId
+          }));
+
+          await prisma.courseTrainer.createMany({
+            data: trainerConnections,
+            skipDuplicates: true
+          });
+        }
+      }
 
       // Log audit trail
       if (req.user?.userId) {

@@ -124,6 +124,10 @@ const CourseForm: React.FC = () => {
         const c: any = resp?.data?.course || resp?.data || resp;
         if (c) {
           const generatedCode = generateCourseCodeFromTitle(c.title || "");
+
+          // Extract trainer IDs from courseTrainers pivot table
+          const trainerIds = Array.isArray(c.courseTrainers) ? c.courseTrainers.map((ct: any) => ct.trainerId || ct.trainer?.id).filter(Boolean) : [];
+
           setFormData((prev) => ({
             ...prev,
             courseCode: c.courseCode || "",
@@ -132,7 +136,7 @@ const CourseForm: React.FC = () => {
             category: c.category || "",
             duration: c.duration || "",
             durationType: c.durationType || "days",
-            trainer: Array.isArray(c.trainers) ? c.trainers.map((t: any) => (typeof t === "string" ? t : t.name || String(t))) : [],
+            trainer: trainerIds,
             venueFee: c.venueFee || 0,
             venueFeeType: c.venueFeeType || "",
             venue: c.venue || "",

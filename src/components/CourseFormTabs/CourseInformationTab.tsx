@@ -148,24 +148,28 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
               <Button variant="outline" role="combobox" className="w-full justify-between min-h-10">
                 {formData.trainer.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    {formData.trainer.map((trainerName: string) => (
-                      <Badge key={trainerName} variant="secondary" className="text-xs">
-                        {trainerName}
-                        <button
-                          type="button"
-                          className="ml-1 hover:bg-muted rounded-full"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onInputChange(
-                              "trainer",
-                              formData.trainer.filter((t: string) => t !== trainerName)
-                            );
-                          }}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                    {formData.trainer.map((trainerId: string) => {
+                      const trainer = trainers.find((t: any) => t.id === trainerId);
+                      const displayName = trainer?.name || trainerId;
+                      return (
+                        <Badge key={trainerId} variant="secondary" className="text-xs">
+                          {displayName}
+                          <button
+                            type="button"
+                            className="ml-1 hover:bg-muted rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onInputChange(
+                                "trainer",
+                                formData.trainer.filter((id: string) => id !== trainerId)
+                              );
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : (
                   "Select trainers..."
@@ -180,18 +184,19 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                   <CommandEmpty>No trainer found.</CommandEmpty>
                   <CommandGroup heading="Trainers">
                     {trainers.map((trainer: any) => {
+                      const trainerId = trainer.id;
                       const displayName = trainer.name || trainer;
                       return (
                         <CommandItem
-                          key={trainer.id || displayName}
+                          key={trainerId}
                           value={displayName}
                           onSelect={() => {
-                            if (!formData.trainer.includes(displayName)) {
-                              onInputChange("trainer", [...formData.trainer, displayName]);
+                            if (!formData.trainer.includes(trainerId)) {
+                              onInputChange("trainer", [...formData.trainer, trainerId]);
                             }
                           }}
                         >
-                          <Check className={`mr-2 h-4 w-4 ${formData.trainer.includes(displayName) ? "opacity-100" : "opacity-0"}`} />
+                          <Check className={`mr-2 h-4 w-4 ${formData.trainer.includes(trainerId) ? "opacity-100" : "opacity-0"}`} />
                           {displayName}
                         </CommandItem>
                       );
@@ -199,18 +204,19 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                   </CommandGroup>
                   <CommandGroup heading="Partners">
                     {partners.map((partner: any) => {
+                      const partnerId = partner.id;
                       const name = partner.name || partner;
                       return (
                         <CommandItem
-                          key={partner.id || name}
+                          key={partnerId}
                           value={name}
                           onSelect={() => {
-                            if (!formData.trainer.includes(name)) {
-                              onInputChange("trainer", [...formData.trainer, name]);
+                            if (!formData.trainer.includes(partnerId)) {
+                              onInputChange("trainer", [...formData.trainer, partnerId]);
                             }
                           }}
                         >
-                          <Check className={`mr-2 h-4 w-4 ${formData.trainer.includes(name) ? "opacity-100" : "opacity-0"}`} />
+                          <Check className={`mr-2 h-4 w-4 ${formData.trainer.includes(partnerId) ? "opacity-100" : "opacity-0"}`} />
                           {name}
                         </CommandItem>
                       );

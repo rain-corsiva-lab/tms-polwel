@@ -1240,6 +1240,14 @@ export const courseRunsApi = {
       body: JSON.stringify(payload),
     });
   },
+
+  // Update trainer assignments
+  updateTrainerAssignments: async (courseRunId: string, trainers: Array<{trainerId: string; trainerBaseAmount: number; additionalCost: number}>) => {
+    return apiRequest(`/course-runs/${courseRunId}/trainer-assignments`, {
+      method: 'PUT',
+      body: JSON.stringify({ trainers }),
+    });
+  },
 };
 
 // Define venue interfaces

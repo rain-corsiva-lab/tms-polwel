@@ -49,4 +49,10 @@ router.put('/:id/attendance', requirePermissions('course-run.edit'), courseRunCo
 // PUT /api/course-runs/:id/learners/:learnerId - Update learner enrollment
 router.put('/:id/learners/:learnerId', requirePermissions('course-run.edit'), courseRunController.updateEnrollment);
 
+// PUT /api/course-runs/:id/trainer-assignments - Update trainer assignments
+router.put('/:id/trainer-assignments', requirePermissions('course-run.edit'), courseRunController.updateTrainerAssignments);
+
+// POST /api/course-runs/:id/send-trainer-assignment-email - Send trainer assignment emails
+router.post('/:id/send-trainer-assignment-email', requirePermissions('course-run.edit'), courseRunController.sendTrainerAssignmentEmail);
+
 export default router;

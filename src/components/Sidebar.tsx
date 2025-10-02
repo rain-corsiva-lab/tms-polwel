@@ -20,13 +20,12 @@ interface MenuItem {
 const userManagementItems: MenuItem[] = [
   { name: "POLWEL Users", href: "/polwel-users", icon: Shield, subject: "User" },
   { name: "Associate Trainers & Training Partners", href: "/trainers", icon: GraduationCap, subject: "Trainer" },
-  // i need to fill CLients also in here and remove from below
   { name: "Client Organisations", href: "/client-organisations", icon: Building2, subject: "Client" },
 ];
 
 const courseManagementItems: MenuItem[] = [
   { name: "Course Creation", href: "/course-creation", icon: BookOpen, subject: "CourseVenue" },
-  // { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
   { name: "Venue Management", href: "/venue-setup", icon: Building2, subject: "CourseVenue" },
 ];
 

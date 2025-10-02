@@ -52,6 +52,7 @@ model User {
   bookings                        Booking[]                       @relation("BookingUser")
   courseRunLearnerAttendanceEdits CourseRunLearnerAttendance[]
   courseRunTrainers               CourseRunTrainer[]
+  courseTrainers                  CourseTrainer[]                 @relation("CourseTrainers")
   coursesCreated                  Course[]                        @relation("CourseCreator")
   learnersAsTrainingCoordinator   Learner[]
   trainerAssignmentEmailHistory   TrainerAssignmentEmailHistory[]
@@ -119,7 +120,6 @@ model Course {
   materials          Json?
   venueFee           Float        @default(0)
   venue              String?
-  trainers           Json?
   certificates       String       @default("polwel")
   remarks            String?      @db.Text
   courseOutline      Json?
@@ -141,9 +141,25 @@ model Course {
   runs               CourseRun[]
   creator            User?        @relation("CourseCreator", fields: [createdBy], references: [id])
   trainerFees        TrainerFee[]
+  courseTrainers     CourseTrainer[]
 
   @@index([createdBy], map: "courses_createdBy_fkey")
   @@map("courses")
+}
+
+model CourseTrainer {
+  id        String   @id @default(cuid())
+  courseId  String
+  trainerId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  trainer   User     @relation("CourseTrainers", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, trainerId])
+  @@index([courseId], map: "course_trainers_courseId_fkey")
+  @@index([trainerId], map: "course_trainers_trainerId_fkey")
+  @@map("course_trainers")
 }
 
 model CourseRun {

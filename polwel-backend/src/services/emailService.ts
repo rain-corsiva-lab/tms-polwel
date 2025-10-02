@@ -337,6 +337,76 @@ class EmailService {
       return false;
     }
   }
+
+  static async sendTrainerAssignmentEmail(
+    email: string,
+    name: string,
+    courseRunDetails: {
+      course?: string;
+      serialNumber?: string;
+      startDate?: string | null;
+      endDate?: string | null;
+      venue?: string | null;
+    },
+    baseFee: number,
+    additionalCost: number,
+    ccEmails?: string[] | null,
+    additionalBody?: string | null
+  ): Promise<{ success: boolean; info?: any; error?: string }> {
+    const transporter = this.getTransporter();
+
+    const formatCurrency = (amount: number) =>
+      new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(amount);
+
+    const formatDate = (d?: string | null) => {
+      if (!d) return 'TBD';
+      try {
+        const dt = new Date(d);
+        return new Intl.DateTimeFormat('en-SG', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }).format(dt);
+      } catch {
+        return String(d);
+      }
+    };
+
+    const total = baseFee + (additionalCost || 0);
+
+    const body = `Dear ${name},\n\nYou have been assigned as a trainer for the following course run:\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Serial Number: ${courseRunDetails.serialNumber || ''}\n- Start Date: ${formatDate(courseRunDetails.startDate)}\n- End Date: ${formatDate(courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}\n\nYour Compensation:\n- Base Fee: ${formatCurrency(baseFee)}\n${additionalCost > 0 ? `- Additional Cost: ${formatCurrency(additionalCost)}\n` : ''}- Total: ${formatCurrency(total)}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Please confirm your availability for this course run.\n\nBest regards,\nPolwel Training Team`;
+
+    const mailOptions: any = {
+      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      to: email,
+      subject: `Trainer Assignment: ${courseRunDetails.serialNumber || ''}`,
+      text: body,
+    };
+
+    if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
+      mailOptions.cc = ccEmails.join(', ');
+    }
+
+    try {
+      if (!transporter) {
+        console.log('(EmailService) SMTP not configured — trainer assignment email would be:');
+        console.log('To:', email);
+        console.log('CC:', ccEmails);
+        console.log('Subject:', mailOptions.subject);
+        console.log('Body:', body);
+        return { success: false, error: 'SMTP not configured' };
+      }
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`(EmailService) Trainer assignment email sent to ${email}:`, info?.messageId || info);
+      return { success: true, info };
+    } catch (err) {
+      console.error('(EmailService) Failed to send trainer assignment email:', (err as any)?.message || err);
+      return { success: false, error: (err as any)?.message || String(err) };
+    }
+  }
 }
 
 export default EmailService;

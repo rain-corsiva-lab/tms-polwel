@@ -8,7 +8,7 @@ async function testEmailService() {
   const trainerResult = await EmailService.sendTrainerSetupEmail(
     'test.trainer@example.com',
     'John Trainer',
-    'http://localhost:8081/onboarding/test-token-123'
+    'http://localhost:8080/onboarding/test-token-123'
   );
   console.log(`✅ Trainer email sent: ${trainerResult}\n`);
 
@@ -17,7 +17,7 @@ async function testEmailService() {
   const coordinatorResult = await EmailService.sendCoordinatorSetupEmail(
     'test.coordinator@example.com',
     'Jane Coordinator',
-    'http://localhost:8081/onboarding/test-token-456',
+    'http://localhost:8080/onboarding/test-token-456',
     'Example Organization'
   );
   console.log(`✅ Coordinator email sent: ${coordinatorResult}\n`);
@@ -27,7 +27,7 @@ async function testEmailService() {
   const polwelResult = await EmailService.sendPolwelUserSetupEmail(
     'test.polwel@example.com',
     'Bob Admin',
-    'http://localhost:8081/onboarding/test-token-789'
+    'http://localhost:8080/onboarding/test-token-789'
   );
   console.log(`✅ POLWEL email sent: ${polwelResult}\n`);
 
@@ -36,7 +36,7 @@ async function testEmailService() {
   const resetResult = await EmailService.sendPasswordResetEmail(
     'test.reset@example.com',
     'Alice User',
-    'http://localhost:8081/reset-password/test-reset-token'
+    'http://localhost:8080/reset-password/test-reset-token'
   );
   console.log(`✅ Password reset email sent: ${resetResult}\n`);
 
