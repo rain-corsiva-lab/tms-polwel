@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { X, Edit, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isValidEmail } from "@/lib/validators";
 import { trainersApi } from "@/lib/api";
 import { digitsOnly } from "@/lib/utils";
 import { errorHandlers } from "@/lib/errorHandler";
@@ -73,6 +74,15 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
     setLoading(true);
 
     try {
+      if (!isValidEmail(formData.email)) {
+        toast({
+          title: "Validation Error",
+          description: "Please enter a valid email address (name@email.com).",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
       const sanitizedPhone = sanitizeSGPhone(formData.contactNumber);
       await trainersApi.update(trainer.id, {
         name: formData.name,

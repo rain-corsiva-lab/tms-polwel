@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useMemo } from "react";
-import { authService, User, AuthResponse } from "@/lib/auth";
+import { authService, User, AuthResponse, LoginResult, PendingMfaChallenge } from "@/lib/auth";
 import { toast } from "sonner";
 import { createAbility, type AppAbility } from "@/lib/casl";
 import { AbilityContext } from "@/lib/casl";
@@ -8,7 +8,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   ability: AppAbility;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthResponse>;
+  pendingMfa: PendingMfaChallenge | null;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<LoginResult>;
+  setPendingMfa: (challenge: PendingMfaChallenge | null) => void;
+  verifyMfaCode: (code: string) => Promise<AuthResponse>;
+  resendMfaCode: () => Promise<PendingMfaChallenge>;
   logout: () => Promise<void>;
   loading: boolean;
   hasRole: (roleOrRoles: string | string[]) => boolean;
@@ -22,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingMfa, setPendingMfaState] = useState<PendingMfaChallenge | null>(authService.getPendingMfa());
 
   // Create CASL ability from user
   const ability = useMemo(() => {
@@ -33,9 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = () => {
       const authenticated = authService.isAuthenticated();
       const userData = authService.getUser();
+      const pendingChallenge = authService.getPendingMfa();
 
       setIsAuthenticated(authenticated);
       setUser(userData);
+      setPendingMfaState(pendingChallenge);
       setLoading(false);
     };
 
@@ -46,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for storage changes (for cross-tab synchronization)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "polwel_access_token" || e.key === "polwel_user_data") {
+      if (e.key === "polwel_access_token" || e.key === "polwel_user_data" || e.key === "polwel_pending_mfa") {
         checkAuth();
       }
     };
@@ -64,17 +71,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const setPendingMfa = (challenge: PendingMfaChallenge | null) => {
+    if (challenge) {
+      setPendingMfaState(authService.savePendingMfa(challenge));
+    } else {
+      authService.clearPendingMfa();
+      setPendingMfaState(null);
+    }
+  };
+
   const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
-      const response = await authService.login(email, password, rememberMe);
+      const result = await authService.login(email, password, rememberMe);
+
+      if ("mfaRequired" in result && result.mfaRequired) {
+        setPendingMfa(result);
+        setIsAuthenticated(false);
+        setUser(null);
+        return result;
+      }
+
+      const success = result as AuthResponse;
+      setPendingMfa(null);
       setIsAuthenticated(true);
-      setUser(response.user);
-      return response; // Return the response so Login component can access user data
+      setUser(success.user);
+      return success;
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
+      setPendingMfa(null);
       throw error;
     }
+  };
+
+  const verifyMfaCode = async (code: string) => {
+    if (!pendingMfa) {
+      throw new Error("No verification challenge in progress");
+    }
+
+    const result = await authService.verifyMfaCode(pendingMfa.challengeId, code, pendingMfa.rememberMe);
+    setPendingMfa(null);
+    setIsAuthenticated(true);
+    setUser(result.user);
+    return result;
+  };
+
+  const resendMfaCode = async () => {
+    if (!pendingMfa) {
+      throw new Error("No verification challenge in progress");
+    }
+
+    const updated = await authService.resendMfaCode(pendingMfa.challengeId);
+    setPendingMfa(updated);
+    return updated;
   };
 
   const logout = async () => {
@@ -137,7 +186,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         user,
         ability,
+        pendingMfa,
         login,
+        setPendingMfa,
+        verifyMfaCode,
+        resendMfaCode,
         logout,
         loading,
         hasRole,

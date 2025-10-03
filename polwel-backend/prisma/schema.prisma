@@ -41,6 +41,8 @@ model User {
   rating                          Float?
   employeeId                      String?
   createdAt                       DateTime                        @default(now())
+  mfaCodeHash                     String?                         @db.Text
+  mfaCodeExpiresAt                DateTime?
   updatedAt                       DateTime                        @updatedAt
   createdBy                       String?
   old_email                       String?
@@ -59,6 +61,7 @@ model User {
   trainerBlockouts                TrainerBlockout[]
   trainerFeesCreated              TrainerFee[]                    @relation("TrainerFeeCreatedBy")
   trainerFees                     TrainerFee[]
+  mfaChallenge                   MfaChallenge?
   permissions                     UserPermission[]
   createdByUser                   User?                           @relation("UserCreatedBy", fields: [createdBy], references: [id])
   usersCreated                    User[]                          @relation("UserCreatedBy")
@@ -284,6 +287,22 @@ model Venue {
 
   @@index([createdBy], map: "venues_createdBy_fkey")
   @@map("venues")
+}
+
+model MfaChallenge {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  codeHash     String
+  expiresAt    DateTime
+  attempts     Int      @default(0)
+  resendCount  Int      @default(0)
+  lastSentAt   DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("mfa_challenges")
 }
 
 model Booking {

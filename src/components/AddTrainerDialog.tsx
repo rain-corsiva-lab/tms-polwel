@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, GraduationCap, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn, digitsOnly } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { isValidEmail } from "@/lib/validators";
 import { trainersApi } from "@/lib/api";
 import { errorHandlers } from "@/lib/errorHandler";
 
@@ -63,6 +64,15 @@ export function AddTrainerDialog({ onTrainerCreated }: { onTrainerCreated?: () =
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address (name@email.com).",
         variant: "destructive",
       });
       return;

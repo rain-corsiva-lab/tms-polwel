@@ -11,6 +11,7 @@ import { ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { courseRunsApi, clientOrganizationsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { isValidEmail } from "@/lib/validators";
 
 interface EditLearnerDialogProps {
   open: boolean;
@@ -381,6 +382,17 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
 
   const handleSave = async () => {
     if (!learner?.id) return;
+    // Basic validation
+    if (!form.fullName || !form.email) {
+      toast({ title: "Error", description: "Please fill in required fields", variant: "destructive" });
+      return;
+    }
+
+    if (!isValidEmail(form.email)) {
+      toast({ title: "Validation Error", description: "Please enter a valid email address (name@email.com).", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
     try {
       await courseRunsApi.updateEnrollment(courseRunId, learner.id, {

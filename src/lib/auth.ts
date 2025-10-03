@@ -24,6 +24,26 @@ export interface AuthResponse {
   expiresIn: string;
 }
 
+export interface MfaChallengeResponse {
+  success: boolean;
+  mfaRequired: true;
+  challengeId: string;
+  expiresAt: string;
+  maskedEmail: string;
+  resendCooldownSeconds: number;
+  emailDelivery?: boolean;
+  resendCount?: number;
+}
+
+export interface PendingMfaChallenge extends MfaChallengeResponse {
+  email: string;
+  rememberMe: boolean;
+  createdAt: string;
+  resendAvailableAt: string;
+}
+
+export type LoginResult = AuthResponse | PendingMfaChallenge;
+
 export interface AuthError {
   error: string;
   code?: string;
@@ -35,6 +55,7 @@ class AuthService {
   private refreshTokenKey = 'polwel_refresh_token';
   private userKey = 'polwel_user_data';
   private lastActivityKey = 'polwel_last_activity';
+  private pendingMfaKey = 'polwel_pending_mfa';
   private refreshTokenTimer: NodeJS.Timeout | null = null;
   private sessionCheckTimer: NodeJS.Timeout | null = null;
   private suppressExpiryRedirectUntil: number | null = null;
@@ -241,6 +262,7 @@ class AuthService {
     localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.userKey);
     localStorage.removeItem(this.lastActivityKey);
+    localStorage.removeItem(this.pendingMfaKey);
     this.clearTimers();
   }
 
@@ -257,7 +279,89 @@ class AuthService {
     return userData ? JSON.parse(userData) : null;
   }
 
-  async login(email: string, password: string, rememberMe: boolean = false): Promise<AuthResponse> {
+  getPendingMfa(): PendingMfaChallenge | null {
+    const pending = localStorage.getItem(this.pendingMfaKey);
+    if (!pending) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(pending) as PendingMfaChallenge;
+      return parsed.mfaRequired ? parsed : null;
+    } catch (error) {
+      console.warn('Failed to parse pending MFA challenge', error);
+      localStorage.removeItem(this.pendingMfaKey);
+      return null;
+    }
+  }
+
+  savePendingMfa(data: PendingMfaChallenge): PendingMfaChallenge {
+    localStorage.setItem(this.pendingMfaKey, JSON.stringify(data));
+    return data;
+  }
+
+  updatePendingMfa(updates: Partial<PendingMfaChallenge>): PendingMfaChallenge | null {
+    const existing = this.getPendingMfa();
+    if (!existing) {
+      return null;
+    }
+    const merged = { ...existing, ...updates } as PendingMfaChallenge;
+    return this.savePendingMfa(merged);
+  }
+
+  clearPendingMfa(): void {
+    localStorage.removeItem(this.pendingMfaKey);
+  }
+
+  private storeAuthenticatedSession(data: AuthResponse): AuthResponse {
+    const userData = {
+      ...data.user,
+      permissions: data.user.permissions || [],
+    };
+
+    localStorage.setItem(this.tokenKey, data.accessToken);
+    localStorage.setItem(this.userKey, JSON.stringify(userData));
+    localStorage.setItem(this.lastActivityKey, Date.now().toString());
+
+    if (data.refreshToken) {
+      localStorage.setItem(this.refreshTokenKey, data.refreshToken);
+    } else {
+      localStorage.removeItem(this.refreshTokenKey);
+    }
+
+    this.clearPendingMfa();
+    this.scheduleTokenRefresh();
+    this.broadcastAuthUpdate();
+
+    return { ...data, user: userData };
+  }
+
+  private broadcastAuthUpdate(): void {
+    try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('polwel_auth_updated'));
+      }
+    } catch (error) {
+      console.warn('Failed to broadcast auth update', error);
+    }
+  }
+
+  private buildPendingMfa(response: MfaChallengeResponse, email: string, rememberMe: boolean): PendingMfaChallenge {
+    const now = Date.now();
+    const resendAvailableAt = new Date(now + response.resendCooldownSeconds * 1000).toISOString();
+
+    const pending: PendingMfaChallenge = {
+      ...response,
+      email,
+      rememberMe,
+      createdAt: new Date(now).toISOString(),
+      resendAvailableAt,
+    };
+
+    return this.savePendingMfa(pending);
+  }
+
+  async login(email: string, password: string, rememberMe: boolean = false): Promise<LoginResult> {
     try {
       const response = await fetch(`${this.apiUrl}/auth/login`, {
         method: 'POST',
@@ -267,52 +371,146 @@ class AuthService {
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
+  const payload = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const error: AuthError = await response.json();
-        throw new Error(error.error || 'Login failed');
-      }
-
-      const data: AuthResponse = await response.json();
-      
-      // Ensure user has permissions array
-      const userData = {
-        ...data.user,
-        permissions: data.user.permissions || []
-      };
-      
-      console.log('🔐 [AUTH] Login response received:', {
-        userRole: userData.role,
-        permissionsCount: userData.permissions.length,
-        permissions: userData.permissions,
-        environment: import.meta.env.MODE
-      });
-      
-      localStorage.setItem(this.tokenKey, data.accessToken);
-      localStorage.setItem(this.userKey, JSON.stringify(userData));
-      localStorage.setItem(this.lastActivityKey, Date.now().toString());
-      
-      if (data.refreshToken) {
-        localStorage.setItem(this.refreshTokenKey, data.refreshToken);
-      }
-
-      this.scheduleTokenRefresh();
-
-      // Dispatch a custom event so the rest of the app updates immediately
-      try {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('polwel_auth_updated'));
+        if (payload?.mfaRequired) {
+          const pending = this.buildPendingMfa(payload, email, rememberMe);
+          toast.success('Verification code sent to your email.');
+          return pending;
         }
-      } catch (e) {
-        // ignore
+
+        const error: AuthError = payload;
+        throw new Error(error?.error || 'Login failed');
       }
 
-      toast.success(`Welcome back, ${userData.name}!`);
-      return { ...data, user: userData };
+      if (payload?.mfaRequired) {
+        const pending = this.buildPendingMfa(payload, email, rememberMe);
+        toast.success('Verification code sent to your email.');
+        return pending;
+      }
+
+      const data = payload as AuthResponse;
+
+      const stored = this.storeAuthenticatedSession(data);
+
+      console.log('🔐 [AUTH] Login response received:', {
+        userRole: stored.user.role,
+        permissionsCount: stored.user.permissions?.length || 0,
+        permissions: stored.user.permissions,
+        environment: import.meta.env.MODE,
+      });
+
+      toast.success(`Welcome back, ${stored.user.name}!`);
+      return stored;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       toast.error(errorMessage);
       throw error;
     }
+  }
+
+  async verifyMfaCode(challengeId: string, code: string, rememberMe: boolean = false): Promise<AuthResponse> {
+    const response = await fetch(`${this.apiUrl}/auth/mfa/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ challengeId, code, rememberMe }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage = payload?.error || 'Failed to verify MFA code';
+      const error = new Error(errorMessage);
+      if (payload?.code) {
+        (error as any).code = payload.code;
+      }
+      if (payload?.attemptsRemaining !== undefined) {
+        (error as any).attemptsRemaining = payload.attemptsRemaining;
+      }
+      throw error;
+    }
+
+    this.clearPendingMfa();
+    const data = payload as AuthResponse;
+    const stored = this.storeAuthenticatedSession(data);
+    toast.success('Verification successful. Welcome back!');
+    return stored;
+  }
+
+  async resendMfaCode(challengeId: string): Promise<PendingMfaChallenge> {
+    const response = await fetch(`${this.apiUrl}/auth/mfa/resend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ challengeId }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage = payload?.error || 'Failed to resend verification code';
+      const error = new Error(errorMessage);
+      if (payload?.code) {
+        (error as any).code = payload.code;
+      }
+      if (payload?.nextAllowedAt) {
+        (error as any).nextAllowedAt = payload.nextAllowedAt;
+      }
+      throw error;
+    }
+
+    const resendCooldown = payload?.resendCooldownSeconds ?? this.getPendingMfa()?.resendCooldownSeconds ?? 60;
+    const resendAvailableAt = new Date(Date.now() + resendCooldown * 1000).toISOString();
+
+    const updated = this.updatePendingMfa({
+      challengeId: payload.challengeId ?? challengeId,
+      expiresAt: payload.expiresAt,
+      resendCount: payload.resendCount,
+      maskedEmail: payload.maskedEmail,
+      resendCooldownSeconds: resendCooldown,
+      resendAvailableAt,
+      emailDelivery: payload.emailDelivery,
+    });
+
+    if (!updated) {
+      // If no existing challenge, build a new one using stored email context if available
+      const pending = this.getPendingMfa();
+      if (pending) {
+        return this.savePendingMfa({
+          ...pending,
+          challengeId: payload.challengeId ?? challengeId,
+          expiresAt: payload.expiresAt,
+          resendCount: payload.resendCount,
+          maskedEmail: payload.maskedEmail ?? pending.maskedEmail,
+          resendCooldownSeconds: resendCooldown,
+          resendAvailableAt,
+          emailDelivery: payload.emailDelivery,
+        });
+      }
+
+      // Fallback: create minimal structure
+      const email = payload.email ?? this.getUser()?.email ?? '';
+      return this.buildPendingMfa(
+        {
+          success: true,
+          mfaRequired: true,
+          challengeId: payload.challengeId ?? challengeId,
+          expiresAt: payload.expiresAt,
+          maskedEmail: payload.maskedEmail ?? email,
+          resendCooldownSeconds: resendCooldown,
+          emailDelivery: payload.emailDelivery,
+          resendCount: payload.resendCount,
+        },
+        email,
+        false
+      );
+    }
+
+    return updated;
   }
 
   async logout(): Promise<void> {

@@ -2,12 +2,22 @@ import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma'; // Use shared Prisma instance
+import EmailService from '../services/emailService';
+import {
+  createOrResetChallenge,
+  verifyChallenge as verifyMfaChallenge,
+  resendChallenge as resendMfaChallenge,
+  maskEmail,
+  MFA_RESEND_COOLDOWN_SECONDS,
+} from '../services/mfaService';
 // import { logRoute, logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
+
+const MFA_ENFORCED_ROLES = new Set(['POLWEL', 'TRAINER', 'TRAINING_COORDINATOR']);
 
 // Generate access token (short-lived)
 function generateAccessToken(user: any): string {
@@ -24,12 +34,80 @@ function generateAccessToken(user: any): string {
 }
 
 // Generate refresh token (long-lived)
-function generateRefreshToken(user: any): string {
+function generateRefreshToken(user: any, options?: { rememberMe?: boolean }): string {
+  const expiresIn = options?.rememberMe ? '30d' : '7d';
+
   return jwt.sign(
     { userId: user.id, email: user.email },
     JWT_REFRESH_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn }
   );
+}
+
+async function issueTokensForUser(userId: string, options?: { rememberMe?: boolean }) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      organization: true,
+      permissions: {
+        select: { permissionName: true, granted: true },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new Error('User not found during MFA verification');
+  }
+
+  const userEmail = user.email;
+
+  if (!userEmail) {
+    throw new Error('User email is missing');
+  }
+
+  const normalizedUser = { ...user, email: userEmail };
+
+  const accessToken = generateAccessToken(normalizedUser);
+  const refreshToken = generateRefreshToken(normalizedUser, options);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      lastLogin: new Date(),
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      refreshToken,
+    },
+  });
+
+  const userData = {
+    id: user.id,
+  email: userEmail,
+    name: user.name,
+    role: user.role,
+    status: user.status,
+    organizationId: user.organizationId,
+    designation: user.designation,
+    division: user.division,
+    lastLogin: new Date(),
+    permissions: (user.permissions || [])
+      .filter((p) => p.granted)
+      .map((p) => p.permissionName),
+    organization: user.organization
+      ? {
+          id: user.organization.id,
+          name: user.organization.name,
+          status: user.organization.status,
+        }
+      : null,
+  };
+
+  return {
+    accessToken,
+  refreshToken,
+    user: userData,
+    expiresIn: '15m',
+  };
 }
 
 // Login endpoint
@@ -64,6 +142,13 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
     if (!user) {
       console.log(`❌ [AUTH] User not found: ${email}`);
       res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    const userEmail = user.email;
+    if (!userEmail) {
+      console.log(`❌ [AUTH] User record missing email: ${email}`);
+      res.status(500).json({ error: 'User account is misconfigured' });
       return;
     }
 
@@ -106,51 +191,42 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
       return;
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const requiresMfa = MFA_ENFORCED_ROLES.has(user.role);
 
-    // Update user login info
-    // logDatabaseQuery('User', 'update', { lastLogin: 'now', failedLoginAttempts: 0 });
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLogin: new Date(),
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        refreshToken: refreshToken
-      }
-    });
+    if (requiresMfa) {
+      const { challenge, code } = await createOrResetChallenge(user.id);
+      const emailDelivery = await EmailService.sendMfaCodeEmail(
+        userEmail,
+        user.name,
+        code,
+        challenge.expiresAt
+      );
 
-    // Prepare user data for response (exclude sensitive fields)
-    const userData = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status,
-      organizationId: user.organizationId,
-      designation: user.designation,
-      division: user.division,
-      lastLogin: new Date(),
-      permissions: (user.permissions || []).filter(p => p.granted).map(p => p.permissionName),
-      organization: user.organization ? {
-        id: user.organization.id,
-        name: user.organization.name,
-        status: user.organization.status
-      } : null
-    };
+      const duration = Date.now() - startTime;
+      console.log(
+        `✅ [AUTH] MFA challenge issued for user: ${userEmail} (${user.role}) - Duration: ${duration}ms`
+      );
 
+      res.status(200).json({
+        success: true,
+        mfaRequired: true,
+        challengeId: challenge.id,
+        expiresAt: challenge.expiresAt,
+  maskedEmail: maskEmail(userEmail),
+        resendCooldownSeconds: MFA_RESEND_COOLDOWN_SECONDS,
+        emailDelivery,
+      });
+      return;
+    }
+
+    const authPayload = await issueTokensForUser(user.id, { rememberMe });
     const duration = Date.now() - startTime;
-    console.log(`✅ [AUTH] Successful login for user: ${user.email} (${user.role}) - Duration: ${duration}ms`);
+  console.log(`✅ [AUTH] Successful login for user: ${userEmail} (${user.role}) - Duration: ${duration}ms`);
 
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      accessToken,
-      refreshToken,
-      user: userData,
-      expiresIn: '15m'
+      ...authPayload,
     });
 
   } catch (error) {
@@ -158,6 +234,123 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
     console.error(`❌ [AUTH] Login error - Duration: ${duration}ms`, error);
     const errorMessage = error instanceof Error ? error.message : 'Login failed';
     res.status(500).json({ error: errorMessage });
+  }
+});
+
+router.post('/mfa/verify', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { challengeId, code, rememberMe = false } = req.body;
+
+    if (!challengeId || !code) {
+      res.status(400).json({ error: 'Challenge ID and code are required' });
+      return;
+    }
+
+    const result = await verifyMfaChallenge(challengeId, code);
+
+    if (result.status === 'not_found') {
+      res.status(404).json({ error: 'Verification challenge not found', code: 'MFA_NOT_FOUND' });
+      return;
+    }
+
+    if (result.status === 'expired') {
+      res.status(410).json({ error: 'Verification code has expired. Please login again.', code: 'MFA_EXPIRED' });
+      return;
+    }
+
+    if (result.status === 'locked') {
+      res.status(423).json({ error: 'Too many invalid attempts. Please login again.', code: 'MFA_LOCKED' });
+      return;
+    }
+
+    if (result.status === 'invalid') {
+      res.status(400).json({
+        error: 'Invalid verification code',
+        code: 'MFA_INVALID',
+        attemptsRemaining: result.attemptsRemaining,
+      });
+      return;
+    }
+
+    const payload = await issueTokensForUser(result.userId, { rememberMe });
+
+    res.status(200).json({
+      success: true,
+      message: 'MFA verification successful',
+      ...payload,
+    });
+  } catch (error) {
+    console.error('❌ [AUTH] MFA verification error', error);
+    res.status(500).json({ error: 'Failed to verify MFA code' });
+  }
+});
+
+router.post('/mfa/resend', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { challengeId } = req.body;
+
+    if (!challengeId) {
+      res.status(400).json({ error: 'Challenge ID is required' });
+      return;
+    }
+
+    const result = await resendMfaChallenge(challengeId);
+
+    if (result.status === 'not_found') {
+      res.status(404).json({ error: 'Verification challenge not found', code: 'MFA_NOT_FOUND' });
+      return;
+    }
+
+    if (result.status === 'expired') {
+      res.status(410).json({ error: 'Verification code has expired. Please login again.', code: 'MFA_EXPIRED' });
+      return;
+    }
+
+    if (result.status === 'too_soon') {
+      res.status(429).json({
+        error: 'Please wait before requesting a new code',
+        code: 'MFA_TOO_SOON',
+        nextAllowedAt: result.nextAllowed,
+      });
+      return;
+    }
+
+    if (result.status === 'max_resends') {
+      res.status(429).json({
+        error: 'Maximum resend attempts reached. Please login again.',
+        code: 'MFA_MAX_RESENDS',
+      });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: result.challenge.userId } });
+
+    if (!user || !user.email) {
+      console.error('❌ [AUTH] MFA resend error: user not found for challenge');
+      res.status(500).json({ error: 'Unable to deliver verification code' });
+      return;
+    }
+
+    const emailDelivery = await EmailService.sendMfaCodeEmail(
+      user.email,
+      user.name,
+      result.code,
+      result.challenge.expiresAt
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code resent',
+      challengeId,
+      expiresAt: result.challenge.expiresAt,
+      resendCount: result.challenge.resendCount,
+      maskedEmail: maskEmail(user.email),
+      emailDelivery,
+      resendCooldownSeconds: MFA_RESEND_COOLDOWN_SECONDS,
+    });
+  } catch (error) {
+    console.error('❌ [AUTH] MFA resend error', error);
+    res.status(500).json({ error: 'Failed to resend MFA code' });
   }
 });
 

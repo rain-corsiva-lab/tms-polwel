@@ -8,6 +8,7 @@ import { Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { errorHandlers } from "@/lib/errorHandler";
 import { digitsOnly } from "@/lib/utils";
+import { isValidEmail } from "@/lib/validators";
 
 interface TrainingCoordinator {
   id: string;
@@ -74,6 +75,16 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
         description: "Please fill in all required fields.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address (name@email.com).",
+        variant: "destructive",
+      });
+      setLoading(false);
       return;
     }
 

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Plus, Users, User, Trash2, ChevronsUpDown, Check, FileDown, FileSpreadsheet, Loader2, UploadCloud } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isValidEmail } from "@/lib/validators";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { courseRunsApi, clientOrganizationsApi } from "@/lib/api";
@@ -867,6 +868,11 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           return;
         }
 
+        if (!isValidEmail(singleData.email)) {
+          toast({ title: "Validation Error", description: "Please enter a valid email address (name@email.com).", variant: "destructive" });
+          return;
+        }
+
         // Submit single registration
         const cleanSingleData = {
           ...singleData,
@@ -881,6 +887,11 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         // Validate group registration
         if (!groupData.division || groupData.learners.some((l) => !l.fullName || !l.email)) {
           toast({ title: "Error", description: "Please fill in all required fields for all learners", variant: "destructive" });
+          return;
+        }
+
+        if (groupData.learners.some((l) => !isValidEmail(l.email))) {
+          toast({ title: "Validation Error", description: "One or more learners have invalid email addresses. Please correct them.", variant: "destructive" });
           return;
         }
 

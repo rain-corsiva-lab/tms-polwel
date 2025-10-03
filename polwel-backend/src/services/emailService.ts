@@ -61,9 +61,10 @@ class EmailService {
     name: string,
     setupUrl: string
   ): Promise<boolean> {
-    const transporter = this.getTransporter();
+  const transporter = this.getTransporter();
+  const expiryMinutes = parseInt(process.env.MFA_CODE_EXPIRY_MINUTES || '10', 10);
 
-    const mailOptions = {
+  const mailOptions = {
       from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Trainer Account Setup',
@@ -258,6 +259,82 @@ class EmailService {
       }
     } catch (error) {
       console.error('Error sending password reset email:', error);
+      return false;
+    }
+  }
+
+  static async sendMfaCodeEmail(
+    email: string,
+    name: string | null,
+    code: string,
+    expiresAt: Date
+  ): Promise<boolean> {
+    const transporter = this.getTransporter();
+
+    const friendlyName = name?.trim() ? name : email;
+    const formattedExpiry = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(expiresAt);
+    const expiryMinutes = Math.max(
+      1,
+      Math.round((expiresAt.getTime() - Date.now()) / 60000)
+    );
+
+    const mailOptions = {
+      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      to: email,
+      subject: 'POLWEL Login Verification Code',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #111827; background-color: #f3f4f6; padding: 0; margin: 0; }
+            .container { max-width: 520px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+            .title { font-size: 24px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }
+            .subtitle { font-size: 16px; color: #4b5563; margin-bottom: 24px; }
+            .code { font-size: 36px; letter-spacing: 12px; font-weight: 700; text-align: center; color: #2563eb; background: #eff6ff; padding: 18px 24px; border-radius: 12px; border: 1px solid #bfdbfe; }
+            .footer { margin-top: 28px; font-size: 13px; color: #6b7280; }
+            .warning { margin-top: 20px; padding: 16px; border-radius: 12px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div style="padding: 32px 16px; background: #f3f4f6;">
+            <div class="container">
+              <div class="title">Verify your login</div>
+              <div class="subtitle">Hi ${friendlyName}, use the code below to complete your sign in to the POLWEL Training Management System.</div>
+              <div class="code">${code}</div>
+              <div class="subtitle" style="margin-top: 28px;">This code will expire at <strong>${formattedExpiry}</strong>. Enter it on the sign-in page within the next ${expiryMinutes} minutes.</div>
+              <div class="warning">If you didn’t request this code, please secure your account immediately by resetting your password.</div>
+              <div class="footer">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    try {
+      if (transporter) {
+        await transporter.sendMail(mailOptions);
+        console.log(`MFA code email sent to ${email}`);
+        return true;
+      } else {
+        console.log('=== MFA CODE EMAIL (Development Mode) ===');
+        console.log(`To: ${email}`);
+        console.log(`Recipient: ${friendlyName}`);
+        console.log(`Code: ${code}`);
+        console.log(`Expires At: ${formattedExpiry}`);
+        console.log('========================================');
+        return true;
+      }
+    } catch (error) {
+      console.error('Error sending MFA code email:', error);
       return false;
     }
   }
