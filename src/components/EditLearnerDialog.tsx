@@ -534,7 +534,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Total Fees Before GST</Label>
+                <Label>Total Fees</Label>
                 <div className="text-xl font-bold text-blue-600">{formatCurrency(form.totalFees)}</div>
               </div>
               <div className="space-y-2 col-span-2">

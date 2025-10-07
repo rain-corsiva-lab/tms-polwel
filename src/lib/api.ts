@@ -1173,9 +1173,27 @@ export const courseRunsApi = {
     return apiRequest('/course-runs/status-options');
   },
 
-  cancel: async (id: string) => {
+  cancel: async (id: string, payload?: { reason?: string }) => {
     return apiRequest(`/course-runs/${id}/cancel`, {
       method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    });
+  },
+
+  getWorkflowState: async (id: string) => {
+    return apiRequest(`/course-runs/${id}/workflow`);
+  },
+
+  performWorkflowAction: async (
+    id: string,
+    payload: {
+      action: string;
+      sendEmails?: boolean;
+    }
+  ) => {
+    return apiRequest(`/course-runs/${id}/workflow/action`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 
@@ -1246,6 +1264,43 @@ export const courseRunsApi = {
     return apiRequest(`/course-runs/${courseRunId}/trainer-assignments`, {
       method: 'PUT',
       body: JSON.stringify({ trainers }),
+    });
+  },
+
+  // Mark course run as confirmed (PENDING → CONFIRMED_PENDING_TA_APPROVAL)
+  markAsConfirmed: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/mark-confirmed`, {
+      method: 'POST',
+    });
+  },
+
+  // Approve trainer assignment (CONFIRMED_PENDING_TA_APPROVAL → CONFIRMED_PENDING_CONFIRMATION_EMAILS)
+  approveTrainerAssignment: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/approve-trainer-assignment`, {
+      method: 'POST',
+    });
+  },
+
+  // Reject trainer assignment (stays at CONFIRMED_PENDING_TA_APPROVAL)
+  rejectTrainerAssignment: async (courseRunId: string, payload: { rejectionReason: string }) => {
+    return apiRequest(`/course-runs/${courseRunId}/reject-trainer-assignment`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Send course confirmation email to learners
+  sendCourseConfirmationEmail: async (courseRunId: string, payload: { cc?: string; additionalBodyContent?: string }) => {
+    return apiRequest(`/course-runs/${courseRunId}/send-course-confirmation-email`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Send training assignment email to both learners and trainers (transitions to CONFIRMED)
+  sendTrainingAssignmentEmailToLearners: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/send-training-assignment-email-learners`, {
+      method: 'POST',
     });
   },
 };

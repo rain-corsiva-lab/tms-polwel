@@ -34,6 +34,7 @@ import referencesRoutes from './routes/references';
 import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import trainerDashboardRoutes from './routes/trainerDashboard';
 import profileRoutes from './routes/profile';
+import { startCourseRunStatusJob, evaluateCourseRunStatusesNow } from './jobs/courseRunStatusJob';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -177,6 +178,12 @@ const startServer = () => {
     console.log(`🚀 POLWEL API Server running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`⚠️  Database connection will be established after Prisma setup`);
+
+    evaluateCourseRunStatusesNow().catch((error) => {
+      console.error('Immediate course run status evaluation failed on startup:', error);
+    });
+
+    startCourseRunStatusJob();
   });
 };
 

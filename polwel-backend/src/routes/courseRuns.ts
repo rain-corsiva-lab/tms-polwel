@@ -13,6 +13,9 @@ router.get('/', requirePermissions('course-run.view'), courseRunController.getAl
 // GET /api/course-runs/status-options - Get status options for filters
 router.get('/status-options', requirePermissions('course-run.view'), courseRunController.getStatusOptions);
 
+// GET /api/course-runs/:id/workflow - Retrieve workflow metadata for a course run
+router.get('/:id/workflow', requirePermissions('course-run.view'), courseRunController.getWorkflowState);
+
 // GET /api/course-runs/:id - Get single course run by ID
 router.get('/:id', requirePermissions('course-run.view'), courseRunController.getById);
 
@@ -21,6 +24,9 @@ router.post('/', requirePermissions('course-run.create'), courseRunController.cr
 
 // PUT /api/course-runs/:id - Update course run
 router.put('/:id', requirePermissions('course-run.edit'), courseRunController.update);
+
+// POST /api/course-runs/:id/workflow/action - Execute workflow action
+router.post('/:id/workflow/action', requirePermissions('course-run.edit'), courseRunController.performWorkflowAction);
 
 // POST /api/course-runs/:id/cancel - Cancel course run
 router.post('/:id/cancel', requirePermissions('course-run.edit'), courseRunController.cancel);
@@ -54,5 +60,20 @@ router.put('/:id/trainer-assignments', requirePermissions('course-run.edit'), co
 
 // POST /api/course-runs/:id/send-trainer-assignment-email - Send trainer assignment emails
 router.post('/:id/send-trainer-assignment-email', requirePermissions('course-run.edit'), courseRunController.sendTrainerAssignmentEmail);
+
+// POST /api/course-runs/:id/mark-confirmed - Mark course run as confirmed (PENDING → CONFIRMED_PENDING_TA_APPROVAL)
+router.post('/:id/mark-confirmed', requirePermissions('course-run.edit'), courseRunController.markAsConfirmed);
+
+// POST /api/course-runs/:id/approve-trainer-assignment - Approve trainer assignment (CONFIRMED_PENDING_TA_APPROVAL → CONFIRMED_PENDING_CONFIRMATION_EMAILS)
+router.post('/:id/approve-trainer-assignment', requirePermissions('course-run.approve'), courseRunController.approveTrainerAssignment);
+
+// POST /api/course-runs/:id/reject-trainer-assignment - Reject trainer assignment
+router.post('/:id/reject-trainer-assignment', requirePermissions('course-run.approve'), courseRunController.rejectTrainerAssignment);
+
+// POST /api/course-runs/:id/send-course-confirmation-email - Send course confirmation email to learners
+router.post('/:id/send-course-confirmation-email', requirePermissions('course-run.edit'), courseRunController.sendCourseConfirmationEmail);
+
+// POST /api/course-runs/:id/send-training-assignment-email-learners - Send training assignment email to all learners and trainers
+router.post('/:id/send-training-assignment-email-learners', requirePermissions('course-run.edit'), courseRunController.sendTrainingAssignmentEmailToLearners);
 
 export default router;

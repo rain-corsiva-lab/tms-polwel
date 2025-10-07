@@ -1016,7 +1016,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         </DialogHeader>
 
         {/* Mode Selection */}
-        <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
           <Card
             className={`cursor-pointer transition-all ${mode === "single" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
             onClick={() => setMode("single")}
@@ -1037,7 +1037,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
               <p className="text-sm text-gray-500">Add multiple learners at once</p>
             </CardContent>
           </Card>
-          <Card
+          {/* <Card
             className={`cursor-pointer transition-all ${mode === "import" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
             onClick={() => setMode("import")}
           >
@@ -1046,7 +1046,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
               <h3 className="font-medium">Import from File</h3>
               <p className="text-sm text-gray-500">Upload the learner template (CSV/XLSX)</p>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {mode === "single" ? (
@@ -1327,7 +1327,7 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <Label>Total Fees Before GST</Label>
+            <Label>Total Fees</Label>
             <div className="text-2xl font-bold text-blue-600">${data.totalFees}</div>
           </div>
           <div className="space-y-2 col-span-2">

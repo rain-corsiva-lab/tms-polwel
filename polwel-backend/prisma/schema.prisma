@@ -67,6 +67,7 @@ model User {
   usersCreated                    User[]                          @relation("UserCreatedBy")
   organization                    Organization?                   @relation(fields: [organizationId], references: [id])
   venuesCreated                   Venue[]
+  courseRunsCancelled             CourseRun[]                     @relation("CourseRunCancelledBy")
 
   @@index([createdBy], map: "users_createdBy_fkey")
   @@index([organizationId], map: "users_organizationId_fkey")
@@ -200,10 +201,18 @@ model CourseRun {
   course                         Course                          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   venue                          Venue?                          @relation(fields: [venueId], references: [id])
   trainerAssignmentEmailHistory  TrainerAssignmentEmailHistory[]
+  cancelReason                   String?                         @db.Text
+  cancelledById                  String?
+  cancelledAt                    DateTime?
+  learnerEmailStatus             LearnerEmailStatus              @default(PENDING)
+  learnerEmailStatusUpdatedAt    DateTime?
+  statusLastEvaluatedAt          DateTime?
+  cancelledBy                    User?                           @relation("CourseRunCancelledBy", fields: [cancelledById], references: [id])
 
   @@index([courseId], map: "course_runs_courseId_fkey")
   @@index([venueId], map: "course_runs_venueId_fkey")
   @@index([billingReportId], map: "course_runs_billingReportId_fkey")
+  @@index([cancelledById], map: "course_runs_cancelledById_fkey")
   @@map("course_runs")
 }
 
@@ -252,6 +261,7 @@ model CourseRunTrainer {
   additionalCost               Decimal?  @db.Decimal(10, 2)
   remarks                      String?   @db.Text
   trainerAssignmentEmailStatus String?
+  emailStatus                  String?   @default("PENDING")
   createdAt                    DateTime  @default(now())
   updatedAt                    DateTime  @updatedAt
   deletedAt                    DateTime?
@@ -481,6 +491,8 @@ model CourseRunLearner {
   updatedAt                     DateTime                   @updatedAt
   deletedAt                     DateTime?
   departmentName                String?
+  confirmationEmailStatus       ConfirmationEmailStatus    @default(PENDING)
+  confirmationEmailLastSentAt   DateTime?
   confirmationEmailHistory      ConfirmationEmailHistory[]
   courseRunBillingEntry         CourseRunBillingEntry?     @relation(fields: [courseRunBillingEntryId], references: [id])
   courseRun                     CourseRun                  @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
@@ -612,6 +624,14 @@ enum PaymentMode {
   NOT_APPLICABLE
 }
 
+enum LearnerEmailStatus {
+  NOT_REQUIRED
+  PENDING
+  IN_PROGRESS
+  SENT
+  FAILED
+}
+
 enum CourseStatus {
   DRAFT
   PENDING
@@ -620,11 +640,19 @@ enum CourseStatus {
   CONFIRMED
   CONFIRMED_PENDING_CONFIRMATION_EMAILS
   IN_PROGRESS
+  PENDING_BILLING
   COMPLETED
   CANCELLED
   ARCHIVED
   PUBLISHED
   ONGOING
+}
+
+enum ConfirmationEmailStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
 }
 
 enum BookingStatus {

@@ -288,33 +288,83 @@ class EmailService {
     const mailOptions = {
       from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
       to: email,
-      subject: 'POLWEL Login Verification Code',
+      subject: 'Your POLWEL security code',
       html: `
         <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #111827; background-color: #f3f4f6; padding: 0; margin: 0; }
-            .container { max-width: 520px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
-            .title { font-size: 24px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }
-            .subtitle { font-size: 16px; color: #4b5563; margin-bottom: 24px; }
-            .code { font-size: 36px; letter-spacing: 12px; font-weight: 700; text-align: center; color: #2563eb; background: #eff6ff; padding: 18px 24px; border-radius: 12px; border: 1px solid #bfdbfe; }
-            .footer { margin-top: 28px; font-size: 13px; color: #6b7280; }
-            .warning { margin-top: 20px; padding: 16px; border-radius: 12px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; font-size: 13px; }
-          </style>
-        </head>
-        <body>
-          <div style="padding: 32px 16px; background: #f3f4f6;">
-            <div class="container">
-              <div class="title">Verify your login</div>
-              <div class="subtitle">Hi ${friendlyName}, use the code below to complete your sign in to the POLWEL Training Management System.</div>
-              <div class="code">${code}</div>
-              <div class="subtitle" style="margin-top: 28px;">This code will expire at <strong>${formattedExpiry}</strong>. Enter it on the sign-in page within the next ${expiryMinutes} minutes.</div>
-              <div class="warning">If you didn’t request this code, please secure your account immediately by resetting your password.</div>
-              <div class="footer">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</div>
-            </div>
-          </div>
-        </body>
+        <html lang="en">
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>POLWEL Security Code</title>
+            <style>
+              body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
+              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%); padding: 32px 16px; }
+              .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
+              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1e3a8a, #0f172a); color: #e0f2fe; text-align: left; }
+              .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; }
+              .header p { margin: 4px 0 0; font-size: 14px; color: rgba(240,253,250,0.85); }
+              .content { padding: 32px 28px; }
+              .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
+              .code-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+              .code-label { text-transform: uppercase; font-size: 13px; letter-spacing: 2.2px; color: #2563eb; font-weight: 600; margin-bottom: 12px; }
+              .code { font-size: 38px; letter-spacing: 12px; font-weight: 700; color: #1e40af; }
+              .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
+              .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
+              .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
+              .checklist ul { padding: 0; margin: 0; list-style: none; }
+              .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
+              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #1d4ed8; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
+              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #fef3c7; border: 1px solid #fbbf24; font-size: 13px; color: #9a3412; line-height: 1.6; }
+              .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
+              .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
+              @media (max-width: 600px) {
+                .outer { margin: 0 12px; }
+                .content { padding: 28px 22px; }
+                .code { letter-spacing: 10px; font-size: 32px; }
+              }
+            </style>
+          </head>
+          <body>
+            <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">
+              <tr>
+                <td align="center">
+                  <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
+                    <tr>
+                      <td class="header">
+                        <h1>Secure your login</h1>
+                        <p>POLWEL Training Management System</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="content">
+                        <p class="greeting">Hi ${friendlyName},</p>
+                        <p class="meta">Use the one-time security code below to complete your sign in. The code expires at <strong>${formattedExpiry}</strong> (${expiryMinutes} minute${expiryMinutes === 1 ? '' : 's'} remaining).</p>
+                        <div class="code-card">
+                          <div class="code-label">One-time security code</div>
+                          <div class="code">${code}</div>
+                        </div>
+                        <div class="checklist">
+                          <p>Next steps:</p>
+                          <ul>
+                            <li><span>1</span><div>Enter the code on the verification screen as soon as possible.</div></li>
+                            <li><span>2</span><div>Make sure you are signing in from a trusted device and network.</div></li>
+                            <li><span>3</span><div>Do not share this code with anyone. POLWEL will never ask you for it.</div></li>
+                          </ul>
+                        </div>
+                        <div class="warning">Didn&#39;t request this code? Reset your password immediately or contact the POLWEL support team so we can help secure your account.</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="footer">
+                        &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
         </html>
       `,
     };
@@ -482,6 +532,144 @@ class EmailService {
     } catch (err) {
       console.error('(EmailService) Failed to send trainer assignment email:', (err as any)?.message || err);
       return { success: false, error: (err as any)?.message || String(err) };
+    }
+  }
+
+  static async sendLearnerCourseConfirmationEmail(params: {
+    email: string;
+    learnerName: string;
+    courseTitle: string;
+    courseCode?: string;
+    serialNumber?: string;
+    startDate?: Date;
+    endDate?: Date;
+    venueName?: string;
+    additionalNotes?: string;
+  }): Promise<boolean> {
+    const {
+      email,
+      learnerName,
+      courseTitle,
+      courseCode,
+      serialNumber,
+      startDate,
+      endDate,
+      venueName,
+      additionalNotes,
+    } = params;
+
+    const transporter = this.getTransporter();
+
+    const formatDate = (date?: Date) => {
+      if (!date) return 'To be confirmed';
+      try {
+        return new Intl.DateTimeFormat('en-SG', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }).format(date);
+      } catch (error) {
+        console.warn('Failed to format date for learner confirmation email:', error);
+        return date.toISOString();
+      }
+    };
+
+    const mailOptions = {
+      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      to: email,
+      subject: `POLWEL Course Confirmation – ${courseTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 24px; color: #111827; }
+              .card { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(15,23,42,0.08); overflow: hidden; }
+              .header { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #ffffff; padding: 32px 28px; }
+              .header h1 { margin: 0; font-size: 24px; }
+              .content { padding: 28px; }
+              .content p { margin: 0 0 16px; line-height: 1.6; }
+              .details { border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; margin: 24px 0; background-color: #f9fafb; }
+              .details h2 { margin: 0 0 16px; font-size: 18px; color: #1f2937; }
+              .details dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 24px; }
+              .details dt { font-weight: 600; font-size: 13px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.08em; }
+              .details dd { margin: 4px 0 0; font-size: 15px; color: #1f2937; }
+              .footer { padding: 24px 28px; background: #f9fafb; font-size: 13px; color: #6b7280; }
+              .cta { margin-top: 12px; display: inline-block; padding: 12px 18px; background: #2563eb; color: #ffffff; border-radius: 8px; text-decoration: none; font-weight: 600; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="header">
+                <h1>Course Confirmation</h1>
+                <p style="margin: 6px 0 0; font-size: 16px; opacity: 0.9;">${courseTitle}</p>
+              </div>
+              <div class="content">
+                <p>Dear ${learnerName || 'Participant'},</p>
+                <p>
+                  This is to confirm your registration for <strong>${courseTitle}</strong>${courseCode ? ` (${courseCode})` : ''}.
+                  Please find the course run details below. We look forward to your participation.
+                </p>
+
+                <div class="details">
+                  <h2>Course Run Details</h2>
+                  <dl>
+                    <div>
+                      <dt>Serial Number</dt>
+                      <dd>${serialNumber || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>Start</dt>
+                      <dd>${formatDate(startDate)}</dd>
+                    </div>
+                    <div>
+                      <dt>End</dt>
+                      <dd>${formatDate(endDate)}</dd>
+                    </div>
+                    <div>
+                      <dt>Venue / Platform</dt>
+                      <dd>${venueName || 'Venue to be advised'}</dd>
+                    </div>
+                  </dl>
+                </div>
+
+                ${additionalNotes ? `<p style="background: #fef3c7; border: 1px solid #f59e0b; padding: 16px; border-radius: 10px; color: #92400e;">
+                  <strong>Additional Notes:</strong><br />${additionalNotes}
+                </p>` : ''}
+
+                <p style="margin-top: 24px;">If you have any questions, kindly reach out to your training coordinator or reply to this email.</p>
+                <p>Warm regards,<br /><strong>POLWEL Training Team</strong></p>
+              </div>
+              <div class="footer">
+                <p>This email was sent automatically by the POLWEL Training Management System.</p>
+                <p>&copy; ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
+    };
+
+    try {
+      if (!transporter) {
+        console.log('(EmailService) SMTP not configured — learner confirmation email would be:');
+        console.log('To:', email);
+        console.log('Course:', courseTitle);
+        console.log('Serial:', serialNumber);
+        console.log('Start:', formatDate(startDate));
+        console.log('End:', formatDate(endDate));
+        console.log('Venue:', venueName);
+        return true;
+      }
+
+      await transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Failed to send learner confirmation email:', error);
+      return false;
     }
   }
 }

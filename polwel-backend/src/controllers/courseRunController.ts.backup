@@ -119,7 +119,7 @@ type AttendanceSnapshot = {
 };
 
 const loadAttendanceSnapshot = async (courseRunId: string, editorId: string | null): Promise<AttendanceSnapshot | null> => {
-  const courseRun = await prisma.courseRun.findFirst({
+  const courseRun = await prisma.courseRun.findUnique({
     where: { id: courseRunId, deletedAt: null },
     include: {
       course: {
@@ -727,7 +727,7 @@ export const courseRunController = {
       };
 
       const courseRun = await prisma.courseRun.update({
-        where: { id: id },
+        where: { id },
         data: courseRunData,
         include: {
           course: {
@@ -917,7 +917,7 @@ export const courseRunController = {
 
       // Update status to CANCELLED
       const courseRun = await prisma.courseRun.update({
-        where: { id: id },
+        where: { id },
         data: {
           status: 'CANCELLED',
           cancelReason: reason,
@@ -1002,7 +1002,7 @@ export const courseRunController = {
 
       // Soft delete
       const courseRun = await prisma.courseRun.update({
-        where: { id: id },
+        where: { id },
         data: {
           deletedAt: new Date(),
           updatedAt: new Date(),
@@ -1759,7 +1759,7 @@ export const courseRunController = {
 
       const learnerIds = Array.from(recordMap.keys());
 
-      const courseRun = await prisma.courseRun.findFirst({
+      const courseRun = await prisma.courseRun.findUnique({
         where: { id: courseRunId, deletedAt: null },
         include: {
           course: {
@@ -1941,7 +1941,7 @@ export const courseRunController = {
 
       // Verify course run exists
       const courseRun = await prisma.courseRun.findUnique({
-        where: { id: id },
+        where: { id },
         include: { course: true },
       });
 
@@ -1976,7 +1976,7 @@ export const courseRunController = {
 
       // Fetch updated course run with trainers
       const updated = await prisma.courseRun.findUnique({
-        where: { id: id },
+        where: { id },
         include: {
           courseRunTrainers: {
             include: {
@@ -2020,7 +2020,7 @@ export const courseRunController = {
 
       // Fetch course run with all necessary details
       const courseRun = await prisma.courseRun.findUnique({
-        where: { id: id },
+        where: { id },
         include: {
           course: {
             select: {
@@ -2186,19 +2186,11 @@ export const courseRunController = {
   },
 
   // Mark course run as confirmed (PENDING → CONFIRMED_PENDING_TA_APPROVAL)
-  async markAsConfirmed(req: Request, res: Response): Promise<void> {
+  async markAsConfirmed(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
-      if (!id) {
-        res.status(400).json({
-          success: false,
-          error: 'Course run ID is required',
-        });
-        return;
-      }
-
-      const courseRun = await prisma.courseRun.findFirst({
+      const courseRun = await prisma.courseRun.findUnique({
         where: { id, deletedAt: null },
         include: {
           course: true,
@@ -2206,23 +2198,21 @@ export const courseRunController = {
       });
 
       if (!courseRun) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Course run not found',
         });
-        return;
       }
 
       if (courseRun.status !== 'PENDING') {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: `Cannot mark as confirmed. Current status is ${courseRun.status}`,
         });
-        return;
       }
 
       const updated = await prisma.courseRun.update({
-        where: { id: id },
+        where: { id },
         data: {
           status: 'CONFIRMED_PENDING_TA_APPROVAL',
           statusLastEvaluatedAt: new Date(),
@@ -2241,19 +2231,11 @@ export const courseRunController = {
   },
 
   // Approve trainer assignment (CONFIRMED_PENDING_TA_APPROVAL → CONFIRMED_PENDING_CONFIRMATION_EMAILS)
-  async approveTrainerAssignment(req: Request, res: Response): Promise<void> {
+  async approveTrainerAssignment(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
-      if (!id) {
-        res.status(400).json({
-          success: false,
-          error: 'Course run ID is required',
-        });
-        return;
-      }
-
-      const courseRun = await prisma.courseRun.findFirst({
+      const courseRun = await prisma.courseRun.findUnique({
         where: { id, deletedAt: null },
         include: {
           course: true,
@@ -2266,23 +2248,21 @@ export const courseRunController = {
       });
 
       if (!courseRun) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Course run not found',
         });
-        return;
       }
 
       if (courseRun.status !== 'CONFIRMED_PENDING_TA_APPROVAL') {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: `Cannot approve trainer assignment. Current status is ${courseRun.status}`,
         });
-        return;
       }
 
       const updated = await prisma.courseRun.update({
-        where: { id: id },
+        where: { id },
         data: {
           status: 'CONFIRMED_PENDING_CONFIRMATION_EMAILS',
           statusLastEvaluatedAt: new Date(),
@@ -2301,36 +2281,26 @@ export const courseRunController = {
   },
 
   // Reject trainer assignment (stays at CONFIRMED_PENDING_TA_APPROVAL)
-  async rejectTrainerAssignment(req: Request, res: Response): Promise<void> {
+  async rejectTrainerAssignment(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
-      if (!id) {
-        res.status(400).json({
-          success: false,
-          error: 'Course run ID is required',
-        });
-        return;
-      }
-
-      const courseRun = await prisma.courseRun.findFirst({
+      const courseRun = await prisma.courseRun.findUnique({
         where: { id, deletedAt: null },
       });
 
       if (!courseRun) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Course run not found',
         });
-        return;
       }
 
       if (courseRun.status !== 'CONFIRMED_PENDING_TA_APPROVAL') {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: `Cannot reject trainer assignment. Current status is ${courseRun.status}`,
         });
-        return;
       }
 
       // Just return success - no status change
@@ -2345,20 +2315,12 @@ export const courseRunController = {
   },
 
   // Send course confirmation email to learners
-  async sendCourseConfirmationEmail(req: Request, res: Response): Promise<void> {
+  async sendCourseConfirmationEmail(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const { cc, additionalBodyContent } = req.body;
 
-      if (!id) {
-        res.status(400).json({
-          success: false,
-          error: 'Course run ID is required',
-        });
-        return;
-      }
-
-      const courseRun = await prisma.courseRun.findFirst({
+      const courseRun = await prisma.courseRun.findUnique({
         where: { id, deletedAt: null },
         include: {
           course: true,
@@ -2368,6 +2330,7 @@ export const courseRunController = {
             include: {
               learner: {
                 include: {
+                  organization: true,
                 },
               },
             },
@@ -2376,19 +2339,17 @@ export const courseRunController = {
       });
 
       if (!courseRun) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Course run not found',
         });
-        return;
       }
 
       if (courseRun.status !== 'CONFIRMED_PENDING_CONFIRMATION_EMAILS') {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: `Cannot send confirmation emails. Current status is ${courseRun.status}`,
         });
-        return;
       }
 
       // Send emails to all learners
@@ -2427,19 +2388,11 @@ export const courseRunController = {
   },
 
   // Send training assignment email to learners
-  async sendTrainingAssignmentEmailToLearners(req: Request, res: Response): Promise<void> {
+  async sendTrainingAssignmentEmailToLearners(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
-      if (!id) {
-        res.status(400).json({
-          success: false,
-          error: 'Course run ID is required',
-        });
-        return;
-      }
-
-      const courseRun = await prisma.courseRun.findFirst({
+      const courseRun = await prisma.courseRun.findUnique({
         where: { id, deletedAt: null },
         include: {
           course: true,
@@ -2449,6 +2402,7 @@ export const courseRunController = {
             include: {
               learner: {
                 include: {
+                  organization: true,
                 },
               },
             },
@@ -2463,19 +2417,17 @@ export const courseRunController = {
       });
 
       if (!courseRun) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Course run not found',
         });
-        return;
       }
 
       if (courseRun.status !== 'CONFIRMED_PENDING_CONFIRMATION_EMAILS') {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: `Cannot send training assignment emails. Current status is ${courseRun.status}`,
         });
-        return;
       }
 
       // Send emails to all learners and trainers
@@ -2522,7 +2474,7 @@ export const courseRunController = {
 
       // Update course run status to CONFIRMED after all emails sent
       await prisma.courseRun.update({
-        where: { id: id },
+        where: { id },
         data: {
           status: 'CONFIRMED',
           statusLastEvaluatedAt: new Date(),
