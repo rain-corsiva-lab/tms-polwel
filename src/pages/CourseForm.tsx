@@ -27,6 +27,8 @@ interface FormState {
   courseCode: string;
   title: string;
   description: string;
+  learningObjectives: string;
+  courseOutline: string;
   category: string;
   duration: string;
   durationType: string;
@@ -47,6 +49,8 @@ const initialForm: FormState = {
   courseCode: "",
   title: "",
   description: "",
+  learningObjectives: "",
+  courseOutline: "",
   category: "",
   duration: "",
   durationType: "days",
@@ -102,11 +106,25 @@ const CourseForm: React.FC = () => {
           referencesApi.getPartners().catch(() => null),
           venuesApi.getAll().catch(() => null),
         ]);
+
+        // Extract venues from response and filter ACTIVE only
+        let venuesList = [];
+        if (ve?.success && Array.isArray(ve?.venues)) {
+          venuesList = ve.venues;
+        } else if (Array.isArray(ve?.data?.venues)) {
+          venuesList = ve.data.venues;
+        } else if (Array.isArray(ve?.data)) {
+          venuesList = ve.data;
+        }
+
+        // Filter to only show ACTIVE venues
+        const activeVenues = venuesList.filter((v: any) => v.status === "ACTIVE");
+
         setRefs({
           categories: cat?.data?.categories || [],
           trainers: tr?.data?.trainers || [],
           partners: pa?.data?.partners || [],
-          venues: Array.isArray(ve?.data) ? ve.data : ve?.data?.venues || [],
+          venues: activeVenues,
         });
       } finally {
         setLoading((l) => ({ ...l, categories: false, trainers: false, venues: false }));
@@ -133,6 +151,8 @@ const CourseForm: React.FC = () => {
             courseCode: c.courseCode || "",
             title: c.title || "",
             description: c.description || "",
+            learningObjectives: c.learningObjectives || "",
+            courseOutline: c.courseOutline || "",
             category: c.category || "",
             duration: c.duration || "",
             durationType: c.durationType || "days",
@@ -258,6 +278,8 @@ const CourseForm: React.FC = () => {
       courseCode: formData.courseCode,
       title: formData.title,
       description: formData.description,
+      learningObjectives: formData.learningObjectives,
+      courseOutline: formData.courseOutline,
       category: formData.category,
       duration: formData.duration,
       durationType: formData.durationType,
@@ -281,7 +303,7 @@ const CourseForm: React.FC = () => {
         await coursesApi.create(payload);
         toast({ title: "Created", description: "Course created" });
       }
-      navigate("/course-creation");
+      navigate("/courses");
     } catch (err: any) {
       console.error("Course save error:", err);
       let title = "Error";
@@ -381,7 +403,7 @@ const CourseForm: React.FC = () => {
           </TabsContent>
         </Tabs>
         <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={() => navigate(isEdit && id ? `/course-creation/detail/${id}` : "/course-creation")}>
+          <Button type="button" variant="outline" onClick={() => navigate(isEdit && id ? `/courses/detail/${id}` : "/courses")}>
             Cancel
           </Button>
           <Button type="submit" disabled={loading.submitting}>

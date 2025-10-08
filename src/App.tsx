@@ -137,7 +137,7 @@ const App = () => (
 
               {/* Course Management */}
               <Route
-                path="course-creation"
+                path="courses"
                 element={
                   <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["course-venue.view"]}>
                     <CourseArchive />
@@ -145,7 +145,7 @@ const App = () => (
                 }
               />
               <Route
-                path="course-creation/new"
+                path="courses/new"
                 element={
                   <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["course-venue.create"]}>
                     <CourseForm />
@@ -153,7 +153,7 @@ const App = () => (
                 }
               />
               <Route
-                path="course-creation/edit/:id"
+                path="courses/edit/:id"
                 element={
                   <ProtectedRoute requiredRoles={["POLWEL", "TRAINING_COORDINATOR"]} requiredPermissions={["course-venue.edit"]}>
                     <CourseForm />
@@ -161,7 +161,7 @@ const App = () => (
                 }
               />
               <Route
-                path="course-creation/view/:id"
+                path="courses/view/:id"
                 element={
                   <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <CourseForm />
@@ -169,7 +169,7 @@ const App = () => (
                 }
               />
               <Route
-                path="course-creation/detail/:id"
+                path="courses/detail/:id"
                 element={
                   <ProtectedRoute requiredPermissions={["course-venue.view"]}>
                     <CourseDetail />

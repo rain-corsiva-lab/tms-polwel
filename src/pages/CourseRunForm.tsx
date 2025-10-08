@@ -21,6 +21,7 @@ interface Course {
   title: string;
   courseCode: string;
   category?: string;
+  status?: string;
 }
 
 interface Venue {
@@ -112,13 +113,15 @@ const CourseRunForm: React.FC = () => {
       setLoading(true);
       try {
         const [coursesResponse, venuesResponse, trainersResponse] = await Promise.all([
-          coursesApi.getAll({ limit: 1000 }),
+          coursesApi.getAll({ limit: 1000, status: "ACTIVE" }),
           venuesApi.getAll(),
           trainersApi.getAll({ limit: 1000 }),
         ]);
 
         if (coursesResponse.success) {
-          setCourses(coursesResponse.courses || []);
+          // Filter to only show ACTIVE courses
+          const activeCourses = (coursesResponse.courses || []).filter((c: Course) => c.status === "ACTIVE");
+          setCourses(activeCourses);
         }
 
         if (venuesResponse.success) {
@@ -131,7 +134,7 @@ const CourseRunForm: React.FC = () => {
 
         // Pre-select course if courseId is provided
         if (courseId && coursesResponse.success) {
-          const selectedCourse = coursesResponse.courses?.find((c: Course) => c.id === courseId);
+          const selectedCourse = coursesResponse.courses?.find((c: Course) => c.id === courseId && c.status === "ACTIVE");
           if (selectedCourse) {
             handleCourseChange(courseId);
           }

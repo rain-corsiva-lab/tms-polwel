@@ -110,40 +110,42 @@ model Organization {
 }
 
 model Course {
-  id                 String       @id @default(cuid())
+  id                 String        @id @default(cuid())
   title              String
-  description        String?      @db.Text
+  description        String?       @db.Text
+  learningObjectives String?       @db.Text
+  courseOutline      String?       @db.Text
   objectives         Json?
   duration           String
-  durationType       String       @default("days")
-  maxParticipants    Int          @default(25)
-  minParticipants    Int          @default(1)
+  durationType       String        @default("days")
+  maxParticipants    Int           @default(25)
+  minParticipants    Int           @default(1)
   category           String?
   level              String?
   prerequisites      Json?
   materials          Json?
-  venueFee           Float        @default(0)
+  venueFee           Float         @default(0)
   venue              String?
-  certificates       String       @default("polwel")
-  remarks            String?      @db.Text
-  courseOutline      Json?
-  targetAudience     String?      @db.Text
-  syllabus           String?      @db.Text
-  assessmentMethod   String?      @db.Text
+  certificates       String        @default("polwel")
+  remarks            String?       @db.Text
+  targetAudience     String?       @db.Text
+  syllabus           String?       @db.Text
+  assessmentMethod   String?       @db.Text
   certificationType  String?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  status             CourseStatus  @default(ACTIVE)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
   createdBy          String?
-  courseCode         String?      @unique @db.VarChar(50)
+  courseCode         String?       @unique @db.VarChar(50)
   specifiedLocation  String?
-  defaultCourseFee   Float        @default(0)
+  defaultCourseFee   Float         @default(0)
   discounts          Json?
-  billingRate        Float        @default(0)
-  contractsFeePayout Float        @default(0)
+  billingRate        Float         @default(0)
+  contractsFeePayout Float         @default(0)
   venueFeeType       String?
   bookings           Booking[]
   runs               CourseRun[]
-  creator            User?        @relation("CourseCreator", fields: [createdBy], references: [id])
+  creator            User?         @relation("CourseCreator", fields: [createdBy], references: [id])
   trainerFees        TrainerFee[]
   courseTrainers     CourseTrainer[]
 
@@ -637,6 +639,7 @@ enum CourseStatus {
   PENDING
   CONFIRMED_PENDING_TA_APPROVAL
   ACTIVE
+  INACTIVE
   CONFIRMED
   CONFIRMED_PENDING_CONFIRMATION_EMAILS
   IN_PROGRESS

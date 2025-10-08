@@ -1121,6 +1121,13 @@ export const coursesApi = {
     });
   },
 
+  // Toggle course status
+  toggleStatus: async (id: string | number) => {
+    return apiRequest(`/courses/${id}/toggle-status`, {
+      method: 'PATCH',
+    });
+  },
+
   // Get course statistics
   getStatistics: async () => {
     return apiRequest('/courses/statistics');

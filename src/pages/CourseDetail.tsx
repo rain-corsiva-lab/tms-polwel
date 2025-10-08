@@ -78,7 +78,7 @@ const CourseDetail = () => {
       <div className="container mx-auto py-6 px-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Course Not Found</h1>
-          <Button onClick={() => navigate("/course-creation")}>Back to Courses</Button>
+          <Button onClick={() => navigate("/courses")}>Back to Courses</Button>
         </div>
       </div>
     );
@@ -89,7 +89,7 @@ const CourseDetail = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate("/course-creation")}>
+          <Button variant="outline" onClick={() => navigate("/courses")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Courses
           </Button>
@@ -110,7 +110,7 @@ const CourseDetail = () => {
             </div>
           </div>
         </div>
-        <Button onClick={() => navigate(`/course-creation/edit/${course.id}`)}>
+        <Button onClick={() => navigate(`/courses/edit/${course.id}`)}>
           <Edit className="mr-2 h-4 w-4" />
           Edit Course
         </Button>
@@ -119,89 +119,101 @@ const CourseDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Course Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Course Overview */}
+          {/* Course Synopsis */}
           <Card>
             <CardHeader>
-              <CardTitle>Course Overview</CardTitle>
+              <CardTitle>Course Synopsis</CardTitle>
             </CardHeader>
-            <CardContent>
-              {course.description ? (
-                <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
-              ) : (
-                <p className="text-gray-500 italic">No description available.</p>
-              )}
-            </CardContent>
-          </Card>
+            <CardContent className="space-y-6">
+              {/* Course Overview */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Course Overview</h3>
+                {course.description ? (
+                  <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
+                ) : (
+                  <p className="text-gray-500 italic">No description available.</p>
+                )}
+              </div>
 
-          {/* Learning Objectives */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Learning Objectives</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {course.objectives && Array.isArray(course.objectives) && course.objectives.length > 0 ? (
-                <ul className="space-y-2 text-gray-600">
-                  {course.objectives.map((objective, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                      {objective}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 italic">No learning objectives specified for this course.</p>
-              )}
-            </CardContent>
-          </Card>
+              {/* Learning Objectives */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Learning Objectives</h3>
+                {course.learningObjectives ? (
+                  <div
+                    className="prose prose-sm max-w-none text-gray-600"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.learningObjectives) }}
+                  />
+                ) : course.objectives && Array.isArray(course.objectives) && course.objectives.length > 0 ? (
+                  <ul className="space-y-2 text-gray-600">
+                    {course.objectives.map((objective, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                        {objective}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 italic">No learning objectives specified for this course.</p>
+                )}
+              </div>
 
-          {/* Course Outline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Course Outline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {course.courseOutline && typeof course.courseOutline === "object" && Object.keys(course.courseOutline).length > 0 ? (
-                // Display real course outline from database
-                (() => {
-                  const outline = course.courseOutline;
-                  if (Array.isArray(outline)) {
-                    return outline.map((module, index) => (
-                      <div key={index} className="border-l-4 border-blue-500 pl-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-semibold">{module.title || `Module ${index + 1}`}</h4>
-                          <span className="text-sm text-gray-500">{module.day || `Day ${index + 1}`}</span>
+              {/* Course Outline */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Course Outline</h3>
+                {course.courseOutline && typeof course.courseOutline === "string" ? (
+                  // Display rich text courseOutline
+                  <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.courseOutline) }} />
+                ) : course.courseOutline && typeof course.courseOutline === "object" && Object.keys(course.courseOutline).length > 0 ? (
+                  // Display JSON courseOutline from database
+                  (() => {
+                    const outline = course.courseOutline;
+                    if (Array.isArray(outline)) {
+                      return (
+                        <div className="space-y-4">
+                          {outline.map((module, index) => (
+                            <div key={index} className="border-l-4 border-blue-500 pl-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-semibold">{module.title || `Module ${index + 1}`}</h4>
+                                <span className="text-sm text-gray-500">{module.day || `Day ${index + 1}`}</span>
+                              </div>
+                              {module.topics && Array.isArray(module.topics) && (
+                                <ul className="text-sm text-gray-600 space-y-1">
+                                  {module.topics.map((topic, topicIndex) => (
+                                    <li key={topicIndex}>• {topic}</li>
+                                  ))}
+                                </ul>
+                              )}
+                              {module.description && <p className="text-sm text-gray-600 mt-2">{module.description}</p>}
+                            </div>
+                          ))}
                         </div>
-                        {module.topics && Array.isArray(module.topics) && (
-                          <ul className="text-sm text-gray-600 space-y-1">
-                            {module.topics.map((topic, topicIndex) => (
-                              <li key={topicIndex}>• {topic}</li>
-                            ))}
-                          </ul>
-                        )}
-                        {module.description && <p className="text-sm text-gray-600 mt-2">{module.description}</p>}
-                      </div>
-                    ));
-                  } else {
-                    // Handle object format
-                    return Object.entries(outline).map(([key, value], index) => (
-                      <div key={key} className="border-l-4 border-blue-500 pl-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-semibold">{(value as any)?.title || key}</h4>
-                          <span className="text-sm text-gray-500">{(value as any)?.day || `Day ${index + 1}`}</span>
+                      );
+                    } else {
+                      // Handle object format
+                      return (
+                        <div className="space-y-4">
+                          {Object.entries(outline).map(([key, value], index) => (
+                            <div key={key} className="border-l-4 border-blue-500 pl-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-semibold">{(value as any)?.title || key}</h4>
+                                <span className="text-sm text-gray-500">{(value as any)?.day || `Day ${index + 1}`}</span>
+                              </div>
+                              {(value as any)?.description && <p className="text-sm text-gray-600">{(value as any).description}</p>}
+                            </div>
+                          ))}
                         </div>
-                        {(value as any)?.description && <p className="text-sm text-gray-600">{(value as any).description}</p>}
-                      </div>
-                    ));
-                  }
-                })()
-              ) : course.syllabus ? (
-                // Fallback to syllabus if available
-                <div className="text-sm text-gray-600">
-                  <pre className="whitespace-pre-wrap">{course.syllabus}</pre>
-                </div>
-              ) : (
-                <p className="text-gray-500 italic">No course outline available for this course.</p>
-              )}
+                      );
+                    }
+                  })()
+                ) : course.syllabus ? (
+                  // Fallback to syllabus if available
+                  <div className="text-sm text-gray-600">
+                    <pre className="whitespace-pre-wrap">{course.syllabus}</pre>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No course outline available for this course.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -241,7 +253,7 @@ const CourseDetail = () => {
                   <div className="font-semibold">${(course.venueFee || 0).toFixed(2)}</div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-gray-500">Contracts Fee Payout</div>
+                  <div className="text-gray-500">Contracts Fees</div>
                   <div className="font-semibold">${(course.contractsFeePayout || 0).toFixed(2)}</div>
                 </div>
               </div>

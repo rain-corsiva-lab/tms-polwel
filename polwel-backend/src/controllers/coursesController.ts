@@ -12,6 +12,8 @@ const CourseCreateSchema = z.object({
   title: z.string().min(1, "Title is required"),
   courseCode: z.string().trim().max(5, "Course code must be at most 5 characters"),
   description: z.string().optional(),
+  learningObjectives: z.string().optional(),
+  courseOutline: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   objectives: z.union([z.array(z.string()), z.any()]).default([]),
   targetAudience: z.string().optional(),
@@ -27,9 +29,9 @@ const CourseCreateSchema = z.object({
   venue: z.string().optional(),
   specifiedLocation: z.string().optional(),
   remarks: z.string().optional(),
-  courseOutline: z.any().optional(), // JSON
   syllabus: z.string().optional(),
   assessmentMethod: z.string().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
   
   // Simplified financial fields
   defaultCourseFee: z.number().default(0),
@@ -233,6 +235,32 @@ export const coursesController = {
           allowedSchemes: ['data','http','https']
         });
       }
+      if (data.learningObjectives !== undefined) {
+        courseData.learningObjectives = sanitizeHtml(data.learningObjectives, {
+          allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+          allowedAttributes: {
+            a: ['href','name','target','rel'],
+            img: ['src','alt','title'],
+            span: ['style'],
+            p: ['style'],
+            div: ['style']
+          },
+          allowedSchemes: ['data','http','https']
+        });
+      }
+      if (data.courseOutline !== undefined) {
+        courseData.courseOutline = sanitizeHtml(data.courseOutline, {
+          allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+          allowedAttributes: {
+            a: ['href','name','target','rel'],
+            img: ['src','alt','title'],
+            span: ['style'],
+            p: ['style'],
+            div: ['style']
+          },
+          allowedSchemes: ['data','http','https']
+        });
+      }
       if (data.category !== undefined) courseData.category = data.category;
       if (data.objectives !== undefined) courseData.objectives = data.objectives;
       if (data.targetAudience !== undefined) courseData.targetAudience = data.targetAudience;
@@ -245,17 +273,17 @@ export const coursesController = {
       if (data.certificationType !== undefined) courseData.certificationType = data.certificationType;
       if (data.level !== undefined) courseData.level = data.level;
       if (data.venue !== undefined) courseData.venue = data.venue;
-  if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
+      if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
       if (data.remarks !== undefined) courseData.remarks = data.remarks;
-      if (data.courseOutline !== undefined) courseData.courseOutline = data.courseOutline;
       if (data.syllabus !== undefined) courseData.syllabus = data.syllabus;
       if (data.assessmentMethod !== undefined) courseData.assessmentMethod = data.assessmentMethod;
+      if (data.status !== undefined) courseData.status = data.status;
       
-  // Simplified financial fields
-  if (data.defaultCourseFee !== undefined) courseData.defaultCourseFee = data.defaultCourseFee;
-  if (data.billingRate !== undefined) courseData.billingRate = data.billingRate;
-  if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
-  if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
+      // Simplified financial fields
+      if (data.defaultCourseFee !== undefined) courseData.defaultCourseFee = data.defaultCourseFee;
+      if (data.billingRate !== undefined) courseData.billingRate = data.billingRate;
+      if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
+      if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
   if (data.contractsFeePayout !== undefined) courseData.contractsFeePayout = data.contractsFeePayout;
   if (data.discounts !== undefined) courseData.discounts = data.discounts;
 
@@ -358,6 +386,30 @@ export const coursesController = {
         if (value !== undefined) {
           if (key === 'description' && typeof value === 'string') {
             updateData.description = sanitizeHtml(value, {
+              allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+              allowedAttributes: {
+                a: ['href','name','target','rel'],
+                img: ['src','alt','title'],
+                span: ['style'],
+                p: ['style'],
+                div: ['style']
+              },
+              allowedSchemes: ['data','http','https']
+            });
+          } else if (key === 'learningObjectives' && typeof value === 'string') {
+            updateData.learningObjectives = sanitizeHtml(value, {
+              allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+              allowedAttributes: {
+                a: ['href','name','target','rel'],
+                img: ['src','alt','title'],
+                span: ['style'],
+                p: ['style'],
+                div: ['style']
+              },
+              allowedSchemes: ['data','http','https']
+            });
+          } else if (key === 'courseOutline' && typeof value === 'string') {
+            updateData.courseOutline = sanitizeHtml(value, {
               allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
               allowedAttributes: {
                 a: ['href','name','target','rel'],
@@ -504,7 +556,68 @@ export const coursesController = {
     }
   },
 
-  // Update course status
+  // Toggle course status (ACTIVE/INACTIVE)
+  async toggleCourseStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Course ID is required'
+        });
+      }
+
+      // Check if course exists
+      const existingCourse = await prisma.course.findUnique({
+        where: { id }
+      });
+
+      if (!existingCourse) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found'
+        });
+      }
+
+      // Toggle status
+      const newStatus = existingCourse.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+
+      const updatedCourse = await prisma.course.update({
+        where: { id },
+        data: { status: newStatus }
+      });
+
+      // Log audit trail
+      if (req.user?.userId) {
+        await AuditService.log({
+          userId: req.user.userId,
+          action: 'Course Status Updated',
+          actionType: 'STATUS_CHANGE',
+          tableName: 'courses',
+          recordId: id,
+          oldValues: { status: existingCourse.status },
+          newValues: { status: newStatus },
+          details: `Changed course status from ${existingCourse.status} to ${newStatus}: ${existingCourse.title}`,
+          performedBy: req.user.userId
+        }, req);
+      }
+
+      return res.json({
+        success: true,
+        message: `Course ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`,
+        data: { course: updatedCourse }
+      });
+    } catch (error) {
+      console.error('Error toggling course status:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to toggle course status',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  },
+
   // Get course statistics
   async getCourseStatistics(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {

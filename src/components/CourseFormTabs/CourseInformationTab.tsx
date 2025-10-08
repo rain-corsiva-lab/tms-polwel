@@ -100,13 +100,59 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="description">Course Description / Learning Objectives</Label>
+        <Label htmlFor="description">Course Description</Label>
         <div className="border rounded-md">
           <ReactQuill
             theme="snow"
             value={formData.description}
             onChange={(value) => onInputChange("description", value)}
-            placeholder="Enter course description and learning objectives"
+            placeholder="Enter course description and overview"
+            modules={{
+              toolbar: [
+                [{ header: [1, 2, 3, false] }],
+                ["bold", "italic", "underline", "strike"],
+                [{ list: "ordered" }, { list: "bullet" }],
+                ["link", "image"],
+                ["clean"],
+              ],
+            }}
+            className="h-48"
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="learningObjectives">Learning Objectives</Label>
+        <div className="border rounded-md">
+          <ReactQuill
+            theme="snow"
+            value={formData.learningObjectives || ""}
+            onChange={(value) => onInputChange("learningObjectives", value)}
+            placeholder="Enter learning objectives for this course"
+            modules={{
+              toolbar: [
+                [{ header: [1, 2, 3, false] }],
+                ["bold", "italic", "underline", "strike"],
+                [{ list: "ordered" }, { list: "bullet" }],
+                ["link", "image"],
+                ["clean"],
+              ],
+            }}
+            className="h-48"
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="courseOutline">Course Outline</Label>
+        <div className="border rounded-md">
+          <ReactQuill
+            theme="snow"
+            value={formData.courseOutline || ""}
+            onChange={(value) => onInputChange("courseOutline", value)}
+            placeholder="Enter detailed course outline and modules"
             modules={{
               toolbar: [
                 [{ header: [1, 2, 3, false] }],

@@ -24,8 +24,8 @@ const userManagementItems: MenuItem[] = [
 ];
 
 const courseManagementItems: MenuItem[] = [
-  { name: "Course Creation", href: "/course-creation", icon: BookOpen, subject: "CourseVenue" },
-  { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Courses", href: "/courses", icon: BookOpen, subject: "CourseVenue" },
+  // { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
   { name: "Venue Management", href: "/venue-setup", icon: Building2, subject: "CourseVenue" },
 ];
 

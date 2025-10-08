@@ -886,22 +886,31 @@ const CourseRuns: React.FC = () => {
                               onClick={() => openTrainerApprovalDialog(courseRun)}
                               className={`${getStatusChipClass(
                                 courseRun.status
-                              )} inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-all hover:scale-110 cursor-pointer`}
+                              )} inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-all hover:scale-110 cursor-pointer self-center text-center`}
                             >
-                              {courseRun.status.replace(/_/g, " ")}
+                              {/* {courseRun.status
+                                .replace(/_/g, " ")
+                                .toLowerCase()
+                                .replace(/\b\w/g, (c) => c.toUpperCase())} */}
+                              Confirmed Pending TA Approval
                             </button>
                           ) : (
-                            <Badge variant={getStatusBadgeVariant(courseRun.status)}>{courseRun.status.replace(/_/g, " ")}</Badge>
+                            <Badge className="self-center text-center" variant={getStatusBadgeVariant(courseRun.status)}>
+                              {courseRun.status
+                                .replace(/_/g, " ")
+                                .toLowerCase()
+                                .replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </Badge>
                           )}
-                          {courseRun.workflow?.learnerEmailStatus && (
+                          {/* {courseRun.workflow?.learnerEmailStatus && (
                             <Badge variant={getLearnerEmailBadgeVariant(courseRun.workflow.learnerEmailStatus)} className="w-fit">
                               Learner emails: {formatLearnerEmailStatus(courseRun.workflow.learnerEmailStatus)}
                             </Badge>
-                          )}
+                          )} */}
                           {courseRun.cancelReason && <p className="text-xs text-gray-500">Cancel reason: {courseRun.cancelReason}</p>}
-                          {courseRun.statusLastEvaluatedAt && (
+                          {/* {courseRun.statusLastEvaluatedAt && (
                             <p className="text-xs text-gray-400">Workflow checked {formatTimestamp(courseRun.statusLastEvaluatedAt)}</p>
-                          )}
+                          )} */}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -931,8 +940,8 @@ const CourseRuns: React.FC = () => {
                             {/* CONFIRMED_PENDING_CONFIRMATION_EMAILS: Show email action buttons */}
                             {courseRun.status === "CONFIRMED_PENDING_CONFIRMATION_EMAILS" && (
                               <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuLabel>Email Actions</DropdownMenuLabel>
+                                {/* <DropdownMenuSeparator /> */}
+                                {/* <DropdownMenuLabel>Email Actions</DropdownMenuLabel> */}
                                 <DropdownMenuItem onClick={() => openEmailDialog(courseRun, "course_confirmation")}>
                                   Send Course Confirmation Email
                                 </DropdownMenuItem>
@@ -943,7 +952,7 @@ const CourseRuns: React.FC = () => {
                             {(courseRun.workflow?.availableActions?.length ?? 0) > 0 && (
                               <>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuLabel>Workflow actions</DropdownMenuLabel>
+                                {/* <DropdownMenuLabel>Workflow actions</DropdownMenuLabel> */}
                                 {courseRun.workflow?.availableActions?.map((action) => (
                                   <DropdownMenuItem key={`${courseRun.id}-${action.key}`} onClick={() => openWorkflowDialog(courseRun, action)}>
                                     {action.label}
@@ -1197,10 +1206,11 @@ const CourseRuns: React.FC = () => {
           )}
 
           <DialogFooter className="flex flex-row gap-3">
-            <Button variant="outline" onClick={closeTrainerApprovalDialog} disabled={trainerApprovalDialog.submitting}>
+            {/* <Button variant="outline" onClick={closeTrainerApprovalDialog} disabled={trainerApprovalDialog.submitting}>
               Close
-            </Button>
-            <Button variant="destructive" onClick={handleRejectTrainer} disabled={trainerApprovalDialog.submitting || trainerApprovalDialog.loading}>
+            </Button> */}
+            {/* <Button variant="destructive" onClick={handleRejectTrainer} disabled={trainerApprovalDialog.submitting || trainerApprovalDialog.loading}> */}
+            <Button variant="destructive" onClick={closeTrainerApprovalDialog} disabled={trainerApprovalDialog.submitting || trainerApprovalDialog.loading}>
               <span className="mr-2">✕</span>
               {trainerApprovalDialog.submitting ? "Rejecting…" : "Reject Assignment"}
             </Button>

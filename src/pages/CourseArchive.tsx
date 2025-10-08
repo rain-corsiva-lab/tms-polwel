@@ -16,9 +16,10 @@ interface Course {
   duration: string;
   durationType: string;
   venue: string;
-  amountPerPax: number;
+  defaultCourseFee: number;
   minParticipants?: number;
   certificates: string;
+  status?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -146,6 +147,36 @@ const CourseArchive = () => {
     }
   };
 
+  const handleToggleStatus = async (courseId: string) => {
+    try {
+      await coursesApi.toggleStatus(courseId);
+      // Reload courses to reflect status change
+      const coursesResponse = await coursesApi.getAll();
+      let coursesData = [];
+      if (coursesResponse.success && Array.isArray(coursesResponse.courses)) {
+        coursesData = coursesResponse.courses;
+      } else if (coursesResponse.data && Array.isArray(coursesResponse.data.courses)) {
+        coursesData = coursesResponse.data.courses;
+      } else if (Array.isArray(coursesResponse.data)) {
+        coursesData = coursesResponse.data;
+      } else if (Array.isArray(coursesResponse)) {
+        coursesData = coursesResponse;
+      }
+      setCourses(coursesData);
+
+      toast({
+        title: "Status Updated",
+        description: "Course status has been successfully updated",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update course status",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Filter courses based on selected filters
   const filteredCourses = Array.isArray(courses)
     ? courses.filter((course) => {
@@ -184,10 +215,10 @@ const CourseArchive = () => {
     <div className="container mx-auto py-6 px-4">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Course Archive</h1>
+          <h1 className="text-3xl font-bold">List of Courses</h1>
           <p className="text-muted-foreground">Manage and view all courses in the system.</p>
         </div>
-        <Button onClick={() => navigate("/course-creation/new")}>
+        <Button onClick={() => navigate("/courses/new")}>
           <Plus className="mr-2 h-4 w-4" />
           Add New Course
         </Button>
@@ -275,6 +306,7 @@ const CourseArchive = () => {
                   <TableHead>Price/Pax</TableHead>
                   <TableHead>Min Pax</TableHead>
                   <TableHead>Certificate</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -289,17 +321,27 @@ const CourseArchive = () => {
                       {course.duration} {course.durationType}
                     </TableCell>
                     <TableCell>{course.venue || "TBD"}</TableCell>
-                    <TableCell>${course.amountPerPax?.toFixed(2) || "0.00"}</TableCell>
+                    <TableCell>${course.defaultCourseFee?.toFixed(2) || "0.00"}</TableCell>
                     <TableCell>{course.minParticipants || 1}</TableCell>
                     <TableCell>
                       <Badge variant={course.certificates === "polwel" ? "default" : "secondary"}>{course.certificates?.toUpperCase() || "POLWEL"}</Badge>
                     </TableCell>
                     <TableCell>
+                      <Button
+                        variant={course.status === "ACTIVE" ? "default" : "secondary"}
+                        size="sm"
+                        onClick={() => handleToggleStatus(course.id)}
+                        className={course.status === "ACTIVE" ? "bg-green-600 hover:bg-green-700" : ""}
+                      >
+                        {course.status || "ACTIVE"}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/course-creation/detail/${course.id}`)}>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/courses/detail/${course.id}`)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/course-creation/edit/${course.id}`)}>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/courses/edit/${course.id}`)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => handleDelete(course.id)} className="text-red-600 hover:bg-red-50">

@@ -71,7 +71,7 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/course-creation")}>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/courses")}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <BookOpen className="h-5 w-5" />
@@ -95,7 +95,7 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/course-creation")}>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/courses")}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <BookOpen className="h-5 w-5" />

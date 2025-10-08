@@ -69,7 +69,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
           {formData.venueFeeType && <p className="text-xs text-muted-foreground">Auto-filled from selected venue</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="contractsFeePayout">Contracts Fee Payout ($)</Label>
+          <Label htmlFor="contractsFeePayout">Contracts Fees ($)</Label>
           <Input
             id="contractsFeePayout"
             type="number"
