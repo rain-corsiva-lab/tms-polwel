@@ -11,9 +11,9 @@ export const startCourseRunStatusJob = () => {
     async () => {
       try {
         const result = await courseRunWorkflowService.evaluateStatuses(prisma);
-        if (result.started || result.completed || result.pendingBilling) {
+        if (result.started  || result.pendingBilling) {
           console.log(
-            `📅 Course run status job: ${result.started} started, ${result.pendingBilling} pending billing, ${result.completed} completed at ${result.evaluatedAt.toISOString()}`
+            `📅 Course run status job: ${result.started} started, ${result.pendingBilling} pending billing, at ${result.evaluatedAt.toISOString()}`
           );
         }
       } catch (error) {
@@ -34,7 +34,7 @@ export const evaluateCourseRunStatusesNow = async () => {
   try {
     const result = await courseRunWorkflowService.evaluateStatuses(prisma);
     console.log(
-      `📅 Course run status job (manual): ${result.started} started, ${result.pendingBilling} pending billing, ${result.completed} completed at ${result.evaluatedAt.toISOString()}`
+      `📅 Course run status job (manual): ${result.started} started, ${result.pendingBilling} pending billing, at ${result.evaluatedAt.toISOString()}`
     );
     return result;
   } catch (error) {

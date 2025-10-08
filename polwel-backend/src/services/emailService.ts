@@ -545,6 +545,7 @@ class EmailService {
     endDate?: Date;
     venueName?: string;
     additionalNotes?: string;
+    cc?: string[] | string | null;
   }): Promise<boolean> {
     const {
       email,
@@ -556,6 +557,7 @@ class EmailService {
       endDate,
       venueName,
       additionalNotes,
+      cc,
     } = params;
 
     const transporter = this.getTransporter();
@@ -576,10 +578,29 @@ class EmailService {
       }
     };
 
+    const normalizeCc = () => {
+      if (!cc) return undefined;
+      if (Array.isArray(cc)) {
+        const cleaned = cc.map((item) => item?.trim()).filter(Boolean);
+        return cleaned.length > 0 ? cleaned : undefined;
+      }
+      if (typeof cc === 'string') {
+        const cleaned = cc
+          .split(/[;,]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+        return cleaned.length > 0 ? cleaned : undefined;
+      }
+      return undefined;
+    };
+
+    const ccRecipients = normalizeCc();
+
     const mailOptions = {
       from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
       to: email,
       subject: `POLWEL Course Confirmation – ${courseTitle}`,
+      ...(ccRecipients ? { cc: ccRecipients } : {}),
       html: `
         <!DOCTYPE html>
         <html>
@@ -656,12 +677,15 @@ class EmailService {
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — learner confirmation email would be:');
-        console.log('To:', email);
+          console.log('To:', email);
         console.log('Course:', courseTitle);
         console.log('Serial:', serialNumber);
         console.log('Start:', formatDate(startDate));
         console.log('End:', formatDate(endDate));
         console.log('Venue:', venueName);
+        if (ccRecipients) {
+          console.log('CC:', ccRecipients);
+          }
         return true;
       }
 

@@ -6,6 +6,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Mail, Send } from "lucide-react";
 import { toast } from "sonner";
+import { courseRunsApi } from "../lib/api";
 
 interface SendTrainerEmailDialogProps {
   open: boolean;
@@ -37,38 +38,21 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
     try {
       setSending(true);
 
-      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-      const endpoint = `${API_BASE}/course-runs/${courseRunId}/send-trainer-assignment-email`;
+      const ccList = ccEmails
+        .split(",")
+        .map((email) => email.trim())
+        .filter(Boolean);
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("polwel_access_token")}`,
-        },
-        body: JSON.stringify({
-          ccEmails: ccEmails
-            .split(",")
-            .map((e) => e.trim())
-            .filter(Boolean),
-          additionalBody,
-        }),
+      const response = await courseRunsApi.sendTrainerAssignmentEmail(courseRunId, {
+        ...(ccList.length ? { ccEmails: ccList } : {}),
+        additionalBody: additionalBody.trim() ? additionalBody.trim() : undefined,
       });
 
-      // If network-level failure, fetch would have thrown. Here we have a response.
-      let data: any = {};
-      try {
-        data = await response.json();
-      } catch (err) {
-        const text = await response.text().catch(() => null);
-        throw new Error(text || `Server returned status ${response.status}`);
+      if (!response?.success) {
+        throw new Error(response?.message || "Failed to send trainer assignment emails");
       }
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || data.message || `Failed to send email (status ${response.status})`);
-      }
-
-      toast.success("Trainer assignment emails sent successfully!");
+      toast.success(response?.message || "Trainer assignment emails sent successfully!");
       onSuccess();
       onOpenChange(false);
 
@@ -77,7 +61,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
       setAdditionalBody("");
     } catch (error: any) {
       console.error("Error sending emails:", error);
-      toast.error(error.message || "Failed to send trainer assignment emails");
+      toast.error(error?.message || "Failed to send trainer assignment emails");
     } finally {
       setSending(false);
     }

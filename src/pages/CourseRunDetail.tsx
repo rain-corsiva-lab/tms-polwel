@@ -10,6 +10,7 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import DateInput from "../components/ui/date-input";
 import TimeInput from "../components/ui/time-input";
 import {
@@ -96,6 +97,11 @@ interface CourseRunDetailData {
     id: string;
     enrollmentStatus: string;
     attendanceStatus: string;
+    confirmationEmailStatus?: string;
+    withdrawnReason?: string;
+    withdrawnAt?: string;
+    withdrawnBy?: string;
+    paymentMode?: string;
     learner: {
       id: string;
       fullname: string;
@@ -132,6 +138,30 @@ const CourseRunDetail: React.FC = () => {
     [trainerId: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null };
   }>({});
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+
+  // Withdrawal Dialog State
+  const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
+  const [withdrawalReason, setWithdrawalReason] = useState("");
+  const [withdrawalDocument, setWithdrawalDocument] = useState<File | null>(null);
+  const [withdrawalSubmitting, setWithdrawalSubmitting] = useState(false);
+  const [selectedLearnerForWithdrawal, setSelectedLearnerForWithdrawal] = useState<any>(null);
+
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === "string") {
+          // Strip the data URL prefix if present
+          const base64 = result.includes(",") ? result.split(",")[1] : result;
+          resolve(base64);
+        } else {
+          reject(new Error("Failed to process supporting document"));
+        }
+      };
+      reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
 
   const currency = (v: number | null | undefined) => {
     if (v === null || v === undefined || isNaN(Number(v))) return "$0.00";
@@ -214,6 +244,89 @@ const CourseRunDetail: React.FC = () => {
 
   const handleImportSuccess = () => {
     loadCourseRunDetail();
+  };
+
+  // Learner Withdrawal & Confirmation Functions
+  const handleResendConfirmation = async (learnerRecord: any) => {
+    if (!courseRun || !id) return;
+
+    try {
+      const learnerIdentifier = learnerRecord?.learner?.id || learnerRecord?.learnerId || learnerRecord?.id;
+      if (!learnerIdentifier) {
+        toast.error("Unable to determine learner identifier for resend");
+        return;
+      }
+
+      const response = await courseRunsApi.resendLearnerConfirmation(id, learnerIdentifier);
+      toast.success(response?.message || "Confirmation email sent successfully");
+      loadCourseRunDetail();
+    } catch (error: any) {
+      console.error("Error sending confirmation email:", error);
+      toast.error(error?.message || "Failed to send confirmation email");
+    }
+  };
+
+  const handleWithdrawLearner = async () => {
+    if (!courseRun || !id || !selectedLearnerForWithdrawal) return;
+
+    if (!withdrawalReason) {
+      toast.error("Please select a withdrawal reason");
+      return;
+    }
+
+    try {
+      setWithdrawalSubmitting(true);
+
+      let supportingDocumentPayload:
+        | {
+            filename: string;
+            mimetype?: string;
+            size?: number;
+            base64?: string;
+          }
+        | undefined;
+
+      if (withdrawalDocument) {
+        try {
+          const base64 = await fileToBase64(withdrawalDocument);
+          supportingDocumentPayload = {
+            filename: withdrawalDocument.name,
+            mimetype: withdrawalDocument.type,
+            size: withdrawalDocument.size,
+            base64,
+          };
+        } catch (fileError) {
+          console.error("Failed to process supporting document:", fileError);
+          toast.error("Failed to process supporting document. Please try another file.");
+          setWithdrawalSubmitting(false);
+          return;
+        }
+      }
+
+      const learnerIdentifier = selectedLearnerForWithdrawal?.learner?.id || selectedLearnerForWithdrawal?.learnerId || selectedLearnerForWithdrawal?.id;
+
+      if (!learnerIdentifier) {
+        toast.error("Unable to determine learner identifier for withdrawal");
+        return;
+      }
+
+      const response = await courseRunsApi.withdrawLearner(id, learnerIdentifier, {
+        reason: withdrawalReason,
+        ...(supportingDocumentPayload ? { supportingDocument: supportingDocumentPayload } : {}),
+      });
+
+      toast.success(response?.message || "Learner marked as withdrawn successfully");
+      setWithdrawalDialogOpen(false);
+      setWithdrawalReason("");
+      setWithdrawalDocument(null);
+      setSelectedLearnerForWithdrawal(null);
+      loadCourseRunDetail();
+    } catch (error: any) {
+      console.error("Error withdrawing learner:", error);
+      toast.error(error?.message || "Failed to withdraw learner");
+    } finally {
+      setWithdrawalSubmitting(false);
+    }
   };
 
   // Trainer Assignment Functions
@@ -875,53 +988,86 @@ const CourseRunDetail: React.FC = () => {
                           <TableHead>Designation</TableHead>
                           <TableHead>Payment Mode</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Confirmation</TableHead>
+                          <TableHead>Email Confirmation</TableHead>
+                          <TableHead>Attendance</TableHead>
                           <TableHead className="w-12">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {courseRun.courseRunLearners?.length > 0 ? (
-                          courseRun.courseRunLearners.map((learnerRecord) => (
-                            <TableRow key={learnerRecord.id}>
-                              <TableCell>
-                                <input type="checkbox" className="rounded" />
-                              </TableCell>
-                              <TableCell className="font-medium">{learnerRecord.learner.fullname}</TableCell>
-                              <TableCell>{learnerRecord.learner.email}</TableCell>
-                              <TableCell>{learnerRecord.learner.contactNumber || "—"}</TableCell>
-                              <TableCell>{learnerRecord.learner.designation || "—"}</TableCell>
-                              <TableCell>Online Payment</TableCell>
-                              <TableCell>{getEnrollmentStatusBadge(learnerRecord.enrollmentStatus || "ENROLLED")}</TableCell>
-                              <TableCell>
-                                <Badge variant={learnerRecord.attendanceStatus === "PRESENT" ? "default" : "secondary"}>
-                                  {learnerRecord.attendanceStatus || "Pending"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <SafeDropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setSelectedEnrollment(learnerRecord);
-                                        setEditLearnerDialogOpen(true);
-                                      }}
+                        {courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus !== "WITHDRAWN").length > 0 ? (
+                          courseRun.courseRunLearners
+                            .filter((l) => l.enrollmentStatus !== "WITHDRAWN")
+                            .map((learnerRecord) => (
+                              <TableRow key={learnerRecord.id}>
+                                <TableCell>
+                                  <input type="checkbox" className="rounded" />
+                                </TableCell>
+                                <TableCell className="font-medium">{learnerRecord.learner.fullname}</TableCell>
+                                <TableCell>{learnerRecord.learner.email}</TableCell>
+                                <TableCell>{learnerRecord.learner.contactNumber || "—"}</TableCell>
+                                <TableCell>{learnerRecord.learner.designation || "—"}</TableCell>
+                                <TableCell>{learnerRecord.paymentMode || "Online Payment"}</TableCell>
+                                <TableCell>{getEnrollmentStatusBadge(learnerRecord.enrollmentStatus || "ENROLLED")}</TableCell>
+                                <TableCell>
+                                  {learnerRecord.confirmationEmailStatus && (
+                                    <Badge
+                                      variant={
+                                        learnerRecord.confirmationEmailStatus === "SENT"
+                                          ? "default"
+                                          : learnerRecord.confirmationEmailStatus === "FAILED"
+                                          ? "destructive"
+                                          : learnerRecord.confirmationEmailStatus === "SENDING"
+                                          ? "secondary"
+                                          : "outline"
+                                      }
                                     >
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>Remove</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </SafeDropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                                      {learnerRecord.confirmationEmailStatus}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={learnerRecord.attendanceStatus === "PRESENT" ? "default" : "secondary"}>
+                                    {learnerRecord.attendanceStatus || "Pending"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <SafeDropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedEnrollment(learnerRecord);
+                                          setEditLearnerDialogOpen(true);
+                                        }}
+                                      >
+                                        Edit
+                                      </DropdownMenuItem>
+                                      {(learnerRecord.confirmationEmailStatus === "PENDING" ||
+                                        learnerRecord.confirmationEmailStatus === "FAILED" ||
+                                        !learnerRecord.confirmationEmailStatus) && (
+                                        <DropdownMenuItem onClick={() => handleResendConfirmation(learnerRecord)}>Send Confirmation</DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedLearnerForWithdrawal(learnerRecord);
+                                          setWithdrawalDialogOpen(true);
+                                        }}
+                                      >
+                                        Mark as Withdrawn
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem>Remove</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </SafeDropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8">
+                            <TableCell colSpan={10} className="text-center py-8">
                               <div className="text-gray-500">
                                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                 <p className="text-lg font-medium mb-2">No learners enrolled</p>
@@ -935,6 +1081,49 @@ const CourseRunDetail: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Withdrawn Learners Section */}
+              {courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length > 0 && (
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle>Withdrawn Learners ({courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length || 0})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Designation</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Withdrawn Date</TableHead>
+                            <TableHead>Reason</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {courseRun.courseRunLearners
+                            ?.filter((l) => l.enrollmentStatus === "WITHDRAWN")
+                            .map((learnerRecord) => (
+                              <TableRow key={learnerRecord.id}>
+                                <TableCell className="font-medium">{learnerRecord.learner.fullname}</TableCell>
+                                <TableCell>{learnerRecord.learner.email}</TableCell>
+                                <TableCell>{learnerRecord.learner.contactNumber || "—"}</TableCell>
+                                <TableCell>{learnerRecord.learner.designation || "—"}</TableCell>
+                                <TableCell>
+                                  <Badge variant="destructive">WITHDRAWN</Badge>
+                                </TableCell>
+                                <TableCell>{learnerRecord.withdrawnAt ? new Date(learnerRecord.withdrawnAt).toLocaleDateString("en-SG") : "—"}</TableCell>
+                                <TableCell>{learnerRecord.withdrawnReason || "—"}</TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* Trainer Assignment Tab */}
@@ -1328,6 +1517,66 @@ const CourseRunDetail: React.FC = () => {
         }}
         onSuccess={loadCourseRunDetail}
       />
+
+      {/* Withdrawal Dialog */}
+      <Dialog open={withdrawalDialogOpen} onOpenChange={setWithdrawalDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Withdraw Learner</DialogTitle>
+            <DialogDescription>Mark {selectedLearnerForWithdrawal?.learner?.fullname} as withdrawn from this course run.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="withdrawal-reason">Reason for Withdrawal *</Label>
+              <Select value={withdrawalReason} onValueChange={setWithdrawalReason}>
+                <SelectTrigger id="withdrawal-reason">
+                  <SelectValue placeholder="Select a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Personal Reasons">Personal Reasons</SelectItem>
+                  <SelectItem value="Work Commitment">Work Commitment</SelectItem>
+                  <SelectItem value="Health Issues">Health Issues</SelectItem>
+                  <SelectItem value="Transfer/Relocation">Transfer/Relocation</SelectItem>
+                  <SelectItem value="Financial Constraints">Financial Constraints</SelectItem>
+                  <SelectItem value="Course Schedule Conflict">Course Schedule Conflict</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="withdrawal-document">Supporting Document (Optional)</Label>
+              <Input
+                id="withdrawal-document"
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setWithdrawalDocument(file);
+                  }
+                }}
+              />
+              {withdrawalDocument && <p className="text-sm text-muted-foreground">Selected: {withdrawalDocument.name}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setWithdrawalDialogOpen(false);
+                setWithdrawalReason("");
+                setWithdrawalDocument(null);
+                setSelectedLearnerForWithdrawal(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleWithdrawLearner} disabled={withdrawalSubmitting || !withdrawalReason}>
+              {withdrawalSubmitting ? "Processing..." : "Confirm Withdrawal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

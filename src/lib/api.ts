@@ -161,14 +161,23 @@ export const debugAuthState = () => {
 // API request helper with connection retry and fallback
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = getAuthToken();
-  
+
+  const headers = new Headers(options.headers as HeadersInit | undefined);
+
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+  if (!headers.has('Content-Type') && !isFormData) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   const config: RequestInit = {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+    headers,
   };
 
   // Try different approaches to handle connection issues
@@ -1266,6 +1275,33 @@ export const courseRunsApi = {
     });
   },
 
+  // Resend confirmation email to a specific learner
+  resendLearnerConfirmation: async (courseRunId: string, learnerId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/learners/${learnerId}/resend-confirmation`, {
+      method: 'POST',
+    });
+  },
+
+  // Withdraw a learner from the course run
+  withdrawLearner: async (
+    courseRunId: string,
+    learnerId: string,
+    payload: {
+      reason: string;
+      supportingDocument?: {
+        filename: string;
+        mimetype?: string;
+        size?: number;
+        base64?: string;
+      };
+    }
+  ) => {
+    return apiRequest(`/course-runs/${courseRunId}/learners/${learnerId}/withdraw`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Update trainer assignments
   updateTrainerAssignments: async (courseRunId: string, trainers: Array<{trainerId: string; trainerBaseAmount: number; additionalCost: number}>) => {
     return apiRequest(`/course-runs/${courseRunId}/trainer-assignments`, {
@@ -1308,6 +1344,17 @@ export const courseRunsApi = {
   sendTrainingAssignmentEmailToLearners: async (courseRunId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/send-training-assignment-email-learners`, {
       method: 'POST',
+    });
+  },
+
+  // Send trainer assignment emails with optional CC and additional body
+  sendTrainerAssignmentEmail: async (
+    courseRunId: string,
+    payload: { ccEmails?: string[]; additionalBody?: string }
+  ) => {
+    return apiRequest(`/course-runs/${courseRunId}/send-trainer-assignment-email`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 };

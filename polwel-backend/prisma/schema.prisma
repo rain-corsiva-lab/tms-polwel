@@ -487,6 +487,8 @@ model CourseRunLearner {
   attendanceStatus              AttendanceStatus?          @default(PRESENT)
   enrollmentStatus              EnrollmentStatus?          @default(ENROLLED)
   withdrawnReason               String?                    @db.Text
+  withdrawnAt                   DateTime?
+  withdrawnBy                   String?
   supportingDocumentWithdrawnId String?
   courseRunBillingEntryId       String?
   createdAt                     DateTime                   @default(now())

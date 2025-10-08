@@ -98,7 +98,7 @@ const WORKFLOW_ACTIONS: Record<CourseRunWorkflowAction, WorkflowActionDefinition
     key: 'COMPLETE',
     label: 'Complete Run',
     description: 'Confirm that the run has completed successfully.',
-    from: ['IN_PROGRESS'],
+    from: [],
     to: 'COMPLETED',
   },
   ARCHIVE: {
@@ -492,26 +492,26 @@ export const courseRunWorkflowService = {
     });
 
     // Legacy: Keep completed transition for older statuses (if needed)
-    const completed = await prisma.courseRun.updateMany({
-      where: {
-        deletedAt: null,
-        endDatetime: {
-          lt: oneDayAgo,
-        },
-        status: {
-          in: ['CONFIRMED', 'ACTIVE', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],
-        },
-      },
-      data: {
-        status: 'COMPLETED',
-        statusLastEvaluatedAt: now,
-      },
-    });
+    // const completed = await prisma.courseRun.updateMany({
+    //   where: {
+    //     deletedAt: null,
+    //     endDatetime: {
+    //       lt: oneDayAgo,
+    //     },
+    //     status: {
+    //       in: ['CONFIRMED', 'ACTIVE', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],
+    //     },
+    //   },
+    //   data: {
+    //     status: 'COMPLETED',
+    //     statusLastEvaluatedAt: now,
+    //   },
+    // });
 
     return {
       started: started.count,
       pendingBilling: pendingBilling.count,
-      completed: completed.count,
+      // completed: completed.count,
       evaluatedAt: now,
     };
   },

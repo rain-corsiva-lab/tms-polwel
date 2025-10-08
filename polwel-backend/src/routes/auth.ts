@@ -29,7 +29,7 @@ function generateAccessToken(user: any): string {
       organizationId: user.organizationId 
     },
     JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '7d' } // Changed from 15m to 7 days for better UX
   );
 }
 
@@ -106,7 +106,7 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
     accessToken,
   refreshToken,
     user: userData,
-    expiresIn: '15m',
+    expiresIn: '7d', // Updated to match new token expiry
   };
 }
 

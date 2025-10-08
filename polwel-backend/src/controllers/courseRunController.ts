@@ -1,3 +1,5 @@
+import path from 'path';
+import { promises as fs } from 'fs';
 import { Request, Response } from 'express';
 import {
   PrismaClient,
@@ -15,6 +17,7 @@ import {
   CourseRunWorkflowAction,
   CourseRunWorkflowError,
 } from '../services/courseRunWorkflowService';
+import EmailService from '../services/emailService';
 
 const prisma = new PrismaClient();
 
@@ -89,6 +92,27 @@ const calculateCourseRunDayCount = (courseRun: {
 
   const computed = Math.max(derivedFromSchedule, derivedFromCourse, 1);
   return computed;
+};
+
+const normalizeEmailList = (value: unknown): string[] => {
+  if (!value) {
+    return [];
+  }
+
+  const raw = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(/[;,]/)
+      : [];
+
+  const cleaned = raw
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0);
+
+  return Array.from(new Set(cleaned.map((item) => item.toLowerCase()))).map((lowercase) => {
+    const original = cleaned.find((item) => item.toLowerCase() === lowercase);
+    return original ?? lowercase;
+  });
 };
 
 type AttendanceDayRecord = {
@@ -2065,81 +2089,45 @@ export const courseRunController = {
         return;
       }
 
-      // Format dates
-      const formatDate = (date: Date | null) => {
-        if (!date) return 'TBD';
-        return new Intl.DateTimeFormat('en-SG', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }).format(date);
-      };
-
-      const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(amount);
-      };
-
-      // Prepare email transporter if SMTP configured
-      let transporter: any = null;
-      const smtpHost = process.env.SMTP_HOST;
-      const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined;
-      const smtpUser = process.env.SMTP_USER;
-      const smtpPass = process.env.SMTP_PASS;
-      const emailFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || `no-reply@${process.env.FRONTEND_URL?.replace(/^https?:\/\//, '') || 'polwel.local'}`;
-
-      try {
-        if (smtpHost && smtpPort && smtpUser && smtpPass) {
-          // Lazy require so service isn't mandatory
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const nodemailer = require('nodemailer');
-          transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: smtpPort,
-            secure: smtpPort === 465, // true for 465, false for other ports
-            auth: {
-              user: smtpUser,
-              pass: smtpPass,
-            },
-          });
-          // verify transporter
-          try {
-            await transporter.verify();
-            console.log('SMTP transporter verified');
-          } catch (verifyErr) {
-            console.warn('SMTP verify failed, emails will be logged not sent:', (verifyErr as any)?.message || verifyErr);
-            transporter = null;
-          }
-        } else {
-          console.log('SMTP not fully configured; skipping actual send and logging emails instead');
-        }
-      } catch (err) {
-        console.error('Failed to setup SMTP transporter:', err);
-        transporter = null;
-      }
-
-      // Use EmailService to send trainer assignment emails
-      // Lazy-import to avoid circular deps
-      const EmailService = require('../services/emailService').default;
+      const ccList = normalizeEmailList(ccEmails);
 
       const emailTasks = courseRun.courseRunTrainers.map(async (assignment) => {
+        const trainerEmail = assignment.trainer?.email?.trim();
+        const trainerName = assignment.trainer?.name || 'Trainer';
+
+        if (!trainerEmail) {
+          await prisma.courseRunTrainer.update({
+            where: { id: assignment.id },
+            data: {
+              emailStatus: 'FAILED',
+              trainerAssignmentEmailStatus: 'FAILED',
+            },
+          });
+
+          return { success: false, error: 'Trainer email address is missing' };
+        }
+
         const baseFee = Number(assignment.trainerBaseAmount || 0);
         const additional = Number(assignment.additionalCost || 0);
 
+        const courseDetails: Parameters<typeof EmailService.sendTrainerAssignmentEmail>[2] = {};
+        if (courseRun.course?.title) {
+          courseDetails.course = courseRun.course.title;
+        }
+        if (courseRun.serialNumber) {
+          courseDetails.serialNumber = courseRun.serialNumber;
+        }
+        courseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
+        courseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
+        courseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+
         const result = await EmailService.sendTrainerAssignmentEmail(
-          assignment.trainer.email,
-          assignment.trainer.name,
-          {
-            course: courseRun.course?.title || null,
-            serialNumber: courseRun.serialNumber || null,
-            startDate: courseRun.startDatetime || null,
-            endDate: courseRun.endDatetime || null,
-            venue: courseRun.venue?.name || courseRun.specifiedLocation || null,
-          },
+          trainerEmail,
+          trainerName,
+          courseDetails,
           baseFee,
           additional,
-          Array.isArray(ccEmails) ? ccEmails : null,
+          ccList.length > 0 ? ccList : null,
           additionalBody || null
         );
 
@@ -2149,7 +2137,7 @@ export const courseRunController = {
             data: {
               courseRunId: id,
               trainerId: assignment.trainer.id,
-              cc: Array.isArray(ccEmails) && ccEmails.length > 0 ? ccEmails.join(', ') : null,
+              cc: ccList.length > 0 ? ccList.join(', ') : null,
               additionalBodyContent: additionalBody || null,
             },
           });
@@ -2162,6 +2150,7 @@ export const courseRunController = {
           await prisma.courseRunTrainer.update({
             where: { id: assignment.id },
             data: {
+              emailStatus: result.success ? 'SENT' : 'FAILED',
               trainerAssignmentEmailStatus: result.success ? 'SENT' : 'FAILED',
             },
           });
@@ -2366,10 +2355,7 @@ export const courseRunController = {
           courseRunLearners: {
             where: { deletedAt: null },
             include: {
-              learner: {
-                include: {
-                },
-              },
+              learner: true,
             },
           },
         },
@@ -2391,38 +2377,143 @@ export const courseRunController = {
         return;
       }
 
-      // Send emails to all learners
-      const emailPromises = courseRun.courseRunLearners.map(async (crl) => {
-        try {
-          // Update learner email status
+      const ccList = normalizeEmailList(cc);
+      const additionalNotes =
+        typeof additionalBodyContent === 'string' && additionalBodyContent.trim().length > 0
+          ? additionalBodyContent.trim()
+          : undefined;
+
+      let successCount = 0;
+      let failedCount = 0;
+
+      for (const enrollment of courseRun.courseRunLearners) {
+        const now = new Date();
+        const learnerEmail = enrollment.learner?.email?.trim();
+        const learnerName = enrollment.learner?.fullname || 'Learner';
+
+        if (!learnerEmail) {
+          failedCount += 1;
           await prisma.courseRunLearner.update({
-            where: { id: crl.id },
+            where: { id: enrollment.id },
             data: {
-              confirmationEmailStatus: 'SENT',
-              confirmationEmailLastSentAt: new Date(),
+              confirmationEmailStatus: 'FAILED',
+              confirmationEmailLastSentAt: now,
             },
           });
 
-          // TODO: Integrate with actual email service
-          console.log(`Sending course confirmation email to ${crl.learner.email}`);
-          
-          return { success: true, learnerId: crl.learnerId };
-        } catch (err) {
-          console.error(`Failed to send email to learner ${crl.learnerId}:`, err);
-          return { success: false, learnerId: crl.learnerId };
+          await prisma.confirmationEmailHistory.create({
+            data: {
+              courseRunLearnersId: enrollment.id,
+              courseRunId: id,
+              remarks: 'Skipped sending confirmation email. Reason: Missing learner email address.',
+            },
+          });
+          continue;
         }
-      });
 
-      await Promise.all(emailPromises);
+        try {
+          const emailPayload: Parameters<typeof EmailService.sendLearnerCourseConfirmationEmail>[0] = {
+            email: learnerEmail,
+            learnerName,
+            courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
+          };
+
+          if (courseRun.course?.courseCode) {
+            emailPayload.courseCode = courseRun.course.courseCode;
+          }
+
+          if (courseRun.serialNumber) {
+            emailPayload.serialNumber = courseRun.serialNumber;
+          }
+
+          if (courseRun.startDatetime) {
+            emailPayload.startDate = new Date(courseRun.startDatetime);
+          }
+
+          if (courseRun.endDatetime) {
+            emailPayload.endDate = new Date(courseRun.endDatetime);
+          }
+
+          const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
+          if (venueName) {
+            emailPayload.venueName = venueName;
+          }
+
+          if (additionalNotes) {
+            emailPayload.additionalNotes = additionalNotes;
+          }
+
+          if (ccList.length > 0) {
+            emailPayload.cc = ccList;
+          }
+
+          const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
+
+          const status = didSend ? 'SENT' : 'FAILED';
+
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: {
+              confirmationEmailStatus: status,
+              confirmationEmailLastSentAt: now,
+            },
+          });
+
+          await prisma.confirmationEmailHistory.create({
+            data: {
+              courseRunLearnersId: enrollment.id,
+              courseRunId: id,
+              remarks: didSend
+                ? `Confirmation email sent successfully to ${learnerEmail}.`
+                : `Failed to send confirmation email to ${learnerEmail}.`,
+            },
+          });
+
+          if (didSend) {
+            successCount += 1;
+          } else {
+            failedCount += 1;
+          }
+        } catch (sendError) {
+          failedCount += 1;
+
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: {
+              confirmationEmailStatus: 'FAILED',
+              confirmationEmailLastSentAt: now,
+            },
+          });
+
+          await prisma.confirmationEmailHistory.create({
+            data: {
+              courseRunLearnersId: enrollment.id,
+              courseRunId: id,
+              remarks: `Failed to send confirmation email to ${learnerEmail}. Error: ${
+                sendError instanceof Error ? sendError.message : 'Unknown error'
+              }`,
+            },
+          });
+        }
+      }
 
       res.json({
         success: true,
-        message: 'Course confirmation emails sent successfully',
-        emailsSent: courseRun.courseRunLearners.length,
+        message: `Course confirmation emails processed. Success: ${successCount}, Failed: ${failedCount}`,
+        emailsSent: successCount,
+        failures: failedCount,
       });
     } catch (error) {
       console.error('Error sending course confirmation emails:', error);
-      res.status(500).json(buildErrorResponse('courseRunController.sendCourseConfirmationEmail', 'Failed to send course confirmation emails', error));
+      res
+        .status(500)
+        .json(
+          buildErrorResponse(
+            'courseRunController.sendCourseConfirmationEmail',
+            'Failed to send course confirmation emails',
+            error,
+          ),
+        );
     }
   },
 
@@ -2478,47 +2569,150 @@ export const courseRunController = {
         return;
       }
 
-      // Send emails to all learners and trainers
-      const learnerEmailPromises = courseRun.courseRunLearners.map(async (crl) => {
-        try {
+      let learnerSuccess = 0;
+      let learnerFailed = 0;
+
+      for (const enrollment of courseRun.courseRunLearners) {
+        const now = new Date();
+        const learnerEmail = enrollment.learner?.email?.trim();
+        const learnerName = enrollment.learner?.fullname || 'Learner';
+
+        if (!learnerEmail) {
+          learnerFailed += 1;
           await prisma.courseRunLearner.update({
-            where: { id: crl.id },
+            where: { id: enrollment.id },
             data: {
-              confirmationEmailStatus: 'SENT',
-              confirmationEmailLastSentAt: new Date(),
+              confirmationEmailStatus: 'FAILED',
+              confirmationEmailLastSentAt: now,
             },
           });
-
-          // TODO: Integrate with actual email service
-          console.log(`Sending training assignment email to learner ${crl.learner.email}`);
-          
-          return { success: true, type: 'learner', id: crl.learnerId };
-        } catch (err) {
-          console.error(`Failed to send email to learner ${crl.learnerId}:`, err);
-          return { success: false, type: 'learner', id: crl.learnerId };
+          continue;
         }
-      });
 
-      const trainerEmailPromises = courseRun.courseRunTrainers.map(async (crt) => {
         try {
-          await prisma.courseRunTrainer.update({
-            where: { id: crt.id },
+          const emailPayload: Parameters<typeof EmailService.sendLearnerCourseConfirmationEmail>[0] = {
+            email: learnerEmail,
+            learnerName,
+            courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
+          };
+
+          if (courseRun.course?.courseCode) {
+            emailPayload.courseCode = courseRun.course.courseCode;
+          }
+
+          if (courseRun.serialNumber) {
+            emailPayload.serialNumber = courseRun.serialNumber;
+          }
+
+          if (courseRun.startDatetime) {
+            emailPayload.startDate = new Date(courseRun.startDatetime);
+          }
+
+          if (courseRun.endDatetime) {
+            emailPayload.endDate = new Date(courseRun.endDatetime);
+          }
+
+          const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
+          if (venueName) {
+            emailPayload.venueName = venueName;
+          }
+
+          const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
+
+          const status = didSend ? 'SENT' : 'FAILED';
+
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
             data: {
-              emailStatus: 'SENT',
+              confirmationEmailStatus: status,
+              confirmationEmailLastSentAt: now,
             },
           });
 
-          // TODO: Integrate with actual email service
-          console.log(`Sending training assignment email to trainer ${crt.trainer.email}`);
-          
-          return { success: true, type: 'trainer', id: crt.trainerId };
+          if (didSend) {
+            learnerSuccess += 1;
+          } else {
+            learnerFailed += 1;
+          }
         } catch (err) {
-          console.error(`Failed to send email to trainer ${crt.trainerId}:`, err);
-          return { success: false, type: 'trainer', id: crt.trainerId };
+          learnerFailed += 1;
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: {
+              confirmationEmailStatus: 'FAILED',
+              confirmationEmailLastSentAt: now,
+            },
+          });
+          console.error(`Failed to send email to learner ${enrollment.learnerId}:`, err);
         }
-      });
+      }
 
-      await Promise.all([...learnerEmailPromises, ...trainerEmailPromises]);
+      let trainerSuccess = 0;
+      let trainerFailed = 0;
+
+      for (const assignment of courseRun.courseRunTrainers) {
+        const trainerEmail = assignment.trainer?.email?.trim();
+        const trainerName = assignment.trainer?.name || 'Trainer';
+
+        if (!trainerEmail) {
+          trainerFailed += 1;
+          await prisma.courseRunTrainer.update({
+            where: { id: assignment.id },
+            data: {
+              emailStatus: 'FAILED',
+              trainerAssignmentEmailStatus: 'FAILED',
+            },
+          });
+          continue;
+        }
+
+        try {
+          const trainerCourseDetails: Parameters<typeof EmailService.sendTrainerAssignmentEmail>[2] = {};
+          if (courseRun.course?.title) {
+            trainerCourseDetails.course = courseRun.course.title;
+          }
+          if (courseRun.serialNumber) {
+            trainerCourseDetails.serialNumber = courseRun.serialNumber;
+          }
+          trainerCourseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
+          trainerCourseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
+          trainerCourseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+
+          const result = await EmailService.sendTrainerAssignmentEmail(
+            trainerEmail,
+            trainerName,
+            trainerCourseDetails,
+            Number(assignment.trainerBaseAmount || 0),
+            Number(assignment.additionalCost || 0),
+            null,
+            null,
+          );
+
+          await prisma.courseRunTrainer.update({
+            where: { id: assignment.id },
+            data: {
+              emailStatus: result.success ? 'SENT' : 'FAILED',
+              trainerAssignmentEmailStatus: result.success ? 'SENT' : 'FAILED',
+            },
+          });
+
+          if (result.success) {
+            trainerSuccess += 1;
+          } else {
+            trainerFailed += 1;
+          }
+        } catch (err) {
+          trainerFailed += 1;
+          await prisma.courseRunTrainer.update({
+            where: { id: assignment.id },
+            data: {
+              emailStatus: 'FAILED',
+              trainerAssignmentEmailStatus: 'FAILED',
+            },
+          });
+          console.error(`Failed to send email to trainer ${assignment.trainerId}:`, err);
+        }
+      }
 
       // Update course run status to CONFIRMED after all emails sent
       await prisma.courseRun.update({
@@ -2531,15 +2725,319 @@ export const courseRunController = {
 
       res.json({
         success: true,
-        message: 'Training assignment emails sent successfully',
+        message: 'Training assignment emails processed',
         emailsSent: {
-          learners: courseRun.courseRunLearners.length,
-          trainers: courseRun.courseRunTrainers.length,
+          learners: learnerSuccess,
+          trainers: trainerSuccess,
+        },
+        failures: {
+          learners: learnerFailed,
+          trainers: trainerFailed,
         },
       });
     } catch (error) {
       console.error('Error sending training assignment emails:', error);
       res.status(500).json(buildErrorResponse('courseRunController.sendTrainingAssignmentEmailToLearners', 'Failed to send training assignment emails', error));
+    }
+  },
+
+  // Withdraw a learner from a course run
+  async withdrawLearner(req: Request, res: Response): Promise<void> {
+    try {
+      const { courseRunId, learnerId } = req.params;
+      const { reason, supportingDocument } = req.body;
+      const actorId = (req as any).user?.id;
+
+      if (!courseRunId || !learnerId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID and learner ID are required',
+        });
+        return;
+      }
+
+      if (!reason) {
+        res.status(400).json({
+          success: false,
+          error: 'Withdrawal reason is required',
+        });
+        return;
+      }
+
+      // Find the enrollment
+      const enrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          courseRunId,
+          deletedAt: null,
+          OR: [
+            { id: learnerId },
+            { learnerId },
+          ],
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
+      });
+
+      if (!enrollment) {
+        res.status(404).json({
+          success: false,
+          error: 'Learner enrollment not found',
+        });
+        return;
+      }
+
+      if (enrollment.enrollmentStatus === 'WITHDRAWN') {
+        res.status(400).json({
+          success: false,
+          error: 'Learner is already withdrawn',
+        });
+        return;
+      }
+
+      // Handle supporting document upload if provided
+      let documentId = null;
+      if (supportingDocument) {
+        try {
+          let storedPath = supportingDocument.filepath || supportingDocument.path || null;
+          let filename = supportingDocument.filename || supportingDocument.originalname || 'withdrawal-document';
+          const mimeType = supportingDocument.mimetype || supportingDocument.mimeType || 'application/octet-stream';
+          let size = supportingDocument.size || 0;
+
+          if (supportingDocument.base64) {
+            const uploadsDir = path.join(process.cwd(), 'uploads', 'withdrawal-documents');
+            await fs.mkdir(uploadsDir, { recursive: true });
+
+            const safeName = `${Date.now()}-${filename}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const filePath = path.join(uploadsDir, safeName);
+            const buffer = Buffer.from(supportingDocument.base64, 'base64');
+
+            await fs.writeFile(filePath, buffer);
+
+            storedPath = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
+            filename = safeName;
+            size = supportingDocument.size || buffer.length;
+          }
+
+          const media = await prisma.media.create({
+            data: {
+              filename,
+              originalName: supportingDocument.originalname || supportingDocument.filename || filename,
+              mimeType,
+              size,
+              path: storedPath || `/uploads/withdrawal-documents/${filename}`,
+            },
+          });
+          documentId = media.id;
+        } catch (fileError) {
+          console.error('Failed to store supporting document for withdrawal:', fileError);
+        }
+      }
+
+      // Update enrollment to withdrawn status
+      const updatedEnrollment = await prisma.courseRunLearner.update({
+        where: {
+          id: enrollment.id,
+        },
+        data: {
+          enrollmentStatus: 'WITHDRAWN',
+          withdrawnReason: reason,
+          withdrawnAt: new Date(),
+          withdrawnBy: actorId,
+          supportingDocumentWithdrawnId: documentId,
+        },
+        include: {
+          learner: true,
+          supportingDocumentWithdrawn: true,
+        },
+      });
+
+      // Create audit log
+      await prisma.auditLog.create({
+        data: {
+          ...(actorId && { userId: actorId }),
+          action: 'Learner Withdrawn',
+          actionType: 'UPDATE',
+          ...(enrollment.id && { tableName: 'course_run_learners', recordId: enrollment.id }),
+          ...(enrollment.learner?.fullname && enrollment.courseRun?.course?.title && {
+            details: `Learner ${enrollment.learner.fullname} withdrawn from ${enrollment.courseRun.course.title}. Reason: ${reason}`
+          }),
+          ...((req as any).user?.email && { performedBy: (req as any).user.email }),
+          ...(req.ip && { ipAddress: req.ip }),
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Learner withdrawn successfully',
+        enrollment: updatedEnrollment,
+      });
+    } catch (error) {
+      console.error('Error withdrawing learner:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.withdrawLearner', 'Failed to withdraw learner', error));
+    }
+  },
+
+  // Resend confirmation email to a learner
+  async resendConfirmationEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { courseRunId, learnerId } = req.params;
+
+      if (!courseRunId || !learnerId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID and learner ID are required',
+        });
+        return;
+      }
+
+      // Find the enrollment
+      const enrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          courseRunId,
+          deletedAt: null,
+          OR: [
+            { id: learnerId },
+            { learnerId },
+          ],
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+              venue: true,
+            },
+          },
+        },
+      });
+
+      if (!enrollment) {
+        res.status(404).json({
+          success: false,
+          error: 'Learner enrollment not found',
+        });
+        return;
+      }
+
+      if (enrollment.enrollmentStatus === 'WITHDRAWN') {
+        res.status(400).json({
+          success: false,
+          error: 'Cannot send confirmation email to withdrawn learner',
+        });
+        return;
+      }
+
+      if (!enrollment.learner.email) {
+        res.status(400).json({
+          success: false,
+          error: 'Learner does not have an email address',
+        });
+        return;
+      }
+
+      try {
+        const emailPayload: Parameters<typeof EmailService.sendLearnerCourseConfirmationEmail>[0] = {
+          email: enrollment.learner.email,
+          learnerName: enrollment.learner.fullname || 'Learner',
+          courseTitle:
+            enrollment.courseRun?.course?.title ||
+            enrollment.courseRun?.serialNumber ||
+            'POLWEL Course',
+        };
+
+        if (enrollment.courseRun?.course?.courseCode) {
+          emailPayload.courseCode = enrollment.courseRun.course.courseCode;
+        }
+
+        if (enrollment.courseRun?.serialNumber) {
+          emailPayload.serialNumber = enrollment.courseRun.serialNumber;
+        }
+
+        if (enrollment.courseRun?.startDatetime) {
+          emailPayload.startDate = new Date(enrollment.courseRun.startDatetime);
+        }
+
+        if (enrollment.courseRun?.endDatetime) {
+          emailPayload.endDate = new Date(enrollment.courseRun.endDatetime);
+        }
+
+        const venueName = enrollment.courseRun?.venue?.name || enrollment.courseRun?.specifiedLocation;
+        if (venueName) {
+          emailPayload.venueName = venueName;
+        }
+
+        const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
+
+        const status = didSend ? 'SENT' : 'FAILED';
+        const now = new Date();
+
+        await prisma.courseRunLearner.update({
+          where: {
+            id: enrollment.id,
+          },
+          data: {
+            confirmationEmailStatus: status,
+            confirmationEmailLastSentAt: now,
+          },
+        });
+
+        await prisma.confirmationEmailHistory.create({
+          data: {
+            courseRunLearnersId: enrollment.id,
+            courseRunId: courseRunId,
+            remarks: didSend
+              ? `Confirmation email sent successfully to ${enrollment.learner.email}`
+              : `Failed to send confirmation email to ${enrollment.learner.email}.` ,
+          },
+        });
+
+        if (!didSend) {
+          res.status(500).json({
+            success: false,
+            error: 'Failed to send confirmation email',
+          });
+          return;
+        }
+
+        res.json({
+          success: true,
+          message: 'Confirmation email sent successfully',
+          sentTo: enrollment.learner.email,
+        });
+      } catch (emailError) {
+        const now = new Date();
+
+        await prisma.courseRunLearner.update({
+          where: {
+            id: enrollment.id,
+          },
+          data: {
+            confirmationEmailStatus: 'FAILED',
+            confirmationEmailLastSentAt: now,
+          },
+        });
+
+        await prisma.confirmationEmailHistory.create({
+          data: {
+            courseRunLearnersId: enrollment.id,
+            courseRunId: courseRunId,
+            remarks: `Failed to send confirmation email to ${enrollment.learner.email}. Error: ${
+              emailError instanceof Error ? emailError.message : 'Unknown error'
+            }`,
+          },
+        });
+
+        throw emailError;
+      }
+    } catch (error) {
+      console.error('Error resending confirmation email:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.resendConfirmationEmail', 'Failed to resend confirmation email', error));
     }
   },
 };
