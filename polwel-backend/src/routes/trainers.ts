@@ -11,6 +11,7 @@ import {
   deleteTrainerBlockout,
   getPartnerOrganizations,
   getTrainerCourseRuns,
+  getTrainerTrainingSummary,
   resendTrainerSetup
 } from '../controllers/trainersController';
 import { 
@@ -42,6 +43,7 @@ router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_C
 
 // Trainer course runs
 router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('course-run.view'), getTrainerCourseRuns);
+router.get('/:id/training-summary', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('course-run.view'), getTrainerTrainingSummary);
 
 // Trainer onboarding
 router.post('/:id/resend-setup', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), resendTrainerSetup);

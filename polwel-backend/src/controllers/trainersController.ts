@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
 import EmailService from '../services/emailService';
+import { fetchTrainerCourseRuns, fetchTrainerTrainingSummary } from '../services/trainerService';
 // import { logDatabaseQuery } from '../middleware/logging'; // Temporarily disabled
 
 
@@ -635,128 +636,20 @@ export const getTrainerCourseRuns = async (req: AuthenticatedRequest, res: Respo
       });
     }
 
-    const whereClause: Prisma.CourseRunWhereInput = {
-      courseRunTrainers: {
-        some: { trainerId: id }
-      }
-    };
-
-    if (startDate || endDate) {
-      const start = typeof startDate === 'string' ? new Date(startDate) : undefined;
-      const end = typeof endDate === 'string' ? new Date(endDate) : undefined;
-
-      if (start && !Number.isNaN(start.getTime())) {
-        start.setHours(0, 0, 0, 0);
-      }
-
-      if (end && !Number.isNaN(end.getTime())) {
-        end.setHours(23, 59, 59, 999);
-      }
-
-      if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
-        whereClause.startDatetime = {
-          gte: start,
-          lte: end
-        };
-      } else if (start && !Number.isNaN(start.getTime())) {
-        whereClause.startDatetime = {
-          gte: start
-        };
-      } else if (end && !Number.isNaN(end.getTime())) {
-        whereClause.startDatetime = {
-          lte: end
-        };
-      }
+    const params: Parameters<typeof fetchTrainerCourseRuns>[0] = { trainerId: id };
+    if (typeof startDate === 'string' && startDate.trim()) {
+      params.startDate = startDate;
+    }
+    if (typeof endDate === 'string' && endDate.trim()) {
+      params.endDate = endDate;
     }
 
-    const courseRuns = await prisma.courseRun.findMany({
-      where: whereClause,
-      include: {
-        course: {
-          select: {
-            id: true,
-            title: true
-          }
-        },
-        venue: {
-          select: {
-            id: true,
-            name: true,
-            address: true
-          }
-        },
-        courseRunTrainers: {
-          select: {
-            trainer: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
-          }
-        },
-        _count: {
-          select: {
-            courseRunLearners: true
-          }
-        }
-      },
-      orderBy: {
-        startDatetime: 'asc'
-      }
-    });
-
-    const formatDate = (value?: Date | null) => {
-      if (!value) return '';
-      return value.toISOString().split('T')[0];
-    };
-
-    const formatTime = (value?: Date | null) => {
-      if (!value) return '';
-      return value.toTimeString().split(' ')[0];
-    };
-
-    const transformedRuns = courseRuns
-      .map(run => {
-        const start = run.startDatetime;
-        if (!start) {
-          return null;
-        }
-
-        const startDate = formatDate(start);
-        const endDate = formatDate(run.endDatetime);
-        const startTime = formatTime(start);
-        const endTime = formatTime(run.endDatetime);
-
-        return {
-          id: run.id,
-          courseId: run.courseId,
-          startDate,
-          endDate,
-          startTime,
-          endTime,
-          status: run.status,
-          course: {
-            title: run.course?.title || 'Untitled Course'
-          },
-          venue: run.venue
-            ? {
-                id: run.venue.id,
-                name: run.venue.name,
-                address: run.venue.address
-              }
-            : undefined,
-          currentParticipants: run._count?.courseRunLearners ?? 0,
-          maxParticipants: run.maxClassSize ?? 0
-        };
-      })
-      .filter((run): run is NonNullable<typeof run> => run !== null);
+    const runs = await fetchTrainerCourseRuns(params);
 
     return res.json({
       success: true,
-      runs: transformedRuns,
-      message: `Found ${transformedRuns.length} course run(s) for trainer`
+      runs,
+      message: `Found ${runs.length} course run(s) for trainer`
     });
 
   } catch (error) {
@@ -846,6 +739,47 @@ export const resendTrainerSetup = async (req: AuthenticatedRequest, res: Respons
 
   } catch (error) {
     console.error('Resend trainer setup error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+export const getTrainerTrainingSummary = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { startDate, endDate, page, limit } = req.query;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trainer ID is required'
+      });
+    }
+
+    const params: Parameters<typeof fetchTrainerTrainingSummary>[0] = { trainerId: id };
+    if (typeof startDate === 'string' && startDate.trim()) {
+      params.startDate = startDate;
+    }
+    if (typeof endDate === 'string' && endDate.trim()) {
+      params.endDate = endDate;
+    }
+    if (typeof page === 'string' && page.trim()) {
+      params.page = page;
+    }
+    if (typeof limit === 'string' && limit.trim()) {
+      params.limit = limit;
+    }
+
+    const summary = await fetchTrainerTrainingSummary(params);
+
+    return res.json({
+      success: true,
+      data: summary,
+    });
+  } catch (error) {
+    console.error('Get trainer training summary error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

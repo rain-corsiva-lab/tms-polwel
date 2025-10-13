@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, Clock, MapPin, Users, Building } from "lucide-react";
 import { format, isSameDay, parseISO } from "date-fns";
-import { getTrainerBlockouts, getTrainerCourseRuns, createTrainerBlockout, updateTrainerBlockout, deleteTrainerBlockout } from "@/lib/api";
+import { getTrainerBlockouts, getTrainerCourseRuns, createTrainerBlockout, updateTrainerBlockout, deleteTrainerBlockout, trainerDashboardApi } from "@/lib/api";
 import { AddTrainerBlockoutDialog } from "./AddTrainerBlockoutDialog";
 import { EditTrainerBlockoutDialog } from "./EditTrainerBlockoutDialog";
 import { TrainerBlockout, CourseRun } from "@/types/trainer";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TrainerCalendarProps {
   trainerId: string;
@@ -34,6 +35,8 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
   const [showAddBlockoutDialog, setShowAddBlockoutDialog] = useState(false);
   const [editingBlockout, setEditingBlockout] = useState<TrainerBlockout | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isSelfTrainer = user?.role === "TRAINER" && user?.id === trainerId;
 
   // Update local selected date when prop changes
   useEffect(() => {
@@ -60,13 +63,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
     onEventsChange?.(events);
   }, [blockouts, courseRuns, selectedDate]);
 
-  // Load data
-  useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trainerId, visibleMonth]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -78,14 +75,22 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
       // Load blockouts and course runs
       const [blockoutsResponse, courseRunsResponse] = await Promise.all([
         getTrainerBlockouts(trainerId, startOfMonth.toISOString().split("T")[0], endOfMonth.toISOString().split("T")[0]),
-        getTrainerCourseRuns(trainerId),
+        isSelfTrainer
+          ? trainerDashboardApi.getCourseRuns({
+              startDate: startOfMonth.toISOString().split("T")[0],
+              endDate: endOfMonth.toISOString().split("T")[0],
+            })
+          : getTrainerCourseRuns(trainerId),
       ]);
 
       if (blockoutsResponse?.data) {
         setBlockouts(Array.isArray(blockoutsResponse.data) ? blockoutsResponse.data : []);
       }
 
-      if (courseRunsResponse?.runs) {
+      if (isSelfTrainer) {
+        const runs = Array.isArray(courseRunsResponse?.data) ? courseRunsResponse?.data : [];
+        setCourseRuns(runs as CourseRun[]);
+      } else if (courseRunsResponse?.runs) {
         setCourseRuns(courseRunsResponse.runs || []);
       }
     } catch (error: any) {
@@ -115,7 +120,12 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [trainerId, visibleMonth, propSelectedDate, isSelfTrainer, toast]);
+
+  // Load data
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Get events for selected date
   const getEventsForDate = (date: Date) => {
@@ -362,7 +372,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
               <CardTitle>{trainerName || "Trainer"} Calendar</CardTitle>
             </div>
           </div>
-          <CardDescription>Manage unavailable dates and blockouts for this trainer</CardDescription>
+          {/* <CardDescription>Manage unavailable dates and blockouts for this trainer</CardDescription> */}
         </CardHeader>
         <CardContent className="space-y-4">
           <Calendar
@@ -376,7 +386,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
             className="rounded-md border"
           />
           <div className="text-sm space-y-2">
-            <p className="font-medium">Click a date to block out trainer</p>
+            <p className="font-medium">Select date(s) to manage your availability</p>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-blue-500 rounded"></div>

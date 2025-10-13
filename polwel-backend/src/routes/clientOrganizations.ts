@@ -14,7 +14,9 @@ import {
   deleteOrganizationCoordinator,
   getAllLearners,
   getOrganizationLearners,
-  resendCoordinatorSetup
+  resendCoordinatorSetup,
+  getCoordinatorCourseRunsSelf,
+  getOrganizationLearnersSelf,
 } from '../controllers/clientOrganizationsController';
 
 const router = express.Router();
@@ -43,5 +45,9 @@ router.post('/:organizationId/coordinators/:coordinatorId/resend-setup', authori
 
 // Learners routes
 router.get('/:organizationId/learners', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), authorizeOrganization, requirePermissions('clients.view'), getOrganizationLearners);
+
+// Training Coordinator self-scoped views
+router.get('/:organizationId/coordinator/course-runs', authorizeRoles('TRAINING_COORDINATOR'), authorizeOrganization, getCoordinatorCourseRunsSelf);
+router.get('/:organizationId/coordinator/learners', authorizeRoles('TRAINING_COORDINATOR'), authorizeOrganization, getOrganizationLearnersSelf);
 
 export default router;

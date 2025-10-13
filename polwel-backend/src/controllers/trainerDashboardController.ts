@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { UserRole } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { fetchTrainerCourseRuns, fetchTrainerTrainingSummary } from '../services/trainerService';
 
 // Helper to safely extract remarks with fallback to legacy 'reason'.
 function getRemarks(obj: any): string | null {
@@ -264,6 +265,100 @@ export const updateTrainerProfile = async (req: AuthenticatedRequest, res: Respo
 
   } catch (error) {
     console.error('Update trainer profile error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+export const getTrainerCourseRunsSelf = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const trainerId = req.user?.userId;
+    const role = (req.user?.role || '').toUpperCase();
+
+    if (!trainerId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (role !== UserRole.TRAINER) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Trainer role required.'
+      });
+    }
+
+    const { startDate, endDate } = req.query;
+
+    const params: Parameters<typeof fetchTrainerCourseRuns>[0] = { trainerId };
+    if (typeof startDate === 'string' && startDate.trim()) {
+      params.startDate = startDate;
+    }
+    if (typeof endDate === 'string' && endDate.trim()) {
+      params.endDate = endDate;
+    }
+
+    const runs = await fetchTrainerCourseRuns(params);
+
+    return res.json({
+      success: true,
+      data: runs
+    });
+  } catch (error) {
+    console.error('Get trainer course runs (self) error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+export const getTrainerTrainingSummarySelf = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const trainerId = req.user?.userId;
+    const role = (req.user?.role || '').toUpperCase();
+
+    if (!trainerId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (role !== UserRole.TRAINER) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Trainer role required.'
+      });
+    }
+
+    const { startDate, endDate, page, limit } = req.query;
+
+    const params: Parameters<typeof fetchTrainerTrainingSummary>[0] = { trainerId };
+    if (typeof startDate === 'string' && startDate.trim()) {
+      params.startDate = startDate;
+    }
+    if (typeof endDate === 'string' && endDate.trim()) {
+      params.endDate = endDate;
+    }
+    if (typeof page === 'string' && page.trim()) {
+      params.page = page;
+    }
+    if (typeof limit === 'string' && limit.trim()) {
+      params.limit = limit;
+    }
+
+    const summary = await fetchTrainerTrainingSummary(params);
+
+    return res.json({
+      success: true,
+      data: summary
+    });
+  } catch (error) {
+    console.error('Get trainer training summary (self) error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

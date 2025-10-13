@@ -137,6 +137,8 @@ export const authenticateToken = async (
 export const authenticate = authenticateToken;
 
 // Role-based authorization middleware
+const normalizeRole = (role?: string | null) => (role ? String(role).trim().toUpperCase() : "");
+
 export const authorizeRoles = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -150,17 +152,55 @@ export const authorizeRoles = (...allowedRoles: string[]) => {
     // Enforce permission checks
     if (!allowedRoles || allowedRoles.length === 0) {
       // no role restriction provided
-    } else if (!allowedRoles.includes(req.user.role)) {
-      res.status(403).json({ 
-        error: 'Insufficient permissions',
-        code: 'INSUFFICIENT_PERMISSIONS',
-        required: allowedRoles,
-        current: req.user.role
+    } else {
+      const normalizedAllowed = allowedRoles.map((r) => normalizeRole(r));
+      const currentRole = normalizeRole(req.user.role);
+
+      if (!normalizedAllowed.includes(currentRole)) {
+        res.status(403).json({ 
+          error: 'Insufficient permissions',
+          code: 'INSUFFICIENT_PERMISSIONS',
+          required: normalizedAllowed,
+          current: currentRole
+        });
+        return;
+      }
+    }
+
+    next();
+  };
+};
+
+export const authorizeSelfOrRoles = (resolveUserId: (req: Request) => string | undefined, ...allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Authentication required',
+        code: 'NOT_AUTHENTICATED'
       });
       return;
     }
 
-    next();
+    const currentRole = normalizeRole(req.user.role);
+
+    if (allowedRoles.length > 0) {
+      const normalizedAllowed = allowedRoles.map((r) => normalizeRole(r));
+      if (normalizedAllowed.includes(currentRole)) {
+        next();
+        return;
+      }
+    }
+
+    const targetUserId = resolveUserId(req);
+    if (targetUserId && targetUserId === req.user.userId) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      error: 'Access denied to this resource',
+      code: 'RESOURCE_ACCESS_DENIED'
+    });
   };
 };
 

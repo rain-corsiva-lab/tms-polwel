@@ -1,173 +1,401 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import Header from "@/components/Header";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BookOpen, Calendar, Plus, Search } from "lucide-react";
-import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
-import StatsCard from "@/components/StatsCard";
+import { Users, BookOpen, Eye, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { clientOrganizationsApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/date";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import PaginationControls from "@/components/ui/pagination";
 
-// Mock data for organization
-const organizationData = {
-  name: "TechCorp Solutions",
-  industry: "Technology",
-  totalLearners: 156,
-  activeTrainings: 12,
-  completedTrainings: 87,
-  coordinators: [
-    { id: 1, name: "Sarah Johnson", email: "sarah.johnson@techcorp.com", phone: "+1-555-0123", status: "active" },
-    { id: 2, name: "Mike Chen", email: "mike.chen@techcorp.com", phone: "+1-555-0124", status: "active" },
-    { id: 3, name: "Emily Davis", email: "emily.davis@techcorp.com", phone: "+1-555-0125", status: "inactive" },
-  ]
-};
+interface OrganizationData {
+  id: string;
+  name: string;
+  status: string;
+  address?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactPerson?: string;
+  buNumber?: string;
+  organizationType?: string;
+}
 
-const trainingRecords = [
-  { id: 1, title: "Safety Training", learners: 25, status: "ongoing", startDate: "2024-01-15", endDate: "2024-01-20" },
-  { id: 2, title: "Leadership Development", learners: 15, status: "completed", startDate: "2024-01-10", endDate: "2024-01-14" },
-  { id: 3, title: "Technical Skills", learners: 30, status: "scheduled", startDate: "2024-01-25", endDate: "2024-01-30" },
-];
+interface CourseRun {
+  id: string;
+  courseName: string;
+  courseCode?: string;
+  startDate: Date | string;
+  endDate: Date | string;
+  participants: number;
+  status: string;
+}
 
-const learners = [
-  { id: 1, name: "John Smith", email: "john.smith@techcorp.com", department: "Engineering", status: "active", trainings: 5 },
-  { id: 2, name: "Sarah Wilson", email: "sarah.wilson@techcorp.com", department: "Marketing", status: "active", trainings: 3 },
-  { id: 3, name: "Michael Brown", email: "michael.brown@techcorp.com", department: "HR", status: "inactive", trainings: 2 },
-  { id: 4, name: "Lisa Davis", email: "lisa.davis@techcorp.com", department: "Finance", status: "active", trainings: 4 },
-  { id: 5, name: "David Jones", email: "david.jones@techcorp.com", department: "Engineering", status: "active", trainings: 6 },
-  { id: 6, name: "Emma Thompson", email: "emma.thompson@techcorp.com", department: "Operations", status: "active", trainings: 3 },
-];
+interface Learner {
+  id: string;
+  name: string;
+  email: string;
+  designation: string;
+  status: string;
+  enrolledCourses: number;
+  completedCourses: number;
+}
 
 const OrganizationDashboard = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [learnerSearchTerm, setLearnerSearchTerm] = useState("");
+  const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [organization, setOrganization] = useState<OrganizationData | null>(null);
+  const [inProgressRuns, setInProgressRuns] = useState<CourseRun[]>([]);
+  const [completedRuns, setCompletedRuns] = useState<CourseRun[]>([]);
+  const [learners, setLearners] = useState<Learner[]>([]);
+  const [learnersPagination, setLearnersPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [learnersPerPage, setLearnersPerPage] = useState(10);
+  const [activeTab, setActiveTab] = useState("details");
 
-  const filteredCoordinators = organizationData.coordinators.filter(coordinator =>
-    coordinator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coordinator.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const organizationId = user?.organizationId;
 
-  const filteredLearners = learners.filter(learner =>
-    learner.name.toLowerCase().includes(learnerSearchTerm.toLowerCase()) ||
-    learner.email.toLowerCase().includes(learnerSearchTerm.toLowerCase()) ||
-    learner.department.toLowerCase().includes(learnerSearchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (!hasRole("TRAINING_COORDINATOR") || !organizationId) {
+      navigate("/", { replace: true });
+      return;
+    }
+    fetchOrganizationData();
+  }, [organizationId]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active": return "bg-green-100 text-green-800";
-      case "inactive": return "bg-red-100 text-red-800";
-      case "ongoing": return "bg-blue-100 text-blue-800";
-      case "completed": return "bg-green-100 text-green-800";
-      case "scheduled": return "bg-yellow-100 text-yellow-800";
-      default: return "bg-gray-100 text-gray-800";
+  useEffect(() => {
+    if (activeTab === "learners" && organizationId) {
+      fetchLearners();
+    }
+  }, [activeTab, organizationId, learnersPagination.page, learnersPerPage]);
+
+  const fetchOrganizationData = async () => {
+    if (!organizationId) return;
+    try {
+      setLoading(true);
+      const [orgData, courseRunsData] = await Promise.all([
+        clientOrganizationsApi.getById(organizationId),
+        clientOrganizationsApi.getCoordinatorCourseRuns(organizationId),
+      ]);
+      setOrganization(orgData);
+      setInProgressRuns(courseRunsData.inProgress || []);
+      setCompletedRuns(courseRunsData.completed || []);
+    } catch (error: any) {
+      toast({
+        title: "Error loading dashboard",
+        description: error.message || "Failed to load organization data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
+  const fetchLearners = async () => {
+    if (!organizationId) return;
+    try {
+      const response = await clientOrganizationsApi.getCoordinatorLearners(organizationId, {
+        page: learnersPagination.page,
+        limit: learnersPerPage,
+      });
+      setLearners(response.learners || []);
+      setLearnersPagination(response.pagination || learnersPagination);
+    } catch (error: any) {
+      toast({
+        title: "Error loading learners",
+        description: error.message || "Failed to load learners",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes("progress") || statusLower === "ongoing" || statusLower === "in_progress") {
+      return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>;
+    }
+    if (statusLower === "completed" || statusLower === "pending_billing") {
+      return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+    }
+    if (statusLower === "active") {
+      return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+    }
+    return <Badge variant="secondary">{status}</Badge>;
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading dashboard...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!organization) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-muted-foreground">Organisation not found</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const totalLearners = learnersPagination.total || learners.length;
+  const activeLearners = learners.filter((l) => l.status === "ACTIVE").length;
+  const completedCourses = completedRuns.length;
+  const ongoingCourses = inProgressRuns.length;
+
   return (
-    <div className="space-y-6">
+    <div className="pt-[var(--header-height)] p-6 space-y-6">
+      <Header />
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">{organizationData.name}</h1>
-          <p className="text-muted-foreground">{organizationData.industry} Organization</p>
+          <h1 className="text-3xl font-bold">{organization.name}</h1>
+          {/* <p className="text-muted-foreground">Organisation Details and Training Information</p> */}
         </div>
+        {getStatusBadge(organization.status)}
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StatsCard
-          title="Total Learners"
-          value={organizationData.totalLearners}
-          icon={Users}
-        />
-        <StatsCard
-          title="Training Coordinators"
-          value={organizationData.coordinators.length}
-          icon={Users}
-        />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Learners</p>
+                <p className="text-3xl font-bold">{totalLearners}</p>
+                <p className="text-xs text-muted-foreground mt-1">{activeLearners} currently active</p>
+              </div>
+              <div className="p-3 bg-accent rounded-lg">
+                <Users className="h-6 w-6 text-accent-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Completed Courses</p>
+                <p className="text-3xl font-bold">{completedCourses}</p>
+                <p className="text-xs text-muted-foreground mt-1">{ongoingCourses} ongoing</p>
+              </div>
+              <div className="p-3 bg-accent rounded-lg">
+                <BookOpen className="h-6 w-6 text-accent-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Tabs for Coordinators and Learners */}
-      <Tabs defaultValue="coordinators" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>
-          <TabsTrigger value="learners">Organization Learners</TabsTrigger>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="details">Organisation Details</TabsTrigger>
+          <TabsTrigger value="courses">List of Course Runs</TabsTrigger>
+          <TabsTrigger value="learners">Learners</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="coordinators">
+
+        <TabsContent value="details" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Training Coordinators</CardTitle>
-                <AddCoordinatorDialog />
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search coordinators..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <CardTitle>Organisation Information</CardTitle>
+              {/* <CardDescription>Basic details and contact information for the Organisation</CardDescription> */}
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {filteredCoordinators.map((coordinator) => (
-                  <div key={coordinator.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{coordinator.name}</h3>
-                        <p className="text-sm text-muted-foreground">{coordinator.email}</p>
-                        <p className="text-sm text-muted-foreground">{coordinator.phone}</p>
-                      </div>
-                    </div>
-                    <Badge className={getStatusColor(coordinator.status)}>
-                      {coordinator.status}
-                    </Badge>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Organisation Name</p>
+                  <p className="mt-1">{organization.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Address</p>
+                  <p className="mt-1">{organization.address || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Industry</p>
+                  <p className="mt-1">{organization.organizationType || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Registration Number</p>
+                  <p className="mt-1">{organization.buNumber || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Website</p>
+                  <p className="mt-1 text-muted-foreground">—</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">GST Number</p>
+                  <p className="mt-1 text-muted-foreground">—</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Email</p>
+                  <p className="mt-1">{organization.contactEmail || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Account Manager</p>
+                  <p className="mt-1">{organization.contactPerson || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                  <p className="mt-1">{organization.contactPhone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Payment Terms</p>
+                  <p className="mt-1 text-muted-foreground">—</p>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="learners">
+        <TabsContent value="courses" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Organization Learners</CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search learners..."
-                  value={learnerSearchTerm}
-                  onChange={(e) => setLearnerSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                <CardTitle>In Progress Course Runs ({inProgressRuns.length})</CardTitle>
               </div>
+              <CardDescription>Currently ongoing training programs</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {filteredLearners.map((learner) => (
-                  <div key={learner.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{learner.name}</h3>
-                        <p className="text-sm text-muted-foreground">{learner.email}</p>
-                      </div>
-                    </div>
-                    <Badge className={getStatusColor(learner.status)}>
-                      {learner.status}
-                    </Badge>
-                  </div>
-                ))}
+              {inProgressRuns.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No courses in progress</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Course Name</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Participants</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inProgressRuns.map((run) => (
+                      <TableRow key={run.id}>
+                        <TableCell className="font-medium">{run.courseName}</TableCell>
+                        <TableCell>{formatDate(run.startDate)}</TableCell>
+                        <TableCell>{formatDate(run.endDate)}</TableCell>
+                        <TableCell>{run.participants}</TableCell>
+                        <TableCell>{getStatusBadge(run.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                <CardTitle>Completed Course Runs ({completedRuns.length})</CardTitle>
               </div>
+              <CardDescription>Finished training programs with learner details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {completedRuns.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No completed courses</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Course Name</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Participants</TableHead>
+                      <TableHead>Status</TableHead>
+                      {/* <TableHead className="text-right">Actions</TableHead> */}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {completedRuns.map((run) => (
+                      <TableRow key={run.id}>
+                        <TableCell className="font-medium">{run.courseName}</TableCell>
+                        <TableCell>{formatDate(run.startDate)}</TableCell>
+                        <TableCell>{formatDate(run.endDate)}</TableCell>
+                        <TableCell>{run.participants}</TableCell>
+                        <TableCell>{getStatusBadge(run.status)}</TableCell>
+                        {/* <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/course-runs/${run.id}`)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </Button>
+                        </TableCell> */}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="learners" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                <CardTitle>Learners ({totalLearners})</CardTitle>
+              </div>
+              <CardDescription>Employees enrolled in training programs</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {learners.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No learners found</div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Enrolled</TableHead>
+                        <TableHead>Completed</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {learners.map((learner) => (
+                        <TableRow key={learner.id}>
+                          <TableCell className="font-medium">{learner.name}</TableCell>
+                          <TableCell>{learner.email}</TableCell>
+                          <TableCell>{learner.designation}</TableCell>
+                          <TableCell>{learner.enrolledCourses}</TableCell>
+                          <TableCell>{learner.completedCourses}</TableCell>
+                          <TableCell>{getStatusBadge(learner.status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <PaginationControls
+                    page={learnersPagination.page}
+                    perPage={learnersPerPage}
+                    total={learnersPagination.total}
+                    onPageChange={(p) => setLearnersPagination((prev) => ({ ...prev, page: p }))}
+                    onPerPageChange={(pp) => {
+                      setLearnersPerPage(pp);
+                      setLearnersPagination((prev) => ({ ...prev, page: 1 }));
+                    }}
+                  />
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

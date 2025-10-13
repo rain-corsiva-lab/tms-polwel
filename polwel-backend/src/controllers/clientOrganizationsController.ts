@@ -181,7 +181,18 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
 
     const organization = await prisma.organization.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        address: true,
+        contactEmail: true,
+        contactPhone: true,
+        contactPerson: true,
+        buNumber: true,
+        organizationType: true,
+        createdAt: true,
+        updatedAt: true,
         users: {
           select: {
             id: true,
@@ -189,6 +200,9 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
             email: true,
             role: true,
             status: true,
+            contactNumber: true,
+            designation: true,
+            isPrimaryCoordinator: true,
             createdAt: true
           }
         },
@@ -205,12 +219,249 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
       return errorResponse(res, 404, 'Organization not found');
     }
 
-    return res.json({
-      ...organization,
-      stats: {
-        totalUsers: organization._count.users,
-        totalBookings: organization._count.bookings
+    const totalLearnersPromise = prisma.learner.count({ where: { clientOrganizationId: id } });
+    const activeLearnersPromise = prisma.learner.count({ where: { clientOrganizationId: id, deletedAt: null } });
+    const courseRunsPromise = prisma.courseRun.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          {
+            courseRunLearners: {
+              some: {
+                deletedAt: null,
+                learner: { clientOrganizationId: id }
+              }
+            }
+          },
+          { bookings: { some: { organizationId: id } } }
+        ]
+      },
+      select: {
+        id: true,
+        courseId: true,
+        status: true,
+        startDatetime: true,
+        endDatetime: true,
+        updatedAt: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+            courseCode: true
+          }
+        },
+        venue: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        bookings: {
+          where: { organizationId: id },
+          select: { id: true, participantCount: true }
+        },
+        courseRunLearners: {
+          where: {
+            deletedAt: null,
+            learner: { clientOrganizationId: id }
+          },
+          select: {
+            id: true,
+            enrollmentStatus: true
+          }
+        }
       }
+    });
+
+    const [totalLearners, activeLearners, courseRuns] = await Promise.all([
+      totalLearnersPromise,
+      activeLearnersPromise,
+      courseRunsPromise
+    ]);
+
+    const now = new Date();
+    const upcomingStatuses = new Set([
+      'PENDING',
+      'ACTIVE',
+      'CONFIRMED',
+      'CONFIRMED_PENDING_TA_APPROVAL',
+      'CONFIRMED_PENDING_CONFIRMATION_EMAILS',
+      'PUBLISHED'
+    ]);
+    const ongoingStatuses = new Set(['ONGOING', 'IN_PROGRESS']);
+    const completedStatuses = new Set(['COMPLETED']);
+    const pendingBillingStatuses = new Set(['PENDING_BILLING']);
+    const cancelledStatuses = new Set(['CANCELLED']);
+
+    const processedRuns = courseRuns.map((run) => {
+      const start = run.startDatetime ? new Date(run.startDatetime) : null;
+      const end = run.endDatetime ? new Date(run.endDatetime) : null;
+      const learnerCount = run.courseRunLearners.length;
+      const activeEnrollmentCount = run.courseRunLearners.filter((l) => l.enrollmentStatus === 'ENROLLED').length;
+
+      let bucket: 'upcoming' | 'ongoing' | 'completed' | 'cancelled' = 'upcoming';
+
+      if (cancelledStatuses.has(run.status)) {
+        bucket = 'cancelled';
+      } else if (pendingBillingStatuses.has(run.status) || completedStatuses.has(run.status) || (end && end < now)) {
+        bucket = 'completed';
+      } else if (ongoingStatuses.has(run.status) || (start && start <= now && (!end || end >= now))) {
+        bucket = 'ongoing';
+      } else if (upcomingStatuses.has(run.status) || (start && start > now)) {
+        bucket = 'upcoming';
+      }
+
+      return {
+        id: run.id,
+        courseId: run.courseId,
+        courseTitle: run.course?.title ?? 'Untitled Course',
+  courseCode: run.course?.courseCode ?? null,
+        status: run.status,
+        startDate: run.startDatetime ? new Date(run.startDatetime) : null,
+        endDate: run.endDatetime ? new Date(run.endDatetime) : null,
+        updatedAt: new Date(run.updatedAt),
+        venueName: run.venue?.name ?? null,
+        learnerCount,
+        activeEnrollmentCount,
+        bucket
+      };
+    });
+
+    let upcomingCount = 0;
+    let ongoingCount = 0;
+    let completedCount = 0;
+    let pendingBillingCount = 0;
+    let cancelledCount = 0;
+    let lastEngagementAt: Date | null = null;
+    const uniqueCourseIds = new Set<string>();
+    let totalEnrollments = 0;
+    let activeEnrollments = 0;
+
+    const updateLastEngagement = (candidate: Date | null) => {
+      if (!candidate) {
+        return;
+      }
+      if (!lastEngagementAt || candidate > lastEngagementAt) {
+        lastEngagementAt = candidate;
+      }
+    };
+
+    processedRuns.forEach((run) => {
+      uniqueCourseIds.add(run.courseId);
+      totalEnrollments += run.learnerCount;
+      activeEnrollments += run.activeEnrollmentCount;
+
+      if (run.bucket === 'upcoming') {
+        upcomingCount += 1;
+      } else if (run.bucket === 'ongoing') {
+        ongoingCount += 1;
+      } else if (run.bucket === 'completed') {
+        completedCount += 1;
+      } else if (run.bucket === 'cancelled') {
+        cancelledCount += 1;
+      }
+
+      if (run.status === 'PENDING_BILLING') {
+        pendingBillingCount += 1;
+      }
+
+      updateLastEngagement(run.endDate ?? run.startDate ?? null);
+    });
+
+    const getAscendingTime = (run: typeof processedRuns[number]) => {
+      if (run.startDate) {
+        return run.startDate.getTime();
+      }
+      if (run.endDate) {
+        return run.endDate.getTime();
+      }
+      return Number.MAX_SAFE_INTEGER;
+    };
+
+    const getDescendingTime = (run: typeof processedRuns[number]) => {
+      if (run.endDate) {
+        return run.endDate.getTime();
+      }
+      if (run.startDate) {
+        return run.startDate.getTime();
+      }
+      return 0;
+    };
+
+    const mapRunForSummary = (run: typeof processedRuns[number]) => ({
+      id: run.id,
+      courseTitle: run.courseTitle,
+      courseCode: run.courseCode,
+      status: run.status,
+      startDate: run.startDate,
+      endDate: run.endDate,
+      venueName: run.venueName,
+      learnerCount: run.learnerCount,
+      activeEnrollmentCount: run.activeEnrollmentCount
+    });
+
+    const courseRunSummary = {
+      upcoming: processedRuns
+        .filter((run) => run.bucket === 'upcoming')
+        .sort((a, b) => getAscendingTime(a) - getAscendingTime(b))
+        .slice(0, 5)
+        .map(mapRunForSummary),
+      recent: processedRuns
+        .filter((run) => run.bucket !== 'upcoming')
+        .sort((a, b) => getDescendingTime(b) - getDescendingTime(a))
+        .slice(0, 5)
+        .map(mapRunForSummary)
+    };
+
+    const coordinatorUsers = organization.users.filter((user) => user.role === 'TRAINING_COORDINATOR');
+    const activeCoordinators = coordinatorUsers.filter((user) => user.status === 'ACTIVE').length;
+    const primaryCoordinator = coordinatorUsers.find((user) => user.isPrimaryCoordinator) || null;
+
+    const stats = {
+      totalUsers: organization._count.users,
+      totalBookings: organization._count.bookings,
+      totalLearners,
+      activeLearners,
+      inactiveLearners: Math.max(totalLearners - activeLearners, 0),
+      totalCoordinators: coordinatorUsers.length,
+      activeCoordinators,
+      upcomingCourseRuns: upcomingCount,
+      ongoingCourseRuns: ongoingCount,
+      completedCourseRuns: completedCount,
+      pendingBillingCourseRuns: pendingBillingCount,
+      cancelledCourseRuns: cancelledCount,
+      totalCourseRuns: processedRuns.length,
+      uniqueCourses: uniqueCourseIds.size,
+      totalEnrollments,
+      activeEnrollments,
+      lastEngagementAt
+    };
+
+    return res.json({
+      id: organization.id,
+      name: organization.name,
+      status: organization.status,
+      address: organization.address,
+      contactEmail: organization.contactEmail,
+      contactPhone: organization.contactPhone,
+      contactPerson: organization.contactPerson,
+      buNumber: organization.buNumber,
+      organizationType: organization.organizationType,
+      createdAt: organization.createdAt,
+      updatedAt: organization.updatedAt,
+      users: organization.users,
+      stats,
+      primaryCoordinator: primaryCoordinator
+        ? {
+            id: primaryCoordinator.id,
+            name: primaryCoordinator.name,
+            email: primaryCoordinator.email,
+            status: primaryCoordinator.status,
+            contactNumber: primaryCoordinator.contactNumber,
+            designation: primaryCoordinator.designation
+          }
+        : null,
+      courseRunSummary
     });
   } catch (error) {
     console.error('Get client organization by ID error:', error);
@@ -946,6 +1197,177 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
     });
   } catch (error) {
     console.error('Get organization learners error:', error);
+    return errorResponse(res, 500, 'Internal server error');
+  }
+};
+
+// Get course runs for an organization scoped to the logged-in training coordinator (self)
+export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { organizationId } = req.params;
+    if (!organizationId) {
+      return errorResponse(res, 400, 'Organization ID is required');
+    }
+    if (!req.user) {
+      return errorResponse(res, 401, 'Authentication required');
+    }
+
+    const coordinatorId = req.user.userId;
+
+    const runs = await prisma.courseRun.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          {
+            courseRunLearners: {
+              some: {
+                deletedAt: null,
+                learner: {
+                  clientOrganizationId: organizationId,
+                  trainingCoordinatorId: coordinatorId,
+                },
+              },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        courseId: true,
+        status: true,
+        startDatetime: true,
+        endDatetime: true,
+        course: { select: { id: true, title: true, courseCode: true } },
+        courseRunLearners: {
+          where: {
+            deletedAt: null,
+            learner: { clientOrganizationId: organizationId, trainingCoordinatorId: coordinatorId },
+          },
+          select: { id: true },
+        },
+      },
+      orderBy: { startDatetime: 'desc' },
+    });
+
+    const now = new Date();
+    const inProgress: any[] = [];
+    const completed: any[] = [];
+
+    runs.forEach((run) => {
+      const start = run.startDatetime ? new Date(run.startDatetime) : null;
+      const end = run.endDatetime ? new Date(run.endDatetime) : null;
+      const participants = run.courseRunLearners.length;
+      const item = {
+        id: run.id,
+        courseName: run.course?.title || 'Untitled Course',
+        courseCode: run.course?.courseCode || null,
+        startDate: start,
+        endDate: end,
+        participants,
+        status: run.status,
+      };
+
+      const isCompleted = run.status === 'COMPLETED' || run.status === 'PENDING_BILLING' || (end && end < now);
+      const isOngoing = run.status === 'ONGOING' || run.status === 'IN_PROGRESS' || (start && start <= now && (!end || end >= now));
+      if (isCompleted) completed.push(item);
+      else if (isOngoing) inProgress.push(item);
+    });
+
+    return res.json({ inProgress, completed });
+  } catch (error) {
+    console.error('Get coordinator course runs error:', error);
+    return errorResponse(res, 500, 'Internal server error');
+  }
+};
+
+// Get learners for organization scoped to the logged-in training coordinator (self)
+export const getOrganizationLearnersSelf = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { organizationId } = req.params;
+    const { page = '1', limit = '10', search, status } = req.query;
+
+    if (!organizationId) {
+      return errorResponse(res, 400, 'Organization ID is required');
+    }
+    if (!req.user) {
+      return errorResponse(res, 401, 'Authentication required');
+    }
+
+    const coordinatorId = req.user.userId;
+
+    const rawPage = Number(page);
+    const rawLimit = Number(limit);
+    const pageNum = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+    const limitNum = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(1000, Math.floor(rawLimit)) : 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    const rawSearch = typeof search === 'string' ? search.trim() : undefined;
+    const normalizedSearch = rawSearch && rawSearch.length > 0 ? rawSearch.substring(0, 500) : undefined;
+    const rawStatus = typeof status === 'string' ? status.trim().toUpperCase() : undefined;
+
+    const where: any = {
+      clientOrganizationId: organizationId,
+      trainingCoordinatorId: coordinatorId,
+    };
+
+    if (normalizedSearch) {
+      where.OR = [
+        { fullname: { contains: normalizedSearch, mode: 'insensitive' } },
+        { email: { contains: normalizedSearch, mode: 'insensitive' } },
+        { departmentName: { contains: normalizedSearch, mode: 'insensitive' } },
+        { designation: { contains: normalizedSearch, mode: 'insensitive' } },
+        { contact: { contains: normalizedSearch, mode: 'insensitive' } },
+      ];
+    }
+
+    if (rawStatus === 'ACTIVE') {
+      where.deletedAt = null;
+    } else if (rawStatus === 'INACTIVE') {
+      where.deletedAt = { not: null };
+    }
+
+    const [rows, total] = await Promise.all([
+      prisma.learner.findMany({
+        where,
+        select: {
+          id: true,
+          fullname: true,
+          email: true,
+          designation: true,
+          departmentName: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true,
+          courseRunLearners: {
+            where: { deletedAt: null },
+            select: { id: true },
+          },
+        },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.learner.count({ where }),
+    ]);
+
+    const learners = rows.map((l) => ({
+      id: l.id,
+      name: l.fullname,
+      email: l.email,
+      designation: l.designation || l.departmentName || 'N/A',
+      status: l.deletedAt ? 'INACTIVE' : 'ACTIVE',
+      enrolledCourses: l.courseRunLearners.length,
+      completedCourses: 0,
+      createdAt: l.createdAt,
+      updatedAt: l.updatedAt,
+    }));
+
+    return res.json({
+      learners,
+      pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) || 1 },
+    });
+  } catch (error) {
+    console.error('Get coordinator learners error:', error);
     return errorResponse(res, 500, 'Internal server error');
   }
 };

@@ -664,6 +664,19 @@ export const trainersApi = {
     return apiRequest(`/trainers/partner-organizations?${queryParams}`);
   },
 
+  getTrainingSummary: async (
+    trainerId: string,
+    params: { startDate?: string; endDate?: string; page?: number | string; limit?: number | string } = {}
+  ) => {
+    const query = new URLSearchParams();
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+    if (params.page !== undefined) query.append('page', String(params.page));
+    if (params.limit !== undefined) query.append('limit', String(params.limit));
+    const queryString = query.toString();
+    return apiRequest(`/trainers/${trainerId}/training-summary${queryString ? `?${queryString}` : ''}`);
+  },
+
   // Resend setup email for trainer onboarding
   resendSetup: async (id: string) => {
     return apiRequest(`/trainers/${id}/resend-setup`, {
@@ -704,6 +717,24 @@ export const trainerDashboardApi = {
     return apiRequest('/trainer/dashboard');
   },
 
+  getCourseRuns: async (params: { startDate?: string; endDate?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+    const queryString = query.toString();
+    return apiRequest(`/trainer/course-runs${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getTrainingSummary: async (params: { startDate?: string; endDate?: string; page?: number | string; limit?: number | string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+    if (params.page !== undefined) query.append('page', String(params.page));
+    if (params.limit !== undefined) query.append('limit', String(params.limit));
+    const queryString = query.toString();
+    return apiRequest(`/trainer/training-summary${queryString ? `?${queryString}` : ''}`);
+  },
+
   // Update trainer profile
   updateProfile: async (profileData: {
     name?: string;
@@ -717,6 +748,28 @@ export const trainerDashboardApi = {
       method: 'PUT',
       body: JSON.stringify(profileData),
     });
+  },
+};
+
+// Trainers API (admin context)
+// extend trainersApi with training summary helper
+(trainersApi as any).getTrainingSummary = async (
+  trainerId: string,
+  params: { startDate?: string; endDate?: string; page?: number | string; limit?: number | string } = {}
+) => {
+  const query = new URLSearchParams();
+  if (params.startDate) query.append('startDate', params.startDate);
+  if (params.endDate) query.append('endDate', params.endDate);
+  if (params.page !== undefined) query.append('page', String(params.page));
+  if (params.limit !== undefined) query.append('limit', String(params.limit));
+  const queryString = query.toString();
+  return apiRequest(`/trainers/${trainerId}/training-summary${queryString ? `?${queryString}` : ''}`);
+};
+
+// Dashboard metrics API (for POLWEL home counters)
+export const dashboardApi = {
+  getGlobalMetrics: async () => {
+    return apiRequest('/dashboard/metrics');
   },
 };
 
@@ -1021,6 +1074,30 @@ export const clientOrganizationsApi = {
     });
     
     return apiRequest(`/client-organizations/${organizationId}/learners?${queryParams}`);
+  },
+
+  // ============ COORDINATOR SELF-SERVICE ============
+  
+  // Get coordinator's course runs (filtered to their learners)
+  getCoordinatorCourseRuns: async (organizationId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinator/course-runs`);
+  },
+
+  // Get coordinator's learners
+  getCoordinatorLearners: async (organizationId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/client-organizations/${organizationId}/coordinator/learners?${queryParams}`);
   },
 };
 

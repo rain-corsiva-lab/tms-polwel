@@ -19,6 +19,7 @@ import { Calendar as CalendarIcon, Clock, MapPin, Mail, Phone, Building2, User, 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { trainerDashboardApi } from "@/lib/api";
+import { TrainerTrainingSummary } from "@/components/TrainerTrainingSummary";
 
 interface TrainerProfile {
   id: string;
@@ -262,8 +263,8 @@ export default function TrainerDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Trainer Dashboard</h1>
-            <p className="text-muted-foreground">Manage your profile and training schedule</p>
+            <h1 className="text-3xl font-bold text-foreground">My Dashboard</h1>
+            <p className="text-muted-foreground">Manage your profile and schedule</p>
           </div>
           <div className="flex items-center space-x-2">
             <Button onClick={() => setShowEditProfile(true)}>
@@ -646,6 +647,11 @@ export default function TrainerDashboard() {
             )}
           </CardContent>
         </Card> */}
+      </div>
+
+      {/* Training Summary at bottom */}
+      <div className="mt-2">
+        <TrainerTrainingSummary mode="self" />
       </div>
 
       {/* Edit Profile Dialog */}

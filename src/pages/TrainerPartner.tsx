@@ -163,7 +163,7 @@ const TrainerPartner = () => {
                 <Clock className="h-5 w-5 mr-2" />
                 My Training Calendar
               </CardTitle>
-              <p className="text-muted-foreground">View and manage your training sessions</p>
+              <p className="text-muted-foreground">View Trainings and Manage your Availability</p>
             </CardHeader>
             <CardContent>
               <TrainerCalendar trainerId={trainerProfile.id} trainerName={trainerProfile.name} />

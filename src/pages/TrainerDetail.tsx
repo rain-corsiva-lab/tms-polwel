@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Mail, Phone, Calendar, Edit, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/date";
 import TrainerCalendar from "@/components/TrainerCalendar";
+import { TrainerTrainingSummary } from "@/components/TrainerTrainingSummary";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { trainersApi, coursesApi } from "@/lib/api";
 import Swal from "sweetalert2";
@@ -446,6 +447,9 @@ const TrainerDetail = () => {
             </table>
           </CardContent>
         </Card>
+        <div className="lg:col-span-2">
+          <TrainerTrainingSummary mode="admin" trainerId={trainer.id} />
+        </div>
         {/* Calendar and events */}
         <Card>
           <CardHeader>

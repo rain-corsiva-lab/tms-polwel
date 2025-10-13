@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import StatsCard from "@/components/StatsCard";
 import { Users, GraduationCap, Building2, BookOpen } from "lucide-react";
+import { useState, useEffect as useEffectReact } from "react";
+import { dashboardApi } from "@/lib/api";
 
 const Home = () => {
   const { user, hasRole } = useAuth();
@@ -19,9 +21,9 @@ const Home = () => {
       }
 
       // Training coordinators are now handled at login and don't reach this page
-      // if they access home directly, redirect them to their organization
+      // if they access home directly, redirect them to their organization dashboard
       if (user.role === "TRAINING_COORDINATOR" && user.organizationId) {
-        navigate(`/client-organisations/${user.organizationId}`, { replace: true });
+        navigate("/org", { replace: true });
         return;
       }
     }
@@ -38,14 +40,7 @@ const Home = () => {
       </div>
 
       {/* Quick Stats - Only for POLWEL users */}
-      {hasRole(["POLWEL"]) && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard title="Total Users" value="1,234" description="+20.1% from last month" icon={Users} />
-          <StatsCard title="Active Trainers" value="89" description="+5 new this month" icon={GraduationCap} />
-          <StatsCard title="Organisations" value="56" description="+3 new partnerships" icon={Building2} />
-          <StatsCard title="Active Courses" value="142" description="+12 new courses" icon={BookOpen} />
-        </div>
-      )}
+      {hasRole(["POLWEL"]) && <HomeCounters />}
 
       {/* Quick Actions */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -127,3 +122,54 @@ const Home = () => {
 };
 
 export default Home;
+
+function HomeCounters() {
+  const [metrics, setMetrics] = useState<{ totalUsers: number; activeTrainers: number; activeOrganizations: number; activeCourses: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffectReact(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const resp = await dashboardApi.getGlobalMetrics();
+        const data = resp?.data ?? resp; // support either {success,data} or bare data
+        if (!mounted) return;
+        setMetrics({
+          totalUsers: Number(data?.totalUsers || 0),
+          activeTrainers: Number(data?.activeTrainers || 0),
+          activeOrganizations: Number(data?.activeOrganizations || 0),
+          activeCourses: Number(data?.activeCourses || 0),
+        });
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e?.message || "Failed to load metrics");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <StatsCard title="Total Users" value={loading ? "…" : metrics?.totalUsers ?? 0} description={error ? "—" : "+20.1% from last month"} icon={Users} />
+      <StatsCard
+        title="Active Trainers"
+        value={loading ? "…" : metrics?.activeTrainers ?? 0}
+        description={error ? "—" : "+5 new this month"}
+        icon={GraduationCap}
+      />
+      <StatsCard
+        title="Organisations"
+        value={loading ? "…" : metrics?.activeOrganizations ?? 0}
+        description={error ? "—" : "+3 new partnerships"}
+        icon={Building2}
+      />
+      <StatsCard title="Active Courses" value={loading ? "…" : metrics?.activeCourses ?? 0} description={error ? "—" : "+12 new courses"} icon={BookOpen} />
+    </div>
+  );
+}

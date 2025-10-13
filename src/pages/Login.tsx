@@ -111,7 +111,7 @@ const Login = () => {
       const success = result as AuthResponse;
 
       if (success.user.role === "TRAINING_COORDINATOR" && success.user.organizationId) {
-        navigate(`/client-organisations/${success.user.organizationId}`, { replace: true });
+        navigate("/org", { replace: true });
         return;
       }
       // Other roles handled by redirect effect
@@ -168,7 +168,7 @@ const Login = () => {
       const success = result as AuthResponse;
       setMfaCode("");
       if (success.user.role === "TRAINING_COORDINATOR" && success.user.organizationId) {
-        navigate(`/client-organisations/${success.user.organizationId}`, { replace: true });
+        navigate("/org", { replace: true });
       }
     } catch (err: any) {
       const message = err instanceof Error ? err.message : "Verification failed";
