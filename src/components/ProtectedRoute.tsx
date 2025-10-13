@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Lock, Building } from "lucide-react";
 import Forbidden from "@/pages/Forbidden";
+import { toCanonicalPermission } from "@/lib/permissionMapping";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -45,8 +46,19 @@ export function ProtectedRoute({ children, requiredRoles = [], organizationId, r
     // Only enforce on the client if we actually have a permissions list.
     // If not present, let the backend enforce so we don't block valid users by mistake.
     if (Array.isArray(raw) && raw.length > 0) {
-      const userPerms = new Set(raw.map((p: string) => p.toLowerCase()));
-      const needs = requiredPermissions.map((p) => p.toLowerCase());
+      const userPerms = new Set(
+        raw
+          .map((perm: any) => {
+            const permName = typeof perm === "string" ? perm : perm?.permissionName;
+            if (!permName) {
+              return null;
+            }
+            return toCanonicalPermission(permName).toLowerCase();
+          })
+          .filter((value): value is string => Boolean(value))
+      );
+
+      const needs = requiredPermissions.map((perm) => toCanonicalPermission(perm).toLowerCase());
       const ok = needs.every((p) => userPerms.has(p));
       if (!ok) return <Navigate to="/403" replace />;
     }

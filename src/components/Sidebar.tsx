@@ -1,6 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Users, UserCheck, GraduationCap, Building2, Shield, ChevronDown, ChevronRight, BookOpen, Calendar } from "lucide-react";
+import { Users, GraduationCap, Building2, Shield, ChevronDown, ChevronRight, BookOpen, Calendar, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Can } from "../lib/casl/Can";
@@ -25,13 +25,17 @@ const userManagementItems: MenuItem[] = [
 
 const courseManagementItems: MenuItem[] = [
   { name: "Courses", href: "/courses", icon: BookOpen, subject: "CourseVenue" },
-  // { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Post Run Management", href: "/post-run-management", icon: ClipboardList, subject: "PostCourseRun" },
   { name: "Venue Management", href: "/venue-setup", icon: Building2, subject: "CourseVenue" },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {
+  const location = useLocation();
+  const isCourseManagementRoute = courseManagementItems.some((item) => location.pathname.startsWith(item.href));
+
   const [userManagementOpen, setUserManagementOpen] = useState(false);
-  const [courseManagementOpen, setCourseManagementOpen] = useState(false);
+  const [courseManagementOpen, setCourseManagementOpen] = useState(isCourseManagementRoute);
   const { user, isAuthenticated, loading, ability } = useAuth();
 
   // Local helper that uses the CASL ability from AuthProvider
@@ -51,7 +55,13 @@ const Sidebar = ({ className }: SidebarProps) => {
   // Compute group visibility using CASL
   const userManagementVisible = isPolwelUser || can("view", "User") || can("view", "Trainer") || can("view", "Client");
 
-  const courseManagementVisible = isPolwelUser || can("view", "CourseVenue") || can("view", "CourseRun");
+  const courseManagementVisible = isPolwelUser || can("view", "CourseVenue") || can("view", "CourseRun") || can("view", "PostCourseRun");
+
+  useEffect(() => {
+    if (isCourseManagementRoute) {
+      setCourseManagementOpen(true);
+    }
+  }, [isCourseManagementRoute]);
 
   // Debug logging
   useEffect(() => {
@@ -71,6 +81,7 @@ const Sidebar = ({ className }: SidebarProps) => {
       console.log("Course Management Visible:", courseManagementVisible);
       console.log("  can('view', 'CourseVenue'):", can("view", "CourseVenue"));
       console.log("  can('view', 'CourseRun'):", can("view", "CourseRun"));
+      console.log("  can('view', 'PostCourseRun'):", can("view", "PostCourseRun"));
       console.groupEnd();
     }
   }, [loading, isAuthenticated, user, isPolwelUser, isTrainer, ability, userManagementVisible, courseManagementVisible, can]);

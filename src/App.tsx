@@ -30,6 +30,7 @@ import VenueDetail from "./pages/VenueDetail";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import CompleteSetup from "./pages/CompleteSetup";
+import PostRunManagement from "./pages/PostRunManagement";
 
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
@@ -215,6 +216,15 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredPermissions={["course-run.view"]}>
                     <CourseRunDetail />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="post-run-management"
+                element={
+                  <ProtectedRoute requiredPermissions={["post-course-run.view"]}>
+                    <PostRunManagement />
                   </ProtectedRoute>
                 }
               />

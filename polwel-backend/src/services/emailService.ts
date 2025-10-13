@@ -503,13 +503,103 @@ class EmailService {
 
     const total = baseFee + (additionalCost || 0);
 
-    const body = `Dear ${name},\n\nYou have been assigned as a trainer for the following course run:\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Serial Number: ${courseRunDetails.serialNumber || ''}\n- Start Date: ${formatDate(courseRunDetails.startDate)}\n- End Date: ${formatDate(courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}\n\nYour Compensation:\n- Base Fee: ${formatCurrency(baseFee)}\n${additionalCost > 0 ? `- Additional Cost: ${formatCurrency(additionalCost)}\n` : ''}- Total: ${formatCurrency(total)}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Please confirm your availability for this course run.\n\nBest regards,\nPolwel Training Team`;
+    const textBody = `Dear ${name},\n\nYou have been assigned as a trainer for the following course run:\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Serial Number: ${courseRunDetails.serialNumber || ''}\n- Start Date: ${formatDate(courseRunDetails.startDate)}\n- End Date: ${formatDate(courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}\n\nYour Compensation:\n- Base Fee: ${formatCurrency(baseFee)}\n${additionalCost > 0 ? `- Additional Cost: ${formatCurrency(additionalCost)}\n` : ''}- Total: ${formatCurrency(total)}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Please confirm your availability for this course run.\n\nBest regards,\nPolwel Training Team`;
+
+    const html = `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <style>
+          body { font-family: Arial, Helvetica, sans-serif; background:#f3f4f6; margin:0; padding:24px; color:#111827 }
+          .card { max-width:680px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 12px 40px rgba(2,6,23,0.08) }
+          .header { background:linear-gradient(90deg,#2563eb,#3b82f6); color:#fff; padding:28px } 
+          .header h1 { margin:0; font-size:20px }
+          .inner { padding:28px }
+          .section { margin-bottom:18px }
+          .label { font-size:12px; text-transform:uppercase; color:#475569; letter-spacing:0.06em; margin-bottom:6px }
+          .value { font-size:15px; color:#0f172a }
+          .details { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:8px }
+          .comp { background:#f8fafc; border:1px solid #e6eefb; padding:16px; border-radius:8px }
+          .comp .amount { font-weight:700; color:#0f172a; font-size:18px }
+          .cta { display:inline-block; background:#10b981; color:#fff; padding:12px 18px; border-radius:8px; text-decoration:none; font-weight:600 }
+          .note { font-size:13px; color:#475569 }
+          .footer { background:#f9fafb; padding:18px; text-align:center; font-size:12px; color:#94a3b8 }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="header">
+            <h1>Polwel Training - Trainer Assignment</h1>
+          </div>
+          <div class="inner">
+            <div class="section">
+              <p class="note">Hello <strong>${name}</strong>,</p>
+              <p class="note">You have been assigned as a trainer for the following course run. Please review the details and confirm your availability by replying to this email or contacting the organiser.</p>
+            </div>
+
+            <div class="section">
+              <div class="label">Course Run Details</div>
+              <div class="details">
+                <div>
+                  <div class="value"><strong>Course</strong></div>
+                  <div class="note">${courseRunDetails.course || 'N/A'}</div>
+                </div>
+                <div>
+                  <div class="value"><strong>Serial</strong></div>
+                  <div class="note">${courseRunDetails.serialNumber || '—'}</div>
+                </div>
+                <div>
+                  <div class="value"><strong>Start</strong></div>
+                  <div class="note">${formatDate(courseRunDetails.startDate)}</div>
+                </div>
+                <div>
+                  <div class="value"><strong>End</strong></div>
+                  <div class="note">${formatDate(courseRunDetails.endDate)}</div>
+                </div>
+                <div>
+                  <div class="value"><strong>Venue</strong></div>
+                  <div class="note">${courseRunDetails.venue || 'TBD'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section comp">
+              <div class="label">Compensation</div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div class="note">Base Fee</div>
+                  <div class="value">${formatCurrency(baseFee)}</div>
+                  ${additionalCost > 0 ? `<div class="note" style="margin-top:6px">Additional Cost</div><div class="value">${formatCurrency(additionalCost)}</div>` : ''}
+                </div>
+                <div style="text-align:right">
+                  <div class="note">Total</div>
+                  <div class="amount">${formatCurrency(total)}</div>
+                </div>
+              </div>
+            </div>
+
+            ${additionalBody ? `<div class="section"><div class="label">Additional Notes</div><div class="note">${additionalBody}</div></div>` : ''}
+
+            <div class="section" style="margin-top:12px">
+              <a href="mailto:${email}?subject=Confirm%20Availability%20for%20${encodeURIComponent(courseRunDetails.serialNumber || '')}" class="cta">Confirm Availability</a>
+            </div>
+
+            <div class="section">
+              <p class="note">If you have any questions, reply to this email or contact your training coordinator.</p>
+            </div>
+          </div>
+          <div class="footer">&copy; ${new Date().getFullYear()} POLWEL Training. All rights reserved.</div>
+        </div>
+      </body>
+    </html>`;
 
     const mailOptions: any = {
       from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
       to: email,
       subject: `Trainer Assignment: ${courseRunDetails.serialNumber || ''}`,
-      text: body,
+      text: textBody,
+      html,
     };
 
     if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
@@ -522,7 +612,8 @@ class EmailService {
         console.log('To:', email);
         console.log('CC:', ccEmails);
         console.log('Subject:', mailOptions.subject);
-        console.log('Body:', body);
+        console.log('Body (text):', textBody);
+        console.log('Body (html):', html ? '(html content)' : undefined);
         return { success: false, error: 'SMTP not configured' };
       }
 
