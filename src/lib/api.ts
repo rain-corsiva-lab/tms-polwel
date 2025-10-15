@@ -438,7 +438,11 @@ export const polwelUsersApi = {
         }
         return;
       }
-      const stringValue = value.toString();
+      let stringValue = value.toString();
+      // normalize status to uppercase so backend can accept 'all' or 'ALL'
+      if (key === 'status' && stringValue.length > 0) {
+        stringValue = stringValue.toUpperCase();
+      }
       if (stringValue.length === 0) {
         return;
       }
@@ -995,11 +999,15 @@ export const clientOrganizationsApi = {
     page?: number;
     limit?: number;
     search?: string;
+    status?: string;
   } = {}) => {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        queryParams.append(key, value.toString());
+      if (value === undefined || value === null) return;
+      let stringValue = value.toString();
+      if (key === 'status' && stringValue.length > 0) stringValue = stringValue.toUpperCase();
+      if (stringValue !== '') {
+        queryParams.append(key, stringValue);
       }
     });
     

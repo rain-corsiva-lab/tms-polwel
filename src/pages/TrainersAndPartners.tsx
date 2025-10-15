@@ -11,7 +11,23 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Download, Filter, GraduationCap, Calendar, Ban, MoreHorizontal, Edit, Mail, Users, Clock, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
+import {
+  Download,
+  Filter,
+  GraduationCap,
+  Calendar,
+  Ban,
+  MoreHorizontal,
+  Edit,
+  Mail,
+  Users,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  X,
+  Loader2,
+  CheckCircle,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddTrainerDialog } from "@/components/AddTrainerDialog";
@@ -245,7 +261,7 @@ const TrainersAndPartners = () => {
         page: pageToUse,
         limit: limitToUse,
         search: searchQuery || undefined,
-        status: statusFilter || undefined,
+        status: statusFilter || "all",
       });
 
       // Map backend data to frontend interface
@@ -333,7 +349,7 @@ const TrainersAndPartners = () => {
         }),
         partnersApi.getAll({
           search: searchQuery || undefined,
-          status: statusFilter || undefined,
+          status: statusFilter || "all",
           all: true,
         }),
       ]);
@@ -735,21 +751,32 @@ const TrainersAndPartners = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem
-                                      onClick={() => {
-                                        if (confirm("Are you sure you want to delete this partner?")) {
-                                          partnersApi.delete(partner.id).then(() => {
-                                            fetchPartners();
-                                            toast({
-                                              title: "Partner Deleted",
-                                              description: "The partner has been removed successfully.",
-                                            });
+                                      onClick={async () => {
+                                        const nextStatus = partner.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+                                        try {
+                                          await partnersApi.update(partner.id, { status: nextStatus });
+                                          await fetchPartners();
+                                          toast({
+                                            title: `Partner ${nextStatus === "ACTIVE" ? "Activated" : "Deactivated"}`,
+                                            description: `${partner.partnerName} is now ${nextStatus.toLowerCase()}.`,
                                           });
+                                        } catch (error) {
+                                          console.error("Failed to update partner status", error);
+                                          toast({ title: "Update failed", description: "Could not change partner status.", variant: "destructive" });
                                         }
                                       }}
-                                      className="text-destructive"
                                     >
-                                      <Ban className="h-4 w-4 mr-2" />
-                                      Delete Partner
+                                      {partner.status === "ACTIVE" ? (
+                                        <>
+                                          <Ban className="h-4 w-4 mr-2" />
+                                          Mark Inactive
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle className="h-4 w-4 mr-2" />
+                                          Mark Active
+                                        </>
+                                      )}
                                     </DropdownMenuItem>
                                     {/* <DropdownMenuItem
                                       onClick={() => {

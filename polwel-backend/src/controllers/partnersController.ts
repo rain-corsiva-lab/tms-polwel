@@ -78,10 +78,12 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
 
     const where: Prisma.PartnerWhereInput = {};
 
-    const statusParam = typeof req.query.status === 'string' ? req.query.status.trim() : '';
-    if (statusParam) {
+    const statusParam = typeof req.query.status === 'string' ? req.query.status.trim().toUpperCase() : '';
+    // If caller explicitly requests 'ALL', do not filter by status
+    if (statusParam && statusParam !== 'ALL') {
       where.status = statusParam as UserStatus;
-    } else {
+    } else if (!statusParam) {
+      // default behaviour: hide INACTIVE unless caller specified otherwise
       where.status = { not: UserStatus.INACTIVE };
     }
 

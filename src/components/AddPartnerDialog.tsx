@@ -83,6 +83,13 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
     }
   }, [isEditMode, partner]);
 
+  const sanitizeSGPhone = (value: string) => {
+    let digits = digitsOnly(value || "");
+    if (digits.startsWith("65") && digits.length >= 10) digits = digits.slice(2);
+    if (digits.length > 8) digits = digits.slice(0, 8);
+    return digits;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -96,9 +103,20 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       return;
     }
 
+    // Validate phone number length (must be 8 digits if provided)
+    const phoneDigits = sanitizeSGPhone(formData.contactNumber);
+    if (phoneDigits && phoneDigits.length !== 8) {
+      toast({
+        title: "Validation Error",
+        description: "Contact number must be 8 digits (Singapore local).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const payload = {
       ...formData,
-      contactNumber: digitsOnly(formData.contactNumber),
+      contactNumber: phoneDigits,
     };
 
     setLoading(true);
@@ -178,7 +196,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
@@ -260,9 +278,11 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
               value={formData.contactNumber}
               inputMode="numeric"
               pattern="[0-9]*"
-              onChange={(e) => setFormData({ ...formData, contactNumber: digitsOnly(e.target.value) })}
+              maxLength={10}
+              onChange={(e) => setFormData({ ...formData, contactNumber: sanitizeSGPhone(e.target.value) })}
               placeholder="Enter contact number"
             />
+            <p className="text-xs text-muted-foreground mt-1">Enter 8-digit local number (country code 65 is auto-ignored).</p>
           </div>
 
           <div>

@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BookOpen, Eye, Loader2 } from "lucide-react";
+import { Users, BookOpen, Eye, Loader2, CalendarIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { clientOrganizationsApi } from "@/lib/api";
@@ -12,6 +12,10 @@ import { formatDate } from "@/lib/date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import PaginationControls from "@/components/ui/pagination";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface OrganizationData {
   id: string;
@@ -51,12 +55,23 @@ const OrganizationDashboard = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<OrganizationData | null>(null);
+  const [allCourseRuns, setAllCourseRuns] = useState<CourseRun[]>([]);
   const [inProgressRuns, setInProgressRuns] = useState<CourseRun[]>([]);
   const [completedRuns, setCompletedRuns] = useState<CourseRun[]>([]);
   const [learners, setLearners] = useState<Learner[]>([]);
   const [learnersPagination, setLearnersPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [learnersPerPage, setLearnersPerPage] = useState(10);
   const [activeTab, setActiveTab] = useState("details");
+
+  // Pagination for course runs
+  const [inProgressPage, setInProgressPage] = useState(1);
+  const [inProgressPerPage, setInProgressPerPage] = useState(10);
+  const [completedPage, setCompletedPage] = useState(1);
+  const [completedPerPage, setCompletedPerPage] = useState(10);
+
+  // Date range filter for completed runs
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   const organizationId = user?.organizationId;
 
@@ -83,8 +98,25 @@ const OrganizationDashboard = () => {
         clientOrganizationsApi.getCoordinatorCourseRuns(organizationId),
       ]);
       setOrganization(orgData);
-      setInProgressRuns(courseRunsData.inProgress || []);
-      setCompletedRuns(courseRunsData.completed || []);
+
+      // Combine all course runs and filter by status
+      const allRuns = [...(courseRunsData.inProgress || []), ...(courseRunsData.completed || [])];
+
+      // Only "COMPLETED" status goes to completed table
+      const completed = allRuns.filter((run) => {
+        const statusLower = run.status.toLowerCase();
+        return statusLower === "completed" || statusLower === "pending_billing";
+      });
+
+      // Everything else goes to in-progress table
+      const inProgress = allRuns.filter((run) => {
+        const statusLower = run.status.toLowerCase();
+        return statusLower !== "completed" && statusLower !== "pending_billing";
+      });
+
+      setAllCourseRuns(allRuns);
+      setInProgressRuns(inProgress);
+      setCompletedRuns(completed);
     } catch (error: any) {
       toast({
         title: "Error loading dashboard",
@@ -127,6 +159,41 @@ const OrganizationDashboard = () => {
     }
     return <Badge variant="secondary">{status}</Badge>;
   };
+
+  // Filter completed runs by date range
+  const filteredCompletedRuns = completedRuns.filter((run) => {
+    if (!dateFrom && !dateTo) return true;
+
+    const runStartDate = new Date(run.startDate);
+    const runEndDate = new Date(run.endDate);
+
+    if (dateFrom && dateTo) {
+      // Check if course run overlaps with the date range
+      return (
+        (runStartDate >= dateFrom && runStartDate <= dateTo) ||
+        (runEndDate >= dateFrom && runEndDate <= dateTo) ||
+        (runStartDate <= dateFrom && runEndDate >= dateTo)
+      );
+    }
+
+    if (dateFrom) {
+      return runStartDate >= dateFrom || runEndDate >= dateFrom;
+    }
+
+    if (dateTo) {
+      return runStartDate <= dateTo || runEndDate <= dateTo;
+    }
+
+    return true;
+  });
+
+  // Paginate in-progress runs
+  const totalInProgressPages = Math.ceil(inProgressRuns.length / inProgressPerPage);
+  const paginatedInProgressRuns = inProgressRuns.slice((inProgressPage - 1) * inProgressPerPage, inProgressPage * inProgressPerPage);
+
+  // Paginate completed runs (after filtering)
+  const totalCompletedPages = Math.ceil(filteredCompletedRuns.length / completedPerPage);
+  const paginatedCompletedRuns = filteredCompletedRuns.slice((completedPage - 1) * completedPerPage, completedPage * completedPerPage);
 
   if (loading) {
     return (
@@ -270,77 +337,138 @@ const OrganizationDashboard = () => {
               </div>
               <CardDescription>Currently ongoing training programs</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {inProgressRuns.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">No courses in progress</div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Course Name</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Participants</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inProgressRuns.map((run) => (
-                      <TableRow key={run.id}>
-                        <TableCell className="font-medium">{run.courseName}</TableCell>
-                        <TableCell>{formatDate(run.startDate)}</TableCell>
-                        <TableCell>{formatDate(run.endDate)}</TableCell>
-                        <TableCell>{run.participants}</TableCell>
-                        <TableCell>{getStatusBadge(run.status)}</TableCell>
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Course Name</TableHead>
+                        <TableHead>Start Date</TableHead>
+                        <TableHead>End Date</TableHead>
+                        <TableHead>Participants</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedInProgressRuns.map((run) => (
+                        <TableRow key={run.id}>
+                          <TableCell className="font-medium">{run.courseName}</TableCell>
+                          <TableCell>{formatDate(run.startDate)}</TableCell>
+                          <TableCell>{formatDate(run.endDate)}</TableCell>
+                          <TableCell>{run.participants}</TableCell>
+                          <TableCell>{getStatusBadge(run.status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <PaginationControls
+                    page={inProgressPage}
+                    perPage={inProgressPerPage}
+                    total={inProgressRuns.length}
+                    onPageChange={setInProgressPage}
+                    onPerPageChange={(pp) => {
+                      setInProgressPerPage(pp);
+                      setInProgressPage(1);
+                    }}
+                  />
+                </>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                <CardTitle>Completed Course Runs ({completedRuns.length})</CardTitle>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    <CardTitle>Completed Course Runs ({filteredCompletedRuns.length})</CardTitle>
+                  </div>
+                  <CardDescription>Finished training programs with learner details</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFrom ? format(dateFrom, "MMM dd, yyyy") : "Start Date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-muted-foreground">to</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateTo ? format(dateTo, "MMM dd, yyyy") : "End Date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                  {(dateFrom || dateTo) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDateFrom(undefined);
+                        setDateTo(undefined);
+                        setCompletedPage(1);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
-              <CardDescription>Finished training programs with learner details</CardDescription>
             </CardHeader>
-            <CardContent>
-              {completedRuns.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No completed courses</div>
+            <CardContent className="space-y-4">
+              {filteredCompletedRuns.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {completedRuns.length === 0 ? "No completed courses" : "No courses found in selected date range"}
+                </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Course Name</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Participants</TableHead>
-                      <TableHead>Status</TableHead>
-                      {/* <TableHead className="text-right">Actions</TableHead> */}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {completedRuns.map((run) => (
-                      <TableRow key={run.id}>
-                        <TableCell className="font-medium">{run.courseName}</TableCell>
-                        <TableCell>{formatDate(run.startDate)}</TableCell>
-                        <TableCell>{formatDate(run.endDate)}</TableCell>
-                        <TableCell>{run.participants}</TableCell>
-                        <TableCell>{getStatusBadge(run.status)}</TableCell>
-                        {/* <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => navigate(`/course-runs/${run.id}`)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        </TableCell> */}
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Course Name</TableHead>
+                        <TableHead>Start Date</TableHead>
+                        <TableHead>End Date</TableHead>
+                        <TableHead>Participants</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedCompletedRuns.map((run) => (
+                        <TableRow key={run.id}>
+                          <TableCell className="font-medium">{run.courseName}</TableCell>
+                          <TableCell>{formatDate(run.startDate)}</TableCell>
+                          <TableCell>{formatDate(run.endDate)}</TableCell>
+                          <TableCell>{run.participants}</TableCell>
+                          <TableCell>{getStatusBadge(run.status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <PaginationControls
+                    page={completedPage}
+                    perPage={completedPerPage}
+                    total={filteredCompletedRuns.length}
+                    onPageChange={setCompletedPage}
+                    onPerPageChange={(pp) => {
+                      setCompletedPerPage(pp);
+                      setCompletedPage(1);
+                    }}
+                  />
+                </>
               )}
             </CardContent>
           </Card>

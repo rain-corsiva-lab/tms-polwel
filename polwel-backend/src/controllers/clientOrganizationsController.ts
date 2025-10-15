@@ -670,14 +670,26 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
       return errorResponse(res, 400, 'Organization ID is required');
     }
 
+    // Parse status query parameter to allow callers to request all statuses
+    const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim().toUpperCase() : '';
+
     // Build where clause
     const where: any = {
       organizationId,
       role: 'TRAINING_COORDINATOR',
-      status: {
-        not: 'INACTIVE'
-      }
     };
+
+    // If caller provided a specific status (and didn't ask for ALL), filter by it.
+    // If no status provided, default to hiding INACTIVE coordinators for backward compatibility.
+    if (rawStatus) {
+      if (rawStatus !== 'ALL') {
+        where.status = rawStatus;
+      }
+      // else: rawStatus === 'ALL' -> do not add status filter
+    } else {
+      // default behaviour: hide INACTIVE unless caller specified otherwise
+      where.status = { not: 'INACTIVE' };
+    }
 
     if (search) {
       where.OR = [

@@ -242,7 +242,7 @@ const ClientOrganisationDetail = () => {
     try {
       setCoordinatorsLoading(true);
       console.log("Fetching coordinators for organization:", id);
-      const response = await clientOrganizationsApi.getCoordinators(id, { page: coordinatorsPagination.page, limit: coordinatorsPerPage });
+      const response = await clientOrganizationsApi.getCoordinators(id, { page: coordinatorsPagination.page, limit: coordinatorsPerPage, status: "all" });
       console.log("Coordinators API response:", response);
       setCoordinators(response.coordinators || []);
       setCoordinatorsPagination(response.pagination || { ...coordinatorsPagination, limit: coordinatorsPerPage });
@@ -643,6 +643,7 @@ const ClientOrganisationDetail = () => {
                     <TableHead>Contact</TableHead>
                     <TableHead>Designation</TableHead>
                     <TableHead>Last Active</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -675,6 +676,7 @@ const ClientOrganisationDetail = () => {
                         <TableCell>{coordinator.contactNumber || "N/A"}</TableCell>
                         <TableCell>{coordinator.designation}</TableCell>
                         <TableCell>{formatDate(coordinator.createdAt)}</TableCell>
+                        <TableCell>{getStatusBadge((coordinator.status || "ACTIVE").toLowerCase())}</TableCell>
                         <TableCell>
                           <DropdownMenu open={openMenuId === coordinator.id} onOpenChange={(next) => handleMenuOpenChange(next, next ? coordinator.id : null)}>
                             <DropdownMenuTrigger asChild>
@@ -732,9 +734,19 @@ const ClientOrganisationDetail = () => {
                                 Send Password Reset Link
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleCoordinatorDelete(coordinator.id)} className="text-destructive">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  try {
+                                    const nextStatus = coordinator.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+                                    await clientOrganizationsApi.updateCoordinator(id!, coordinator.id, { status: nextStatus });
+                                    await fetchCoordinators();
+                                    toast({ title: `Coordinator ${nextStatus === "ACTIVE" ? "Activated" : "Deactivated"}` });
+                                  } catch (error: any) {
+                                    toast({ title: "Failed to update status", description: error.message || "Please try again.", variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                {coordinator.status === "ACTIVE" ? "Mark Inactive" : "Mark Active"}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

@@ -417,7 +417,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     }
 
     try {
-      const response = await clientOrganizationsApi.getCoordinators(organizationId, { limit: 100 });
+      const response = await clientOrganizationsApi.getCoordinators(organizationId, { limit: 100, status: "all" });
       const coordinatorList = Array.isArray(response?.coordinators) ? response.coordinators : [];
       const mappedCoordinators: TrainingCoordinator[] = coordinatorList.map((coord: any) => ({
         id: coord.id,
