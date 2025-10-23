@@ -8,7 +8,25 @@ import { formatDate } from "../lib/date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail, RefreshCw, X, Loader2 } from "lucide-react";
+import {
+  Download,
+  Filter,
+  Shield,
+  Users,
+  Clock,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Key,
+  Eye,
+  History,
+  Mail,
+  RefreshCw,
+  X,
+  Loader2,
+  Lock,
+  Unlock,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
@@ -209,6 +227,28 @@ export default function PolwelUsers() {
     }
   };
 
+  const handleStatusChange = async (userId: string, currentStatus: string, newStatus: "ACTIVE" | "INACTIVE") => {
+    if (!confirm(`Are you sure you want to change the status to ${newStatus}?`)) {
+      return;
+    }
+
+    try {
+      await polwelUsersApi.updateStatus(userId, newStatus);
+      toast({
+        title: "Success",
+        description: `User status changed to ${newStatus}`,
+      });
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleResendSetup = async (userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to resend the setup email to ${userName}?`)) {
       return;
@@ -270,6 +310,7 @@ export default function PolwelUsers() {
   const totalUsers = users.length;
   const activeUsers = users.filter((user) => user.status === "ACTIVE").length;
   const pendingUsers = users.filter((user) => user.status === "PENDING").length;
+  const inactiveUsers = users.filter((user) => user.status === "INACTIVE").length;
 
   if (loading) {
     return (
@@ -457,6 +498,22 @@ export default function PolwelUsers() {
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Resend Onboarding Email
                             </DropdownMenuItem>
+                          )}
+                          {(user.status === "ACTIVE" || user.status === "INACTIVE") && (
+                            <>
+                              {user.status === "ACTIVE" && (
+                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status, "INACTIVE")}>
+                                  <Lock className="h-4 w-4 mr-2" />
+                                  Deactivate User
+                                </DropdownMenuItem>
+                              )}
+                              {user.status === "INACTIVE" && (
+                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status, "ACTIVE")}>
+                                  <Unlock className="h-4 w-4 mr-2" />
+                                  Activate User
+                                </DropdownMenuItem>
+                              )}
+                            </>
                           )}
                           {/* MFA toggle removed */}
                           <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-destructive">

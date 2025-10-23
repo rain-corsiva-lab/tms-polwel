@@ -11,7 +11,8 @@ import {
   getUserAuditTrail,
   sendPasswordResetLink,
   getPolwelUserDetails,
-  resendPolwelUserSetup
+  resendPolwelUserSetup,
+  updateUserStatus
 } from '../controllers/polwelUsersController';
 
 const router = express.Router();
@@ -32,6 +33,7 @@ router.get('/:id/details', requirePermissions('users.view'), getPolwelUserDetail
 router.get('/:id/audit-trail', requirePermissions('users.view'), getUserAuditTrail);
 router.post('/', requirePermissions('users.create'), createPolwelUser);
 router.put('/:id', requirePermissions('users.edit'), updatePolwelUser);
+router.put('/:id/status', requirePermissions('users.edit'), updateUserStatus);
 router.delete('/:id', requirePermissions('users.delete'), deletePolwelUser);
 router.post('/:id/reset-password', requirePermissions('users.edit'), resetPolwelUserPassword);
 router.post('/:id/send-reset-link', requirePermissions('users.edit'), sendPasswordResetLink);

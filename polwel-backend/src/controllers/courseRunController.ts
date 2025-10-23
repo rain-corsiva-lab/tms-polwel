@@ -3040,4 +3040,122 @@ export const courseRunController = {
       res.status(500).json(buildErrorResponse('courseRunController.resendConfirmationEmail', 'Failed to resend confirmation email', error));
     }
   },
+
+  saveBilling: async (req: Request, res: Response) => {
+    try {
+      const {
+        courseRunId,
+        valueOfWorkDone,
+        contractFeePBMSBENumber,
+        contractPBMSInvoiceDate,
+        contractInvoiceAmount,
+        venuePBMSBENumber,
+        venuePBMSInvoiceDate,
+        venueInvoiceAmount,
+        finalRemarks,
+        entries,
+      } = req.body;
+
+      if (!courseRunId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course Run ID is required',
+        });
+        return;
+      }
+
+      // Verify course run exists and is in PENDING_BILLING status
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id: courseRunId },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({
+          success: false,
+          error: 'Course run not found',
+        });
+        return;
+      }
+
+      // Create or update billing record
+      const billing = await prisma.courseRunBilling.upsert({
+        where: { courseRunId },
+        create: {
+          courseRunId,
+          valueOfWorkDone: valueOfWorkDone ? parseInt(valueOfWorkDone) : null,
+          contractFeePBMSBENumber: contractFeePBMSBENumber || null,
+          contractPBMSInvoiceDate: contractPBMSInvoiceDate ? new Date(contractPBMSInvoiceDate) : null,
+          contractInvoiceAmount: contractInvoiceAmount ? parseFloat(contractInvoiceAmount) : null,
+          venuePBMSBENumber: venuePBMSBENumber || null,
+          venuePBMSInvoiceDate: venuePBMSInvoiceDate ? new Date(venuePBMSInvoiceDate) : null,
+          venueInvoiceAmount: venueInvoiceAmount ? parseFloat(venueInvoiceAmount) : null,
+          finalRemarks: finalRemarks || null,
+        },
+        update: {
+          valueOfWorkDone: valueOfWorkDone ? parseInt(valueOfWorkDone) : null,
+          contractFeePBMSBENumber: contractFeePBMSBENumber || null,
+          contractPBMSInvoiceDate: contractPBMSInvoiceDate ? new Date(contractPBMSInvoiceDate) : null,
+          contractInvoiceAmount: contractInvoiceAmount ? parseFloat(contractInvoiceAmount) : null,
+          venuePBMSBENumber: venuePBMSBENumber || null,
+          venuePBMSInvoiceDate: venuePBMSInvoiceDate ? new Date(venuePBMSInvoiceDate) : null,
+          venueInvoiceAmount: venueInvoiceAmount ? parseFloat(venueInvoiceAmount) : null,
+          finalRemarks: finalRemarks || null,
+        },
+      });
+
+      // Basic validation: each learner can only appear in one billing entry
+      if (entries && Array.isArray(entries)) {
+        const learnerIdToEntryIndex = new Map<string, number>();
+        for (let i = 0; i < entries.length; i++) {
+          const e = entries[i];
+          const ids: string[] = Array.isArray(e?.learnerIds) ? e.learnerIds : [];
+          for (const lid of ids) {
+            if (learnerIdToEntryIndex.has(lid)) {
+              const firstIndex = learnerIdToEntryIndex.get(lid)!;
+              res.status(400).json({
+                success: false,
+                message: `Learner appears in multiple entries (entries ${firstIndex + 1} and ${i + 1}). Each learner can only belong to one entry.`,
+              });
+              return;
+            }
+            learnerIdToEntryIndex.set(lid, i);
+          }
+        }
+      }
+
+      // Delete existing entries and create new ones
+      await prisma.courseRunBillingEntry.deleteMany({
+        where: { courseRunBillingId: billing.id },
+      });
+
+      if (entries && Array.isArray(entries)) {
+        for (const entry of entries) {
+          await prisma.courseRunBillingEntry.create({
+            data: {
+              courseRunBillingId: billing.id,
+              pbmsInvoiceNumber: entry.pbmsInvoiceNumber || null,
+              pbmsInvoiceDate: entry.pbmsInvoiceDate || null,
+              invoiceAmount: entry.invoiceAmount ? parseFloat(entry.invoiceAmount) : null,
+              remarks: entry.remarks || null,
+            },
+          });
+        }
+      }
+
+      // Update course run status to COMPLETED
+      await prisma.courseRun.update({
+        where: { id: courseRunId },
+        data: { status: 'COMPLETED' },
+      });
+
+      res.json({
+        success: true,
+        message: 'Billing information saved successfully',
+        billing,
+      });
+    } catch (error) {
+      console.error('Error saving billing:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.saveBilling', 'Failed to save billing information', error));
+    }
+  },
 };

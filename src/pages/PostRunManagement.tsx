@@ -288,7 +288,7 @@ const PostRunManagement: React.FC = () => {
 
   const handleViewDetails = useCallback(
     (run: CourseRunRow) => {
-      navigate(`/course-runs/${run.id}`, { state: { focusSection: "post-run" } });
+      navigate(`/post-run/${run.id}`);
     },
     [navigate]
   );

@@ -26,7 +26,6 @@ const userManagementItems: MenuItem[] = [
 const courseManagementItems: MenuItem[] = [
   { name: "Courses", href: "/courses", icon: BookOpen, subject: "CourseVenue" },
   // { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
-  // { name: "Post Run Management", href: "/post-run-management", icon: ClipboardList, subject: "PostCourseRun" },
   { name: "Venue Management", href: "/venue-setup", icon: Building2, subject: "CourseVenue" },
 ];
 
@@ -56,6 +55,8 @@ const Sidebar = ({ className }: SidebarProps) => {
   const userManagementVisible = isPolwelUser || can("view", "User") || can("view", "Trainer") || can("view", "Client");
 
   const courseManagementVisible = isPolwelUser || can("view", "CourseVenue") || can("view", "CourseRun") || can("view", "PostCourseRun");
+
+  const postRunManagementVisible = isPolwelUser || can("view", "PostCourseRun");
 
   useEffect(() => {
     if (isCourseManagementRoute) {
@@ -188,6 +189,24 @@ const Sidebar = ({ className }: SidebarProps) => {
             )}
           </div>
         )}
+
+        {/* Post Run Management - Standalone Menu Item */}
+        {/* {postRunManagementVisible && (
+          <Can I="view" a="PostCourseRun">
+            <NavLink
+              to="/post-run-management"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                )
+              }
+            >
+              <ClipboardList className="mr-3 h-5 w-5" />
+              Post Run Management
+            </NavLink>
+          </Can>
+        )} */}
       </nav>
     </aside>
   );

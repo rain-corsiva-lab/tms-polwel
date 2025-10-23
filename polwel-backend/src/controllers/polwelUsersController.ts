@@ -475,8 +475,7 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
 
     // Build where clause
     const where: any = {
-      role: UserRole.POLWEL,
-      status: { not: UserStatus.INACTIVE } // Exclude soft-deleted users
+      role: UserRole.POLWEL
     };
 
     if (search) {
@@ -487,7 +486,7 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
     }
 
     if (status) {
-      // If status is explicitly specified, override the default filter
+      // If status is explicitly specified, filter by that status
       where.status = status as UserStatus;
     }
 
@@ -1166,6 +1165,88 @@ export const resendPolwelUserSetup = async (req: AuthenticatedRequest, res: Resp
     });
   } catch (error) {
     console.error('Resend setup email error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Update POLWEL user status (ACTIVE <-> INACTIVE only)
+export const updateUserStatus = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate user ID
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Validate status
+    if (!status || !['ACTIVE', 'INACTIVE'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be either ACTIVE or INACTIVE'
+      });
+    }
+
+    // Find the user
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.POLWEL
+      }
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'POLWEL user not found'
+      });
+    }
+
+    // Only allow changing status if current status is ACTIVE or INACTIVE (not PENDING, LOCKED, etc.)
+    if (!['ACTIVE', 'INACTIVE'].includes(existingUser.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot change status from ${existingUser.status}. Only ACTIVE and INACTIVE statuses can be changed.`
+      });
+    }
+
+    // Update the user status
+    const updatedUser = await prisma.user.update({
+      where: { id: id },
+      data: {
+        status: status as UserStatus
+      }
+    });
+
+    // Log the status change
+    await AuditService.logUserUpdate(
+      req.user?.userId || 'system',
+      existingUser.id,
+      { status: existingUser.status },
+      { status: updatedUser.status },
+      `User status changed from ${existingUser.status} to ${updatedUser.status}`,
+      req
+    );
+
+    return res.json({
+      success: true,
+      message: `User status updated to ${status} successfully`,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        status: updatedUser.status
+      }
+    });
+  } catch (error) {
+    console.error('Update user status error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

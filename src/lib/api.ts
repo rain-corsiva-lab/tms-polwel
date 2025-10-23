@@ -525,6 +525,14 @@ export const polwelUsersApi = {
     });
   },
 
+  // Update user status (ACTIVE/INACTIVE)
+  updateStatus: async (id: string | number, status: 'ACTIVE' | 'INACTIVE') => {
+    return apiRequest(`/polwel-users/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  },
+
   // Get all learners for an organization
   getLearners: async (organizationId: string) => {
     return apiRequest(`/client-organizations/${organizationId}/learners`);
@@ -1438,6 +1446,14 @@ export const courseRunsApi = {
     payload: { ccEmails?: string[]; additionalBody?: string }
   ) => {
     return apiRequest(`/course-runs/${courseRunId}/send-trainer-assignment-email`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Save billing information
+  saveBilling: async (payload: any) => {
+    return apiRequest(`/course-runs/billing`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

@@ -82,4 +82,7 @@ router.post('/:courseRunId/learners/:learnerId/withdraw', requirePermissions('co
 // POST /api/course-runs/:courseRunId/learners/:learnerId/resend-confirmation - Resend confirmation email to a learner
 router.post('/:courseRunId/learners/:learnerId/resend-confirmation', requirePermissions('course-run.edit'), courseRunController.resendConfirmationEmail);
 
+// POST /api/course-runs/billing - Save billing information for a course run
+router.post('/billing', requirePermissions('post.course.run.edit'), courseRunController.saveBilling);
+
 export default router;
