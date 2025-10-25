@@ -141,10 +141,11 @@ const VenueForm = () => {
       return false;
     }
 
-    if (!formData.fee || formData.fee === "") {
+    // Allow zero fee, but not empty/undefined
+    if (formData.fee === "" || formData.fee === undefined || formData.fee === null) {
       toast({
         title: "Validation Error",
-        description: "Fee is required",
+        description: "Fee is required (can be 0)",
         variant: "destructive",
       });
       return false;

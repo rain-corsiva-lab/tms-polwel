@@ -43,6 +43,8 @@ interface FormState {
   discounts: any[];
   billingRate: number;
   contractsFeePayout: number;
+  minParticipants: number;
+  maxParticipants: number | string;
 }
 
 const initialForm: FormState = {
@@ -65,6 +67,8 @@ const initialForm: FormState = {
   discounts: [],
   billingRate: 0,
   contractsFeePayout: 0,
+  minParticipants: 1,
+  maxParticipants: "",
 };
 
 const CourseForm: React.FC = () => {
@@ -120,10 +124,41 @@ const CourseForm: React.FC = () => {
         // Filter to only show ACTIVE venues
         const activeVenues = venuesList.filter((v: any) => v.status === "ACTIVE");
 
+        const rawPartners = pa?.data?.partners || [];
+        const partnersList = Array.isArray(rawPartners)
+          ? rawPartners
+              .map((partner: any) => {
+                if (!partner) return null;
+                if (typeof partner === "string") {
+                  const value = partner.trim();
+                  return value
+                    ? {
+                        id: value,
+                        partnerName: value,
+                      }
+                    : null;
+                }
+                const partnerId = partner.id || partner.partnerId || partner.value || partner.partnerName;
+                const partnerName = partner.partnerName || partner.name || partner.label || partnerId;
+                if (!partnerId || !partnerName) {
+                  return null;
+                }
+                return {
+                  id: String(partnerId),
+                  partnerName: String(partnerName),
+                  email: partner.email || null,
+                  pointOfContact: partner.pointOfContact || null,
+                  contactNumber: partner.contactNumber || null,
+                  contactDesignation: partner.contactDesignation || null,
+                };
+              })
+              .filter((partner: any) => Boolean(partner && partner.id))
+          : [];
+
         setRefs({
           categories: cat?.data?.categories || [],
           trainers: tr?.data?.trainers || [],
-          partners: pa?.data?.partners || [],
+          partners: partnersList,
           venues: activeVenues,
         });
       } finally {
@@ -143,8 +178,10 @@ const CourseForm: React.FC = () => {
         if (c) {
           const generatedCode = generateCourseCodeFromTitle(c.title || "");
 
-          // Extract trainer IDs from courseTrainers pivot table
+          // Extract trainer and partner IDs from pivot tables
           const trainerIds = Array.isArray(c.courseTrainers) ? c.courseTrainers.map((ct: any) => ct.trainerId || ct.trainer?.id).filter(Boolean) : [];
+          const partnerIds = Array.isArray(c.coursePartners) ? c.coursePartners.map((cp: any) => cp.partnerId || cp.partner?.id).filter(Boolean) : [];
+          const combinedAssignmentIds = Array.from(new Set([...trainerIds, ...partnerIds].map(String)));
 
           setFormData((prev) => ({
             ...prev,
@@ -156,7 +193,7 @@ const CourseForm: React.FC = () => {
             category: c.category || "",
             duration: c.duration || "",
             durationType: c.durationType || "days",
-            trainer: trainerIds,
+            trainer: combinedAssignmentIds,
             venueFee: c.venueFee || 0,
             venueFeeType: c.venueFeeType || "",
             venue: c.venue || "",
@@ -167,6 +204,8 @@ const CourseForm: React.FC = () => {
             discounts: Array.isArray(c.discounts) ? c.discounts : [],
             billingRate: c.billingRate || 0,
             contractsFeePayout: c.contractsFeePayout || 0,
+            minParticipants: c.minParticipants || 1,
+            maxParticipants: c.maxParticipants || "",
           }));
           setLastAutoCourseCode(generatedCode);
           if (c.courseCode) {
@@ -246,6 +285,11 @@ const CourseForm: React.FC = () => {
 
     if (!formData.duration?.trim()) {
       errors.push("Duration is required");
+    } else {
+      const durationNum = parseFloat(formData.duration);
+      if (isNaN(durationNum) || durationNum < 1) {
+        errors.push("Duration must be at least 1");
+      }
     }
 
     if (!formData.courseCode?.trim()) {
@@ -294,6 +338,8 @@ const CourseForm: React.FC = () => {
       discounts: formData.discounts,
       billingRate: formData.billingRate,
       contractsFeePayout: formData.contractsFeePayout,
+      minParticipants: formData.minParticipants,
+      maxParticipants: formData.maxParticipants || undefined,
     };
     try {
       if (isEdit && id) {

@@ -28230,3 +28230,116 @@ I'll replace the old "Generate tokens" section with new MFA logic that issues ch
 
 ---
 
+_**User (2025-10-23 13:14Z)**_
+
+great , now we need to dev these : 
+
+- on course index archive table we need to add sort feature that we can change ascending descending directly by clicking in the table header like what we can do on ms excel sort , all columns able to sort except actions columns , please ensure its having proper loading animations and working properly as ajax sort in front end and backend
+
+- in trainer detail , when we try to add training fee or edit training fee , in course dropdown selection field, i cant see any options showing altho i have some courses data , please fix it , ensure all working correctly , all course should be able to see no matter what trainer is it, and list is acending by course title
+
+- in course add and edit form , we need to add form validation to not allowed 0 filled in course duration , minimum is 1 , please add it in front end and backend
+
+- in add trainer dialog popup ,  please remove courses assigned field in front end and backend . The course tagging should be at the course creation level and system admin does not need to manually tag it in system which is we already add it in course module.
+
+also in addtrainerdialog we need to add email field in it , we will store email in here , but partner is not a user, partner will not have any account in it so we will only store the data in partners table without in user data table , please dev it in front end and backend
+
+ensure all working correctly witout broke anything
+
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+I'll implement all the requested features systematically. Let me create a comprehensive todo list and work through each item. Now I'll implement each feature. Let me start with the sortable table headers in CourseArchive: 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Now let me fix the trainer detail fee dialog course dropdown issue: 
+```
+
+```
+Now let me read the FeeDialog component to fix the dropdown display: The dropdown looks correct. Let me check if there's an import issue with Select component. Let me now add course duration validation: 
+```
+
+```
+Now let me update the backend course validation to add the duration minimum check. Let me search for the courses controller: 
+```
+
+```
+Now let me remove the courses field from AddTrainerDialog: 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Now I need to find AddPartnerDialog to add email field. Let me search for it: 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+[object Object]
+
+---
+
+_**User (2025-10-23 13:16Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+
+```
+
+```
+
+```
+
+```
+
+
+---
+
+_**User (2025-10-23 13:18Z)**_
+
+please continue
+
+---
+
+_**Assistant**_
+
+I'm going to create a tracked todo list for the remaining tasks and mark the backend partner controller update as in-progress; next I'll find the backend partner controller file so I can update it to accept and validate the new email field. Expected outcome: todo list created and partner controller file located for editing. Now I'll search the backend for the partners controller so I can update it to accept the email field. I'll run a quick grep across the backend controllers folder to find `partnersController.ts`. Expected outcome: path to file, allowing me to open and edit it. I'll locate the backend 
+
+---
+

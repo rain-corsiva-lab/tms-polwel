@@ -19,7 +19,10 @@ const CourseCreateSchema = z.object({
   targetAudience: z.string().optional(),
   prerequisites: z.union([z.array(z.string()), z.any()]).default([]),
   materials: z.union([z.array(z.string()), z.any()]).default([]),
-  duration: z.string().optional(),
+  duration: z.string().min(1, "Duration is required").refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num >= 1;
+  }, { message: "Duration must be at least 1" }),
   durationType: z.string().default("days"),
   maxParticipants: z.number().int().positive().default(25),
   minParticipants: z.number().int().positive().default(1),
@@ -162,6 +165,18 @@ export const coursesController = {
                 }
               }
             }
+          },
+          coursePartners: {
+            include: {
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  status: true
+                }
+              }
+            }
           }
         }
       });
@@ -300,17 +315,39 @@ export const coursesController = {
         }
       });
 
-      // Handle trainers via pivot table if provided
+      // Handle trainers and partners via pivot tables if provided
       if (req.body.trainers && Array.isArray(req.body.trainers) && req.body.trainers.length > 0) {
-        const trainerConnections = req.body.trainers.map((trainerId: string) => ({
-          courseId: course.id,
-          trainerId: trainerId
-        }));
+        // Separate trainers (Users) and partners (Partners) based on their existence in respective tables
+        const trainersAndPartners = await Promise.all(
+          req.body.trainers.map(async (id: string) => {
+            const user = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+            if (user && user.role === 'TRAINER') {
+              return { type: 'trainer', id };
+            }
+            const partner = await prisma.partner.findUnique({ where: { id }, select: { id: true } });
+            if (partner) {
+              return { type: 'partner', id };
+            }
+            return null;
+          })
+        );
 
-        await prisma.courseTrainer.createMany({
-          data: trainerConnections,
-          skipDuplicates: true
-        });
+        const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer').map((item) => item!.id);
+        const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
+
+        if (trainers.length > 0) {
+          await prisma.courseTrainer.createMany({
+            data: trainers.map((trainerId) => ({ courseId: course.id, trainerId })),
+            skipDuplicates: true
+          });
+        }
+
+        if (partners.length > 0) {
+          await prisma.coursePartner.createMany({
+            data: partners.map((partnerId) => ({ courseId: course.id, partnerId })),
+            skipDuplicates: true
+          });
+        }
       }
 
       // Log audit trail
@@ -444,24 +481,49 @@ export const coursesController = {
         }
       });
 
-      // Handle trainers via pivot table if provided
+      // Handle trainers and partners via pivot tables if provided
       if (req.body.trainers && Array.isArray(req.body.trainers)) {
-        // Delete existing trainer associations
+        // Delete existing trainer and partner associations
         await prisma.courseTrainer.deleteMany({
+          where: { courseId: id }
+        });
+        await prisma.coursePartner.deleteMany({
           where: { courseId: id }
         });
 
         // Create new associations
         if (req.body.trainers.length > 0) {
-          const trainerConnections = req.body.trainers.map((trainerId: string) => ({
-            courseId: id,
-            trainerId: trainerId
-          }));
+          // Separate trainers (Users) and partners (Partners)
+          const trainersAndPartners = await Promise.all(
+            req.body.trainers.map(async (itemId: string) => {
+              const user = await prisma.user.findUnique({ where: { id: itemId }, select: { id: true, role: true } });
+              if (user && user.role === 'TRAINER') {
+                return { type: 'trainer', id: itemId };
+              }
+              const partner = await prisma.partner.findUnique({ where: { id: itemId }, select: { id: true } });
+              if (partner) {
+                return { type: 'partner', id: itemId };
+              }
+              return null;
+            })
+          );
 
-          await prisma.courseTrainer.createMany({
-            data: trainerConnections,
-            skipDuplicates: true
-          });
+          const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer').map((item) => item!.id);
+          const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
+
+          if (trainers.length > 0) {
+            await prisma.courseTrainer.createMany({
+              data: trainers.map((trainerId) => ({ courseId: id, trainerId })),
+              skipDuplicates: true
+            });
+          }
+
+          if (partners.length > 0) {
+            await prisma.coursePartner.createMany({
+              data: partners.map((partnerId) => ({ courseId: id, partnerId })),
+              skipDuplicates: true
+            });
+          }
         }
       }
 

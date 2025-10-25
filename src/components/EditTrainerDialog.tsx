@@ -160,131 +160,133 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Edit Trainer</DialogTitle>
           <DialogDescription>Update trainer information and specializations.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto px-6 space-y-4 flex-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactNumber">Contact Number</Label>
+                <Input
+                  id="contactNumber"
+                  value={(formData as any).contactNumber}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={(e) => handleInputChange("contactNumber", e.target.value)}
+                  placeholder="Mobile or office number"
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="contactNumber">Contact Number</Label>
+              <Label htmlFor="onboardingDate">Onboarding Date</Label>
+              <DateInput id="onboardingDate" value={(formData as any).onboardingDate} onChange={(v) => handleInputChange("onboardingDate", v)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="partnerOrganization">Partner Organization</Label>
               <Input
-                id="contactNumber"
-                value={(formData as any).contactNumber}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                onChange={(e) => handleInputChange("contactNumber", e.target.value)}
-                placeholder="Mobile or office number"
+                id="partnerOrganization"
+                value={formData.partnerOrganization}
+                onChange={(e) => handleInputChange("partnerOrganization", e.target.value)}
+                placeholder="Enter partner organization"
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="onboardingDate">Onboarding Date</Label>
-            <DateInput id="onboardingDate" value={(formData as any).onboardingDate} onChange={(v) => handleInputChange("onboardingDate", v)} />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea id="bio" value={formData.bio} onChange={(e) => handleInputChange("bio", e.target.value)} placeholder="Enter trainer bio" rows={3} />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="partnerOrganization">Partner Organization</Label>
-            <Input
-              id="partnerOrganization"
-              value={formData.partnerOrganization}
-              onChange={(e) => handleInputChange("partnerOrganization", e.target.value)}
-              placeholder="Enter partner organization"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" value={formData.bio} onChange={(e) => handleInputChange("bio", e.target.value)} placeholder="Enter trainer bio" rows={3} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="experience">Experience</Label>
-            <Textarea
-              id="experience"
-              value={formData.experience}
-              onChange={(e) => handleInputChange("experience", e.target.value)}
-              placeholder="Enter trainer experience"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Specializations</Label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                value={newSpecialization}
-                onChange={(e) => setNewSpecialization(e.target.value)}
-                placeholder="Add specialization"
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecialization())}
+            <div className="space-y-2">
+              <Label htmlFor="experience">Experience</Label>
+              <Textarea
+                id="experience"
+                value={formData.experience}
+                onChange={(e) => handleInputChange("experience", e.target.value)}
+                placeholder="Enter trainer experience"
+                rows={3}
               />
-              <Button type="button" onClick={addSpecialization} size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.specializations.map((spec, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {spec}
-                  <Button type="button" variant="ghost" size="sm" className="h-auto p-0 ml-1" onClick={() => removeSpecialization(index)}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
+
+            <div className="space-y-2">
+              <Label>Specializations</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  value={newSpecialization}
+                  onChange={(e) => setNewSpecialization(e.target.value)}
+                  placeholder="Add specialization"
+                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecialization())}
+                />
+                <Button type="button" onClick={addSpecialization} size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.specializations.map((spec, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {spec}
+                    <Button type="button" variant="ghost" size="sm" className="h-auto p-0 ml-1" onClick={() => removeSpecialization(index)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Certifications</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  value={newCertification}
+                  onChange={(e) => setNewCertification(e.target.value)}
+                  placeholder="Add certification"
+                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addCertification())}
+                />
+                <Button type="button" onClick={addCertification} size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.certifications.map((cert, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {cert}
+                    <Button type="button" variant="ghost" size="sm" className="h-auto p-0 ml-1" onClick={() => removeCertification(index)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Certifications</Label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                value={newCertification}
-                onChange={(e) => setNewCertification(e.target.value)}
-                placeholder="Add certification"
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addCertification())}
-              />
-              <Button type="button" onClick={addCertification} size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.certifications.map((cert, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {cert}
-                  <Button type="button" variant="ghost" size="sm" className="h-auto p-0 ml-1" onClick={() => removeCertification(index)}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

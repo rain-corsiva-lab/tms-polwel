@@ -49,6 +49,7 @@ model User {
   onboardingDate                  DateTime?
   designation                     String?
   isPrimaryCoordinator            Boolean                         @default(false)
+  deletedAt                       DateTime?
   auditLogs                       AuditLog[]
   bookingsCreated                 Booking[]                       @relation("BookingCreatedBy")
   bookings                        Booking[]                       @relation("BookingUser")
@@ -75,17 +76,23 @@ model User {
 }
 
 model Partner {
-  id                 String     @id @default(cuid())
-  name               String
-  status             UserStatus @default(ACTIVE)
-  pointOfContact     String?
-  contactNumber      String?
-  contactDesignation String?
-  coursesAssigned    Json?
-  onboardingDate     DateTime?
-  notes              String?    @db.Text
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  id                  String          @id @default(cuid())
+  name                String
+  email               String?         @db.VarChar(255)
+  status              UserStatus      @default(ACTIVE)
+  pointOfContact      String?
+  contactNumber       String?
+  contactDesignation  String?
+  coursesAssigned     Json?
+  onboardingDate      DateTime?
+  notes               String?         @db.Text
+  partnerOrganization String?
+  bio                 String?         @db.Text
+  experience          String?         @db.Text
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  deletedAt           DateTime?
+  coursePartners      CoursePartner[]
 
   @@map("partners")
 }
@@ -110,44 +117,45 @@ model Organization {
 }
 
 model Course {
-  id                 String        @id @default(cuid())
+  id                 String          @id @default(cuid())
   title              String
-  description        String?       @db.Text
-  learningObjectives String?       @db.Text
-  courseOutline      String?       @db.Text
+  description        String?         @db.Text
+  learningObjectives String?         @db.Text
+  courseOutline      String?         @db.Text
   objectives         Json?
   duration           String
-  durationType       String        @default("days")
-  maxParticipants    Int           @default(25)
-  minParticipants    Int           @default(1)
+  durationType       String          @default("days")
+  maxParticipants    Int             @default(25)
+  minParticipants    Int             @default(1)
   category           String?
   level              String?
   prerequisites      Json?
   materials          Json?
-  venueFee           Float         @default(0)
+  venueFee           Float           @default(0)
   venue              String?
-  certificates       String        @default("polwel")
-  remarks            String?       @db.Text
-  targetAudience     String?       @db.Text
-  syllabus           String?       @db.Text
-  assessmentMethod   String?       @db.Text
+  certificates       String          @default("polwel")
+  remarks            String?         @db.Text
+  targetAudience     String?         @db.Text
+  syllabus           String?         @db.Text
+  assessmentMethod   String?         @db.Text
   certificationType  String?
-  status             CourseStatus  @default(ACTIVE)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  status             CourseStatus    @default(ACTIVE)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
   createdBy          String?
-  courseCode         String?       @unique @db.VarChar(50)
+  courseCode         String?         @unique @db.VarChar(50)
   specifiedLocation  String?
-  defaultCourseFee   Float         @default(0)
+  defaultCourseFee   Float           @default(0)
   discounts          Json?
-  billingRate        Float         @default(0)
-  contractsFeePayout Float         @default(0)
+  billingRate        Float           @default(0)
+  contractsFeePayout Float           @default(0)
   venueFeeType       String?
   bookings           Booking[]
   runs               CourseRun[]
-  creator            User?         @relation("CourseCreator", fields: [createdBy], references: [id])
+  creator            User?           @relation("CourseCreator", fields: [createdBy], references: [id])
   trainerFees        TrainerFee[]
   courseTrainers     CourseTrainer[]
+  coursePartners     CoursePartner[]
 
   @@index([createdBy], map: "courses_createdBy_fkey")
   @@map("courses")
@@ -166,6 +174,21 @@ model CourseTrainer {
   @@index([courseId], map: "course_trainers_courseId_fkey")
   @@index([trainerId], map: "course_trainers_trainerId_fkey")
   @@map("course_trainers")
+}
+
+model CoursePartner {
+  id        String   @id @default(cuid())
+  courseId  String
+  partnerId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, partnerId])
+  @@index([courseId], map: "course_partners_courseId_fkey")
+  @@index([partnerId], map: "course_partners_partnerId_fkey")
+  @@map("course_partners")
 }
 
 model CourseRun {

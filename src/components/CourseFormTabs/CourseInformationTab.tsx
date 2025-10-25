@@ -1,13 +1,14 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
@@ -83,18 +84,22 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
               )}
               {!loading?.categories &&
                 categoryGroups.length > 0 &&
-                categoryGroups.map((group: any) => (
-                  <React.Fragment key={group.name}>
-                    <div className={`px-2 py-1 text-xs font-semibold ${group.color || "bg-muted text-foreground"} rounded mx-1 my-1 pointer-events-none`}>
-                      {group.name}
-                    </div>
-                    {(group.subcategories || []).map((subcategory: string) => (
-                      <SelectItem key={subcategory} value={subcategory} className="ml-2 text-sm">
-                        {subcategory}
-                      </SelectItem>
-                    ))}
-                  </React.Fragment>
-                ))}
+                categoryGroups.map((group: any) => {
+                  const label = group?.name || "Categories";
+                  const subcategories = Array.isArray(group?.subcategories) ? group.subcategories : [];
+                  return (
+                    <SelectGroup key={label}>
+                      <SelectLabel className={cn("mx-1 my-1 rounded px-2 py-1 text-xs font-semibold", group?.color || "bg-muted text-foreground")}>
+                        {label}
+                      </SelectLabel>
+                      {subcategories.map((subcategory: string) => (
+                        <SelectItem key={`${label}-${subcategory}`} value={subcategory} className="ml-2 text-sm">
+                          {subcategory}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  );
+                })}
             </SelectContent>
           </Select>
         </div>
@@ -168,7 +173,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
         <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="space-y-2">
           <Label htmlFor="duration">Course Duration</Label>
           <Input id="duration" type="number" value={formData.duration} onChange={(e) => onInputChange("duration", e.target.value)} placeholder="Duration" />
@@ -188,6 +193,30 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="minParticipants">Min Participants *</Label>
+          <Input
+            id="minParticipants"
+            type="number"
+            min="1"
+            value={formData.minParticipants || 1}
+            onChange={(e) => onInputChange("minParticipants", parseInt(e.target.value) || 1)}
+            placeholder="Min pax"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="maxParticipants">Max Participants</Label>
+          <Input
+            id="maxParticipants"
+            type="number"
+            min="1"
+            value={formData.maxParticipants || ""}
+            onChange={(e) => onInputChange("maxParticipants", e.target.value ? parseInt(e.target.value) : "")}
+            placeholder="Max pax (optional)"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="trainer">Trainers *</Label>
           <Popover>
             <PopoverTrigger asChild>
@@ -195,24 +224,38 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                 {formData.trainer.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {formData.trainer.map((trainerId: string) => {
-                      const trainer = trainers.find((t: any) => t.id === trainerId);
-                      const displayName = trainer?.name || trainerId;
+                      const normalizedId = String(trainerId);
+                      const trainer = trainers.find((t: any) => String(t?.id) === normalizedId);
+                      const partner = partners.find((p: any) => String(p?.id) === normalizedId || String(p?.partnerId) === normalizedId);
+                      const displayName = trainer?.name || partner?.partnerName || partner?.name || normalizedId;
                       return (
-                        <Badge key={trainerId} variant="secondary" className="text-xs">
+                        <Badge key={normalizedId} variant="secondary" className="text-xs">
                           {displayName}
-                          <button
-                            type="button"
-                            className="ml-1 hover:bg-muted rounded-full"
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Remove ${displayName}`}
+                            className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-muted"
                             onClick={(e) => {
                               e.stopPropagation();
                               onInputChange(
                                 "trainer",
-                                formData.trainer.filter((id: string) => id !== trainerId)
+                                formData.trainer.filter((id: string) => String(id) !== normalizedId)
                               );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onInputChange(
+                                  "trainer",
+                                  formData.trainer.filter((id: string) => String(id) !== normalizedId)
+                                );
+                              }
                             }}
                           >
                             <X className="h-3 w-3" />
-                          </button>
+                          </span>
                         </Badge>
                       );
                     })}
@@ -230,19 +273,25 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                   <CommandEmpty>No trainer found.</CommandEmpty>
                   <CommandGroup heading="Trainers">
                     {trainers.map((trainer: any) => {
-                      const trainerId = trainer.id;
-                      const displayName = trainer.name || trainer;
+                      const trainerId = trainer?.id;
+                      if (!trainerId) {
+                        return null;
+                      }
+                      const normalizedId = String(trainerId);
+                      const displayName = trainer?.name || trainer?.email || normalizedId;
+                      const isSelected = formData.trainer.includes(normalizedId);
                       return (
                         <CommandItem
-                          key={trainerId}
+                          key={normalizedId}
                           value={displayName}
                           onSelect={() => {
-                            if (!formData.trainer.includes(trainerId)) {
-                              onInputChange("trainer", [...formData.trainer, trainerId]);
-                            }
+                            onInputChange(
+                              "trainer",
+                              isSelected ? formData.trainer.filter((id: string) => id !== normalizedId) : [...formData.trainer, normalizedId]
+                            );
                           }}
                         >
-                          <Check className={`mr-2 h-4 w-4 ${formData.trainer.includes(trainerId) ? "opacity-100" : "opacity-0"}`} />
+                          <Check className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`} />
                           {displayName}
                         </CommandItem>
                       );
@@ -250,19 +299,25 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                   </CommandGroup>
                   <CommandGroup heading="Partners">
                     {partners.map((partner: any) => {
-                      const partnerId = partner.id;
-                      const name = partner.name || partner;
+                      if (!partner) {
+                        return null;
+                      }
+                      const partnerIdRaw = partner.id || partner.partnerId || partner.value || partner.partnerName;
+                      if (!partnerIdRaw) {
+                        return null;
+                      }
+                      const partnerId = String(partnerIdRaw);
+                      const name = partner.partnerName || partner.name || partner.label || partnerId;
+                      const isSelected = formData.trainer.includes(partnerId);
                       return (
                         <CommandItem
                           key={partnerId}
                           value={name}
                           onSelect={() => {
-                            if (!formData.trainer.includes(partnerId)) {
-                              onInputChange("trainer", [...formData.trainer, partnerId]);
-                            }
+                            onInputChange("trainer", isSelected ? formData.trainer.filter((id: string) => id !== partnerId) : [...formData.trainer, partnerId]);
                           }}
                         >
-                          <Check className={`mr-2 h-4 w-4 ${formData.trainer.includes(partnerId) ? "opacity-100" : "opacity-0"}`} />
+                          <Check className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`} />
                           {name}
                         </CommandItem>
                       );
@@ -272,6 +327,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
               </Command>
             </PopoverContent>
           </Popover>
+          <span className="text-xs text-gray-400">Note: Trainers and partners should be created in User Management before being able to select here.</span>
         </div>
       </div>
 
@@ -300,6 +356,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
               )}
             </SelectContent>
           </Select>
+          <span className="text-xs text-gray-400">Note: Venue should be created in Venue Management before being able to select here.</span>
         </div>
 
         <div className="space-y-2">

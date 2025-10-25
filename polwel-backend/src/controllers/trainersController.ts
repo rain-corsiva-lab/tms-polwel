@@ -35,7 +35,8 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
 
     // Build where clause
     const where: any = {
-      role: UserRole.TRAINER
+      role: UserRole.TRAINER,
+      deletedAt: null  // Exclude soft-deleted trainers
     };
 
     if (search) {
@@ -77,7 +78,7 @@ export const getTrainers = async (req: AuthenticatedRequest, res: Response) => {
         },
         ...(skip !== undefined ? { skip } : {}),
         ...(take !== undefined ? { take } : {}),
-        orderBy: { name: 'asc' }
+        orderBy: { updatedAt: 'desc' }
       }),
       prisma.user.count({ where })
     ]);
@@ -382,10 +383,11 @@ export const deleteTrainer = async (req: AuthenticatedRequest, res: Response) =>
       });
     }
 
-    // Soft delete by setting status to INACTIVE
+    // Soft delete by setting deletedAt timestamp
     await prisma.user.update({
       where: { id: id },
       data: {
+        deletedAt: new Date(),
         status: UserStatus.INACTIVE
       }
     });
@@ -780,6 +782,121 @@ export const getTrainerTrainingSummary = async (req: AuthenticatedRequest, res: 
     });
   } catch (error) {
     console.error('Get trainer training summary error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Get deleted trainers
+export const getDeletedTrainers = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const rawPage = typeof req.query.page === 'string' ? req.query.page : undefined;
+    const parsedPage = rawPage ? Number(rawPage) : undefined;
+    const pageNum = parsedPage && Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+
+    const rawLimit = typeof req.query.limit === 'string' ? req.query.limit : undefined;
+    const limitNum = rawLimit ? Number(rawLimit) : 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    const where = {
+      role: UserRole.TRAINER,
+      deletedAt: { not: null }
+    };
+
+    const [trainers, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          contactNumber: true,
+          partnerOrganization: true,
+          specializations: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true
+        },
+        skip,
+        take: limitNum,
+        orderBy: { deletedAt: 'desc' }
+      }),
+      prisma.user.count({ where })
+    ]);
+
+    const transformedTrainers = trainers.map(trainer => ({
+      ...trainer,
+      specializations: Array.isArray(trainer.specializations) 
+        ? trainer.specializations.filter((item): item is string => typeof item === 'string')
+        : []
+    }));
+
+    return res.json({
+      trainers: transformedTrainers,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching deleted trainers:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch deleted trainers',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+// Restore deleted trainer
+export const restoreTrainer = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trainer ID is required'
+      });
+    }
+
+    // Check if trainer exists and is deleted
+    const existingTrainer = await prisma.user.findFirst({
+      where: {
+        id: id,
+        role: UserRole.TRAINER,
+        deletedAt: { not: null }
+      }
+    });
+
+    if (!existingTrainer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Deleted trainer not found'
+      });
+    }
+
+    // Restore by clearing deletedAt and setting status to ACTIVE
+    await prisma.user.update({
+      where: { id: id },
+      data: {
+        deletedAt: null,
+        status: UserStatus.ACTIVE
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Trainer restored successfully'
+    });
+  } catch (error) {
+    console.error('Restore trainer error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

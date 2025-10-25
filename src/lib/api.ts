@@ -622,6 +622,27 @@ export const trainersApi = {
     });
   },
 
+  // Get deleted trainers
+  getDeleted: async (params: {
+    page?: number;
+    limit?: number;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    return apiRequest(`/trainers/deleted/all?${queryParams}`);
+  },
+
+  // Restore deleted trainer
+  restore: async (id: string) => {
+    return apiRequest(`/trainers/${id}/restore`, {
+      method: 'PATCH',
+    });
+  },
+
   // Get trainer blockouts
   getBlockouts: async (id: string, params: {
     startDate?: string;
@@ -849,6 +870,7 @@ export const partnersApi = {
   // Create new partner (no email/password needed since partners are just data)
   create: async (partnerData: {
     partnerName: string;
+    email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
     contactNumber?: string;
@@ -856,6 +878,9 @@ export const partnersApi = {
     onboardingDate?: string;
     status?: string;
     notes?: string;
+    partnerOrganization?: string;
+    bio?: string;
+    experience?: string;
   }) => {
     return apiRequest('/partners', {
       method: 'POST',
@@ -866,6 +891,7 @@ export const partnersApi = {
   // Update partner
   update: async (id: string, partnerData: {
     partnerName?: string;
+    email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
     contactNumber?: string;
@@ -873,6 +899,9 @@ export const partnersApi = {
     status?: string;
     onboardingDate?: string;
     notes?: string;
+    partnerOrganization?: string;
+    bio?: string;
+    experience?: string;
   }) => {
     return apiRequest(`/partners/${id}`, {
       method: 'PUT',
@@ -884,6 +913,27 @@ export const partnersApi = {
   delete: async (id: string) => {
     return apiRequest(`/partners/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  // Get deleted partners
+  getDeleted: async (params: {
+    page?: number;
+    limit?: number;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    return apiRequest(`/partners/deleted/all?${queryParams}`);
+  },
+
+  // Restore deleted partner
+  restore: async (id: string) => {
+    return apiRequest(`/partners/${id}/restore`, {
+      method: 'PATCH',
     });
   },
 

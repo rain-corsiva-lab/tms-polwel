@@ -35,7 +35,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
           onChange={(e) => handleNumericInputChange("defaultCourseFee", e.target.value)}
           placeholder="0.00"
         />
-        <p className="text-sm text-muted-foreground">Base fee for this course template</p>
+        <p className="text-sm text-muted-foreground">per pax w/o GST</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

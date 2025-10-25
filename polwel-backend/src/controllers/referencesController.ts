@@ -12,7 +12,8 @@ export const referencesController = {
       const trainers = await prisma.user.findMany({
         where: {
           role: UserRole.TRAINER,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          deletedAt: null
         },
         select: {
           id: true,
@@ -54,23 +55,34 @@ export const referencesController = {
     try {
       const partners = await prisma.partner.findMany({
         where: {
-          status: UserStatus.ACTIVE
+          status: UserStatus.ACTIVE,
+          deletedAt: null
         },
         select: {
-          name: true
+          id: true,
+          name: true,
+          email: true,
+          pointOfContact: true,
+          contactNumber: true,
+          contactDesignation: true
         },
         orderBy: {
           name: 'asc'
         }
       });
 
-      const uniquePartners = partners
-        .map(p => p.name?.trim())
-        .filter((name): name is string => Boolean(name));
+      const formattedPartners = partners.map(partner => ({
+        id: partner.id,
+        partnerName: partner.name?.trim() || 'Unnamed Partner',
+        email: partner.email || null,
+        pointOfContact: partner.pointOfContact || null,
+        contactNumber: partner.contactNumber || null,
+        contactDesignation: partner.contactDesignation || null
+      }));
 
       return res.json({
         success: true,
-        data: { partners: uniquePartners }
+        data: { partners: formattedPartners }
       });
     } catch (error) {
       console.error('Error fetching partners:', error);
@@ -87,7 +99,8 @@ export const referencesController = {
     try {
       const venues = await prisma.venue.findMany({
         where: {
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          deletedAt: null
         },
         select: {
           id: true,

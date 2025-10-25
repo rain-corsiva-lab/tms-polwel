@@ -5,7 +5,9 @@ import {
   createPartner, 
   updatePartner, 
   deletePartner,
-  getPartnerStatistics 
+  getPartnerStatistics,
+  restorePartner,
+  getDeletedPartners
 } from '../controllers/partnersController';
 import { authenticateToken, authorizeRoles, requirePermissions } from '../middleware/auth';
 
@@ -31,5 +33,11 @@ router.put('/:id', authorizeRoles('POLWEL'), requirePermissions('clients.edit'),
 
 // Delete partner (soft delete) - requires POLWEL role
 router.delete('/:id', authorizeRoles('POLWEL'), requirePermissions('clients.delete'), deletePartner);
+
+// Get deleted partners - requires POLWEL role
+router.get('/deleted/all', authorizeRoles('POLWEL'), requirePermissions('clients.view'), getDeletedPartners);
+
+// Restore deleted partner - requires POLWEL role
+router.patch('/:id/restore', authorizeRoles('POLWEL'), requirePermissions('clients.edit'), restorePartner);
 
 export default router;

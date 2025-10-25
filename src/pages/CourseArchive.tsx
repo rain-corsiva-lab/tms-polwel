@@ -30,6 +30,10 @@ const CourseArchive = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCertificate, setSelectedCertificate] = useState<string>("all");
 
+  // Sorting state
+  const [sortField, setSortField] = useState<keyof Course | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
   // Loading and data states
   const [loading, setLoading] = useState({
     courses: false,
@@ -37,6 +41,7 @@ const CourseArchive = () => {
   });
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [venuesMap, setVenuesMap] = useState<Record<string, string>>({});
 
   // Load data from API
   useEffect(() => {
@@ -49,9 +54,9 @@ const CourseArchive = () => {
           categoriesResponse.success && categoriesResponse.data && Array.isArray(categoriesResponse.data.categories) ? categoriesResponse.data.categories : []
         );
 
-        // Load courses
+        // Load courses and venues
         setLoading((prev) => ({ ...prev, courses: true }));
-        const coursesResponse = await coursesApi.getAll();
+        const [coursesResponse, venuesResponse] = await Promise.all([coursesApi.getAll(), referencesApi.getVenues().catch(() => null)]);
         console.log("Courses API response:", coursesResponse);
 
         // Handle the correct API response structure: { success: true, courses: [...] }
@@ -67,6 +72,23 @@ const CourseArchive = () => {
         }
 
         setCourses(coursesData);
+
+        // Build venues map (id -> name) if venues were returned
+        const vData = Array.isArray(venuesResponse?.data?.venues)
+          ? venuesResponse.data.venues
+          : Array.isArray(venuesResponse?.data)
+          ? venuesResponse.data
+          : Array.isArray(venuesResponse?.venues)
+          ? venuesResponse.venues
+          : Array.isArray(venuesResponse)
+          ? venuesResponse
+          : [];
+
+        const map: Record<string, string> = {};
+        for (const v of vData) {
+          if (v && v.id) map[v.id] = v.name || v.title || v.address || String(v.id);
+        }
+        setVenuesMap(map);
       } catch (error) {
         console.error("Error loading data:", error);
         toast({
@@ -200,6 +222,52 @@ const CourseArchive = () => {
       })
     : [];
 
+  // Sort courses based on selected field and direction
+  const sortedCourses = [...filteredCourses].sort((a, b) => {
+    if (!sortField) return 0;
+
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+
+    // Handle null/undefined
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return sortDirection === "asc" ? 1 : -1;
+    if (bValue == null) return sortDirection === "asc" ? -1 : 1;
+
+    // Compare based on type
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    // String comparison
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    if (aStr < bStr) return sortDirection === "asc" ? -1 : 1;
+    if (aStr > bStr) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Handle column header click for sorting
+  const handleSort = (field: keyof Course) => {
+    if (sortField === field) {
+      // Toggle direction
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Render sort icon
+  const renderSortIcon = (field: keyof Course) => {
+    if (sortField !== field) {
+      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
+    }
+    return sortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
+  };
+
   if (loading.courses) {
     return (
       <div className="container mx-auto py-6 px-4">
@@ -274,14 +342,14 @@ const CourseArchive = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            Courses ({filteredCourses.length})
-            {courses.length > 0 && filteredCourses.length !== courses.length && (
+            Courses ({sortedCourses.length})
+            {courses.length > 0 && sortedCourses.length !== courses.length && (
               <span className="text-sm font-normal text-muted-foreground ml-2">of {courses.length} total</span>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredCourses.length === 0 ? (
+          {sortedCourses.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No courses found matching the selected filters.</p>
               <Button
@@ -299,19 +367,59 @@ const CourseArchive = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Course Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Venue</TableHead>
-                  <TableHead>Price/Pax</TableHead>
-                  <TableHead>Min Pax</TableHead>
-                  <TableHead>Certificate</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("title")}>
+                    <div className="flex items-center">
+                      Course Title
+                      {renderSortIcon("title")}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("category")}>
+                    <div className="flex items-center">
+                      Category
+                      {renderSortIcon("category")}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("duration")}>
+                    <div className="flex items-center">
+                      Duration
+                      {renderSortIcon("duration")}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("venue")}>
+                    <div className="flex items-center">
+                      Venue
+                      {renderSortIcon("venue")}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("defaultCourseFee")}>
+                    <div className="flex items-center">
+                      Price/Pax
+                      {renderSortIcon("defaultCourseFee")}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("minParticipants")}>
+                    <div className="flex items-center">
+                      Min Pax
+                      {renderSortIcon("minParticipants")}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("certificates")}>
+                    <div className="flex items-center">
+                      Certificate
+                      {renderSortIcon("certificates")}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                    <div className="flex items-center">
+                      Status
+                      {renderSortIcon("status")}
+                    </div>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCourses.map((course) => (
+                {sortedCourses.map((course) => (
                   <TableRow key={course.id}>
                     <TableCell className="font-medium">{course.title}</TableCell>
                     <TableCell>
@@ -320,7 +428,7 @@ const CourseArchive = () => {
                     <TableCell>
                       {course.duration} {course.durationType}
                     </TableCell>
-                    <TableCell>{course.venue || "TBD"}</TableCell>
+                    <TableCell>{(course.venue && venuesMap[course.venue]) || course.venue || "TBD"}</TableCell>
                     <TableCell>${course.defaultCourseFee?.toFixed(2) || "0.00"}</TableCell>
                     <TableCell>{course.minParticipants || 1}</TableCell>
                     <TableCell>

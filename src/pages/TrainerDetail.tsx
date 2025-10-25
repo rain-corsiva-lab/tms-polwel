@@ -178,7 +178,9 @@ const TrainerDetail = () => {
       // use central API client that handles auth
       const resp = await coursesApi.getAll({ limit: 200 });
       let list: any[] = [];
-      if (resp && resp.success && resp.data && Array.isArray(resp.data.courses)) {
+      if (resp && resp.success && resp.courses && Array.isArray(resp.courses)) {
+        list = resp.courses;
+      } else if (resp && resp.success && resp.data && Array.isArray(resp.data.courses)) {
         list = resp.data.courses;
       } else if (resp && Array.isArray((resp as any).data)) {
         list = (resp as any).data;
@@ -189,10 +191,18 @@ const TrainerDetail = () => {
       }
 
       if (Array.isArray(list)) {
-        setCourseOptions(list.map((c: any) => ({ id: c.id, courseCode: c.courseCode, title: c.title })));
+        // Sort courses by title ascending
+        const sorted = list
+          .map((c: any) => ({ id: c.id, courseCode: c.courseCode, title: c.title }))
+          .sort((a, b) => {
+            const aTitle = (a.title || "").toLowerCase();
+            const bTitle = (b.title || "").toLowerCase();
+            return aTitle.localeCompare(bTitle);
+          });
+        setCourseOptions(sorted);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error loading courses:", e);
     }
   };
 
@@ -388,7 +398,7 @@ const TrainerDetail = () => {
         {/* Training Fee full width */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Training Fee</CardTitle>
+            <CardTitle className="text-sm font-medium">Courses</CardTitle>
             <Button
               size="sm"
               onClick={() => {
@@ -396,7 +406,7 @@ const TrainerDetail = () => {
                 setShowFeeDialog(true);
               }}
             >
-              Add Training Fee
+              Add Course Details
             </Button>
           </CardHeader>
           <CardContent className="p-0">

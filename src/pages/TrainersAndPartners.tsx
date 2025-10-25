@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import Swal from "sweetalert2";
 import {
   Download,
   Filter,
@@ -27,6 +28,8 @@ import {
   X,
   Loader2,
   CheckCircle,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
@@ -53,6 +56,7 @@ interface Trainer {
   partnerOrganization: string | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
   specializations?: string[];
 }
 
@@ -67,6 +71,7 @@ interface Partner {
   contactDesignation: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
   onboardingDate?: string;
   notes?: string;
 }
@@ -88,6 +93,8 @@ const TrainersAndPartners = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [partnersLoading, setPartnersLoading] = useState(false);
+  const [deletedTrainers, setDeletedTrainers] = useState<Trainer[]>([]);
+  const [deletedPartners, setDeletedPartners] = useState<Partner[]>([]);
   const [exporting, setExporting] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -108,6 +115,15 @@ const TrainersAndPartners = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [trainerBlockouts, setTrainerBlockouts] = useState<TrainerBlockout[]>([]);
   const [isPendingOpen, setIsPendingOpen] = useState(false);
+
+  // Sorting state for trainers
+  const [trainerSortField, setTrainerSortField] = useState<keyof Trainer | null>(null);
+  const [trainerSortDirection, setTrainerSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Sorting state for partners
+  const [partnerSortField, setPartnerSortField] = useState<keyof Partner | null>(null);
+  const [partnerSortDirection, setPartnerSortDirection] = useState<"asc" | "desc">("asc");
+
   const { toast } = useToast();
 
   // Dummy data for trainers
@@ -234,6 +250,9 @@ const TrainersAndPartners = () => {
           specializations: trainer.specializations || [],
         })) || [];
 
+      // Default sort by updatedAt desc
+      mappedTrainers.sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+
       setTrainers(mappedTrainers);
       setPagination(response.pagination || { ...pagination, limit: limitToUse, page: pageToUse });
     } catch (error) {
@@ -265,11 +284,10 @@ const TrainersAndPartners = () => {
       });
 
       // Map backend data to frontend interface
-      const mappedPartners =
-        response.partners?.map((partner) => ({
-          ...partner,
-          role: "PARTNER" as const,
-        })) || [];
+      const mappedPartners = response.partners?.map((partner) => ({ ...partner, role: "PARTNER" as const })) || [];
+
+      // Default sort by updatedAt desc
+      mappedPartners.sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
 
       setPartners(mappedPartners);
       setPartnersPagination(response.pagination || { ...partnersPagination, limit: limitToUse, page: pageToUse });
@@ -312,11 +330,11 @@ const TrainersAndPartners = () => {
     fetchPartners(1, partnersPerPage);
   }, [partnersPerPage]);
 
-  // Calculate stats from real data
-  const totalTrainers = trainers.length;
+  // Calculate stats from pagination totals (reflects database totals, not just current page)
+  const totalTrainers = pagination.total || 0;
+  const totalPartners = partnersPagination.total || 0;
+  // Keep pending trainers as array filter for the dialog display
   const pendingTrainers = trainers.filter((trainer) => trainer.status === "PENDING");
-  const totalPartners = partners.length;
-  const pendingPartners = partners.filter((partner) => partner.status === "PENDING");
 
   const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, "id">) => {
     const newBlockout = {
@@ -337,6 +355,218 @@ const TrainersAndPartners = () => {
       description: "The trainer blockout has been removed",
     });
   };
+
+  // Delete trainer handler
+  const handleDeleteTrainer = async (trainerId: string, trainerName: string) => {
+    const result = await Swal.fire({
+      title: "Delete Trainer?",
+      text: `Are you sure you want to delete "${trainerName}"? This action can be undone from the Deleted tab.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await trainersApi.delete(trainerId);
+        toast({
+          title: "Trainer Deleted",
+          description: `${trainerName} has been deleted successfully`,
+        });
+        fetchTrainers(); // Refresh list
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete trainer",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Delete partner handler
+  const handleDeletePartner = async (partnerId: string, partnerName: string) => {
+    const result = await Swal.fire({
+      title: "Delete Partner?",
+      text: `Are you sure you want to delete "${partnerName}"? This action can be undone from the Deleted tab.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await partnersApi.delete(partnerId);
+        toast({
+          title: "Partner Deleted",
+          description: `${partnerName} has been deleted successfully`,
+        });
+        fetchPartners(); // Refresh list
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete partner",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Fetch deleted trainers and partners
+  const fetchDeleted = async () => {
+    try {
+      const [deletedTrainersResponse, deletedPartnersResponse] = await Promise.all([trainersApi.getDeleted(), partnersApi.getDeleted()]);
+
+      const mappedDeletedTrainers =
+        deletedTrainersResponse.trainers?.map((trainer: any) => ({
+          ...trainer,
+          role: "TRAINER" as const,
+          courses: trainer.specializations || [],
+        })) || [];
+
+      const mappedDeletedPartners =
+        deletedPartnersResponse.partners?.map((partner: any) => ({
+          ...partner,
+          role: "PARTNER" as const,
+        })) || [];
+
+      setDeletedTrainers(mappedDeletedTrainers);
+      setDeletedPartners(mappedDeletedPartners);
+    } catch (error) {
+      console.error("Error fetching deleted items:", error);
+    }
+  };
+
+  // Restore trainer handler
+  const handleRestoreTrainer = async (trainerId: string, trainerName: string) => {
+    try {
+      await trainersApi.restore(trainerId);
+      toast({
+        title: "Trainer Restored",
+        description: `${trainerName} has been restored successfully`,
+      });
+      fetchDeleted();
+      fetchTrainers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to restore trainer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Restore partner handler
+  const handleRestorePartner = async (partnerId: string, partnerName: string) => {
+    try {
+      await partnersApi.restore(partnerId);
+      toast({
+        title: "Partner Restored",
+        description: `${partnerName} has been restored successfully`,
+      });
+      fetchDeleted();
+      fetchPartners();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to restore partner",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Fetch deleted data when Deleted tab is active
+  useEffect(() => {
+    if (activeTab === "deleted") {
+      fetchDeleted();
+    }
+  }, [activeTab]);
+
+  // Sorting handlers for trainers
+  const handleTrainerSort = (field: keyof Trainer) => {
+    if (trainerSortField === field) {
+      setTrainerSortDirection(trainerSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setTrainerSortField(field);
+      setTrainerSortDirection("asc");
+    }
+  };
+
+  const renderTrainerSortIcon = (field: keyof Trainer) => {
+    if (trainerSortField !== field) {
+      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
+    }
+    return trainerSortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
+  };
+
+  // Sorting handlers for partners
+  const handlePartnerSort = (field: keyof Partner) => {
+    if (partnerSortField === field) {
+      setPartnerSortDirection(partnerSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setPartnerSortField(field);
+      setPartnerSortDirection("asc");
+    }
+  };
+
+  const renderPartnerSortIcon = (field: keyof Partner) => {
+    if (partnerSortField !== field) {
+      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
+    }
+    return partnerSortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
+  };
+
+  // Apply sorting to trainers
+  const sortedTrainers = [...trainers].sort((a, b) => {
+    if (!trainerSortField) return 0;
+
+    const aValue = a[trainerSortField];
+    const bValue = b[trainerSortField];
+
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return trainerSortDirection === "asc" ? 1 : -1;
+    if (bValue == null) return trainerSortDirection === "asc" ? -1 : 1;
+
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return trainerSortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    if (aStr < bStr) return trainerSortDirection === "asc" ? -1 : 1;
+    if (aStr > bStr) return trainerSortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Apply sorting to partners
+  const sortedPartners = [...partners].sort((a, b) => {
+    if (!partnerSortField) return 0;
+
+    const aValue = a[partnerSortField];
+    const bValue = b[partnerSortField];
+
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return partnerSortDirection === "asc" ? 1 : -1;
+    if (bValue == null) return partnerSortDirection === "asc" ? -1 : 1;
+
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return partnerSortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    if (aStr < bStr) return partnerSortDirection === "asc" ? -1 : 1;
+    if (aStr > bStr) return partnerSortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
 
   const handleExport = async () => {
     try {
@@ -407,10 +637,10 @@ const TrainersAndPartners = () => {
           <p className="text-muted-foreground">Manage associate trainers and training partners and their availability</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" onClick={() => setFilterOpen((o) => !o)}>
+          {/* <Button variant="outline" onClick={() => setFilterOpen((o) => !o)}>
             <Filter className="h-4 w-4 mr-2" />
             {filterOpen ? "Hide Filters" : "Filter"}
-          </Button>
+          </Button> */}
           <Button variant="outline" onClick={handleExport} disabled={exporting}>
             {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
             {exporting ? "Exporting..." : "Export"}
@@ -475,9 +705,26 @@ const TrainersAndPartners = () => {
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Training Partners</p>
+                    <p className="text-2xl font-bold text-foreground">{totalPartners}</p>
+                  </div>
+                  <div className="p-2 bg-accent rounded-lg">
+                    <Users className="h-5 w-5 text-accent-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Pending trainers dialog */}
+          {pendingTrainers.length > 0 && (
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors mt-4">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -542,12 +789,13 @@ const TrainersAndPartners = () => {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
+          )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList>
-              <TabsTrigger value="trainers">Associate Trainers</TabsTrigger>
-              <TabsTrigger value="partners">Training Partners</TabsTrigger>
+              <TabsTrigger value="trainers">Associate Trainers ({totalTrainers})</TabsTrigger>
+              <TabsTrigger value="partners">Training Partners ({totalPartners})</TabsTrigger>
+              <TabsTrigger value="deleted">Deleted ({deletedTrainers.length + deletedPartners.length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="trainers" className="space-y-6">
@@ -560,15 +808,23 @@ const TrainersAndPartners = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Courses</TableHead>
+                        <TableHead onClick={() => handleTrainerSort("name")} className="cursor-pointer hover:bg-muted transition-colors">
+                          Name {renderTrainerSortIcon("name")}
+                        </TableHead>
+                        <TableHead onClick={() => handleTrainerSort("email")} className="cursor-pointer hover:bg-muted transition-colors">
+                          Email {renderTrainerSortIcon("email")}
+                        </TableHead>
+                        <TableHead onClick={() => handleTrainerSort("status")} className="cursor-pointer hover:bg-muted transition-colors">
+                          Status {renderTrainerSortIcon("status")}
+                        </TableHead>
+                        <TableHead onClick={() => handleTrainerSort("partnerOrganization")} className="cursor-pointer hover:bg-muted transition-colors">
+                          Partner Organization {renderTrainerSortIcon("partnerOrganization")}
+                        </TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {trainers.map((trainer) => (
+                      {sortedTrainers.map((trainer) => (
                         <TableRow key={trainer.id}>
                           <TableCell className="font-medium">
                             <Link to={`/trainers/${trainer.id}`} className="hover:underline text-primary">
@@ -579,7 +835,7 @@ const TrainersAndPartners = () => {
                           <TableCell>
                             <Badge variant={trainer.status === "ACTIVE" ? "default" : "secondary"}>{trainer.status}</Badge>
                           </TableCell>
-                          <TableCell>{trainer.courses.join(", ")}</TableCell>
+                          <TableCell>{trainer.partnerOrganization || "-"}</TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
                               <EditTrainerDialog trainer={trainer} onTrainerUpdated={fetchTrainers} />
@@ -635,6 +891,10 @@ const TrainersAndPartners = () => {
                                     <Mail className="h-4 w-4 mr-2" />
                                     Send Password Reset Link
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDeleteTrainer(trainer.id, trainer.name)} className="text-red-600">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Trainer
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </SafeDropdownMenu>
                             </div>
@@ -666,28 +926,33 @@ const TrainersAndPartners = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Partner Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Contact Info</TableHead>
-                        <TableHead>Courses Assigned</TableHead>
+                        <TableHead onClick={() => handlePartnerSort("partnerName")} className="cursor-pointer hover:bg-muted transition-colors">
+                          Partner Name {renderPartnerSortIcon("partnerName")}
+                        </TableHead>
+                        <TableHead onClick={() => handlePartnerSort("status")} className="cursor-pointer hover:bg-muted transition-colors">
+                          Status {renderPartnerSortIcon("status")}
+                        </TableHead>
+                        <TableHead onClick={() => handlePartnerSort("contactNumber")} className="cursor-pointer hover:bg-muted transition-colors">
+                          Contact Info {renderPartnerSortIcon("contactNumber")}
+                        </TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {partnersLoading ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
+                          <TableCell colSpan={4} className="text-center py-8">
                             Loading partners...
                           </TableCell>
                         </TableRow>
                       ) : partners.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
+                          <TableCell colSpan={4} className="text-center py-8">
                             No partners found
                           </TableCell>
                         </TableRow>
                       ) : (
-                        partners.map((partner) => (
+                        sortedPartners.map((partner) => (
                           <TableRow key={partner.id}>
                             <TableCell className="font-medium">
                               <div>
@@ -714,20 +979,6 @@ const TrainersAndPartners = () => {
                               <div className="text-sm">
                                 <div>{partner.contactNumber}</div>
                                 <div className="text-xs text-muted-foreground">{partner.contactDesignation}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                {partner.coursesAssigned?.slice(0, 2).map((course, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
-                                    {course}
-                                  </Badge>
-                                ))}
-                                {partner.coursesAssigned && partner.coursesAssigned.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{partner.coursesAssigned.length - 2}
-                                  </Badge>
-                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -778,18 +1029,10 @@ const TrainersAndPartners = () => {
                                         </>
                                       )}
                                     </DropdownMenuItem>
-                                    {/* <DropdownMenuItem
-                                      onClick={() => {
-                                        // Handle password reset
-                                        toast({
-                                          title: "Password Reset Link Sent",
-                                          description: "Password reset link has been sent to the partner's email.",
-                                        });
-                                      }}
-                                    >
-                                      <Mail className="h-4 w-4 mr-2" />
-                                      Send Password Reset Link
-                                    </DropdownMenuItem> */}
+                                    <DropdownMenuItem onClick={() => handleDeletePartner(partner.id, partner.partnerName)} className="text-red-600">
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Partner
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
@@ -809,6 +1052,91 @@ const TrainersAndPartners = () => {
                     onPerPageChange={(pp) => setPartnersPerPage(pp)}
                   />
                 </div>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="deleted" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Deleted Partners and Trainers</CardTitle>
+                  <CardDescription>View and restore deleted trainers and partners</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email / Contact</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Deleted At</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {deletedTrainers.length === 0 && deletedPartners.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8">
+                            No deleted trainers or partners found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        <>
+                          {deletedTrainers.map((trainer) => (
+                            <TableRow key={`trainer-${trainer.id}`}>
+                              <TableCell>
+                                <Badge variant="outline">Trainer</Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">{trainer.name}</TableCell>
+                              <TableCell>{trainer.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={trainer.status === "ACTIVE" ? "default" : "secondary"}>{trainer.status}</Badge>
+                              </TableCell>
+                              <TableCell>{trainer.deletedAt ? formatDate(trainer.deletedAt) : "-"}</TableCell>
+                              <TableCell>
+                                <Button variant="outline" size="sm" onClick={() => handleRestoreTrainer(trainer.id, trainer.name)}>
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Restore
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {deletedPartners.map((partner) => (
+                            <TableRow key={`partner-${partner.id}`}>
+                              <TableCell>
+                                <Badge variant="outline">Partner</Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">{partner.partnerName}</TableCell>
+                              <TableCell>{partner.contactNumber}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    partner.status === "ACTIVE"
+                                      ? "default"
+                                      : partner.status === "PENDING"
+                                      ? "secondary"
+                                      : partner.status === "INACTIVE"
+                                      ? "destructive"
+                                      : "outline"
+                                  }
+                                >
+                                  {partner.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{partner.deletedAt ? formatDate(partner.deletedAt) : "-"}</TableCell>
+                              <TableCell>
+                                <Button variant="outline" size="sm" onClick={() => handleRestorePartner(partner.id, partner.partnerName)}>
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Restore
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
               </Card>
             </TabsContent>
           </Tabs>

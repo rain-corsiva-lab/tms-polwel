@@ -12,7 +12,9 @@ import {
   getPartnerOrganizations,
   getTrainerCourseRuns,
   getTrainerTrainingSummary,
-  resendTrainerSetup
+  resendTrainerSetup,
+  getDeletedTrainers,
+  restoreTrainer
 } from '../controllers/trainersController';
 import { 
   listTrainerFees,
@@ -35,6 +37,10 @@ router.get('/:id', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePerm
 router.post('/', authorizeRoles('POLWEL'), requirePermissions('trainers.create'), createTrainer);
 router.put('/:id', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), updateTrainer);
 router.delete('/:id', authorizeRoles('POLWEL'), requirePermissions('trainers.delete'), deleteTrainer);
+
+// Get deleted trainers and restore
+router.get('/deleted/all', authorizeRoles('POLWEL'), requirePermissions('trainers.view'), getDeletedTrainers);
+router.patch('/:id/restore', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), restoreTrainer);
 
 // Trainer blockout routes
 router.get('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.view'), getTrainerBlockouts);

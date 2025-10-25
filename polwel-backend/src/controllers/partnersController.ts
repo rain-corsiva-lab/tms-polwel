@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { Prisma, UserStatus } from '@prisma/client';
+import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 
@@ -11,13 +12,11 @@ const toStringArray = (value: Prisma.JsonValue | null | undefined): string[] => 
   return [];
 };
 
-// Interface for partner data (no email/password since it's not a user account)
+// Interface for partner data (simplified to match trainer structure)
 interface PartnerData {
   partnerName: string;
-  coursesAssigned?: string[];
-  pointOfContact?: string;
+  email?: string;
   contactNumber?: string;
-  contactDesignation?: string;
   onboardingDate?: string;
   status?: UserStatus;
   notes?: string;
@@ -27,12 +26,16 @@ type PartnerRecord = {
   id: string;
   name: string;
   status: UserStatus;
+  email: string | null;
   coursesAssigned: Prisma.JsonValue | null;
   pointOfContact: string | null;
   contactNumber: string | null;
   contactDesignation: string | null;
   onboardingDate: Date | null;
   notes: string | null;
+  partnerOrganization: string | null;
+  bio: string | null;
+  experience: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -40,6 +43,7 @@ type PartnerRecord = {
 const transformPartner = (partner: PartnerRecord) => ({
   id: partner.id,
   partnerName: partner.name,
+  email: partner.email || '',
   status: partner.status,
   coursesAssigned: toStringArray(partner.coursesAssigned),
   pointOfContact: partner.pointOfContact || '',
@@ -47,9 +51,30 @@ const transformPartner = (partner: PartnerRecord) => ({
   contactDesignation: partner.contactDesignation || '',
   onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
   notes: partner.notes || undefined,
+  partnerOrganization: partner.partnerOrganization || undefined,
+  bio: partner.bio || undefined,
+  experience: partner.experience || undefined,
   createdAt: partner.createdAt,
   updatedAt: partner.updatedAt,
 });
+
+// Zod schemas for partner create/update validation
+const PartnerCreateSchema = z.object({
+  partnerName: z.string().min(1, 'Partner name is required'),
+  email: z.string().email().optional(),
+  coursesAssigned: z.array(z.string()).optional(),
+  pointOfContact: z.string().optional(),
+  contactNumber: z.string().optional(),
+  contactDesignation: z.string().optional(),
+  onboardingDate: z.string().optional(),
+  status: z.nativeEnum(UserStatus).optional(),
+  notes: z.string().optional(),
+  partnerOrganization: z.string().optional(),
+  bio: z.string().optional(),
+  experience: z.string().optional(),
+});
+
+const PartnerUpdateSchema = PartnerCreateSchema.partial();
 
 const normalizeString = (value?: string | null) => {
   if (typeof value !== 'string') return null;
@@ -79,6 +104,9 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
     const where: Prisma.PartnerWhereInput = {};
 
     const statusParam = typeof req.query.status === 'string' ? req.query.status.trim().toUpperCase() : '';
+    // Always exclude deleted partners
+    where.deletedAt = null;
+    
     // If caller explicitly requests 'ALL', do not filter by status
     if (statusParam && statusParam !== 'ALL') {
       where.status = statusParam as UserStatus;
@@ -103,6 +131,7 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
         select: {
           id: true,
           name: true,
+          email: true,
           status: true,
           coursesAssigned: true,
           pointOfContact: true,
@@ -110,12 +139,15 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
           contactDesignation: true,
           onboardingDate: true,
           notes: true,
+          partnerOrganization: true,
+          bio: true,
+          experience: true,
           createdAt: true,
           updatedAt: true,
         },
         ...(skip !== undefined ? { skip } : {}),
         ...(take !== undefined ? { take } : {}),
-        orderBy: { createdAt: 'desc' },
+        orderBy: { updatedAt: 'desc' },
       }),
       prisma.partner.count({ where }),
     ]);
@@ -154,6 +186,7 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
       select: {
         id: true,
         name: true,
+        email: true,
         status: true,
         coursesAssigned: true,
         pointOfContact: true,
@@ -161,6 +194,9 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
         contactDesignation: true,
         onboardingDate: true,
         notes: true,
+        partnerOrganization: true,
+        bio: true,
+        experience: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -183,30 +219,14 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
 // Create new partner
 export const createPartner = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { 
-      partnerName, 
-      coursesAssigned, 
-      pointOfContact, 
-      contactNumber, 
-      contactDesignation,
-      onboardingDate,
-      status,
-      notes
-    }: PartnerData = req.body;
-
-    // Validation - only partnerName is required
-    if (!partnerName) {
-      return res.status(400).json({ 
-        error: 'Missing required field: partnerName is required' 
-      });
+    const validation = PartnerCreateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
+
+    const { partnerName, email, coursesAssigned, pointOfContact, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
 
     const normalizedName = partnerName.trim();
-    if (!normalizedName) {
-      return res.status(400).json({
-        error: 'Partner name cannot be empty'
-      });
-    }
 
     let parsedOnboardingDate: Date | null = null;
     if (onboardingDate) {
@@ -218,7 +238,8 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
 
     const partner = await prisma.partner.create({
       data: {
-  name: normalizedName,
+        name: normalizedName,
+        email: normalizeString(email),
         status: status ?? UserStatus.ACTIVE,
         coursesAssigned: Array.isArray(coursesAssigned) ? coursesAssigned : [],
         pointOfContact: normalizeString(pointOfContact),
@@ -226,10 +247,14 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         contactDesignation: normalizeString(contactDesignation),
         onboardingDate: parsedOnboardingDate,
         notes: normalizeString(notes),
+        partnerOrganization: normalizeString(partnerOrganization),
+        bio: normalizeString(bio),
+        experience: normalizeString(experience),
       },
       select: {
         id: true,
         name: true,
+        email: true,
         status: true,
         coursesAssigned: true,
         pointOfContact: true,
@@ -237,6 +262,9 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         contactDesignation: true,
         onboardingDate: true,
         notes: true,
+        partnerOrganization: true,
+        bio: true,
+        experience: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -256,16 +284,13 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
 export const updatePartner = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { 
-      partnerName, 
-      coursesAssigned, 
-      pointOfContact, 
-      contactNumber, 
-      contactDesignation,
-      onboardingDate,
-      status,
-      notes
-    }: Partial<PartnerData> & { status?: UserStatus } = req.body;
+    const parsedBody = req.body as unknown;
+    const validation = PartnerUpdateSchema.safeParse(parsedBody);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
+    }
+
+    const { partnerName, email, coursesAssigned, pointOfContact, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
 
     if (!id) {
       return res.status(400).json({ error: 'Partner ID is required' });
@@ -302,6 +327,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
       where: { id: existingPartner.id },
       data: {
         ...(normalizedName !== undefined && { name: normalizedName }),
+        ...(email !== undefined && { email: normalizeString(email) }),
         ...(status && { status }),
         ...(coursesAssigned !== undefined && { coursesAssigned: Array.isArray(coursesAssigned) ? coursesAssigned : [] }),
         ...(pointOfContact !== undefined && { pointOfContact: normalizeString(pointOfContact) }),
@@ -309,10 +335,14 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         ...(contactDesignation !== undefined && { contactDesignation: normalizeString(contactDesignation) }),
         ...(onboardingDate !== undefined && { onboardingDate: onboardingDateUpdate ?? null }),
         ...(notes !== undefined && { notes: normalizeString(notes) }),
+        ...(partnerOrganization !== undefined && { partnerOrganization: normalizeString(partnerOrganization) }),
+        ...(bio !== undefined && { bio: normalizeString(bio) }),
+        ...(experience !== undefined && { experience: normalizeString(experience) }),
       },
       select: {
         id: true,
         name: true,
+        email: true,
         status: true,
         coursesAssigned: true,
         pointOfContact: true,
@@ -320,6 +350,9 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         contactDesignation: true,
         onboardingDate: true,
         notes: true,
+        partnerOrganization: true,
+        bio: true,
+        experience: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -353,10 +386,11 @@ export const deletePartner = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-    // Soft delete by setting status to INACTIVE
+    // Soft delete by setting deletedAt timestamp
     await prisma.partner.update({
       where: { id: existingPartner.id },
       data: {
+        deletedAt: new Date(),
         status: UserStatus.INACTIVE,
       },
     });
@@ -381,16 +415,16 @@ export const getPartnerStatistics = async (req: AuthenticatedRequest, res: Respo
       inactivePartners,
     ] = await Promise.all([
       prisma.partner.count({
-        where: { status: { not: UserStatus.INACTIVE } }
+        where: { status: { not: UserStatus.INACTIVE }, deletedAt: null }
       }),
       prisma.partner.count({
-        where: { status: UserStatus.ACTIVE }
+        where: { status: UserStatus.ACTIVE, deletedAt: null }
       }),
       prisma.partner.count({
-        where: { status: UserStatus.PENDING }
+        where: { status: UserStatus.PENDING, deletedAt: null }
       }),
       prisma.partner.count({
-        where: { status: UserStatus.INACTIVE }
+        where: { status: UserStatus.INACTIVE, deletedAt: null }
       }),
     ]);
 
@@ -405,6 +439,90 @@ export const getPartnerStatistics = async (req: AuthenticatedRequest, res: Respo
     return res.status(500).json({ 
       error: 'Failed to fetch partner statistics',
       details: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
+
+// Restore deleted partner
+export const restorePartner = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Partner ID is required' });
+    }
+
+    // Check if partner exists and is deleted
+    const existingPartner = await prisma.partner.findUnique({
+      where: { id }
+    });
+
+    if (!existingPartner) {
+      return res.status(404).json({ error: 'Partner not found' });
+    }
+
+    if (!existingPartner.deletedAt) {
+      return res.status(400).json({ error: 'Partner is not deleted' });
+    }
+
+    // Restore by clearing deletedAt and setting status to ACTIVE
+    await prisma.partner.update({
+      where: { id: existingPartner.id },
+      data: {
+        deletedAt: null,
+        status: UserStatus.ACTIVE,
+      },
+    });
+
+    return res.json({ message: 'Partner restored successfully' });
+  } catch (error) {
+    console.error('Error restoring partner:', error);
+    return res.status(500).json({ 
+      error: 'Failed to restore partner',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
+
+// Get deleted partners
+export const getDeletedPartners = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const partners = await prisma.partner.findMany({
+      where: {
+        deletedAt: { not: null }
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        coursesAssigned: true,
+        pointOfContact: true,
+        contactNumber: true,
+        contactDesignation: true,
+        onboardingDate: true,
+        notes: true,
+        partnerOrganization: true,
+        bio: true,
+        experience: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      },
+      orderBy: { deletedAt: 'desc' },
+    });
+
+    const transformedPartners = partners.map(transformPartner);
+
+    return res.json({
+      partners: transformedPartners,
+      total: partners.length,
+    });
+  } catch (error) {
+    console.error('Error fetching deleted partners:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch deleted partners',
+      details: process.env.NODE_ENV === 'development' ? error : undefined,
     });
   }
 };
