@@ -524,6 +524,7 @@ export const createTrainerBlockout = async (req: AuthenticatedRequest, res: Resp
 export const deleteTrainerBlockout = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id, blockoutId } = req.params;
+    const currentUser = req.user;
 
     if (!id || !blockoutId) {
       return res.status(400).json({
@@ -544,6 +545,18 @@ export const deleteTrainerBlockout = async (req: AuthenticatedRequest, res: Resp
       return res.status(404).json({
         success: false,
         message: 'Trainer blockout not found'
+      });
+    }
+
+    // Allow deletion if user is admin OR if user is the trainer themselves
+    // blockout.trainerId is the User.id of the trainer
+    const isOwnBlockout = currentUser?.userId === blockout.trainerId;
+    const isAdmin = currentUser?.role === 'POLWEL';
+
+    if (!isOwnBlockout && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to perform this action'
       });
     }
 
