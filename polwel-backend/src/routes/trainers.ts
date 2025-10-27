@@ -45,7 +45,8 @@ router.patch('/:id/restore', authorizeRoles('POLWEL'), requirePermissions('train
 // Trainer blockout routes
 router.get('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.view'), getTrainerBlockouts);
 router.post('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.edit'), createTrainerBlockout);
-router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.edit'), deleteTrainerBlockout);
+// Allow trainers to delete their own blockouts - ownership validation in controller
+router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR', 'TRAINER'), deleteTrainerBlockout);
 
 // Trainer course runs
 router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('course-run.view'), getTrainerCourseRuns);

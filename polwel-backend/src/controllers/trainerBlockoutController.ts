@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
+// Add AuthenticatedRequest interface to access user info
+interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role: string;
+  };
+}
+
 // Helper to safely extract remarks with a fallback to legacy 'reason'.
 // Use any because generated Prisma types may not yet reflect the schema change.
 function getRemarks(obj: any): string | null {
@@ -511,6 +520,7 @@ export const trainerBlockoutController = {
   async deleteBlockout(req: Request, res: Response): Promise<Response | void> {
     try {
       const { id } = req.params;
+      const authenticatedUser = (req as any).user;
 
       if (!id) {
         return res.status(400).json({
@@ -524,7 +534,7 @@ export const trainerBlockoutController = {
         where: { id },
         include: {
           trainer: {
-            select: { name: true }
+            select: { name: true, id: true }
           }
         }
       });
@@ -533,6 +543,15 @@ export const trainerBlockoutController = {
         return res.status(404).json({
           success: false,
           error: 'Blockout not found'
+        });
+      }
+
+      // Ownership validation: trainers can only delete their own blockouts
+      if (authenticatedUser?.role === 'TRAINER' && existingBlockout.trainerId !== authenticatedUser?.userId) {
+        return res.status(403).json({
+          success: false,
+          error: 'You can only delete your own blockout dates',
+          code: 'INSUFFICIENT_PERMISSIONS'
         });
       }
 

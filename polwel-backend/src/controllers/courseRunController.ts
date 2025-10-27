@@ -40,6 +40,58 @@ const buildErrorResponse = (method: string, userMessage: string, error: unknown)
   };
 };
 
+/**
+ * Calculate venue final fee based on fee type, participants, and venue limits
+ */
+const calculateVenueFinalFee = async (courseRunId: string): Promise<number> => {
+  // Get course run with venue and learners count
+  const courseRun = await prisma.courseRun.findUnique({
+    where: { id: courseRunId },
+    include: {
+      venue: {
+        select: {
+          feeType: true,
+          fee: true,
+          maxParticipants: true,
+          perHeadPriceIfMaxExceed: true,
+        },
+      },
+      courseRunLearners: {
+        where: {
+          enrollmentStatus: 'ENROLLED', // Only count enrolled learners
+          deletedAt: null,
+        },
+      },
+    },
+  });
+
+  if (!courseRun || !courseRun.venue) {
+    return 0;
+  }
+
+  const participantCount = courseRun.courseRunLearners.length;
+  const venue = courseRun.venue;
+
+  if (venue.feeType === 'PER_HEAD') {
+    // Simple per head calculation: fee * participants
+    return venue.fee * participantCount;
+  } else if (venue.feeType === 'PER_VENUE') {
+    // Per venue calculation with overflow handling
+    let finalFee = venue.fee;
+
+    // If max participants is set and exceeded, add per-head charges
+    if (venue.maxParticipants && venue.perHeadPriceIfMaxExceed && participantCount > venue.maxParticipants) {
+      const excessParticipants = participantCount - venue.maxParticipants;
+      const excessFee = excessParticipants * Number(venue.perHeadPriceIfMaxExceed);
+      finalFee += excessFee;
+    }
+
+    return finalFee;
+  }
+
+  return 0;
+};
+
 const ALLOWED_COURSE_STATUSES: CourseStatus[] = [
   'DRAFT',
   'PENDING',
@@ -288,6 +340,8 @@ const createCourseRunSchema = z.object({
   baseCourseFee: z.number().nullable().optional(),
   feeType: z.enum(['PER_HEAD', 'PER_VENUE', 'FIXED']).optional(),
   venueFee: z.number().nullable().optional(),
+  venueMaxParticipant: z.number().int().min(1).nullable().optional(),
+  perHeadFeeIfMaxExceed: z.number().nullable().optional(),
   otherFee: z.number().nullable().optional(),
   adminFee: z.number().nullable().optional(),
   contingencyFee: z.number().nullable().optional(),
@@ -701,6 +755,18 @@ export const courseRunController = {
         },
       });
 
+      // Calculate and persist venue final fee after creation
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRun.id);
+        if (venueFinal !== undefined && venueFinal !== null) {
+          await prisma.courseRun.update({ where: { id: courseRun.id }, data: { venueFinalFee: venueFinal } });
+          // reflect the change on returned object
+          (courseRun as any).venueFinalFee = venueFinal;
+        }
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after course run create:', err);
+      }
+
       res.status(201).json({
         success: true,
         courseRun,
@@ -769,6 +835,17 @@ export const courseRunController = {
           },
         },
       });
+
+      // Recalculate venue final fee if venue or related fields changed
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRun.id);
+        if (venueFinal !== undefined && venueFinal !== null) {
+          await prisma.courseRun.update({ where: { id: courseRun.id }, data: { venueFinalFee: venueFinal } });
+          (courseRun as any).venueFinalFee = venueFinal;
+        }
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after course run update:', err);
+      }
 
       res.json({
         success: true,
@@ -1147,6 +1224,13 @@ export const courseRunController = {
         },
       });
 
+      // Recalculate and update venue final fee
+      const venueFinalFee = await calculateVenueFinalFee(courseRunId);
+      await prisma.courseRun.update({
+        where: { id: courseRunId },
+        data: { venueFinalFee },
+      });
+
       res.json({
         success: true,
         message: 'Learner enrolled successfully',
@@ -1253,6 +1337,14 @@ export const courseRunController = {
         enrollments,
         createdLearners,
       });
+
+      // Recalculate venue final fee after enrollments
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRunId);
+        await prisma.courseRun.update({ where: { id: courseRunId }, data: { venueFinalFee: venueFinal } });
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after enrollLearners:', err);
+      }
     } catch (error) {
       console.error('Error enrolling learners:', error);
       res.status(500).json(buildErrorResponse('courseRunController.enrollLearners', 'Failed to enroll learners', error));
@@ -1549,6 +1641,13 @@ export const courseRunController = {
           errors,
         },
       });
+      // Recalculate venue final fee after import enrollments
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRunId);
+        await prisma.courseRun.update({ where: { id: courseRunId }, data: { venueFinalFee: venueFinal } });
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after importLearners:', err);
+      }
     } catch (error) {
       console.error('Error importing learners:', error);
       res.status(500).json(buildErrorResponse('courseRunController.importLearners', 'Failed to import learners', error));
@@ -2871,6 +2970,14 @@ export const courseRunController = {
           ...(req.ip && { ipAddress: req.ip }),
         },
       });
+
+      // Recalculate venue final fee after withdrawal
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRunId);
+        await prisma.courseRun.update({ where: { id: courseRunId }, data: { venueFinalFee: venueFinal } });
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after withdrawLearner:', err);
+      }
 
       res.json({
         success: true,

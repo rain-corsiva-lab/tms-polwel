@@ -197,6 +197,9 @@ model CourseRun {
   venueId                        String?
   status                         CourseStatus                    @default(DRAFT)
   venueFee                       Decimal?                        @db.Decimal(10, 2)
+  venueFinalFee                  Decimal?                        @db.Decimal(10, 2)
+  venueMaxParticipant            Int?
+  perHeadFeeIfMaxExceed          Decimal?                        @db.Decimal(10, 2)
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
   adminFee                       Decimal?                        @db.Decimal(10, 2)
@@ -300,25 +303,27 @@ model CourseRunTrainer {
 }
 
 model Venue {
-  id          String      @id @default(cuid())
-  name        String
-  address     String?
-  capacity    String
-  description String?     @db.Text
-  facilities  Json?
-  contacts    Json?
-  feeType     FeeType     @default(PER_VENUE)
-  fee         Float       @default(0)
-  status      VenueStatus @default(ACTIVE)
-  remarks     String?     @db.Text
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  createdBy   String?
-  deletedAt   DateTime?
-  venueType   VenueType?
-  bookings    Booking[]
-  courseRuns  CourseRun[]
-  creator     User?       @relation(fields: [createdBy], references: [id])
+  id                      String      @id @default(cuid())
+  name                    String
+  address                 String?
+  capacity                String
+  description             String?     @db.Text
+  facilities              Json?
+  contacts                Json?
+  feeType                 FeeType     @default(PER_VENUE)
+  fee                     Float       @default(0)
+  maxParticipants         Int?
+  perHeadPriceIfMaxExceed Decimal?    @db.Decimal(10, 2)
+  status                  VenueStatus @default(ACTIVE)
+  remarks                 String?     @db.Text
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+  createdBy               String?
+  deletedAt               DateTime?
+  venueType               VenueType?
+  bookings                Booking[]
+  courseRuns              CourseRun[]
+  creator                 User?       @relation(fields: [createdBy], references: [id])
 
   @@index([createdBy], map: "venues_createdBy_fkey")
   @@map("venues")

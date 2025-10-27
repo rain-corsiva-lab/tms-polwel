@@ -16,6 +16,8 @@ interface VenueFormData {
   capacity: string;
   feeType: string;
   fee: number | string;
+  maxParticipants?: number | string;
+  perHeadPriceIfMaxExceed?: number | string;
   contacts: Contact[];
   remarks: string;
   status: string;
@@ -33,6 +35,8 @@ const VenueForm = () => {
     capacity: "",
     feeType: "per_head",
     fee: "",
+    maxParticipants: "",
+    perHeadPriceIfMaxExceed: "",
     contacts: [{ id: "temp-1", name: "", number: "", email: "" }],
     remarks: "",
     status: "ACTIVE",
@@ -61,6 +65,8 @@ const VenueForm = () => {
           capacity: venue.capacity,
           feeType: venue.feeType,
           fee: venue.fee,
+          maxParticipants: venue.maxParticipants || "",
+          perHeadPriceIfMaxExceed: venue.perHeadPriceIfMaxExceed || "",
           contacts: venue.contacts && venue.contacts.length > 0 ? venue.contacts : [{ id: "temp-1", name: "", number: "", email: "" }],
           remarks: venue.remarks || "",
           status: venue.status || "ACTIVE",
@@ -194,6 +200,15 @@ const VenueForm = () => {
         capacity: formData.capacity.trim(),
         feeType: (formData.feeType === "per_head" ? "PER_HEAD" : "PER_VENUE") as "PER_HEAD" | "PER_VENUE",
         fee: typeof formData.fee === "string" ? parseFloat(formData.fee) : formData.fee,
+        ...(formData.feeType === "per_venue" &&
+          formData.maxParticipants && {
+            maxParticipants: typeof formData.maxParticipants === "string" ? parseInt(formData.maxParticipants) : formData.maxParticipants,
+          }),
+        ...(formData.feeType === "per_venue" &&
+          formData.perHeadPriceIfMaxExceed && {
+            perHeadPriceIfMaxExceed:
+              typeof formData.perHeadPriceIfMaxExceed === "string" ? parseFloat(formData.perHeadPriceIfMaxExceed) : formData.perHeadPriceIfMaxExceed,
+          }),
         contacts: validContacts,
         remarks: formData.remarks.trim(),
         status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE",
@@ -333,6 +348,38 @@ const VenueForm = () => {
                 />
               </div>
             </div>
+
+            {/* Conditional fields for per_venue fee type */}
+            {formData.feeType === "per_venue" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="maxParticipants">Max Participants</Label>
+                  <Input
+                    id="maxParticipants"
+                    type="number"
+                    min="1"
+                    value={formData.maxParticipants}
+                    onChange={(e) => handleInputChange("maxParticipants", e.target.value)}
+                    placeholder="Maximum participants allowed"
+                  />
+                  <p className="text-xs text-gray-500">If the number of participants exceeds this limit, additional per-head charges will apply</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="perHeadPriceIfMaxExceed">Per Head Price if Max Exceeded ($)</Label>
+                  <Input
+                    id="perHeadPriceIfMaxExceed"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.perHeadPriceIfMaxExceed}
+                    onChange={(e) => handleInputChange("perHeadPriceIfMaxExceed", e.target.value)}
+                    placeholder="Price per extra participant"
+                  />
+                  <p className="text-xs text-gray-500">Charge per participant beyond the maximum limit</p>
+                </div>
+              </div>
+            )}
 
             {/* Status */}
             <div className="space-y-2">

@@ -29,6 +29,10 @@ interface Venue {
   name: string;
   address?: string;
   venueType?: string;
+  fee?: number;
+  feeType?: string;
+  maxParticipants?: number;
+  perHeadPriceIfMaxExceed?: number;
 }
 
 interface Trainer {
@@ -60,6 +64,11 @@ interface CourseRunFormData {
   maxClassSize?: number;
   individualRegistrationRequired: boolean;
   remarks?: string;
+
+  // Venue Fee Calculation (for per_venue type)
+  venueFinalFee?: number;
+  venueMaxParticipants?: number;
+  perHeadFeeIfMaxExceed?: number;
 
   // Trainer Assignment
   selectedTrainers: string[];
@@ -164,6 +173,47 @@ const CourseRunForm: React.FC = () => {
     return `${courseCode}${day}${month}${year}`;
   };
 
+  // Calculate venue final fee based on venue type, participants, and pricing
+  const calculateVenueFinalFee = (selectedVenueId: string, participantCount: number = 0) => {
+    const selectedVenue = venues.find((v) => v.id === selectedVenueId);
+    if (!selectedVenue) return null;
+
+    // If per_head, simple multiplication
+    if (selectedVenue.feeType?.toLowerCase() === "per_head") {
+      return {
+        finalFee: selectedVenue.fee * participantCount,
+        venueFee: selectedVenue.fee,
+        feeType: "per_head" as const,
+        participantCount,
+      };
+    }
+
+    // If per_venue, apply max participant logic
+    if (selectedVenue.feeType?.toLowerCase() === "per_venue") {
+      const baseFee = selectedVenue.fee;
+      const maxParticipants = selectedVenue.maxParticipants || 0;
+      const perHeadExceed = selectedVenue.perHeadPriceIfMaxExceed || 0;
+
+      let finalFee = baseFee;
+
+      if (maxParticipants > 0 && participantCount > maxParticipants && perHeadExceed > 0) {
+        const extraParticipants = participantCount - maxParticipants;
+        finalFee = baseFee + extraParticipants * perHeadExceed;
+      }
+
+      return {
+        finalFee,
+        venueFee: baseFee,
+        feeType: "per_venue" as const,
+        participantCount,
+        maxParticipants,
+        perHeadExceed,
+      };
+    }
+
+    return null;
+  };
+
   // Handle course selection
   const handleCourseChange = async (selectedCourseId: string) => {
     const selectedCourse = courses.find((c) => c.id === selectedCourseId);
@@ -244,6 +294,22 @@ const CourseRunForm: React.FC = () => {
 
   // Handle form field changes
   const handleFieldChange = (field: keyof CourseRunFormData, value: any) => {
+    // If venue changed, pre-fill venue-related override fields from selected venue
+    if (field === "venueId") {
+      const selectedVenue = venues.find((v) => v.id === value);
+      if (selectedVenue) {
+        setFormData({
+          ...formData,
+          [field]: value,
+          venueMaxParticipants: selectedVenue.maxParticipants || undefined,
+          perHeadFeeIfMaxExceed: selectedVenue.perHeadPriceIfMaxExceed || undefined,
+        });
+        // Clear any previous error for venueId
+        if (errors.venueId) setErrors({ ...errors, venueId: "" });
+        return;
+      }
+    }
+
     setFormData({ ...formData, [field]: value });
 
     // Clear error for this field
@@ -315,6 +381,8 @@ const CourseRunForm: React.FC = () => {
         startDatetime,
         endDatetime,
         venueId: formData.venueId || null,
+        venueMaxParticipant: formData.venueMaxParticipants ?? null,
+        perHeadFeeIfMaxExceed: formData.perHeadFeeIfMaxExceed ?? null,
         venueType: formData.venueType,
         specifiedLocation: formData.specifiedLocation,
         minClassSize: formData.minClassSize,
@@ -542,6 +610,44 @@ const CourseRunForm: React.FC = () => {
                         </Select>
                       </div>
                     )}
+                    {/* If selected venue is per_venue, show override fields */}
+                    {formData.venueId &&
+                      (() => {
+                        const sel = availableVenues.find((v) => v.id === formData.venueId);
+                        if (sel && sel.feeType?.toLowerCase() === "per_venue") {
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="venueMaxParticipants">Max Participants (Venue)</Label>
+                                <Input
+                                  id="venueMaxParticipants"
+                                  type="number"
+                                  min={1}
+                                  value={formData.venueMaxParticipants ?? ""}
+                                  onChange={(e) => handleFieldChange("venueMaxParticipants", e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                                  placeholder="Maximum participants allowed for this venue"
+                                />
+                                <p className="text-xs text-gray-500">If participants exceed this, per-head overage pricing applies</p>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="perHeadFeeIfMaxExceed">Per Head Price if Max Exceeded ($)</Label>
+                                <Input
+                                  id="perHeadFeeIfMaxExceed"
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={formData.perHeadFeeIfMaxExceed ?? ""}
+                                  onChange={(e) => handleFieldChange("perHeadFeeIfMaxExceed", e.target.value ? parseFloat(e.target.value) : undefined)}
+                                  placeholder="Price per extra participant"
+                                />
+                                <p className="text-xs text-gray-500">Charge per participant beyond the maximum limit</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                   </div>
 
                   {/* Specified Location */}

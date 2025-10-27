@@ -19,6 +19,8 @@ interface VenueCreateRequest {
   contacts: Contact[];
   feeType: 'PER_HEAD' | 'PER_VENUE';
   fee: number;
+  maxParticipants?: number;
+  perHeadPriceIfMaxExceed?: number;
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   remarks?: string;
   venueType?: 'HOTEL' | 'ON_PREMISE' | 'CLIENT_FACILITY';
@@ -212,7 +214,9 @@ export const venuesController = {
         ...(venueData.address && { address: venueData.address.trim() }),
         ...(venueData.description && { description: venueData.description.trim() }),
         ...(venueData.facilities && { facilities: venueData.facilities }),
-        ...(venueData.remarks && { remarks: venueData.remarks.trim() })
+        ...(venueData.remarks && { remarks: venueData.remarks.trim() }),
+        ...(venueData.maxParticipants && { maxParticipants: venueData.maxParticipants }),
+        ...(venueData.perHeadPriceIfMaxExceed && { perHeadPriceIfMaxExceed: venueData.perHeadPriceIfMaxExceed })
       } as any; // Type assertion for Prisma compatibility
 
       const venue = await prisma.venue.create({
@@ -313,7 +317,9 @@ export const venuesController = {
         ...(venueData.address !== undefined && { address: venueData.address?.trim() || null }),
         ...(venueData.description !== undefined && { description: venueData.description?.trim() || null }),
         ...(venueData.facilities !== undefined && { facilities: venueData.facilities || [] }),
-        ...(venueData.remarks !== undefined && { remarks: venueData.remarks?.trim() || null })
+        ...(venueData.remarks !== undefined && { remarks: venueData.remarks?.trim() || null }),
+        ...(venueData.maxParticipants !== undefined && { maxParticipants: venueData.maxParticipants || null }),
+        ...(venueData.perHeadPriceIfMaxExceed !== undefined && { perHeadPriceIfMaxExceed: venueData.perHeadPriceIfMaxExceed || null })
       } as any; // Type assertion for Prisma compatibility
 
       const venue = await prisma.venue.update({

@@ -28343,3 +28343,64 @@ I'm going to create a tracked todo list for the remaining tasks and mark the bac
 
 ---
 
+_**User (2025-10-27 14:11Z)**_
+
+very good now in create and edit venue , we need to add new columns in database for max_participant and per_head_price_if_max . so if the venue price is per venue , these 2 new fields will be shown below of that selection field in the add and edit venue form . max participant is number field min 1 , and per head price if max exceed is money field (use like our other money field) . the user story behind this is some venues only can accept a limited number of pax. Because they provide refreshments or they have limited seats. If exceed the limit, then will have to charge per head.  but if venue fee type is per head then those fields will no need to shown or fill. we need to add these 2 fields in database with optionals.
+
+also in course run we need to have auto calculation that related to these fees. so since these fees is affected by venue fee, participant enrolled, so we will have these calculations : 
+
+let say if this venue type fee is per venue and it is 1000 , then optional fields will show up for max pax and per head . so if max is 10 and per head is 200 and participant of this course run is 13 then its should be 
+= 1000 + ((13 - 10) x 200) 
+= 1600 
+
+and if its per head just calculate multiply by participant like if per head is 200 and same 13 participant then = 200 x 13 = 2600
+
+ in the course run detail we will (also in database) we need to add venue final fee, venue max participant , per head fee if max exceed . but these venue max participant and perhead fee if max exceed only shown and need to fill if venue type fee is per venue in course run. and this venue final fee  will be automatically calculate like this , and this will be autocalculate everytime we add or delete learners, or if we change the per venue fee , per head fee, per head if exceed fee , and max participant venue
+
+ so these changes will need to affected in venue and course run module , please develop all fornt end , backend , and database for these , ensure all wokring correctly , ensure UI UX are also looks great , the venue final fee need to shown as a detailed formula like : 
+ Participant : 13
+ Venue Fee : 1000 per venue
+ Max Participant Venue : 10 
+ Venue Per Head Fee if Exceed Max : 200
+ Final Fee : 1600
+
+ this goers the same with venue per head fee . please ensure all wokring correctly without broke anything 
+
+
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+I'll help you implement this comprehensive venue pricing feature. Let me break this down into manageable tasks and start implementing. Let me start by examining the current Venue schema and then updating it: Now let me check the CourseRun model: Perfect! Now let me update the schema to add the new fields. Let me mark the task as in-progress and proceed: Now let me update the Venue model in schema.prisma: 
+```
+
+```
+Now let me update the CourseRun model: 
+
+---
+
+_**User (2025-10-27 15:21Z)**_
+
+please continue until all finish , ensure all working 
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+
+
+---
+
+_**User (2025-10-27 15:27Z)**_
+
+please continue
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+
+
+---
+

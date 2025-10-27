@@ -1524,6 +1524,8 @@ export interface Venue {
   capacity: string;
   feeType: "per_head" | "per_venue";
   fee: number;
+  maxParticipants?: number;
+  perHeadPriceIfMaxExceed?: number;
   contacts: Contact[];
   remarks: string;
   status?: string;
@@ -1551,6 +1553,8 @@ export interface VenueCreateRequest {
   contacts: Contact[];
   feeType: "PER_HEAD" | "PER_VENUE";
   fee: number;
+  maxParticipants?: number;
+  perHeadPriceIfMaxExceed?: number;
   status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   remarks?: string;
   venueType?: "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY";
