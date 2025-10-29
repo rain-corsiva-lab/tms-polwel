@@ -293,7 +293,7 @@ const CourseArchive = () => {
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
+      {/* <Card className="mb-6">
         <CardHeader>
           <CardTitle>Filters</CardTitle>
         </CardHeader>
@@ -336,7 +336,7 @@ const CourseArchive = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Course Table */}
       <Card>
