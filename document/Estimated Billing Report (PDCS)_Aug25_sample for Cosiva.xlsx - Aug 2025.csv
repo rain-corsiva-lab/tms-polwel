@@ -1,0 +1,53 @@
+PDCS Estimated Billing for Month of August 2025,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+(All figures to exclude GST),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Part 1: Summary,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,Not an existing field,Before discount (before GST),Before GST,Qty,Number of runs,,,"Column C / C1 * E
+(C1 = Column C * N,O or P)",Column D * F,,Invoicing for work done,,,,,,,,Expenses (Contract Fees to Trainer / Partners + Venue Expenses,,,,,,,,,,,,,for the staff to enter special notes for finance,
+Title,Course Run #,"Billing Rate 
+(if applicable)
+PER HEAD","Billing Rate 
+(if applicable)
+PER RUN",Unit (HEAD),Unit (RUN),"Course/
+Service Delivery Date",Project Mgr (PM),"Value of Work Done (for the month)
+Unit (Head)","Value of Work Done (for the current month)
+(RUN)",PBMS Ref,PBMS Invoice Date,No discounts,"Early bird
+5%",Group discount 5%,"Early bird and Group discount 
+10%",Actual  Amount billed before current month,Actual  Amount billed in current month,Actual  Amount billed after current month,Salary / Contract Fees,"PBMS Ref2
+(Invoice for contract fees)",PBMS Invoice creation date for contract fees,Salary Pay Out in Nov (Gross + ER CPF + SDL),Salary Pay Out in Dec (Gross + ER CPF + SDL),Staff price,Number of staff,Contract Fees Payout in current month,Contract Fees Payout in other months,PBMS Ref3 (Invoice for venue expense),PBMS Invoice creation date for venue expense,Venue Expenses in current month,Venue Expenses in other months,Remarks,Other Remarks
+Emotional Management for Handling Difficult MOPs ,,,$800.00,,11,"1) 25 Jun 2025, 9am 
+2) 2 Jul 2025, 9am
+3) 9 Jul 2025, 9am
+4) 9 Jul 2025, 2pm
+5) 16 Jul 2025, 2pm
+6) 23 Jul 2025, 9am
+7) 30 Jul 2025, 9am
+8) 6 Aug 2025, 9am
+9) 13 Aug 2025, 9am
+10) 20 Aug 2025, 9am
+11) 27 Aug 2025, 9am",N,,$,ARI,Date,,,,,,,$,Contract Fees,API-PES250671,27-Aug-25,,,,,"$6,050.00",,,,,,,
+Leveraging AI to Craft Winning CVs,,$410.00,,7,,15 Aug 2025,N,"$2,829.00",,ARI-PES250647,22-Aug-25,4,0,0,0,,"$1,640.00",,Contract Fees,API-PES250652,19-Aug-25,,,,,"$1,500.00",,API-PES250654,20-Aug-25,$740.70,,"Venue is at Holiday Inn, chargers are at $88 per pax. Total is 7+1pax = $704. Additional $36.70 is for the extension cable.",
+,,,,,,,,,,ARI-PES250648,22-Aug-25,0,1,0,0,,$389.50,,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250650,22-Aug-25,1,1,0,0,,$799.50,,,,,,,,,,,,,,,,
+Sun Tzu Art Of War - 30 Ways to Transform,,,,21+1,,20 Aug 2025,N,"$10,494.00",,ARI-PES250654,28-Aug-25,0,3,0,0,,"$1,510.50",,Contract Fees,API-PES250675,28-Aug-25,,,,,"$2,539.09",,API-PES250664,26-Aug-25,"$2,662.00",,"internal staff: Oh Giles Basil attended @ Facilitation fees - $90.91 + Materials - $30.00 + Venue @ $121.00
+Matthew Facilitation fees @ $2000+$660 (22 Books@$60 each) - $120.91 = 2,539.09",
+,,,,,,,,,,ARI-PES250655,28-Aug-25,0,1,0,0,,$503.50,,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250656,28-Aug-25,0,6,0,5,,"$5,406.00",,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250658,28-Aug-25,0,1,0,0,,$503.50,,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250659,28-Aug-25,2,0,0,0,,"$1,060.00",,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250660,28-Aug-25,0,2,0,0,,"$1,007.00",,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250661,28-Aug-25,0,1,0,0,,$503.50,,,,,,,,,,,,,,,,
+"Better Emails Made Easy! 
+(Dedicated SOC)",,$480.00,,7,,20 Aug 2025,N,"$3,360.00",,ARI-PES250651,25-Aug-25,7,0,0,0,,"$3,360.00",,Contract Fees,API-PES250657,21-Aug-25,,,,,"$2,800.00",,,,,,Klaire fees reduction due to small class,
+Communicate to Influence ,,$530.00,,14,,21 Aug 2025,N,"$6,916.50",,ARI-PES250616,12-Aug-25,0,1,0,0,,$503.50,,Contract Fees,API-PES250659,25-Aug-25,,,,,"$2,400.00",,API-PES250666,26-Aug-25,"$1,320.00",,Venue is Holiday Inn @$88 per pax,
+,,,,,,,,,,ARI-PES250674,29-Aug-25,0,1,0,0,,$503.50,,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250675,29-Aug-25,0,0,0,5,,"$2,385.00",,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250676,29-Aug-25,0,2,0,0,,"$1,007.00",,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250677,29-Aug-25,0,1,0,0,,$503.50,,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250678,29-Aug-25,0,1,0,0,,$503.50,,,,,,,,,,,,,,,,
+,,,,,,,,,,ARI-PES250679,29-Aug-25,0,3,0,0,,"$1,510.50",,,,,,,,,,,,,,,,
+Debt Management and Settlement Strategies for SPF Supervisors,,$590.00,,19,,21 Aug 2025,N,"$10,649.50",,ARI-PES250672,28-Aug-25,0,0,19,0,,"$10,649.50",,Contract Fees,API-PES250663,25-Aug-25,,,,,"$3,750.00",,,,,,"Venue is at CCS, venue chargers included in contract fees.",
+Data Analytics with MS Excel,,$150.00,,9+2,,27 Aug 2025,N,$,,ARI,Date,,,,,,$,,Contract Fees,API-PES250679,29-Aug-25,,,,,$818.18,,,,,,"2 internal staff attended: Nicolas Phua & Joyce Ang @ Facilitation fees $90.91
+Venue at LP+",
+Fundamentals of MS Excel (Dedicated-SOC),,$150.00,,12,,28 Aug 2025,N,$,,ARI,Date,,,,,,$,,Contract Fees,API-PES250677,29-Aug-25,,,,,$936.00,,,,,,Venue at LP+,
+,,,,,,,Total,"$34,249.00",,,,,,,,$0.00,"$34,249.00",$0.00,,,,,,,,"$20,793.27",$0.00,,,"$4,722.70",$0.00,,

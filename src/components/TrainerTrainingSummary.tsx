@@ -164,7 +164,7 @@ export function TrainerTrainingSummary({ trainerId, mode, pageSizeOptions = defa
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/40 text-left text-muted-foreground">
-                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Date of Training</th>
                 <th className="px-4 py-3 font-medium">Training Title</th>
                 <th className="px-4 py-3 font-medium text-right">Fees</th>
               </tr>

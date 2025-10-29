@@ -11,6 +11,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import Swal from "sweetalert2";
 import {
   Download,
@@ -30,6 +33,7 @@ import {
   CheckCircle,
   Trash2,
   RotateCcw,
+  Check,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
@@ -40,6 +44,7 @@ import TrainingCalendar from "@/components/TrainingCalendar";
 import StatsCard from "@/components/StatsCard";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi, partnersApi, polwelUsersApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 // Enhanced user data structure for Trainers
 interface Trainer {
@@ -123,6 +128,22 @@ const TrainersAndPartners = () => {
   // Sorting state for partners
   const [partnerSortField, setPartnerSortField] = useState<keyof Partner | null>(null);
   const [partnerSortDirection, setPartnerSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Filter state for trainers - stores selected values for each column
+  const [trainerFilters, setTrainerFilters] = useState<Record<string, string[]>>({
+    name: [],
+    email: [],
+    status: [],
+    partnerOrganization: [],
+  });
+  const [openTrainerFilter, setOpenTrainerFilter] = useState<string | null>(null);
+
+  // Filter state for partners - stores selected values for each column
+  const [partnerFilters, setPartnerFilters] = useState<Record<string, string[]>>({
+    partnerName: [],
+    status: [],
+  });
+  const [openPartnerFilter, setOpenPartnerFilter] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -304,6 +325,153 @@ const TrainersAndPartners = () => {
     } finally {
       setPartnersLoading(false);
     }
+  };
+
+  // Get unique values for trainer filters
+  const getTrainerUniqueValues = (field: keyof Trainer) => {
+    const values = Array.from(new Set(trainers.map((t) => (t[field] ? String(t[field]) : "")).filter(Boolean)));
+    return values.sort();
+  };
+
+  // Handle trainer filter change
+  const handleTrainerFilterChange = (field: string, newFilters: string[]) => {
+    setTrainerFilters((prev) => ({ ...prev, [field]: newFilters }));
+  };
+
+  // Check if trainer column has active filters
+  const hasActiveTrainerFilter = (field: string) => {
+    return trainerFilters[field] && trainerFilters[field].length > 0;
+  };
+
+  // Get unique values for partner filters
+  const getPartnerUniqueValues = (field: keyof Partner) => {
+    const values = Array.from(new Set(partners.map((p) => (p[field] ? String(p[field]) : "")).filter(Boolean)));
+    return values.sort();
+  };
+
+  // Handle partner filter change
+  const handlePartnerFilterChange = (field: string, newFilters: string[]) => {
+    setPartnerFilters((prev) => ({ ...prev, [field]: newFilters }));
+  };
+
+  // Check if partner column has active filters
+  const hasActivePartnerFilter = (field: string) => {
+    return partnerFilters[field] && partnerFilters[field].length > 0;
+  };
+
+  // Apply filters to trainers
+  const filteredTrainers = trainers.filter((trainer) => {
+    // Apply column filters
+    const nameMatch = trainerFilters.name?.length === 0 || !trainerFilters.name || trainerFilters.name.includes(trainer.name || "");
+    const emailMatch = trainerFilters.email?.length === 0 || !trainerFilters.email || trainerFilters.email.includes(trainer.email || "");
+    const statusMatch = trainerFilters.status?.length === 0 || !trainerFilters.status || trainerFilters.status.includes(trainer.status || "");
+    const partnerMatch =
+      trainerFilters.partnerOrganization?.length === 0 ||
+      !trainerFilters.partnerOrganization ||
+      trainerFilters.partnerOrganization.includes(trainer.partnerOrganization || "");
+
+    return nameMatch && emailMatch && statusMatch && partnerMatch;
+  });
+
+  // Apply filters to partners
+  const filteredPartners = partners.filter((partner) => {
+    // Apply column filters
+    const nameMatch = partnerFilters.partnerName?.length === 0 || !partnerFilters.partnerName || partnerFilters.partnerName.includes(partner.partnerName || "");
+    const statusMatch = partnerFilters.status?.length === 0 || !partnerFilters.status || partnerFilters.status.includes(partner.status || "");
+
+    return nameMatch && statusMatch;
+  });
+
+  // Sort trainers based on selected field and direction
+  const sortedTrainers = [...filteredTrainers].sort((a, b) => {
+    if (!trainerSortField) return 0;
+
+    const aValue = a[trainerSortField];
+    const bValue = b[trainerSortField];
+
+    // Handle null/undefined
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return trainerSortDirection === "asc" ? 1 : -1;
+    if (bValue == null) return trainerSortDirection === "asc" ? -1 : 1;
+
+    // Compare based on type
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return trainerSortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    // String comparison
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    if (aStr < bStr) return trainerSortDirection === "asc" ? -1 : 1;
+    if (aStr > bStr) return trainerSortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Sort partners based on selected field and direction
+  const sortedPartners = [...filteredPartners].sort((a, b) => {
+    if (!partnerSortField) return 0;
+
+    const aValue = a[partnerSortField];
+    const bValue = b[partnerSortField];
+
+    // Handle null/undefined
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return partnerSortDirection === "asc" ? 1 : -1;
+    if (bValue == null) return partnerSortDirection === "asc" ? -1 : 1;
+
+    // Compare based on type
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return partnerSortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    // String comparison
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    if (aStr < bStr) return partnerSortDirection === "asc" ? -1 : 1;
+    if (aStr > bStr) return partnerSortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Handle column header click for sorting trainers
+  const handleTrainerSort = (field: keyof Trainer) => {
+    if (trainerSortField === field) {
+      // Toggle direction
+      setTrainerSortDirection(trainerSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New field, default to ascending
+      setTrainerSortField(field);
+      setTrainerSortDirection("asc");
+    }
+  };
+
+  // Handle column header click for sorting partners
+  const handlePartnerSort = (field: keyof Partner) => {
+    if (partnerSortField === field) {
+      // Toggle direction
+      setPartnerSortDirection(partnerSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New field, default to ascending
+      setPartnerSortField(field);
+      setPartnerSortDirection("asc");
+    }
+  };
+
+  // Render sort icon for trainers
+  const renderTrainerSortIcon = (field: keyof Trainer) => {
+    if (trainerSortField !== field) {
+      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
+    }
+    return trainerSortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
+  };
+
+  // Render sort icon for partners
+  const renderPartnerSortIcon = (field: keyof Partner) => {
+    if (partnerSortField !== field) {
+      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
+    }
+    return partnerSortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
   };
 
   // Fetch trainers on component mount and when filters change
@@ -488,85 +656,28 @@ const TrainersAndPartners = () => {
     }
   }, [activeTab]);
 
-  // Sorting handlers for trainers
-  const handleTrainerSort = (field: keyof Trainer) => {
-    if (trainerSortField === field) {
-      setTrainerSortDirection(trainerSortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setTrainerSortField(field);
-      setTrainerSortDirection("asc");
-    }
+  // Filter utility functions for trainers
+  const getUniqueTrainerValues = (field: keyof Trainer) => {
+    const values = Array.from(
+      new Set(
+        trainers
+          .map((t) => {
+            let val = t[field];
+            return val ? String(val) : "";
+          })
+          .filter(Boolean)
+      )
+    );
+    return values.sort();
   };
 
-  const renderTrainerSortIcon = (field: keyof Trainer) => {
-    if (trainerSortField !== field) {
-      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
-    }
-    return trainerSortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
+  const handleTrainerFilterToggle = (field: string, value: string) => {
+    setTrainerFilters((prev) => {
+      const current = prev[field] || [];
+      const newValues = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: newValues };
+    });
   };
-
-  // Sorting handlers for partners
-  const handlePartnerSort = (field: keyof Partner) => {
-    if (partnerSortField === field) {
-      setPartnerSortDirection(partnerSortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setPartnerSortField(field);
-      setPartnerSortDirection("asc");
-    }
-  };
-
-  const renderPartnerSortIcon = (field: keyof Partner) => {
-    if (partnerSortField !== field) {
-      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
-    }
-    return partnerSortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
-  };
-
-  // Apply sorting to trainers
-  const sortedTrainers = [...trainers].sort((a, b) => {
-    if (!trainerSortField) return 0;
-
-    const aValue = a[trainerSortField];
-    const bValue = b[trainerSortField];
-
-    if (aValue == null && bValue == null) return 0;
-    if (aValue == null) return trainerSortDirection === "asc" ? 1 : -1;
-    if (bValue == null) return trainerSortDirection === "asc" ? -1 : 1;
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return trainerSortDirection === "asc" ? aValue - bValue : bValue - aValue;
-    }
-
-    const aStr = String(aValue).toLowerCase();
-    const bStr = String(bValue).toLowerCase();
-
-    if (aStr < bStr) return trainerSortDirection === "asc" ? -1 : 1;
-    if (aStr > bStr) return trainerSortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  // Apply sorting to partners
-  const sortedPartners = [...partners].sort((a, b) => {
-    if (!partnerSortField) return 0;
-
-    const aValue = a[partnerSortField];
-    const bValue = b[partnerSortField];
-
-    if (aValue == null && bValue == null) return 0;
-    if (aValue == null) return partnerSortDirection === "asc" ? 1 : -1;
-    if (bValue == null) return partnerSortDirection === "asc" ? -1 : 1;
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return partnerSortDirection === "asc" ? aValue - bValue : bValue - aValue;
-    }
-
-    const aStr = String(aValue).toLowerCase();
-    const bStr = String(bValue).toLowerCase();
-
-    if (aStr < bStr) return partnerSortDirection === "asc" ? -1 : 1;
-    if (aStr > bStr) return partnerSortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
 
   const handleExport = async () => {
     try {
@@ -808,17 +919,227 @@ const TrainersAndPartners = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead onClick={() => handleTrainerSort("name")} className="cursor-pointer hover:bg-muted transition-colors">
-                          Name {renderTrainerSortIcon("name")}
+                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-2">
+                            <span onClick={() => handleTrainerSort("name")}>Name {renderTrainerSortIcon("name")}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <Filter className={cn("h-3 w-3", trainerFilters.name.length > 0 && "text-primary")} />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-2">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm font-medium">Filter by Name</span>
+                                    {trainerFilters.name.length > 0 && (
+                                      <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("name", [])}>
+                                        Clear
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Command>
+                                    <CommandInput placeholder="Search names..." />
+                                    <CommandList>
+                                      <CommandEmpty>No results found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {getTrainerUniqueValues("name").map((value) => (
+                                          <CommandItem
+                                            key={value}
+                                            onSelect={() => {
+                                              const newFilters = trainerFilters.name.includes(value)
+                                                ? trainerFilters.name.filter((v) => v !== value)
+                                                : [...trainerFilters.name, value];
+                                              handleTrainerFilterChange("name", newFilters);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <div
+                                                className={cn(
+                                                  "w-4 h-4 border rounded flex items-center justify-center",
+                                                  trainerFilters.name.includes(value) && "bg-primary border-primary"
+                                                )}
+                                              >
+                                                {trainerFilters.name.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                              </div>
+                                              <span>{value}</span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </TableHead>
-                        <TableHead onClick={() => handleTrainerSort("email")} className="cursor-pointer hover:bg-muted transition-colors">
-                          Email {renderTrainerSortIcon("email")}
+                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-2">
+                            <span onClick={() => handleTrainerSort("email")}>Email {renderTrainerSortIcon("email")}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <Filter className={cn("h-3 w-3", trainerFilters.email.length > 0 && "text-primary")} />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-2">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm font-medium">Filter by Email</span>
+                                    {trainerFilters.email.length > 0 && (
+                                      <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("email", [])}>
+                                        Clear
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Command>
+                                    <CommandInput placeholder="Search emails..." />
+                                    <CommandList>
+                                      <CommandEmpty>No results found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {getTrainerUniqueValues("email").map((value) => (
+                                          <CommandItem
+                                            key={value}
+                                            onSelect={() => {
+                                              const newFilters = trainerFilters.email.includes(value)
+                                                ? trainerFilters.email.filter((v) => v !== value)
+                                                : [...trainerFilters.email, value];
+                                              handleTrainerFilterChange("email", newFilters);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <div
+                                                className={cn(
+                                                  "w-4 h-4 border rounded flex items-center justify-center",
+                                                  trainerFilters.email.includes(value) && "bg-primary border-primary"
+                                                )}
+                                              >
+                                                {trainerFilters.email.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                              </div>
+                                              <span>{value}</span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </TableHead>
-                        <TableHead onClick={() => handleTrainerSort("status")} className="cursor-pointer hover:bg-muted transition-colors">
-                          Status {renderTrainerSortIcon("status")}
+                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-2">
+                            <span onClick={() => handleTrainerSort("status")}>Status {renderTrainerSortIcon("status")}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <Filter className={cn("h-3 w-3", trainerFilters.status.length > 0 && "text-primary")} />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-2">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm font-medium">Filter by Status</span>
+                                    {trainerFilters.status.length > 0 && (
+                                      <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("status", [])}>
+                                        Clear
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Command>
+                                    <CommandInput placeholder="Search status..." />
+                                    <CommandList>
+                                      <CommandEmpty>No results found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {getTrainerUniqueValues("status").map((value) => (
+                                          <CommandItem
+                                            key={value}
+                                            onSelect={() => {
+                                              const newFilters = trainerFilters.status.includes(value)
+                                                ? trainerFilters.status.filter((v) => v !== value)
+                                                : [...trainerFilters.status, value];
+                                              handleTrainerFilterChange("status", newFilters);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <div
+                                                className={cn(
+                                                  "w-4 h-4 border rounded flex items-center justify-center",
+                                                  trainerFilters.status.includes(value) && "bg-primary border-primary"
+                                                )}
+                                              >
+                                                {trainerFilters.status.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                              </div>
+                                              <span>{value}</span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </TableHead>
-                        <TableHead onClick={() => handleTrainerSort("partnerOrganization")} className="cursor-pointer hover:bg-muted transition-colors">
-                          Partner Organization {renderTrainerSortIcon("partnerOrganization")}
+                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-2">
+                            <span onClick={() => handleTrainerSort("partnerOrganization")}>
+                              Partner Organization {renderTrainerSortIcon("partnerOrganization")}
+                            </span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <Filter className={cn("h-3 w-3", trainerFilters.partnerOrganization.length > 0 && "text-primary")} />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-2">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm font-medium">Filter by Partner Organization</span>
+                                    {trainerFilters.partnerOrganization.length > 0 && (
+                                      <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("partnerOrganization", [])}>
+                                        Clear
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Command>
+                                    <CommandInput placeholder="Search organizations..." />
+                                    <CommandList>
+                                      <CommandEmpty>No results found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {getTrainerUniqueValues("partnerOrganization").map((value) => (
+                                          <CommandItem
+                                            key={value}
+                                            onSelect={() => {
+                                              const newFilters = trainerFilters.partnerOrganization.includes(value)
+                                                ? trainerFilters.partnerOrganization.filter((v) => v !== value)
+                                                : [...trainerFilters.partnerOrganization, value];
+                                              handleTrainerFilterChange("partnerOrganization", newFilters);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <div
+                                                className={cn(
+                                                  "w-4 h-4 border rounded flex items-center justify-center",
+                                                  trainerFilters.partnerOrganization.includes(value) && "bg-primary border-primary"
+                                                )}
+                                              >
+                                                {trainerFilters.partnerOrganization.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                              </div>
+                                              <span>{value}</span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -919,18 +1240,144 @@ const TrainersAndPartners = () => {
             <TabsContent value="partners" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Training Partners</CardTitle>
-                  <CardDescription>Manage Training Partners and their details</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Training Partners</CardTitle>
+                      <CardDescription>Manage Training Partners and their details</CardDescription>
+                    </div>
+                    {(partnerFilters.partnerName.length > 0 || partnerFilters.status.length > 0) && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="font-normal">
+                          {partnerFilters.partnerName.length + partnerFilters.status.length} filter
+                          {partnerFilters.partnerName.length + partnerFilters.status.length !== 1 ? "s" : ""} active
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setPartnerFilters({ partnerName: [], status: [] });
+                          }}
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Clear All Filters
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead onClick={() => handlePartnerSort("partnerName")} className="cursor-pointer hover:bg-muted transition-colors">
-                          Partner Name {renderPartnerSortIcon("partnerName")}
+                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-2">
+                            <span onClick={() => handlePartnerSort("partnerName")}>Partner Name {renderPartnerSortIcon("partnerName")}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <Filter className={cn("h-3 w-3", partnerFilters.partnerName.length > 0 && "text-primary")} />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-2">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm font-medium">Filter by Partner Name</span>
+                                    {partnerFilters.partnerName.length > 0 && (
+                                      <Button variant="ghost" size="sm" onClick={() => handlePartnerFilterChange("partnerName", [])}>
+                                        Clear
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Command>
+                                    <CommandInput placeholder="Search names..." />
+                                    <CommandList>
+                                      <CommandEmpty>No results found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {getPartnerUniqueValues("partnerName").map((value) => (
+                                          <CommandItem
+                                            key={value}
+                                            onSelect={() => {
+                                              const newFilters = partnerFilters.partnerName.includes(value)
+                                                ? partnerFilters.partnerName.filter((v) => v !== value)
+                                                : [...partnerFilters.partnerName, value];
+                                              handlePartnerFilterChange("partnerName", newFilters);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <div
+                                                className={cn(
+                                                  "w-4 h-4 border rounded flex items-center justify-center",
+                                                  partnerFilters.partnerName.includes(value) && "bg-primary border-primary"
+                                                )}
+                                              >
+                                                {partnerFilters.partnerName.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                              </div>
+                                              <span>{value}</span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </TableHead>
-                        <TableHead onClick={() => handlePartnerSort("status")} className="cursor-pointer hover:bg-muted transition-colors">
-                          Status {renderPartnerSortIcon("status")}
+                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-2">
+                            <span onClick={() => handlePartnerSort("status")}>Status {renderPartnerSortIcon("status")}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <Filter className={cn("h-3 w-3", partnerFilters.status.length > 0 && "text-primary")} />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-2">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm font-medium">Filter by Status</span>
+                                    {partnerFilters.status.length > 0 && (
+                                      <Button variant="ghost" size="sm" onClick={() => handlePartnerFilterChange("status", [])}>
+                                        Clear
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Command>
+                                    <CommandInput placeholder="Search status..." />
+                                    <CommandList>
+                                      <CommandEmpty>No results found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {getPartnerUniqueValues("status").map((value) => (
+                                          <CommandItem
+                                            key={value}
+                                            onSelect={() => {
+                                              const newFilters = partnerFilters.status.includes(value)
+                                                ? partnerFilters.status.filter((v) => v !== value)
+                                                : [...partnerFilters.status, value];
+                                              handlePartnerFilterChange("status", newFilters);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <div
+                                                className={cn(
+                                                  "w-4 h-4 border rounded flex items-center justify-center",
+                                                  partnerFilters.status.includes(value) && "bg-primary border-primary"
+                                                )}
+                                              >
+                                                {partnerFilters.status.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                              </div>
+                                              <span>{value}</span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </TableHead>
                         <TableHead onClick={() => handlePartnerSort("contactNumber")} className="cursor-pointer hover:bg-muted transition-colors">
                           Contact Info {renderPartnerSortIcon("contactNumber")}

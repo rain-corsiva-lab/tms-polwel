@@ -101,6 +101,26 @@ interface BillingFormData {
   entries: BillingEntry[];
 }
 
+const createEmptyBillingEntry = (): BillingEntry => ({
+  pbmsInvoiceNumber: "",
+  pbmsInvoiceDate: "",
+  invoiceAmount: "",
+  learnerIds: [],
+  remarks: "",
+});
+
+const createEmptyBillingForm = (): BillingFormData => ({
+  valueOfWorkDone: "",
+  contractFeePBMSBENumber: "",
+  contractPBMSInvoiceDate: "",
+  contractInvoiceAmount: "",
+  venuePBMSBENumber: "",
+  venuePBMSInvoiceDate: "",
+  venueInvoiceAmount: "",
+  finalRemarks: "",
+  entries: [createEmptyBillingEntry()],
+});
+
 const PostRunDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -115,25 +135,10 @@ const PostRunDetail = () => {
   const [learnerSearch, setLearnerSearch] = useState<{ [key: number]: string }>({});
   const [attendeesCount, setAttendeesCount] = useState<number>(0);
 
-  const [billingForm, setBillingForm] = useState<BillingFormData>({
-    valueOfWorkDone: "",
-    contractFeePBMSBENumber: "",
-    contractPBMSInvoiceDate: "",
-    contractInvoiceAmount: "",
-    venuePBMSBENumber: "",
-    venuePBMSInvoiceDate: "",
-    venueInvoiceAmount: "",
-    finalRemarks: "",
-    entries: [
-      {
-        pbmsInvoiceNumber: "",
-        pbmsInvoiceDate: "",
-        invoiceAmount: "",
-        learnerIds: [],
-        remarks: "",
-      },
-    ],
-  });
+  // Check if course run is completed (view-only mode)
+  const isCompleted = courseRun?.status === "COMPLETED";
+
+  const [billingForm, setBillingForm] = useState<BillingFormData>(() => createEmptyBillingForm());
 
   const fetchCourseRunDetails = useCallback(async () => {
     if (!id) return;
@@ -142,64 +147,95 @@ const PostRunDetail = () => {
       setLoading(true);
       const response = await courseRunsApi.getById(id);
 
-      if (response?.success && response?.courseRun) {
-        const cr: any = response.courseRun;
-        // Normalize trainers from course_run_trainers
-        const trainers = Array.isArray(cr.courseRunTrainers)
-          ? cr.courseRunTrainers
-              .map((crt: any) =>
-                crt?.trainer
-                  ? {
+      if (!response?.success) {
+        throw new Error(response?.message || "Failed to load course run details");
+      }
+
+      const isCourseRunLike = (value: any) =>
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        ("id" in value || "course" in value || "courseRunLearners" in value || "startDatetime" in value);
+
+      const courseRunCandidates = [
+        response?.courseRun,
+        response?.data?.courseRun,
+        response?.data?.course_run,
+        response?.data?.courseRunDetail,
+        response?.data,
+        response?.result?.courseRun,
+        response?.result,
+      ];
+
+      const cr: any = courseRunCandidates.find(isCourseRunLike);
+
+      if (!cr) {
+        throw new Error("Course run payload missing in API response");
+      }
+
+      // Normalize trainers from course_run_trainers
+      const trainers = Array.isArray(cr.courseRunTrainers)
+        ? cr.courseRunTrainers
+            .map((crt: any) =>
+              crt?.trainer
+                ? {
+                    id: crt.trainer.id,
+                    user: {
                       id: crt.trainer.id,
-                      user: {
-                        id: crt.trainer.id,
-                        name: crt.trainer.name,
-                        email: crt.trainer.email,
-                      },
-                      role: crt.role,
-                    }
-                  : null
-              )
-              .filter(Boolean)
+                      name: crt.trainer.name,
+                      email: crt.trainer.email,
+                    },
+                    role: crt.role,
+                  }
+                : null
+            )
+            .filter(Boolean)
+        : [];
+
+      const normalizedCourseRun = {
+        ...cr,
+        trainers,
+        billing: cr.billing ?? cr.courseRunBilling ?? null,
+        courseRunBilling: cr.courseRunBilling ?? cr.billing ?? null,
+      };
+
+      setCourseRun(normalizedCourseRun);
+
+      const billingSource = normalizedCourseRun.billing;
+
+      if (billingSource) {
+        const mapAmount = (value: any) => {
+          if (value === null || value === undefined) return "";
+          const num = Number(value);
+          return Number.isNaN(num) ? String(value) : num.toString();
+        };
+
+        const resolvedEntries = Array.isArray(billingSource.courseRunBillingEntries)
+          ? billingSource.courseRunBillingEntries.map((entry: any) => ({
+              id: entry.id,
+              pbmsInvoiceNumber: entry.pbmsInvoiceNumber || "",
+              pbmsInvoiceDate: entry.pbmsInvoiceDate || "",
+              invoiceAmount: mapAmount(entry.invoiceAmount),
+              learnerIds: Array.isArray(entry.courseRunLearners)
+                ? entry.courseRunLearners.map((crl: any) => crl?.learnerId || crl?.learner_id || crl?.learner?.id).filter(Boolean)
+                : [],
+              remarks: entry.remarks || "",
+            }))
           : [];
 
-        setCourseRun({ ...cr, trainers });
-
-        // If billing data exists, populate the form
-        if (response.courseRun.billing) {
-          const billing = response.courseRun.billing;
-          setBillingForm({
-            valueOfWorkDone: billing.valueOfWorkDone?.toString() || "",
-            contractFeePBMSBENumber: billing.contractFeePBMSBENumber || "",
-            contractPBMSInvoiceDate: billing.contractPBMSInvoiceDate || "",
-            contractInvoiceAmount: billing.contractInvoiceAmount?.toString() || "",
-            venuePBMSBENumber: billing.venuePBMSBENumber || "",
-            venuePBMSInvoiceDate: billing.venuePBMSInvoiceDate || "",
-            venueInvoiceAmount: billing.venueInvoiceAmount?.toString() || "",
-            finalRemarks: billing.finalRemarks || "",
-            entries:
-              billing.courseRunBillingEntries && billing.courseRunBillingEntries.length > 0
-                ? billing.courseRunBillingEntries.map((entry) => ({
-                    id: entry.id,
-                    pbmsInvoiceNumber: entry.pbmsInvoiceNumber || "",
-                    pbmsInvoiceDate: entry.pbmsInvoiceDate || "",
-                    invoiceAmount: entry.invoiceAmount?.toString() || "",
-                    learnerIds: [],
-                    remarks: entry.remarks || "",
-                  }))
-                : [
-                    {
-                      pbmsInvoiceNumber: "",
-                      pbmsInvoiceDate: "",
-                      invoiceAmount: "",
-                      learnerIds: [],
-                      remarks: "",
-                    },
-                  ],
-          });
-        }
+        setBillingForm({
+          valueOfWorkDone: mapAmount(billingSource.valueOfWorkDone),
+          contractFeePBMSBENumber: billingSource.contractFeePBMSBENumber || "",
+          contractPBMSInvoiceDate: billingSource.contractPBMSInvoiceDate || "",
+          contractInvoiceAmount: mapAmount(billingSource.contractInvoiceAmount),
+          venuePBMSBENumber: billingSource.venuePBMSBENumber || "",
+          venuePBMSInvoiceDate: billingSource.venuePBMSInvoiceDate || "",
+          venueInvoiceAmount: mapAmount(billingSource.venueInvoiceAmount),
+          finalRemarks: billingSource.finalRemarks || "",
+          entries: resolvedEntries.length > 0 ? resolvedEntries : [createEmptyBillingEntry()],
+        });
       } else {
-        throw new Error("Failed to load course run details");
+        setBillingForm(createEmptyBillingForm());
       }
 
       // Fetch learners enrolled in this course run and normalize
@@ -576,6 +612,7 @@ const PostRunDetail = () => {
                       placeholder="Enter total value of work done"
                       value={billingForm.valueOfWorkDone}
                       onChange={(e) => setBillingForm({ ...billingForm, valueOfWorkDone: e.target.value })}
+                      disabled={isCompleted}
                       className="mt-2"
                     />
                   </div>
@@ -587,16 +624,18 @@ const PostRunDetail = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Billing Information Input</CardTitle>
-                <Button onClick={handleAddEntry} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Entry
-                </Button>
+                {!isCompleted && (
+                  <Button onClick={handleAddEntry} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Entry
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   {billingForm.entries.map((entry, index) => (
                     <div key={index} className="border rounded-lg p-4 relative">
-                      {billingForm.entries.length > 1 && (
+                      {!isCompleted && billingForm.entries.length > 1 && (
                         <Button variant="ghost" size="sm" className="absolute top-2 right-2" onClick={() => handleRemoveEntry(index)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -612,12 +651,17 @@ const PostRunDetail = () => {
                             placeholder="Enter PBMS invoice number"
                             value={entry.pbmsInvoiceNumber}
                             onChange={(e) => handleEntryChange(index, "pbmsInvoiceNumber", e.target.value)}
+                            disabled={isCompleted}
                             className="mt-2"
                           />
                         </div>
                         <div>
                           <Label htmlFor={`pbmsInvoiceDate-${index}`}>PBMS Invoice Date</Label>
-                          <DateInput value={entry.pbmsInvoiceDate} onChange={(date) => handleEntryChange(index, "pbmsInvoiceDate", date)} />
+                          <DateInput
+                            value={entry.pbmsInvoiceDate}
+                            onChange={(date) => handleEntryChange(index, "pbmsInvoiceDate", date)}
+                            disabled={isCompleted}
+                          />
                         </div>
                         <div>
                           <Label htmlFor={`invoiceAmount-${index}`}>Invoice Amount (Auto-calculated)</Label>
@@ -634,11 +678,17 @@ const PostRunDetail = () => {
                       <div className="mb-4">
                         <Label>Learners</Label>
                         <Popover
-                          open={learnerSearchOpen[index] || false}
-                          onOpenChange={(open) => setLearnerSearchOpen({ ...learnerSearchOpen, [index]: open })}
+                          open={!isCompleted && (learnerSearchOpen[index] || false)}
+                          onOpenChange={(open) => !isCompleted && setLearnerSearchOpen({ ...learnerSearchOpen, [index]: open })}
                         >
                           <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" aria-expanded={learnerSearchOpen[index] || false} className="w-full justify-between mt-2">
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={learnerSearchOpen[index] || false}
+                              className="w-full justify-between mt-2"
+                              disabled={isCompleted}
+                            >
                               <span className="truncate">
                                 {entry.learnerIds.length > 0 ? `${entry.learnerIds.length} learner(s) selected` : "Select learners"}
                               </span>
@@ -706,16 +756,18 @@ const PostRunDetail = () => {
                               return (
                                 <span key={lid} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-sm">
                                   {l.name || l.email} - ${net.toFixed(0)}
-                                  <button
-                                    type="button"
-                                    className="ml-1 opacity-70 hover:opacity-100"
-                                    onClick={() => {
-                                      const newLearnerIds = entry.learnerIds.filter((id) => id !== lid);
-                                      handleEntryChange(index, "learnerIds", newLearnerIds);
-                                    }}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
+                                  {!isCompleted && (
+                                    <button
+                                      type="button"
+                                      className="ml-1 opacity-70 hover:opacity-100"
+                                      onClick={() => {
+                                        const newLearnerIds = entry.learnerIds.filter((id) => id !== lid);
+                                        handleEntryChange(index, "learnerIds", newLearnerIds);
+                                      }}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  )}
                                 </span>
                               );
                             })}
@@ -763,6 +815,7 @@ const PostRunDetail = () => {
                           placeholder="Enter any remarks"
                           value={entry.remarks}
                           onChange={(e) => handleEntryChange(index, "remarks", e.target.value)}
+                          disabled={isCompleted}
                           className="mt-2"
                           rows={3}
                         />
@@ -791,6 +844,7 @@ const PostRunDetail = () => {
                           placeholder="Enter PBMS invoice number"
                           value={billingForm.contractFeePBMSBENumber}
                           onChange={(e) => setBillingForm({ ...billingForm, contractFeePBMSBENumber: e.target.value })}
+                          disabled={isCompleted}
                           className="mt-2"
                         />
                       </div>
@@ -799,6 +853,7 @@ const PostRunDetail = () => {
                         <DateInput
                           value={billingForm.contractPBMSInvoiceDate}
                           onChange={(date) => setBillingForm({ ...billingForm, contractPBMSInvoiceDate: date })}
+                          disabled={isCompleted}
                         />
                       </div>
                       <div>
@@ -809,6 +864,7 @@ const PostRunDetail = () => {
                           placeholder="Enter invoice amount"
                           value={billingForm.contractInvoiceAmount}
                           onChange={(e) => setBillingForm({ ...billingForm, contractInvoiceAmount: e.target.value })}
+                          disabled={isCompleted}
                           className="mt-2"
                         />
                       </div>
@@ -826,6 +882,7 @@ const PostRunDetail = () => {
                           placeholder="Enter PBMS invoice number"
                           value={billingForm.venuePBMSBENumber}
                           onChange={(e) => setBillingForm({ ...billingForm, venuePBMSBENumber: e.target.value })}
+                          disabled={isCompleted}
                           className="mt-2"
                         />
                       </div>
@@ -834,6 +891,7 @@ const PostRunDetail = () => {
                         <DateInput
                           value={billingForm.venuePBMSInvoiceDate}
                           onChange={(date) => setBillingForm({ ...billingForm, venuePBMSInvoiceDate: date })}
+                          disabled={isCompleted}
                         />
                       </div>
                       <div>
@@ -844,6 +902,7 @@ const PostRunDetail = () => {
                           placeholder="Enter invoice amount"
                           value={billingForm.venueInvoiceAmount}
                           onChange={(e) => setBillingForm({ ...billingForm, venueInvoiceAmount: e.target.value })}
+                          disabled={isCompleted}
                           className="mt-2"
                         />
                       </div>
@@ -865,6 +924,7 @@ const PostRunDetail = () => {
                   placeholder="Enter any additional remarks"
                   value={billingForm.finalRemarks}
                   onChange={(e) => setBillingForm({ ...billingForm, finalRemarks: e.target.value })}
+                  disabled={isCompleted}
                   className="mt-2"
                   rows={4}
                 />
@@ -872,26 +932,28 @@ const PostRunDetail = () => {
             </Card>
 
             {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={handleSaveBilling} disabled={saving}>
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+            {!isCompleted && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Actions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={handleSaveBilling} disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>

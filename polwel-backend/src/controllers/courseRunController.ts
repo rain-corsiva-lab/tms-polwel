@@ -641,7 +641,28 @@ export const courseRunController = {
               },
             },
           },
-          courseRunBilling: true,
+          courseRunBilling: {
+            include: {
+              courseRunBillingEntries: {
+                include: {
+                  courseRunLearners: {
+                    where: {
+                      deletedAt: null,
+                    },
+                    include: {
+                      learner: {
+                        select: {
+                          id: true,
+                          fullname: true,
+                          email: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           billingReport: true,
         },
       });
@@ -3231,13 +3252,25 @@ export const courseRunController = {
       }
 
       // Delete existing entries and create new ones
+      // First, clear all courseRunBillingEntryId references from learners
+      await prisma.courseRunLearner.updateMany({
+        where: {
+          courseRunId: courseRunId,
+          courseRunBillingEntryId: { not: null },
+        },
+        data: {
+          courseRunBillingEntryId: null,
+        },
+      });
+
       await prisma.courseRunBillingEntry.deleteMany({
         where: { courseRunBillingId: billing.id },
       });
 
       if (entries && Array.isArray(entries)) {
         for (const entry of entries) {
-          await prisma.courseRunBillingEntry.create({
+          // Create the billing entry
+          const createdEntry = await prisma.courseRunBillingEntry.create({
             data: {
               courseRunBillingId: billing.id,
               pbmsInvoiceNumber: entry.pbmsInvoiceNumber || null,
@@ -3246,6 +3279,19 @@ export const courseRunController = {
               remarks: entry.remarks || null,
             },
           });
+
+          // Update learners to associate them with this billing entry
+          if (Array.isArray(entry.learnerIds) && entry.learnerIds.length > 0) {
+            await prisma.courseRunLearner.updateMany({
+              where: {
+                courseRunId: courseRunId,
+                learnerId: { in: entry.learnerIds },
+              },
+              data: {
+                courseRunBillingEntryId: createdEntry.id,
+              },
+            });
+          }
         }
       }
 

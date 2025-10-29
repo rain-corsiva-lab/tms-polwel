@@ -4,10 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Eye, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Loader2, Filter, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { coursesApi, referencesApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface Course {
   id: string;
@@ -33,6 +37,17 @@ const CourseArchive = () => {
   // Sorting state
   const [sortField, setSortField] = useState<keyof Course | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Filter state - stores selected values for each column
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    category: [],
+    durationType: [],
+    venue: [],
+    minParticipants: [],
+    certificates: [],
+    status: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   // Loading and data states
   const [loading, setLoading] = useState({
@@ -218,9 +233,63 @@ const CourseArchive = () => {
 
         const certificateMatch = selectedCertificate === "all" || course.certificates === selectedCertificate;
 
-        return categoryMatch && certificateMatch;
+        // Apply column filters
+        const categoryFilterMatch = filters.category.length === 0 || filters.category.includes(course.category || "");
+        const durationTypeFilterMatch = filters.durationType.length === 0 || filters.durationType.includes(course.durationType || "");
+        const venueFilterMatch = filters.venue.length === 0 || filters.venue.includes(course.venue || "");
+        const minParticipantsFilterMatch = filters.minParticipants.length === 0 || filters.minParticipants.includes(String(course.minParticipants || 1));
+        const certificatesFilterMatch = filters.certificates.length === 0 || filters.certificates.includes(course.certificates || "");
+        const statusFilterMatch = filters.status.length === 0 || filters.status.includes(course.status || "ACTIVE");
+
+        return (
+          categoryMatch &&
+          certificateMatch &&
+          categoryFilterMatch &&
+          durationTypeFilterMatch &&
+          venueFilterMatch &&
+          minParticipantsFilterMatch &&
+          certificatesFilterMatch &&
+          statusFilterMatch
+        );
       })
     : [];
+
+  // Get unique values for each filterable column
+  const getUniqueValues = (field: keyof Course) => {
+    const values = Array.from(
+      new Set(
+        courses
+          .map((c) => {
+            let val = c[field];
+            if (field === "venue" && val && venuesMap[val]) {
+              return venuesMap[val];
+            }
+            return val ? String(val) : "";
+          })
+          .filter(Boolean)
+      )
+    );
+    return values.sort();
+  };
+
+  // Handle filter toggle
+  const handleFilterToggle = (field: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[field] || [];
+      const newValues = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: newValues };
+    });
+  };
+
+  // Clear all filters for a column
+  const clearColumnFilter = (field: string) => {
+    setFilters((prev) => ({ ...prev, [field]: [] }));
+  };
+
+  // Check if a column has active filters
+  const hasActiveFilter = (field: string) => {
+    return filters[field] && filters[field].length > 0;
+  };
 
   // Sort courses based on selected field and direction
   const sortedCourses = [...filteredCourses].sort((a, b) => {
@@ -341,12 +410,33 @@ const CourseArchive = () => {
       {/* Course Table */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Courses ({sortedCourses.length})
-            {courses.length > 0 && sortedCourses.length !== courses.length && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">of {courses.length} total</span>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              Courses ({sortedCourses.length})
+              {courses.length > 0 && sortedCourses.length !== courses.length && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">of {courses.length} total</span>
+              )}
+            </CardTitle>
+            {Object.values(filters).some((arr) => arr.length > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setFilters({
+                    category: [],
+                    durationType: [],
+                    venue: [],
+                    minParticipants: [],
+                    certificates: [],
+                    status: [],
+                  })
+                }
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear All Filters
+              </Button>
             )}
-          </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           {sortedCourses.length === 0 ? (
@@ -368,27 +458,128 @@ const CourseArchive = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("title")}>
-                    <div className="flex items-center">
-                      Course Title
-                      {renderSortIcon("title")}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        Course Title
+                        {renderSortIcon("title")}
+                      </div>
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("category")}>
-                    <div className="flex items-center">
-                      Category
-                      {renderSortIcon("category")}
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("category")}>
+                        Category
+                        {renderSortIcon("category")}
+                      </div>
+                      <Popover open={openFilter === "category"} onOpenChange={(open) => setOpenFilter(open ? "category" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("category") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Category</span>
+                              {hasActiveFilter("category") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("category")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("category").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("category", value)}
+                              >
+                                <Checkbox checked={filters.category?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("duration")}>
-                    <div className="flex items-center">
-                      Duration
-                      {renderSortIcon("duration")}
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("durationType")}>
+                        Duration
+                        {renderSortIcon("durationType")}
+                      </div>
+                      <Popover open={openFilter === "durationType"} onOpenChange={(open) => setOpenFilter(open ? "durationType" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("durationType") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Duration Type</span>
+                              {hasActiveFilter("durationType") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("durationType")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("durationType").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("durationType", value)}
+                              >
+                                <Checkbox checked={filters.durationType?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("venue")}>
-                    <div className="flex items-center">
-                      Venue
-                      {renderSortIcon("venue")}
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("venue")}>
+                        Venue
+                        {renderSortIcon("venue")}
+                      </div>
+                      <Popover open={openFilter === "venue"} onOpenChange={(open) => setOpenFilter(open ? "venue" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("venue") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Venue</span>
+                              {hasActiveFilter("venue") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("venue")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("venue").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("venue", value)}
+                              >
+                                <Checkbox checked={filters.venue?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("defaultCourseFee")}>
@@ -397,22 +588,121 @@ const CourseArchive = () => {
                       {renderSortIcon("defaultCourseFee")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("minParticipants")}>
-                    <div className="flex items-center">
-                      Min Pax
-                      {renderSortIcon("minParticipants")}
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("minParticipants")}>
+                        Min Pax
+                        {renderSortIcon("minParticipants")}
+                      </div>
+                      <Popover open={openFilter === "minParticipants"} onOpenChange={(open) => setOpenFilter(open ? "minParticipants" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("minParticipants") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Min Pax</span>
+                              {hasActiveFilter("minParticipants") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("minParticipants")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("minParticipants").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("minParticipants", value)}
+                              >
+                                <Checkbox checked={filters.minParticipants?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("certificates")}>
-                    <div className="flex items-center">
-                      Certificate
-                      {renderSortIcon("certificates")}
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("certificates")}>
+                        Certificate
+                        {renderSortIcon("certificates")}
+                      </div>
+                      <Popover open={openFilter === "certificates"} onOpenChange={(open) => setOpenFilter(open ? "certificates" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("certificates") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Certificate</span>
+                              {hasActiveFilter("certificates") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("certificates")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("certificates").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("certificates", value)}
+                              >
+                                <Checkbox checked={filters.certificates?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
-                    <div className="flex items-center">
-                      Status
-                      {renderSortIcon("status")}
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("status")}>
+                        Status
+                        {renderSortIcon("status")}
+                      </div>
+                      <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("status") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Status</span>
+                              {hasActiveFilter("status") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("status").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("status", value)}
+                              >
+                                <Checkbox checked={filters.status?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </TableHead>
                   <TableHead>Actions</TableHead>

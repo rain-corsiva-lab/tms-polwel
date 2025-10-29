@@ -386,8 +386,8 @@ const PostRunManagement: React.FC = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewDetails(run)}>View post-run details</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewAdministrative(run)}>View administrative matters</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewDetails(run)}>View Details</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewAdministrative(run)}>Administrative Matters</DropdownMenuItem>
                       {showGenerateBilling && (
                         <>
                           <DropdownMenuSeparator />
