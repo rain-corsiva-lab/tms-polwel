@@ -51,46 +51,68 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Billing Report');
 
-    worksheet.views = [{ state: 'frozen', ySplit: 6 }];
+    // Set page setup for landscape
+    worksheet.pageSetup = {
+      paperSize: 9, // A4
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: {
+        left: 0.25,
+        right: 0.25,
+        top: 0.75,
+        bottom: 0.75,
+        header: 0.3,
+        footer: 0.3,
+      },
+    };
+
+    // Define column widths - all in one row layout
     worksheet.columns = [
-      { width: 38 },
-      { width: 18 },
-      { width: 18 },
-      { width: 18 },
-      { width: 12 },
-      { width: 14 },
-      { width: 18 },
-      { width: 28 },
-      { width: 12 },
-      { width: 22 },
-      { width: 16 },
-      { width: 18 },
+      { width: 30 }, // A: Title
+      { width: 15 }, // B: Course Run #
+      { width: 12 }, // C: Billing Rate
+      { width: 12 }, // D: Before GST
+      { width: 8 },  // E: Qty
+      { width: 10 }, // F: Unit (HEAD)
+      { width: 12 }, // G: Number of Unit
+      { width: 20 }, // H: Course Duration
+      { width: 8 },  // I: Project
+      { width: 15 }, // J: Value of Work Done
+      { width: 15 }, // K: PBMS Ref (Invoice)
+      { width: 15 }, // L: PBMS Invoice Date
+      { width: 15 }, // M: Contract PBMS BE
+      { width: 15 }, // N: Contract Invoice Date
+      { width: 15 }, // O: Contract Amount
+      { width: 15 }, // P: Venue PBMS BE
+      { width: 15 }, // Q: Venue Invoice Date
+      { width: 15 }, // R: Venue Amount
+      { width: 30 }, // S: Remarks
     ];
 
-    worksheet.mergeCells('A1:L1');
+    worksheet.views = [{ state: 'frozen', ySplit: 3 }];
+
+    worksheet.views = [{ state: 'frozen', ySplit: 3 }];
+
+    // Title row
+    worksheet.mergeCells('A1:S1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = `PDCS Estimated Billing for Month of ${new Date().toLocaleDateString('en-US', {
       month: 'long',
       year: 'numeric',
     })}`;
     titleCell.font = { bold: true, size: 14 };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    worksheet.mergeCells('A2:L2');
+    // Note row
+    worksheet.mergeCells('A2:S2');
     const noteCell = worksheet.getCell('A2');
     noteCell.value = '(All figures to exclude GST)';
-    noteCell.font = { italic: true };
+    noteCell.font = { italic: true, size: 10 };
+    noteCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    worksheet.mergeCells('A4:L4');
-    const summaryHeading = worksheet.getCell('A4');
-    summaryHeading.value = 'Part 1: Summary';
-    summaryHeading.font = { bold: true };
-    summaryHeading.alignment = { horizontal: 'left', vertical: 'middle' };
-    summaryHeading.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE2E8F0' },
-    };
-
+    // Header row with all columns
     const headers = [
       'Title',
       'Course Run #',
@@ -101,22 +123,31 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
       'Number of Unit (RUN)',
       'Course Duration',
       'Project',
-      'Value of Work Done (for the month)',
-      '',
-      '',
+      'Value of Work Done',
+      'PBMS Ref',
+      'PBMS Invoice',
+      'Contract PBMS BE',
+      'Contract Invoice Date',
+      'Contract Amount',
+      'Venue PBMS BE',
+      'Venue Invoice Date',
+      'Venue Amount',
+      'Remarks',
     ];
 
-    const headerRow = worksheet.getRow(6);
+    const headerRow = worksheet.getRow(3);
     headers.forEach((header, index) => {
       const cell = headerRow.getCell(index + 1);
       cell.value = header;
-      const isRed = index === 0 || index === 9;
-      const isYellow = index === 1 || index === 2 || index === 3 || index === 6 || index === 10 || index === 11;
-      const fillColor = isRed ? 'FFFF4C4C' : isYellow ? 'FFFFFF99' : 'FFE2E8F0';
+      // Color coding: Red for important fields, Yellow for data fields, Gray for others
+      const redColumns = [0, 9]; // Title, Value of Work Done
+      const yellowColumns = [1, 2, 3, 6, 10, 11, 12, 13, 14, 15, 16, 17]; // All data columns
+      const fillColor = redColumns.includes(index) ? 'FFFF4C4C' : yellowColumns.includes(index) ? 'FFFFFF99' : 'FFE2E8F0';
       formatHeadingCell(cell, fillColor);
     });
-    headerRow.height = 28;
+    headerRow.height = 30;
 
+    // Calculate data
     const billingRate = Number(exportData.billingRate) || 0;
     const participantCount = Number(exportData.participantCount) || 0;
     const beforeGST = billingRate * participantCount;
@@ -125,181 +156,132 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
       ? `${new Date(courseRun.startDatetime).toLocaleDateString('en-GB')} - ${new Date(courseRun.endDatetime).toLocaleDateString('en-GB')}`
       : '';
 
-    const dataRow = worksheet.getRow(7);
-    dataRow.getCell(1).value = exportData.title || '';
-    dataRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-    dataRow.getCell(2).value = exportData.serialNumber || '';
-    dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-    setCurrency(dataRow.getCell(3), billingRate);
-    setCurrency(dataRow.getCell(4), beforeGST);
-    dataRow.getCell(5).value = participantCount || '';
-    dataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
-    dataRow.getCell(6).value = participantCount ? 'HEAD' : '';
-    dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
-    dataRow.getCell(7).value = exportData.billing?.numberOfUnits || 1;
-    dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
-    dataRow.getCell(8).value = courseDates;
-    dataRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle' };
-    dataRow.getCell(9).value = exportData.projectCode || 'N';
-    dataRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
-    setCurrency(dataRow.getCell(10), valueOfWorkDone);
-    dataRow.getCell(11).value = '';
-    dataRow.getCell(12).value = '';
-    applyRowBorders(dataRow, 1, 12);
-    dataRow.height = 24;
+    const billingEntries = Array.isArray(billing.courseRunBillingEntries) ? billing.courseRunBillingEntries : [];
+    const numBillingRows = Math.max(billingEntries.length, 1);
 
-    let currentRow = 9;
+    // Data rows - merge cells for columns that don't change per billing entry
+    const startRow = 4;
+    const endRow = startRow + numBillingRows - 1;
 
-    worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
-    const invoicingHeading = worksheet.getCell(`A${currentRow}`);
-    invoicingHeading.value = 'Invoicing for work done';
-    invoicingHeading.font = { bold: true };
-    invoicingHeading.alignment = { horizontal: 'left', vertical: 'middle' };
-    invoicingHeading.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE2E8F0' },
-    };
-    currentRow++;
-
-    const invoicingHeaderRow = worksheet.getRow(currentRow);
-    const invoicingHeaders = ['Value of Work Done', 'PBMS Ref', 'PBMS Invoice'];
-    invoicingHeaders.forEach((header, index) => {
-      const cell = invoicingHeaderRow.getCell(10 + index);
-      cell.value = header;
-      const fillColor = index === 0 ? 'FFFF4C4C' : 'FFFFFF99';
-      formatHeadingCell(cell, fillColor);
-    });
-    invoicingHeaderRow.height = 24;
-    currentRow++;
-
-    const billingEntries = Array.isArray(billing.courseRunBillingEntries)
-      ? billing.courseRunBillingEntries
-      : [];
-
-    if (billingEntries.length === 0) {
-      const row = worksheet.getRow(currentRow);
-      for (let i = 10; i <= 12; i += 1) {
-        const cell = row.getCell(i);
-        cell.value = i === 10 ? valueOfWorkDone : '';
-        if (i === 10) {
-          setCurrency(cell, valueOfWorkDone);
-        }
-        applyBorder(cell);
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Merge columns A-J (course info) across all billing rows
+    if (numBillingRows > 1) {
+      for (let col = 1; col <= 10; col++) {
+        worksheet.mergeCells(startRow, col, endRow, col);
       }
-      currentRow++;
-    } else {
-      billingEntries.forEach((entry: any) => {
-        const entryRow = worksheet.getRow(currentRow);
-        const invoiceAmount = typeof entry.invoiceAmount === 'number' ? entry.invoiceAmount : entry.invoiceAmount ? Number(entry.invoiceAmount) : 0;
-        setCurrency(entryRow.getCell(10), invoiceAmount || null);
-        entryRow.getCell(11).value = entry.pbmsInvoiceNumber || '';
-        entryRow.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
-        entryRow.getCell(12).value = entry.pbmsInvoiceDate
-          ? new Date(entry.pbmsInvoiceDate).toLocaleDateString('en-GB')
-          : '';
-        entryRow.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
-        applyRowBorders(entryRow, 10, 12);
-        entryRow.height = 22;
-        currentRow++;
-      });
+      // Also merge contract and venue columns (M-R)
+      for (let col = 13; col <= 18; col++) {
+        worksheet.mergeCells(startRow, col, endRow, col);
+      }
+      // Merge remarks column (S)
+      worksheet.mergeCells(startRow, 19, endRow, 19);
     }
 
-    currentRow += 2;
+    // Fill in the course data (merged cells - only set on first row)
+    const firstDataRow = worksheet.getRow(startRow);
+    
+    // A: Title
+    firstDataRow.getCell(1).value = exportData.title || '';
+    firstDataRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+    
+    // B: Course Run #
+    firstDataRow.getCell(2).value = exportData.serialNumber || '';
+    firstDataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // C: Billing Rate
+    setCurrency(firstDataRow.getCell(3), billingRate);
+    
+    // D: Before GST
+    setCurrency(firstDataRow.getCell(4), beforeGST);
+    
+    // E: Qty
+    firstDataRow.getCell(5).value = participantCount || '';
+    firstDataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // F: Unit
+    firstDataRow.getCell(6).value = participantCount ? 'HEAD' : '';
+    firstDataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // G: Number of Unit
+    firstDataRow.getCell(7).value = courseRun ? 1 : '';
+    firstDataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // H: Course Duration
+    firstDataRow.getCell(8).value = courseDates;
+    firstDataRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+    
+    // I: Project
+    firstDataRow.getCell(9).value = exportData.projectCode || 'N';
+    firstDataRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // J: Value of Work Done
+    setCurrency(firstDataRow.getCell(10), valueOfWorkDone);
 
-    worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
-    const expenseHeading = worksheet.getCell(`A${currentRow}`);
-    expenseHeading.value = 'Expenses (Contract Fees to Trainer / Partners + Venue Expenses)';
-    expenseHeading.font = { bold: true };
-    expenseHeading.alignment = { horizontal: 'left', vertical: 'middle' };
-    expenseHeading.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE2E8F0' },
-    };
-    currentRow++;
-
-    worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
-    const contractHeading = worksheet.getCell(`A${currentRow}`);
-    contractHeading.value = 'Contract Fees';
-    contractHeading.font = { bold: true };
-    contractHeading.alignment = { horizontal: 'left', vertical: 'middle' };
-    currentRow++;
-
-    const contractHeaderRow = worksheet.getRow(currentRow);
-    const contractHeaders = ['Description', 'PBMS Ref', 'PBMS Invoice', 'Amount'];
-    contractHeaders.forEach((header, index) => {
-      const cell = contractHeaderRow.getCell(index + 1);
-      cell.value = header;
-      formatHeadingCell(cell, 'FFFFFF99');
-    });
-    contractHeaderRow.height = 22;
-    currentRow++;
-
-    const contractRow = worksheet.getRow(currentRow);
-    contractRow.getCell(1).value = 'Trainer / Partner Fees';
-    contractRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-    contractRow.getCell(2).value = billing.contractFeePBMSBENumber || '';
-    contractRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-    contractRow.getCell(3).value = billing.contractPBMSInvoiceDate
+    // M-O: Contract Fees (merged)
+    firstDataRow.getCell(13).value = billing.contractFeePBMSBENumber || '';
+    firstDataRow.getCell(13).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    firstDataRow.getCell(14).value = billing.contractPBMSInvoiceDate
       ? new Date(billing.contractPBMSInvoiceDate).toLocaleDateString('en-GB')
       : '';
-    contractRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
-    setCurrency(contractRow.getCell(4), typeof billing.contractInvoiceAmount === 'number' ? billing.contractInvoiceAmount : null);
-    applyRowBorders(contractRow, 1, 4);
+    firstDataRow.getCell(14).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    const contractAmount = typeof billing.contractInvoiceAmount === 'number' 
+      ? billing.contractInvoiceAmount 
+      : billing.contractInvoiceAmount ? Number(billing.contractInvoiceAmount) : null;
+    setCurrency(firstDataRow.getCell(15), contractAmount);
 
-    currentRow += 2;
-
-    worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
-    const venueHeading = worksheet.getCell(`A${currentRow}`);
-    venueHeading.value = `Venue Fees - ${exportData.venue || ''}`.trim();
-    venueHeading.font = { bold: true };
-    venueHeading.alignment = { horizontal: 'left', vertical: 'middle' };
-    currentRow++;
-
-    const venueHeaderRow = worksheet.getRow(currentRow);
-    const venueHeaders = ['PBMS Ref', 'PBMS Invoice', 'Amount'];
-    venueHeaders.forEach((header, index) => {
-      const cell = venueHeaderRow.getCell(index + 1);
-      cell.value = header;
-      formatHeadingCell(cell, 'FFFFFF99');
-    });
-    venueHeaderRow.height = 22;
-    currentRow++;
-
-    const venueRow = worksheet.getRow(currentRow);
-    venueRow.getCell(1).value = billing.venuePBMSBENumber || '';
-    venueRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-    venueRow.getCell(2).value = billing.venuePBMSInvoiceDate
+    // P-R: Venue Fees (merged)
+    firstDataRow.getCell(16).value = billing.venuePBMSBENumber || '';
+    firstDataRow.getCell(16).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    firstDataRow.getCell(17).value = billing.venuePBMSInvoiceDate
       ? new Date(billing.venuePBMSInvoiceDate).toLocaleDateString('en-GB')
       : '';
-    venueRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-  const venueAmount = typeof billing.venueInvoiceAmount === 'number' ? billing.venueInvoiceAmount : billing.venueInvoiceAmount ? Number(billing.venueInvoiceAmount) : null;
-  setCurrency(venueRow.getCell(3), venueAmount);
-  applyRowBorders(venueRow, 1, 3);
+    firstDataRow.getCell(17).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    const venueAmount = typeof billing.venueInvoiceAmount === 'number' 
+      ? billing.venueInvoiceAmount 
+      : billing.venueInvoiceAmount ? Number(billing.venueInvoiceAmount) : null;
+    setCurrency(firstDataRow.getCell(18), venueAmount);
 
-    currentRow += 2;
+    // S: Remarks (merged)
+    firstDataRow.getCell(19).value = billing.finalRemarks || '';
+    firstDataRow.getCell(19).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
 
-    worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
-    const remarksHeading = worksheet.getCell(`A${currentRow}`);
-    remarksHeading.value = 'For the staff to enter special notes';
-    remarksHeading.font = { bold: true };
-    remarksHeading.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFFF0000' },
-    };
-    currentRow++;
+    // Apply borders to all cells in first data row
+    applyRowBorders(firstDataRow, 1, 19);
+    firstDataRow.height = 24 * numBillingRows;
 
-  worksheet.mergeCells(`A${currentRow}:L${currentRow + 1}`);
-  const remarksCell = worksheet.getCell(`A${currentRow}`);
-  remarksCell.value = billing.finalRemarks || '';
-  remarksCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
-  applyBorder(remarksCell);
-  worksheet.getRow(currentRow).height = 60;
-
-    const buffer = await workbook.xlsx.writeBuffer();
+    // Fill in billing entries (columns K-L only, not merged)
+    if (billingEntries.length === 0) {
+      const row = worksheet.getRow(startRow);
+      setCurrency(row.getCell(11), valueOfWorkDone);
+      row.getCell(12).value = '';
+      row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
+      applyBorder(row.getCell(11));
+      applyBorder(row.getCell(12));
+    } else {
+      billingEntries.forEach((entry: any, index: number) => {
+        const row = worksheet.getRow(startRow + index);
+        const invoiceAmount = typeof entry.invoiceAmount === 'number' 
+          ? entry.invoiceAmount 
+          : entry.invoiceAmount ? Number(entry.invoiceAmount) : null;
+        
+        // K: PBMS Ref (invoice number)
+        row.getCell(11).value = entry.pbmsInvoiceNumber || '';
+        row.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
+        applyBorder(row.getCell(11));
+        
+        // L: PBMS Invoice Date
+        row.getCell(12).value = entry.pbmsInvoiceDate
+          ? new Date(entry.pbmsInvoiceDate).toLocaleDateString('en-GB')
+          : '';
+        row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
+        applyBorder(row.getCell(12));
+        
+        row.height = 24;
+      });
+    }    const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });

@@ -462,10 +462,10 @@ const TrainerDetail = () => {
         </div>
         {/* Calendar and events */}
         <Card>
-          <CardHeader>
+          {/* <CardHeader>
             <CardTitle className="text-sm font-medium">{trainer.name} Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
+          </CardHeader> */}
+          <CardContent className="mt-5">
             <TrainerCalendar
               key={calendarRefreshKey}
               trainerId={trainer.id}

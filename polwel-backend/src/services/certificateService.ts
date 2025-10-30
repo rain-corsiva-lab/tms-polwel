@@ -24,8 +24,15 @@ function writeCertificateContent(doc: PDFKit.PDFDocument, data: CertificateData)
   doc.strokeColor('#1e3a8a').lineWidth(8).rect(30, 30, PAGE_WIDTH - 60, PAGE_HEIGHT - 60).stroke();
   doc.strokeColor('#1e3a8a').lineWidth(2).rect(40, 40, PAGE_WIDTH - 80, PAGE_HEIGHT - 80).stroke();
 
-  const logoPath = path.join(__dirname, '../../public/images/logoPolwel.png');
-  if (fs.existsSync(logoPath)) {
+  // Try multiple possible paths for the logo
+  const possibleLogoPaths = [
+    path.join(__dirname, '../../public/images/logoPolwel.png'),
+    path.join(process.cwd(), 'public/images/logoPolwel.png'),
+    path.join(process.cwd(), '../public/images/logoPolwel.png'),
+  ];
+  
+  const logoPath = possibleLogoPaths.find(p => fs.existsSync(p));
+  if (logoPath) {
     doc.image(logoPath, centerX - 40, 70, { width: 80 });
   }
 
@@ -86,9 +93,16 @@ function writeCertificateContent(doc: PDFKit.PDFDocument, data: CertificateData)
     });
 
   const signatureY = 460;
-  const signaturePath = path.join(__dirname, '../../public/images/signature.png');
-
-  if (fs.existsSync(signaturePath)) {
+  
+  // Try multiple possible paths for the signature
+  const possibleSignaturePaths = [
+    path.join(__dirname, '../../public/images/polwel-signature.png'),
+    path.join(process.cwd(), 'public/images/polwel-signature.png'),
+    path.join(process.cwd(), '../public/images/polwel-signature.png'),
+  ];
+  
+  const signaturePath = possibleSignaturePaths.find(p => fs.existsSync(p));
+  if (signaturePath) {
     doc.image(signaturePath, centerX - 60, signatureY - 10, { width: 120, height: 40 });
   } else {
     doc.moveTo(centerX - 80, signatureY + 20).lineTo(centerX + 80, signatureY + 20).strokeColor('#000000').lineWidth(1).stroke();
