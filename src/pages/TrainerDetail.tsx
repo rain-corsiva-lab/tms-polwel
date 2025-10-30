@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, User, Mail, Phone, Calendar, Edit, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/date";
 import TrainerCalendar from "@/components/TrainerCalendar";
@@ -397,8 +398,8 @@ const TrainerDetail = () => {
         </Card>
         {/* Training Fee full width */}
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Courses</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="text-lg font-semibold">Courses</CardTitle>
             <Button
               size="sm"
               onClick={() => {
@@ -410,51 +411,50 @@ const TrainerDetail = () => {
             </Button>
           </CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40">
-                <tr>
-                  <th className="text-left p-2">Course Code</th>
-                  <th className="text-left p-2">Course Name</th>
-                  <th className="text-left p-2">Fees (per run)</th>
-                  <th className="text-left p-2">Remarks</th>
-                  <th className="p-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fees.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                      No fees added
-                    </td>
-                  </tr>
-                )}
-                {fees.map((f) => (
-                  <tr key={f.id} className="border-t">
-                    <td className="p-2 whitespace-nowrap">{f.course.courseCode || "N/A"}</td>
-                    <td className="p-2">{f.course.title}</td>
-                    <td className="p-2">{`$${f.feePerRun.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
-                    <td className="p-2 max-w-[250px] truncate" title={f.remarks || ""}>
-                      {f.remarks || ""}
-                    </td>
-                    <td className="p-2 text-right space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingFee(f);
-                          setShowFeeDialog(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => deleteFee(f)}>
-                        Remove
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {fees.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">No fees added</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-semibold">Course Code</TableHead>
+                    <TableHead className="font-semibold">Course Name</TableHead>
+                    <TableHead className="font-semibold">Fees (per run)</TableHead>
+                    <TableHead className="font-semibold">Remarks</TableHead>
+                    <TableHead className="text-right font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fees.map((f) => (
+                    <TableRow key={f.id}>
+                      <TableCell className="font-medium">{f.course.courseCode || "N/A"}</TableCell>
+                      <TableCell>{f.course.title}</TableCell>
+                      <TableCell>{`$${f.feePerRun.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</TableCell>
+                      <TableCell className="max-w-[250px] truncate" title={f.remarks || ""}>
+                        {f.remarks || "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingFee(f);
+                              setShowFeeDialog(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteFee(f)}>
+                            Remove
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
         <div className="lg:col-span-2">

@@ -173,7 +173,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
         <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="duration">Course Duration</Label>
           <Input id="duration" type="number" value={formData.duration} onChange={(e) => onInputChange("duration", e.target.value)} placeholder="Duration" />
@@ -190,30 +190,6 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
               <SelectItem value="hours">Hours</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="minParticipants">Min Participants *</Label>
-          <Input
-            id="minParticipants"
-            type="number"
-            min="1"
-            value={formData.minParticipants || 1}
-            onChange={(e) => onInputChange("minParticipants", parseInt(e.target.value) || 1)}
-            placeholder="Min pax"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="maxParticipants">Max Participants</Label>
-          <Input
-            id="maxParticipants"
-            type="number"
-            min="1"
-            value={formData.maxParticipants || ""}
-            onChange={(e) => onInputChange("maxParticipants", e.target.value ? parseInt(e.target.value) : "")}
-            placeholder="Max pax (optional)"
-          />
         </div>
 
         <div className="space-y-2">
@@ -328,6 +304,32 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
             </PopoverContent>
           </Popover>
           <span className="text-xs text-gray-400">Note: Trainers and partners should be created in User Management before being able to select here.</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="minParticipants">Min Participants *</Label>
+          <Input
+            id="minParticipants"
+            type="number"
+            min="1"
+            value={formData.minParticipants || 1}
+            onChange={(e) => onInputChange("minParticipants", parseInt(e.target.value) || 1)}
+            placeholder="Min pax"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="maxParticipants">Max Participants</Label>
+          <Input
+            id="maxParticipants"
+            type="number"
+            min="1"
+            value={formData.maxParticipants || ""}
+            onChange={(e) => onInputChange("maxParticipants", e.target.value ? parseInt(e.target.value) : "")}
+            placeholder="Max pax (optional)"
+          />
         </div>
       </div>
 

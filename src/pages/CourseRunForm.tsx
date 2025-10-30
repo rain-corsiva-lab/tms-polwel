@@ -237,7 +237,44 @@ const CourseRunForm: React.FC = () => {
     }
   };
 
-  // Filter trainers based on course - only show trainers connected to this course
+  // Check if trainer has schedule conflict
+  const checkTrainerAvailability = async (trainerId: string, startDate: string, endDate: string): Promise<boolean> => {
+    if (!startDate || !endDate) return true; // Can't check without dates
+
+    try {
+      // Fetch trainer's existing course runs
+      const response = await courseRunsApi.getAll({ limit: 1000 });
+      const allCourseRuns = response?.courseRuns || [];
+
+      // Check for overlapping dates
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      for (const run of allCourseRuns) {
+        // Check if this course run has the trainer assigned
+        if (run.courseRunTrainers && Array.isArray(run.courseRunTrainers)) {
+          const hasTrainer = run.courseRunTrainers.some((crt: any) => crt.trainerId === trainerId);
+
+          if (hasTrainer && run.startDate && run.endDate) {
+            const runStart = new Date(run.startDate);
+            const runEnd = new Date(run.endDate);
+
+            // Check for date overlap
+            if (start <= runEnd && end >= runStart) {
+              return false; // Conflict found
+            }
+          }
+        }
+      }
+
+      return true; // No conflict
+    } catch (error) {
+      console.error("Error checking trainer availability:", error);
+      return true; // Allow on error to not block
+    }
+  };
+
+  // Filter trainers based on course and availability
   const filterTrainersByCourse = async (courseId: string) => {
     try {
       // Fetch course details including courseTrainers
@@ -249,7 +286,20 @@ const CourseRunForm: React.FC = () => {
         const courseTrainerIds = course.courseTrainers.map((ct: any) => ct.trainerId);
 
         // Filter trainers to only those connected to this course
-        const filtered = trainers.filter((trainer) => courseTrainerIds.includes(trainer.id));
+        let filtered = trainers.filter((trainer) => courseTrainerIds.includes(trainer.id));
+
+        // If dates are selected, filter out trainers with conflicts
+        if (formData.startDate && formData.endDate) {
+          const availabilityChecks = await Promise.all(
+            filtered.map(async (trainer) => ({
+              trainer,
+              available: await checkTrainerAvailability(trainer.id, formData.startDate, formData.endDate),
+            }))
+          );
+
+          filtered = availabilityChecks.filter((check) => check.available).map((check) => check.trainer);
+        }
+
         setAvailableTrainers(filtered);
       } else {
         // If no courseTrainers found, show no trainers
@@ -261,7 +311,7 @@ const CourseRunForm: React.FC = () => {
     }
   };
 
-  // Handle start date change to regenerate serial number
+  // Handle start date change to regenerate serial number and re-filter trainers
   const handleStartDateChange = (date: string) => {
     const newFormData = { ...formData, startDate: date };
 
@@ -270,6 +320,21 @@ const CourseRunForm: React.FC = () => {
     }
 
     setFormData(newFormData);
+
+    // Re-filter trainers based on new date range if course is selected
+    if (newFormData.courseId && newFormData.endDate) {
+      filterTrainersByCourse(newFormData.courseId);
+    }
+  };
+
+  // Handle end date change to re-filter trainers
+  const handleEndDateChange = (date: string) => {
+    setFormData({ ...formData, endDate: date });
+
+    // Re-filter trainers based on new date range if course is selected
+    if (formData.courseId && formData.startDate) {
+      filterTrainersByCourse(formData.courseId);
+    }
   };
 
   // Handle venue type change
@@ -550,7 +615,7 @@ const CourseRunForm: React.FC = () => {
                     <DateInput
                       id="endDate"
                       value={formData.endDate}
-                      onChange={(date) => handleFieldChange("endDate", date || "")}
+                      onChange={(date) => handleEndDateChange(date || "")}
                       className={errors.endDate ? "border-red-500" : ""}
                     />
                     {errors.endDate && <p className="text-sm text-red-500 mt-1">{errors.endDate}</p>}

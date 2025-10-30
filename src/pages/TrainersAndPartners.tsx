@@ -831,8 +831,8 @@ const TrainersAndPartners = () => {
             </Card>
           </div>
 
-          {/* Pending trainers dialog */}
-          {pendingTrainers.length > 0 && (
+          {/* Pending trainers dialog - only show on Associate Trainers tab */}
+          {activeTab === "trainers" && pendingTrainers.length > 0 && (
             <Dialog>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:bg-muted/50 transition-colors mt-4">

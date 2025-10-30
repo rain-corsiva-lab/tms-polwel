@@ -41,7 +41,6 @@ interface FormState {
   remarks: string;
   defaultCourseFee: number;
   discounts: any[];
-  billingRate: number;
   contractsFeePayout: number;
   minParticipants: number;
   maxParticipants: number | string;
@@ -65,7 +64,6 @@ const initialForm: FormState = {
   remarks: "",
   defaultCourseFee: 0,
   discounts: [],
-  billingRate: 0,
   contractsFeePayout: 0,
   minParticipants: 1,
   maxParticipants: "",
@@ -202,7 +200,6 @@ const CourseForm: React.FC = () => {
             remarks: c.remarks || "",
             defaultCourseFee: c.defaultCourseFee || 0,
             discounts: Array.isArray(c.discounts) ? c.discounts : [],
-            billingRate: c.billingRate || 0,
             contractsFeePayout: c.contractsFeePayout || 0,
             minParticipants: c.minParticipants || 1,
             maxParticipants: c.maxParticipants || "",
@@ -336,7 +333,6 @@ const CourseForm: React.FC = () => {
       remarks: formData.remarks,
       defaultCourseFee: formData.defaultCourseFee,
       discounts: formData.discounts,
-      billingRate: formData.billingRate,
       contractsFeePayout: formData.contractsFeePayout,
       minParticipants: formData.minParticipants,
       maxParticipants: formData.maxParticipants || undefined,

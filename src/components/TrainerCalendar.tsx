@@ -337,7 +337,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
 
   const calendarModifiersClassNames = {
     blocked: "bg-red-100 text-red-900 hover:bg-red-200",
-    scheduled: "bg-blue-100 text-blue-900 hover:bg-blue-200",
+    scheduled: "bg-green-100 text-green-900 hover:bg-green-200",
   };
 
   if (loading) {
@@ -389,7 +389,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
             <p className="font-medium">Select date(s) to manage your availability</p>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                <div className="w-3 h-3 bg-green-500 rounded"></div>
                 <span>Scheduled Course</span>
               </div>
               <div className="flex items-center space-x-2">

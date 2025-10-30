@@ -93,6 +93,103 @@ const calculateVenueFinalFee = async (courseRunId: string): Promise<number> => {
   return 0;
 };
 
+/**
+ * Check if trainers have schedule conflicts with existing course runs
+ */
+const checkTrainerAvailability = async (
+  trainerIds: string[],
+  startDatetime: Date | null,
+  endDatetime: Date | null,
+  excludeCourseRunId?: string
+): Promise<{ available: boolean; conflicts: any[] }> => {
+  if (!trainerIds || trainerIds.length === 0 || !startDatetime || !endDatetime) {
+    return { available: true, conflicts: [] };
+  }
+
+  try {
+    // Build where clause conditionally
+    const whereClause: any = {
+      deletedAt: null,
+      courseRunTrainers: {
+        some: {
+          trainerId: { in: trainerIds },
+          deletedAt: null,
+        },
+      },
+      AND: [
+        { startDatetime: { not: null } },
+        { endDatetime: { not: null } },
+      ],
+    };
+
+    // Only add id filter if excludeCourseRunId is provided
+    if (excludeCourseRunId) {
+      whereClause.id = { not: excludeCourseRunId };
+    }
+
+    // Find all course runs that have any of the trainers assigned
+    const conflictingRuns = await prisma.courseRun.findMany({
+      where: whereClause,
+      include: {
+        course: {
+          select: {
+            title: true,
+            courseCode: true,
+          },
+        },
+        courseRunTrainers: {
+          where: {
+            trainerId: { in: trainerIds },
+            deletedAt: null,
+          },
+          include: {
+            trainer: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const conflicts: any[] = [];
+
+    for (const run of conflictingRuns) {
+      if (!run.startDatetime || !run.endDatetime) continue;
+
+      // Check for date overlap: (start1 <= end2) AND (end1 >= start2)
+      const hasOverlap =
+        startDatetime <= run.endDatetime && endDatetime >= run.startDatetime;
+
+      if (hasOverlap) {
+        conflicts.push({
+          courseRunId: run.id,
+          serialNumber: run.serialNumber,
+          courseTitle: run.course?.title,
+          courseCode: run.course?.courseCode,
+          startDate: run.startDatetime,
+          endDate: run.endDatetime,
+          trainers: run.courseRunTrainers.map((crt: any) => ({
+            id: crt.trainer.id,
+            name: crt.trainer.name,
+          })),
+        });
+      }
+    }
+
+    return {
+      available: conflicts.length === 0,
+      conflicts,
+    };
+  } catch (error) {
+    console.error('Error checking trainer availability:', error);
+    // On error, allow the operation to proceed
+    return { available: true, conflicts: [] };
+  }
+};
+
 const ALLOWED_COURSE_STATUSES: CourseStatus[] = [
   'DRAFT',
   'PENDING',
@@ -2096,6 +2193,26 @@ export const courseRunController = {
           error: 'Course run not found',
         });
         return;
+      }
+
+      // Check trainer availability if dates are set
+      if (trainers.length > 0 && courseRun.startDatetime && courseRun.endDatetime) {
+        const trainerIds = trainers.map((t: any) => t.trainerId);
+        const availabilityCheck = await checkTrainerAvailability(
+          trainerIds,
+          courseRun.startDatetime,
+          courseRun.endDatetime,
+          id // Exclude current course run
+        );
+
+        if (!availabilityCheck.available) {
+          res.status(400).json({
+            success: false,
+            error: 'One or more trainers have schedule conflicts',
+            conflicts: availabilityCheck.conflicts,
+          });
+          return;
+        }
       }
 
       // Delete existing trainer assignments and create new ones

@@ -206,40 +206,78 @@ class EmailService {
       subject: 'POLWEL - Password Reset Request',
       html: `
         <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #dc2626; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background-color: #ffffff; padding: 30px; border: 1px solid #e9ecef; }
-            .footer { background-color: #f8f9fa; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; font-size: 12px; color: #666; }
-            .button { display: inline-block; background-color: #dc2626; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; font-size: 16px; }
-            .button:hover { background-color: #b91c1c; }
-            .warning { background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🔒 Password Reset Request</h1>
-            </div>
-            <div class="content">
-              <p>Hello <strong>${name}</strong>,</p>
-              <p>We received a request to reset your password for your POLWEL account. Click the button below to reset your password:</p>
-              <div style="text-align: center;">
-                <a href="${resetUrl}" class="button">Reset Password</a>
-              </div>
-              <div class="warning">
-                <strong>⚠️ Security Note:</strong> This link will expire in 1 hour for security purposes. If you didn't request this password reset, please ignore this email.
-              </div>
-              <p>Best regards,<br><strong>POLWEL Security Team</strong></p>
-            </div>
-            <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
-            </div>
-          </div>
-        </body>
+        <html lang="en">
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>POLWEL Password Reset</title>
+            <style>
+              body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
+              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#dc2626 100%); padding: 32px 16px; }
+              .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
+              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #991b1b, #7f1d1d); color: #fef2f2; text-align: left; }
+              .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; }
+              .header p { margin: 4px 0 0; font-size: 14px; color: rgba(254,242,242,0.85); }
+              .content { padding: 32px 28px; }
+              .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
+              .button-card { background: #fee2e2; border: 1px solid #fecaca; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+              .button { display: inline-block; background-color: #dc2626; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
+              .button:hover { background-color: #b91c1c; }
+              .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
+              .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
+              .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; font-weight: 600; }
+              .checklist ul { padding: 0; margin: 0; list-style: none; }
+              .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
+              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #dc2626; color: #fef2f2; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
+              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #fef3c7; border: 1px solid #fbbf24; font-size: 13px; color: #92400e; line-height: 1.6; }
+              .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
+              .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
+              @media (max-width: 600px) {
+                .outer { margin: 0 12px; }
+                .content { padding: 28px 22px; }
+              }
+            </style>
+          </head>
+          <body>
+            <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">
+              <tr>
+                <td align="center">
+                  <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
+                    <tr>
+                      <td class="header">
+                        <h1>🔒 Password Reset Request</h1>
+                        <p>POLWEL Training Management System</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="content">
+                        <p class="greeting">Hello ${name},</p>
+                        <p class="meta">We received a request to reset your password for your POLWEL account. Click the button below to create a new password. This link will expire in <strong>1 hour</strong> for security purposes.</p>
+                        <div class="button-card">
+                          <a href="${resetUrl}" class="button">Reset Your Password</a>
+                        </div>
+                        <div class="checklist">
+                          <p>Security guidelines:</p>
+                          <ul>
+                            <li><span>1</span><div>Only click this button if you requested a password reset.</div></li>
+                            <li><span>2</span><div>Choose a strong password with at least 8 characters, including uppercase, lowercase, and numbers.</div></li>
+                            <li><span>3</span><div>Never share your password with anyone. POLWEL will never ask for it.</div></li>
+                          </ul>
+                        </div>
+                        <div class="warning">⚠️ <strong>Didn&#39;t request this?</strong> If you didn&#39;t request a password reset, please ignore this email or contact our support team immediately to secure your account. Your current password remains unchanged.</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="footer">
+                        &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
         </html>
       `
     };
