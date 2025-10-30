@@ -1508,6 +1508,24 @@ export const courseRunsApi = {
       body: JSON.stringify(payload),
     });
   },
+
+  // Get billing export data
+  getBillingExport: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/billing-export`);
+  },
+
+  // Get certificate data for learners
+  getCertificates: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/certificates`);
+  },
+
+  // Submit waiver form for absent learner
+  submitWaiver: async (courseRunId: string, enrollmentId: string, payload: any) => {
+    return apiRequest(`/course-runs/${courseRunId}/learners/${enrollmentId}/waiver`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
 };
 
 // Define venue interfaces

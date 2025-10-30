@@ -8,8 +8,10 @@ import { DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownM
 import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
 import PaginationControls from "@/components/ui/pagination";
 import { courseRunsApi } from "@/lib/api";
+import { generateBillingXLSX } from "@/lib/billingExport";
+import { GenerateCertificatesDialog } from "@/components/GenerateCertificatesDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, MoreHorizontal, Search } from "lucide-react";
+import { Loader2, MoreHorizontal, Search, FileSpreadsheet, Award } from "lucide-react";
 
 interface CourseRunApiRecord {
   id: string;
@@ -300,6 +302,32 @@ const PostRunManagement: React.FC = () => {
     [navigate]
   );
 
+  const handleGenerateBillingReport = useCallback(
+    async (run: CourseRunRow) => {
+      try {
+        toast({
+          title: "Generating Billing Report",
+          description: `Preparing XLSX export for ${run.courseTitle}...`,
+        });
+
+        await generateBillingXLSX(run.id, run.courseCode);
+
+        toast({
+          title: "Report Downloaded",
+          description: `Billing report for ${run.courseTitle} has been downloaded`,
+        });
+      } catch (error: any) {
+        console.error("Error generating billing report:", error);
+        toast({
+          title: "Export Failed",
+          description: error.message || "Failed to generate billing report",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast]
+  );
+
   const handleGenerateBilling = useCallback(
     (run: CourseRunRow) => {
       toast({
@@ -381,17 +409,31 @@ const PostRunManagement: React.FC = () => {
                 <TableCell className="text-right">
                   <SafeDropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onMouseDown={(event) => event.preventDefault()}>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleViewDetails(run)}>View Details</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewAdministrative(run)}>Administrative Matters</DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <GenerateCertificatesDialog
+                          courseRunId={run.id}
+                          courseRunCode={run.courseCode}
+                          trigger={
+                            <div className="flex items-center w-full">
+                              <Award className="h-4 w-4 mr-2" />
+                              Administrative Matters
+                            </div>
+                          }
+                        />
+                      </DropdownMenuItem>
                       {showGenerateBilling && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleGenerateBilling(run)}>Generate billing</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleGenerateBillingReport(run)}>
+                            <FileSpreadsheet className="h-4 w-4 mr-2" />
+                            Generate Billing Report
+                          </DropdownMenuItem>
                         </>
                       )}
                     </DropdownMenuContent>

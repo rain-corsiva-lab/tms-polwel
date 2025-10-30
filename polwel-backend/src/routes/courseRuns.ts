@@ -85,4 +85,19 @@ router.post('/:courseRunId/learners/:learnerId/resend-confirmation', requirePerm
 // POST /api/course-runs/billing - Save billing information for a course run
 router.post('/billing', requirePermissions('post.course.run.edit'), courseRunController.saveBilling);
 
+// GET /api/course-runs/:id/billing-export - Generate billing XLSX export
+router.get('/:id/billing-export', requirePermissions('post.course.run.view'), courseRunController.generateBillingExport);
+
+// GET /api/course-runs/:id/certificates - Get certificate data for learners
+router.get('/:id/certificates', requirePermissions('post.course.run.view'), courseRunController.generateCertificates);
+
+// POST /api/course-runs/:id/learners/:enrollmentId/waiver - Submit waiver form for absent learner
+router.post('/:id/learners/:enrollmentId/waiver', requirePermissions('post.course.run.edit'), courseRunController.submitWaiverForm);
+
+// GET /api/course-runs/:id/certificates/:learnerId/pdf - Generate individual certificate PDF
+router.get('/:id/certificates/:learnerId/pdf', requirePermissions('post.course.run.view'), courseRunController.generateCertificatePDF);
+
+// POST /api/course-runs/:id/certificates/bulk-zip - Generate bulk certificates ZIP
+router.post('/:id/certificates/bulk-zip', requirePermissions('post.course.run.view'), courseRunController.generateCertificatesZIP);
+
 export default router;

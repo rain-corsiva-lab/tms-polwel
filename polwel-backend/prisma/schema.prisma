@@ -519,6 +519,10 @@ model CourseRunLearner {
   withdrawnBy                   String?
   supportingDocumentWithdrawnId String?
   courseRunBillingEntryId       String?
+  waiverReason                  String?                    @db.Text
+  waiverSupportingDocumentId    String?
+  waiverSubmittedAt             DateTime?
+  certificateGeneratedAt        DateTime?
   createdAt                     DateTime                   @default(now())
   updatedAt                     DateTime                   @updatedAt
   deletedAt                     DateTime?
@@ -529,13 +533,15 @@ model CourseRunLearner {
   courseRunBillingEntry         CourseRunBillingEntry?     @relation(fields: [courseRunBillingEntryId], references: [id])
   courseRun                     CourseRun                  @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
   learner                       Learner                    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  supportingDocumentWithdrawn   Media?                     @relation(fields: [supportingDocumentWithdrawnId], references: [id])
+  supportingDocumentWithdrawn   Media?                     @relation("WithdrawnDocument", fields: [supportingDocumentWithdrawnId], references: [id])
+  waiverSupportingDocument      Media?                     @relation("WaiverDocument", fields: [waiverSupportingDocumentId], references: [id])
 
   @@unique([courseRunId, learnerId])
   @@index([courseRunId])
   @@index([learnerId])
   @@index([courseRunBillingEntryId])
   @@index([supportingDocumentWithdrawnId], map: "course_run_learners_supportingDocumentWithdrawnId_fkey")
+  @@index([waiverSupportingDocumentId])
   @@map("course_run_learners")
 }
 
@@ -573,7 +579,8 @@ model Media {
   updatedAt                DateTime                   @updatedAt
   deletedAt                DateTime?
   confirmationEmailHistory ConfirmationEmailHistory[]
-  courseRunLearners        CourseRunLearner[]
+  courseRunLearnersWithdrawn CourseRunLearner[]      @relation("WithdrawnDocument")
+  courseRunLearnersWaiver    CourseRunLearner[]      @relation("WaiverDocument")
 
   @@map("media")
 }

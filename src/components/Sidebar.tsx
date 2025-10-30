@@ -25,7 +25,7 @@ const userManagementItems: MenuItem[] = [
 
 const courseManagementItems: MenuItem[] = [
   { name: "Courses", href: "/courses", icon: BookOpen, subject: "CourseVenue" },
-  // { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
   { name: "Venue Management", href: "/venue-setup", icon: Building2, subject: "CourseVenue" },
 ];
 
@@ -191,7 +191,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* Post Run Management - Standalone Menu Item */}
-        {/* {postRunManagementVisible && (
+        {postRunManagementVisible && (
           <Can I="view" a="PostCourseRun">
             <NavLink
               to="/post-run-management"
@@ -206,7 +206,7 @@ const Sidebar = ({ className }: SidebarProps) => {
               Post Run Management
             </NavLink>
           </Can>
-        )} */}
+        )}
       </nav>
     </aside>
   );

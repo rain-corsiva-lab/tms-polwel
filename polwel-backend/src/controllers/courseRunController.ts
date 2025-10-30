@@ -18,6 +18,7 @@ import {
   CourseRunWorkflowError,
 } from '../services/courseRunWorkflowService';
 import EmailService from '../services/emailService';
+import { buildCertificatePDFBuffer, buildCertificatesZipBuffer } from '../services/certificateService';
 
 const prisma = new PrismaClient();
 
@@ -3309,6 +3310,449 @@ export const courseRunController = {
     } catch (error) {
       console.error('Error saving billing:', error);
       res.status(500).json(buildErrorResponse('courseRunController.saveBilling', 'Failed to save billing information', error));
+    }
+  },
+
+  // Generate billing XLSX export
+  generateBillingExport: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      // Fetch course run with all related data
+      const courseRun = await prisma.courseRun.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+        },
+        include: {
+          course: true,
+          venue: true,
+          courseRunBilling: {
+            include: {
+              courseRunBillingEntries: {
+                include: {
+                  courseRunLearners: {
+                    where: {
+                      deletedAt: null,
+                    },
+                    include: {
+                      learner: {
+                        select: {
+                          id: true,
+                          fullname: true,
+                          email: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          courseRunLearners: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              learner: {
+                select: {
+                  id: true,
+                  fullname: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          courseRunTrainers: {
+            include: {
+              trainer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({
+          success: false,
+          error: 'Course run not found',
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          courseRun,
+          // Include formatted data for XLSX generation
+          exportData: {
+            title: courseRun.course?.title || '',
+            courseCode: courseRun.course?.courseCode || '',
+            serialNumber: courseRun.serialNumber || '',
+            startDate: courseRun.startDatetime,
+            endDate: courseRun.endDatetime,
+            venue: courseRun.venue?.name || courseRun.specifiedLocation || '',
+            billingRate: courseRun.course?.defaultCourseFee || 0,
+            participantCount: courseRun.courseRunLearners.length,
+            billing: courseRun.courseRunBilling,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error generating billing export:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.generateBillingExport', 'Failed to generate billing export', error));
+    }
+  },
+
+  // Generate certificates for learners
+  generateCertificates: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      // Fetch course run with learners
+      const courseRun = await prisma.courseRun.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+        },
+        include: {
+          course: true,
+          venue: true,
+          courseRunLearners: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              learner: {
+                select: {
+                  id: true,
+                  fullname: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({
+          success: false,
+          error: 'Course run not found',
+        });
+        return;
+      }
+
+      // Fetch all attendance records for this course run
+      const attendanceRecords = await prisma.courseRunLearnerAttendance.findMany({
+        where: {
+          courseRunId: id,
+          deletedAt: null,
+        },
+      });
+
+      // Calculate attendance status for each learner
+      const learnersWithAttendance = courseRun.courseRunLearners.map((enrollment) => {
+        const learnerAttendance = attendanceRecords.filter(
+          (record) => record.learnerId === enrollment.learnerId
+        );
+        const totalDays = learnerAttendance.length;
+        const presentCount = learnerAttendance.filter(
+          (record) => record.attendAM || record.attendPM
+        ).length;
+
+        const isPresent = presentCount > 0; // At least one day present
+
+        return {
+          id: enrollment.id,
+          learnerId: enrollment.learnerId,
+          learnerName: enrollment.learner?.fullname || '',
+          learnerEmail: enrollment.learner?.email || '',
+          isPresent,
+          totalDays,
+          presentDays: presentCount,
+          waiverReason: enrollment.waiverReason,
+          waiverSupportingDocumentId: enrollment.waiverSupportingDocumentId,
+          waiverSubmittedAt: enrollment.waiverSubmittedAt,
+        };
+      });
+
+      res.json({
+        success: true,
+        data: {
+          courseRun: {
+            id: courseRun.id,
+            serialNumber: courseRun.serialNumber,
+            courseName: courseRun.course?.title || '',
+            courseCode: courseRun.course?.courseCode || '',
+            duration: courseRun.course?.duration || 0,
+            durationType: courseRun.course?.durationType || 'days',
+            startDate: courseRun.startDatetime,
+            endDate: courseRun.endDatetime,
+            venue: courseRun.venue?.name || courseRun.specifiedLocation || '',
+          },
+          learners: learnersWithAttendance,
+          summary: {
+            total: learnersWithAttendance.length,
+            present: learnersWithAttendance.filter((l) => l.isPresent).length,
+            absent: learnersWithAttendance.filter((l) => !l.isPresent).length,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error generating certificates:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.generateCertificates', 'Failed to generate certificates', error));
+    }
+  },
+
+  // Submit waiver form for absent learner
+  submitWaiverForm: async (req: Request, res: Response) => {
+    try {
+      const { id, enrollmentId } = req.params;
+      const { waiverReason, waiverDocument } = req.body;
+      const userId = req.user?.userId;
+
+      if (!id || !enrollmentId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID and enrollment ID are required',
+        });
+        return;
+      }
+
+      if (!waiverReason) {
+        res.status(400).json({
+          success: false,
+          error: 'Waiver reason is required',
+        });
+        return;
+      }
+
+      let waiverDocumentId: string | null = null;
+
+      // If there's a document, store it in Media table
+      if (waiverDocument && waiverDocument.base64) {
+        try {
+          // Remove data URL prefix if present
+          const base64Data = waiverDocument.base64.replace(/^data:[^;]+;base64,/, '');
+          const buffer = Buffer.from(base64Data, 'base64');
+
+          const uploadsDir = path.join(process.cwd(), 'uploads', 'waiver-documents');
+          await fs.mkdir(uploadsDir, { recursive: true });
+
+          const safeFileName = `${Date.now()}-${waiverDocument.filename || 'waiver_document'}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const absolutePath = path.join(uploadsDir, safeFileName);
+          await fs.writeFile(absolutePath, buffer);
+
+          const relativePath = path.relative(process.cwd(), absolutePath).replace(/\\/g, '/');
+
+          const media = await prisma.media.create({
+            data: {
+              filename: safeFileName,
+              originalName: waiverDocument.filename || safeFileName,
+              mimeType: waiverDocument.mimetype || 'application/pdf',
+              size: waiverDocument.size || buffer.length,
+              path: relativePath,
+              url: `/${relativePath}`,
+            },
+          });
+
+          waiverDocumentId = media.id;
+        } catch (mediaError) {
+          console.error('Error saving waiver document:', mediaError);
+          // Continue without document if upload fails
+        }
+      }
+
+      // Update enrollment with waiver information
+      const enrollment = await prisma.courseRunLearner.update({
+        where: {
+          id: enrollmentId,
+        },
+        data: {
+          waiverReason,
+          waiverSupportingDocumentId: waiverDocumentId,
+          waiverSubmittedAt: new Date(),
+        },
+        include: {
+          learner: {
+            select: {
+              id: true,
+              fullname: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Waiver form submitted successfully',
+        enrollment,
+      });
+    } catch (error) {
+      console.error('Error submitting waiver form:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.submitWaiverForm', 'Failed to submit waiver form', error));
+    }
+  },
+
+  generateCertificatePDF: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id, learnerId: enrollmentId } = req.params;
+      const userId = req.user?.userId;
+
+      if (!id || !enrollmentId) {
+        res.status(400).json(buildErrorResponse('courseRunController.generateCertificatePDF', 'Course run ID and learner ID are required', new Error('Missing IDs')));
+        return;
+      }
+
+      if (!userId) {
+        res.status(401).json(buildErrorResponse('courseRunController.generateCertificatePDF', 'User not authenticated', new Error('No user ID')));
+        return;
+      }
+
+      // Fetch enrollment with related data
+      const enrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          id: enrollmentId,
+          courseRunId: id,
+          deletedAt: null,
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
+      });
+
+      if (!enrollment) {
+        res.status(404).json(buildErrorResponse('courseRunController.generateCertificatePDF', 'Enrollment not found', new Error('Not found')));
+        return;
+      }
+
+      const courseInfo = (enrollment.courseRun as any)?.course;
+      const certificateData = {
+        learnerName: (enrollment.learner as any)?.fullname || 'Participant',
+        courseName: courseInfo?.title || 'Course',
+        duration: Number(courseInfo?.duration) || 0,
+        durationType: courseInfo?.durationType || 'days',
+        endDate: new Date((enrollment.courseRun as any).endDatetime),
+        courseCode: courseInfo?.courseCode || undefined,
+      };
+
+      const pdfBuffer = await buildCertificatePDFBuffer(certificateData);
+
+      const safeLearnerName = certificateData.learnerName?.replace(/[^a-z0-9]+/gi, '_') || 'Learner';
+      const safeCourseCode = certificateData.courseCode?.replace(/[^a-z0-9]+/gi, '_');
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=Certificate_${safeLearnerName}${safeCourseCode ? `_${safeCourseCode}` : ''}.pdf`
+      );
+
+      res.status(200).send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating certificate PDF:', error);
+      if (!res.headersSent) {
+        res.status(500).json(buildErrorResponse('courseRunController.generateCertificatePDF', 'Failed to generate certificate PDF', error));
+      }
+    }
+  },
+
+  generateCertificatesZIP: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { learnerIds } = req.body;
+      const userId = req.user?.userId;
+
+      if (!id) {
+        res.status(400).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'Course run ID is required', new Error('Missing ID')));
+        return;
+      }
+
+      if (!userId) {
+        res.status(401).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'User not authenticated', new Error('No user ID')));
+        return;
+      }
+
+      if (!learnerIds || !Array.isArray(learnerIds) || learnerIds.length === 0) {
+        res.status(400).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'Please provide learner IDs', new Error('Invalid learner IDs')));
+        return;
+      }
+
+      // Fetch all enrollments
+      const enrollments = await prisma.courseRunLearner.findMany({
+        where: {
+          courseRunId: id,
+          id: {
+            in: learnerIds,
+          },
+          deletedAt: null,
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
+      });
+
+      if (enrollments.length === 0) {
+        res.status(404).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'No enrollments found', new Error('Not found')));
+        return;
+      }
+
+      const certificatesData = enrollments.map((enrollment) => {
+        const courseInfo = (enrollment.courseRun as any)?.course;
+        return {
+          learnerName: (enrollment.learner as any)?.fullname || 'Participant',
+          courseName: courseInfo?.title || 'Course',
+          duration: Number(courseInfo?.duration) || 0,
+          durationType: courseInfo?.durationType || 'days',
+          endDate: new Date((enrollment.courseRun as any).endDatetime),
+          courseCode: courseInfo?.courseCode || undefined,
+        };
+      });
+
+      const zipBuffer = await buildCertificatesZipBuffer(certificatesData);
+
+      const zipFileName = `Certificates_${new Date().toISOString().split('T')[0]}.zip`;
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename=${zipFileName}`);
+      res.setHeader('Content-Length', zipBuffer.length.toString());
+      res.status(200).send(zipBuffer);
+    } catch (error) {
+      console.error('Error generating certificates ZIP:', error);
+      if (!res.headersSent) {
+        res.status(500).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'Failed to generate certificates ZIP', error));
+      }
     }
   },
 };
