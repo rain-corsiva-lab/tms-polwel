@@ -369,7 +369,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <CalendarIcon className="h-5 w-5" />
-              <CardTitle>{trainerName || "Trainer"} Calendar</CardTitle>
+              <CardTitle>{trainerName || "Trainer"}'s Calendar</CardTitle>
             </div>
           </div>
           {/* <CardDescription>Manage unavailable dates and blockouts for this trainer</CardDescription> */}
