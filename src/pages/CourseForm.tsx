@@ -41,7 +41,6 @@ interface FormState {
   remarks: string;
   defaultCourseFee: number;
   discounts: any[];
-  contractsFeePayout: number;
   minParticipants: number;
   maxParticipants: number | string;
 }
@@ -64,7 +63,6 @@ const initialForm: FormState = {
   remarks: "",
   defaultCourseFee: 0,
   discounts: [],
-  contractsFeePayout: 0,
   minParticipants: 1,
   maxParticipants: "",
 };
@@ -200,7 +198,6 @@ const CourseForm: React.FC = () => {
             remarks: c.remarks || "",
             defaultCourseFee: c.defaultCourseFee || 0,
             discounts: Array.isArray(c.discounts) ? c.discounts : [],
-            contractsFeePayout: c.contractsFeePayout || 0,
             minParticipants: c.minParticipants || 1,
             maxParticipants: c.maxParticipants || "",
           }));
@@ -333,7 +330,6 @@ const CourseForm: React.FC = () => {
       remarks: formData.remarks,
       defaultCourseFee: formData.defaultCourseFee,
       discounts: formData.discounts,
-      contractsFeePayout: formData.contractsFeePayout,
       minParticipants: formData.minParticipants,
       maxParticipants: formData.maxParticipants || undefined,
     };
@@ -401,7 +397,7 @@ const CourseForm: React.FC = () => {
         <Tabs defaultValue="information" className="w-full">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="information">Information</TabsTrigger>
-            <TabsTrigger value="fees">Fees & Revenue</TabsTrigger>
+            <TabsTrigger value="fees">Revenues & Expenses</TabsTrigger>
             <TabsTrigger value="discounts">Discounts</TabsTrigger>
           </TabsList>
           <TabsContent value="information" className="mt-4">
@@ -426,7 +422,7 @@ const CourseForm: React.FC = () => {
           <TabsContent value="fees" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Fees & Revenue</CardTitle>
+                <CardTitle>Revenues & Expenses</CardTitle>
               </CardHeader>
               <CardContent>
                 <FeesRevenueTab formData={formData as any} onInputChange={handleInputChange as any} />

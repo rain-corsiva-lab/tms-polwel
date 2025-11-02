@@ -12,6 +12,7 @@ import {
   LearnerEmailStatus,
 } from '@prisma/client';
 import { z } from 'zod';
+import { convertDecimalsToNumbers } from '../lib/decimal-converter';
 import {
   courseRunWorkflowService,
   CourseRunWorkflowAction,
@@ -440,6 +441,8 @@ const createCourseRunSchema = z.object({
   venueFee: z.number().nullable().optional(),
   venueMaxParticipant: z.number().int().min(1).nullable().optional(),
   perHeadFeeIfMaxExceed: z.number().nullable().optional(),
+  venuePerHeadIfExceed: z.number().nullable().optional(),
+  contractFees: z.number().nullable().optional(),
   otherFee: z.number().nullable().optional(),
   adminFee: z.number().nullable().optional(),
   contingencyFee: z.number().nullable().optional(),
@@ -656,9 +659,13 @@ export const courseRunController = {
 
       const totalPages = Math.ceil(total / limit);
 
+      // Convert Decimal fields to numbers for JSON serialization
+      const convertedCourseRuns = convertDecimalsToNumbers(formattedCourseRuns);
+
+      res.setHeader('Content-Type', 'application/json');
       res.json({
         success: true,
-        courseRuns: formattedCourseRuns,
+        courseRuns: JSON.parse(JSON.stringify(convertedCourseRuns)),
         pagination: {
           page,
           limit,
@@ -820,12 +827,20 @@ export const courseRunController = {
         },
       };
 
+      // Convert Decimal fields to numbers for JSON serialization
+      const finalCourseRun = convertDecimalsToNumbers(transformedCourseRun);
+
+      // Send response with proper JSON serialization
+      res.setHeader('Content-Type', 'application/json');
       res.json({
         success: true,
-        courseRun: transformedCourseRun,
+        courseRun: JSON.parse(JSON.stringify(finalCourseRun)),
       });
     } catch (error) {
       console.error('Error fetching course run:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : '';
+      console.error('Error stack:', errorStack);
       res.status(500).json(buildErrorResponse('courseRunController.getById', 'Failed to fetch course run', error));
     }
   },
@@ -886,9 +901,12 @@ export const courseRunController = {
         console.warn('Failed to calculate venue final fee after course run create:', err);
       }
 
-      res.status(201).json({
+      // Convert Decimal fields to numbers for JSON serialization
+      const convertedCourseRun = convertDecimalsToNumbers(courseRun);
+
+      res.status(201).setHeader('Content-Type', 'application/json').json({
         success: true,
-        courseRun,
+        courseRun: JSON.parse(JSON.stringify(convertedCourseRun)),
         message: 'Course run created successfully',
       });
     } catch (error) {
@@ -966,9 +984,11 @@ export const courseRunController = {
         console.warn('Failed to calculate venue final fee after course run update:', err);
       }
 
-      res.json({
+      const convertedCourseRun = convertDecimalsToNumbers(courseRun);
+
+      res.setHeader('Content-Type', 'application/json').json({
         success: true,
-        courseRun,
+        courseRun: JSON.parse(JSON.stringify(convertedCourseRun)),
         message: 'Course run updated successfully',
       });
     } catch (error) {
@@ -1024,12 +1044,14 @@ export const courseRunController = {
         statusLastEvaluatedAt: result.courseRun.statusLastEvaluatedAt,
       };
 
-      res.json({
+      const convertedResult = convertDecimalsToNumbers({
+        ...result.courseRun,
+        workflow,
+      });
+
+      res.setHeader('Content-Type', 'application/json').json({
         success: true,
-        courseRun: {
-          ...result.courseRun,
-          workflow,
-        },
+        courseRun: JSON.parse(JSON.stringify(convertedResult)),
         action: result.action,
         emailReport: result.emailReport,
         message: `${result.action.label} completed successfully`,

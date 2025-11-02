@@ -82,6 +82,8 @@ interface CourseRunDetailData {
   venueFinalFee: number | null;
   venueMaxParticipant: number | null;
   perHeadFeeIfMaxExceed: number | null;
+  venuePerHeadIfExceed: number | null;
+  contractFees: number | null;
   otherFee: number | null;
   adminFee: number | null;
   contingencyFee: number | null;
@@ -692,7 +694,7 @@ const CourseRunDetail: React.FC = () => {
               <TabsTrigger value="course-info">Course Run Information</TabsTrigger>
               <TabsTrigger value="learner-particulars">Learner Particulars ({courseRun.courseRunLearners?.length || 0})</TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
-              <TabsTrigger value="fees-expenses">Fees & Expenses</TabsTrigger>
+              <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
             </TabsList>
 
             {/* Course Run Information Tab */}
@@ -1398,24 +1400,21 @@ const CourseRunDetail: React.FC = () => {
             {/* Fees & Expenses Tab */}
             <TabsContent value="fees-expenses" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Fees & Expenses</h3>
-                {/* <Button variant="outline" size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
-                  Edit Fees & Expenses
-                </Button> */}
+                <h3 className="text-lg font-medium">Revenue & Expenses</h3>
               </div>
 
               <div className="space-y-6">
-                {/* Course Fee Configuration */}
+                {/* REVENUE SECTION */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center text-sm">
                       <DollarSign className="h-4 w-4 mr-2" />
-                      Course Fee Configuration
+                      Revenue
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CardContent className="grid grid-cols-1 md:grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Course Fee ($)</Label>
+                      <Label className="text-sm font-medium">Default Course Fee ($)</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -1424,10 +1423,35 @@ const CourseRunDetail: React.FC = () => {
                         onChange={(e) => handleEditField("baseCourseFee", e.target.value)}
                         className={isEditing ? "" : "bg-gray-50"}
                       />
-                      <p className="text-xs text-gray-500">Base fee for this course run</p>
+                      <p className="text-xs text-gray-500">Fee charged to learners/client per pax</p>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* EXPENSES SECTION */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Expenses</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Contract Fees */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Fee Type</Label>
+                      <Label className="text-sm font-medium">Contract Fees ($)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={isEditing ? editData?.contractFees : courseRun.contractFees ?? ""}
+                        disabled={!isEditing}
+                        onChange={(e) => handleEditField("contractFees", e.target.value)}
+                        className={isEditing ? "" : "bg-gray-50"}
+                      />
+                      <p className="text-xs text-gray-500">Contract/trainer fees paid out</p>
+                    </div>
+
+                    {/* Venue Fee Type */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Venue Fee Type</Label>
                       {isEditing ? (
                         <Select value={editData?.feeType || ""} onValueChange={(v) => handleEditField("feeType", v)}>
                           <SelectTrigger>
@@ -1442,64 +1466,54 @@ const CourseRunDetail: React.FC = () => {
                       ) : (
                         <Input value={courseRun.feeType || ""} disabled className="bg-gray-50" />
                       )}
-                      <p className="text-xs text-gray-500">Pricing model for venue fee calculation</p>
+                      <p className="text-xs text-gray-500">Pricing model for venue charges</p>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Additional Fees */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Additional Fees</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Venue-related fees */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={isEditing ? editData?.venueFee : courseRun.venueFee ?? ""}
-                          disabled={!isEditing}
-                          onChange={(e) => handleEditField("venueFee", e.target.value)}
-                          className={isEditing ? "" : "bg-gray-50"}
-                        />
-                        <p className="text-xs text-gray-500">Base venue rental fee</p>
+                    {/* Base Venue Fee */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={isEditing ? editData?.venueFee : courseRun.venueFee ?? ""}
+                        disabled={!isEditing}
+                        onChange={(e) => handleEditField("venueFee", e.target.value)}
+                        className={isEditing ? "" : "bg-gray-50"}
+                      />
+                      <p className="text-xs text-gray-500">Base venue rental fee</p>
+                    </div>
+
+                    {/* Show venue-specific fields if PER_VENUE fee type */}
+                    {(isEditing ? editData?.feeType : courseRun.feeType) === "PER_VENUE" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Max Participants (Venue)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={isEditing ? editData?.venueMaxParticipant : courseRun.venueMaxParticipant ?? ""}
+                            disabled={!isEditing}
+                            onChange={(e) => handleEditField("venueMaxParticipant", e.target.value)}
+                            className={isEditing ? "" : "bg-gray-50"}
+                          />
+                          <p className="text-xs text-gray-500">Maximum participants before per-head charges apply</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Per Head Fee if Max Exceeded ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={isEditing ? editData?.perHeadFeeIfMaxExceed : courseRun.perHeadFeeIfMaxExceed ?? ""}
+                            disabled={!isEditing}
+                            onChange={(e) => handleEditField("perHeadFeeIfMaxExceed", e.target.value)}
+                            className={isEditing ? "" : "bg-gray-50"}
+                          />
+                          <p className="text-xs text-gray-500">Additional per-head fee beyond max participants</p>
+                        </div>
                       </div>
-
-                      {/* Show venue-specific fields if PER_VENUE fee type */}
-                      {(isEditing ? editData?.feeType : courseRun.feeType) === "PER_VENUE" && (
-                        <>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">Max Participants (Venue)</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={isEditing ? editData?.venueMaxParticipant : courseRun.venueMaxParticipant ?? ""}
-                              disabled={!isEditing}
-                              onChange={(e) => handleEditField("venueMaxParticipant", e.target.value)}
-                              className={isEditing ? "" : "bg-gray-50"}
-                            />
-                            <p className="text-xs text-gray-500">Maximum participants before per-head charges apply</p>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">Per Head Fee if Max Exceeded ($)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={isEditing ? editData?.perHeadFeeIfMaxExceed : courseRun.perHeadFeeIfMaxExceed ?? ""}
-                              disabled={!isEditing}
-                              onChange={(e) => handleEditField("perHeadFeeIfMaxExceed", e.target.value)}
-                              className={isEditing ? "" : "bg-gray-50"}
-                            />
-                            <p className="text-xs text-gray-500">Additional fee per participant beyond max</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    )}
 
                     {/* Other fees */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">

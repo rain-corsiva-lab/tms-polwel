@@ -38,19 +38,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
         <p className="text-sm text-muted-foreground">per pax w/o GST</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="billingRate">Billing Rate ($)</Label>
-          <Input
-            id="billingRate"
-            type="number"
-            step="0.01"
-            min="0"
-            value={formatDisplayValue(formData.billingRate)}
-            onChange={(e) => handleNumericInputChange("billingRate", e.target.value)}
-            placeholder="0.00"
-          />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="venueFee">Venue Expenses ($)</Label>
           <div className="relative">
@@ -67,18 +55,6 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
             {formData.venueFeeType && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{formData.venueFeeType}</span>}
           </div>
           {formData.venueFeeType && <p className="text-xs text-muted-foreground">Auto-filled from selected venue</p>}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="contractsFeePayout">Contracts Fees ($)</Label>
-          <Input
-            id="contractsFeePayout"
-            type="number"
-            step="0.01"
-            min="0"
-            value={formatDisplayValue(formData.contractsFeePayout)}
-            onChange={(e) => handleNumericInputChange("contractsFeePayout", e.target.value)}
-            placeholder="0.00"
-          />
         </div>
       </div>
 

@@ -147,8 +147,6 @@ model Course {
   specifiedLocation  String?
   defaultCourseFee   Float           @default(0)
   discounts          Json?
-  billingRate        Float           @default(0)
-  contractsFeePayout Float           @default(0)
   venueFeeType       String?
   bookings           Booking[]
   runs               CourseRun[]
@@ -200,6 +198,7 @@ model CourseRun {
   venueFinalFee                  Decimal?                        @db.Decimal(10, 2)
   venueMaxParticipant            Int?
   perHeadFeeIfMaxExceed          Decimal?                        @db.Decimal(10, 2)
+  venuePerHeadIfExceed           Decimal?                        @db.Decimal(10, 2)
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
   adminFee                       Decimal?                        @db.Decimal(10, 2)
@@ -219,6 +218,7 @@ model CourseRun {
   specifiedLocation              String?
   startDatetime                  DateTime?
   venueType                      VenueType?
+  contractFees                   Decimal?                        @db.Decimal(10, 2)
   bookings                       Booking[]
   confirmationEmailHistory       ConfirmationEmailHistory[]
   courseRunBilling               CourseRunBilling?
