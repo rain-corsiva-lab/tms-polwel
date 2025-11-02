@@ -33,6 +33,7 @@ interface FormState {
   duration: string;
   durationType: string;
   trainer: string[];
+  contractFees: number;
   venueFee: number;
   venueFeeType: string;
   venue: string;
@@ -55,6 +56,7 @@ const initialForm: FormState = {
   duration: "",
   durationType: "days",
   trainer: [],
+  contractFees: 0,
   venueFee: 0,
   venueFeeType: "",
   venue: "",
@@ -190,6 +192,7 @@ const CourseForm: React.FC = () => {
             duration: c.duration || "",
             durationType: c.durationType || "days",
             trainer: combinedAssignmentIds,
+            contractFees: c.contractFees || 0,
             venueFee: c.venueFee || 0,
             venueFeeType: c.venueFeeType || "",
             venue: c.venue || "",
@@ -322,6 +325,7 @@ const CourseForm: React.FC = () => {
       duration: formData.duration,
       durationType: formData.durationType,
       trainers: formData.trainer,
+      contractFees: formData.contractFees,
       venueFee: formData.venueFee,
       venueFeeType: formData.venueFeeType,
       venue: formData.venue,

@@ -38,10 +38,9 @@ const CourseCreateSchema = z.object({
   
   // Simplified financial fields
   defaultCourseFee: z.number().default(0),
-  billingRate: z.number().default(0),
+  contractFees: z.number().default(0),
   venueFee: z.number().default(0), // used as Venue Expenses
   venueFeeType: z.string().optional(), // Fee type suffix (/ venue or / head)
-  contractsFeePayout: z.number().default(0),
   discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional()
 });
 
@@ -296,11 +295,10 @@ export const coursesController = {
       
       // Simplified financial fields
       if (data.defaultCourseFee !== undefined) courseData.defaultCourseFee = data.defaultCourseFee;
-      if (data.billingRate !== undefined) courseData.billingRate = data.billingRate;
+      if (data.contractFees !== undefined) courseData.contractFees = data.contractFees;
       if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
       if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
-  if (data.contractsFeePayout !== undefined) courseData.contractsFeePayout = data.contractsFeePayout;
-  if (data.discounts !== undefined) courseData.discounts = data.discounts;
+      if (data.discounts !== undefined) courseData.discounts = data.discounts;
 
       const course = await prisma.course.create({
         data: courseData,

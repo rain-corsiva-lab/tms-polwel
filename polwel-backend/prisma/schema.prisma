@@ -147,6 +147,7 @@ model Course {
   specifiedLocation  String?
   defaultCourseFee   Float           @default(0)
   discounts          Json?
+  contractFees       Float           @default(0)
   venueFeeType       String?
   bookings           Booking[]
   runs               CourseRun[]

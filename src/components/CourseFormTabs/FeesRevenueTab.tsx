@@ -40,6 +40,20 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label htmlFor="contractFees">Contract Fees ($)</Label>
+          <Input
+            id="contractFees"
+            type="number"
+            step="0.01"
+            min="0"
+            value={formatDisplayValue(formData.contractFees)}
+            onChange={(e) => handleNumericInputChange("contractFees", e.target.value)}
+            placeholder="0.00"
+          />
+          <p className="text-sm text-muted-foreground">Trainer/contract fees paid out</p>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="venueFee">Venue Expenses ($)</Label>
           <div className="relative">
             <Input
