@@ -10,28 +10,22 @@ interface MonthInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
 
 // Format YYYY-MM to "MonthName YYYY" for display
 const formatMonthDisplay = (yyyyMm: string): string => {
-  if (!yyyyMm || !yyyyMm.includes('-')) return '';
-  const [year, month] = yyyyMm.split('-');
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  if (!yyyyMm || !yyyyMm.includes("-")) return "";
+  const [year, month] = yyyyMm.split("-");
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const monthIndex = parseInt(month, 10) - 1;
   if (monthIndex >= 0 && monthIndex < 12) {
     return `${monthNames[monthIndex]} ${year}`;
   }
-  return '';
+  return "";
 };
 
 // Parse "MonthName YYYY" or "MM/YYYY" back to YYYY-MM
 const parseMonthInput = (text: string): string | null => {
   if (!text) return null;
-  
-  const monthNames = [
-    'january', 'february', 'march', 'april', 'may', 'june',
-    'july', 'august', 'september', 'october', 'november', 'december'
-  ];
-  
+
+  const monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+
   // Try to match "MonthName YYYY" format
   const parts = text.trim().split(/\s+/);
   if (parts.length === 2) {
@@ -39,29 +33,23 @@ const parseMonthInput = (text: string): string | null => {
     const year = parts[1];
     const monthIndex = monthNames.indexOf(monthStr);
     if (monthIndex >= 0 && /^\d{4}$/.test(year)) {
-      const month = String(monthIndex + 1).padStart(2, '0');
+      const month = String(monthIndex + 1).padStart(2, "0");
       return `${year}-${month}`;
     }
   }
-  
+
   // Try MM/YYYY format
   const slashMatch = text.match(/^(\d{1,2})\/(\d{4})$/);
   if (slashMatch) {
-    const month = slashMatch[1].padStart(2, '0');
+    const month = slashMatch[1].padStart(2, "0");
     const year = slashMatch[2];
     return `${year}-${month}`;
   }
-  
+
   return null;
 };
 
-export const MonthInput: React.FC<MonthInputProps> = ({ 
-  value = "", 
-  onChange, 
-  id, 
-  className, 
-  ...rest 
-}) => {
+export const MonthInput: React.FC<MonthInputProps> = ({ value = "", onChange, id, className, ...rest }) => {
   // visibleText stores "MonthName YYYY" for display
   const [visibleText, setVisibleText] = useState<string>(() => formatMonthDisplay(value));
 
@@ -76,7 +64,7 @@ export const MonthInput: React.FC<MonthInputProps> = ({
   const openNativePicker = () => {
     const el = nativeRef.current as any;
     if (!el) return;
-    if (typeof el.showPicker === 'function') {
+    if (typeof el.showPicker === "function") {
       try {
         el.showPicker();
         return;
@@ -94,11 +82,14 @@ export const MonthInput: React.FC<MonthInputProps> = ({
     onChange && onChange(parsed ?? undefined);
   };
 
-  // When native month input changes (picker), update parent with YYYY-MM and visible text
+  // When native month input changes (picker), update parent with YYYY-MM and visible text immediately
   const onNativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const yyyyMm = e.target.value; // YYYY-MM
-    onChange && onChange(yyyyMm || undefined);
     setVisibleText(formatMonthDisplay(yyyyMm));
+    // Trigger onChange immediately
+    if (onChange) {
+      onChange(yyyyMm || undefined);
+    }
   };
 
   return (

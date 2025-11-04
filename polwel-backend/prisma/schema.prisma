@@ -589,11 +589,6 @@ model Media {
 model BillingReport {
   id                   String              @id @default(cuid())
   billingMonth         String              // Month in format "March 2025"
-  totalCourseRuns      Int                 @default(0)
-  totalParticipants    Int                 @default(0)
-  contractFees         Decimal?            @db.Decimal(15, 2)
-  venueFees            Decimal?            @db.Decimal(15, 2)
-  totalAmount          Decimal?            @db.Decimal(15, 2)
   status               BillingStatus       @default(ALL_INCOMPLETED)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt

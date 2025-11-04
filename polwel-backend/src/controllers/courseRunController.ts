@@ -87,11 +87,6 @@ const findOrCreateBillingReport = async (billingMonth: string): Promise<string> 
     billingReport = await prisma.billingReport.create({
       data: {
         billingMonth,
-        totalCourseRuns: 0,
-        totalParticipants: 0,
-        contractFees: 0,
-        venueFees: 0,
-        totalAmount: 0,
         status: 'ALL_INCOMPLETED',
       },
     });
@@ -3556,60 +3551,13 @@ export const courseRunController = {
         data: { status: newStatus },
       });
 
-      // Update billing report totals if connected
+      // Calculate and update billing report status based on course run statuses if connected
       if (billingReportId) {
-        const allBillings = await prisma.courseRunBilling.findMany({
-          where: {
-            billingReportId,
-            deletedAt: null,
-          },
-          include: {
-            courseRun: {
-              include: {
-                courseRunLearners: true,
-              },
-            },
-          },
-        });
-
-        let totalRuns = 0;
-        let totalPax = 0;
-        let totalContractFees = 0;
-        let totalVenueFees = 0;
-
-        for (const bill of allBillings) {
-          totalRuns++;
-          totalPax += bill.courseRun.courseRunLearners.length;
-          
-          const contractFee = bill.contractInvoiceAmount 
-            ? (typeof bill.contractInvoiceAmount === 'object' && 'toNumber' in bill.contractInvoiceAmount 
-                ? bill.contractInvoiceAmount.toNumber() 
-                : Number(bill.contractInvoiceAmount))
-            : 0;
-          
-          const venueFee = bill.venueInvoiceAmount 
-            ? (typeof bill.venueInvoiceAmount === 'object' && 'toNumber' in bill.venueInvoiceAmount 
-                ? bill.venueInvoiceAmount.toNumber() 
-                : Number(bill.venueInvoiceAmount))
-            : 0;
-
-          totalContractFees += contractFee;
-          totalVenueFees += venueFee;
-        }
-
-        const totalAmount = totalContractFees + totalVenueFees;
-
-        // Calculate billing report status based on course run statuses
         const calculatedStatus = await calculateBillingReportStatus(billingReportId);
 
         await prisma.billingReport.update({
           where: { id: billingReportId },
           data: {
-            totalCourseRuns: totalRuns,
-            totalParticipants: totalPax,
-            contractFees: totalContractFees,
-            venueFees: totalVenueFees,
-            totalAmount,
             status: calculatedStatus,
           },
         });

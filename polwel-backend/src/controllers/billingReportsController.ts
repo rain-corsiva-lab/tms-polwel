@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth";
 import prisma from "../lib/prisma";
+import { toNumber } from "../lib/decimal-converter";
 
 // ============== CONTROLLERS ==============
 
@@ -24,40 +25,8 @@ export const billingReportsController = {
         };
       }
 
-      // Filter by month range
-      // Frontend sends format "YYYY-MM", we need to convert to "MonthName YYYY"
-      if (startMonth || endMonth) {
-        const monthNames = [
-          'January', 'February', 'March', 'April', 'May', 'June',
-          'July', 'August', 'September', 'October', 'November', 'December'
-        ];
-        
-        const convertToMonthString = (yyyyMm: string): string => {
-          const parts = yyyyMm.split('-');
-          const year = parts[0] || '';
-          const month = parts[1] || '01';
-          const monthIndex = parseInt(month, 10) - 1;
-          return `${monthNames[monthIndex]} ${year}`;
-        };
-
-        if (startMonth && endMonth && typeof startMonth === 'string' && typeof endMonth === 'string') {
-          const startMonthStr = convertToMonthString(startMonth);
-          const endMonthStr = convertToMonthString(endMonth);
-          
-          whereClause.AND = [
-            { billingMonth: { gte: startMonthStr } },
-            { billingMonth: { lte: endMonthStr } },
-          ];
-        } else if (startMonth && typeof startMonth === 'string') {
-          const startMonthStr = convertToMonthString(startMonth);
-          whereClause.billingMonth = { gte: startMonthStr };
-        } else if (endMonth && typeof endMonth === 'string') {
-          const endMonthStr = convertToMonthString(endMonth);
-          whereClause.billingMonth = { lte: endMonthStr };
-        }
-      }
-
-      const billingReports = await prisma.billingReport.findMany({
+      // Fetch all billing reports (we'll filter by date range in memory)
+      let billingReports = await prisma.billingReport.findMany({
         where: whereClause,
         include: {
           courseRunBillings: {
@@ -76,13 +45,97 @@ export const billingReportsController = {
         },
       });
 
-      // Format the response
-      const formatted = billingReports.map((report: any) => ({
-        ...report,
-        contractFees: report.contractFees?.toNumber() ?? 0,
-        venueFees: report.venueFees?.toNumber() ?? 0,
-        totalAmount: report.totalAmount?.toNumber() ?? 0,
-      }));
+      // Helper function to convert "MonthName YYYY" to Date object for comparison
+      const parseMonthString = (monthStr: string): Date | null => {
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        
+        const parts = monthStr.split(' ');
+        if (parts.length !== 2) return null;
+        
+        const monthName = parts[0] || '';
+        const yearStr = parts[1] || '';
+        const year = parseInt(yearStr, 10);
+        const monthIndex = monthNames.indexOf(monthName);
+        
+        if (monthIndex === -1 || isNaN(year)) return null;
+        
+        return new Date(year, monthIndex, 1);
+      };
+
+      // Filter by month range in memory (proper date comparison)
+      if (startMonth && typeof startMonth === 'string') {
+        const parts = startMonth.split('-').map(Number);
+        const startYear = parts[0];
+        const startMonthNum = parts[1];
+        
+        if (startYear && startMonthNum) {
+          billingReports = billingReports.filter(report => {
+            const reportDate = parseMonthString(report.billingMonth);
+            if (!reportDate) return false;
+            
+            const reportYear = reportDate.getFullYear();
+            const reportMonth = reportDate.getMonth(); // 0-indexed
+            
+            // Compare year first, then month
+            if (reportYear > startYear) return true;
+            if (reportYear < startYear) return false;
+            return reportMonth >= (startMonthNum - 1); // startMonthNum is 1-indexed, convert to 0-indexed
+          });
+        }
+      }
+
+      if (endMonth && typeof endMonth === 'string') {
+        const parts = endMonth.split('-').map(Number);
+        const endYear = parts[0];
+        const endMonthNum = parts[1];
+        
+        if (endYear && endMonthNum) {
+          billingReports = billingReports.filter(report => {
+            const reportDate = parseMonthString(report.billingMonth);
+            if (!reportDate) return false;
+            
+            const reportYear = reportDate.getFullYear();
+            const reportMonth = reportDate.getMonth(); // 0-indexed
+            
+            // Compare year first, then month
+            if (reportYear < endYear) return true;
+            if (reportYear > endYear) return false;
+            return reportMonth <= (endMonthNum - 1); // endMonthNum is 1-indexed, convert to 0-indexed
+          });
+        }
+      }
+
+      // Format the response with dynamically computed totals
+      const formatted = billingReports.map((report: any) => {
+        // Compute totals from courseRunBillings relations
+        const totalCourseRuns = report.courseRunBillings.length;
+        let totalParticipants = 0;
+        let contractFees = 0;
+        let venueFees = 0;
+
+        report.courseRunBillings.forEach((billing: any) => {
+          // Sum participants
+          totalParticipants += billing.courseRun?.courseRunLearners?.length || 0;
+          
+          // Sum fees
+          contractFees += toNumber(billing.contractInvoiceAmount) ?? 0;
+          venueFees += toNumber(billing.venueInvoiceAmount) ?? 0;
+        });
+
+        const totalAmount = contractFees + venueFees;
+
+        return {
+          ...report,
+          totalCourseRuns,
+          totalParticipants,
+          contractFees,
+          venueFees,
+          totalAmount,
+        };
+      });
 
       return res.json({
         success: true,
@@ -134,27 +187,43 @@ export const billingReportsController = {
       // won't receive Decimal objects which can lead to string concatenation issues.
       const normalizedCourseRunBillings = (billingReport.courseRunBillings || []).map((b: any) => ({
         ...b,
-        contractInvoiceAmount: b.contractInvoiceAmount?.toNumber ? b.contractInvoiceAmount.toNumber() : Number(b.contractInvoiceAmount) || 0,
-        venueInvoiceAmount: b.venueInvoiceAmount?.toNumber ? b.venueInvoiceAmount.toNumber() : Number(b.venueInvoiceAmount) || 0,
+        contractInvoiceAmount: toNumber(b.contractInvoiceAmount) ?? 0,
+        venueInvoiceAmount: toNumber(b.venueInvoiceAmount) ?? 0,
         courseRun: {
           ...b.courseRun,
           courseRunLearners: b.courseRun?.courseRunLearners || [],
         },
         courseRunBillingEntries: (b.courseRunBillingEntries || []).map((entry: any) => ({
           ...entry,
-          invoiceAmount: entry.invoiceAmount?.toNumber ? entry.invoiceAmount.toNumber() : Number(entry.invoiceAmount) || 0,
+          invoiceAmount: toNumber(entry.invoiceAmount) ?? 0,
           courseRunLearners: entry.courseRunLearners || [],
         })),
       }));
+
+      // Compute totals dynamically from courseRunBillings
+      const totalCourseRuns = billingReport.courseRunBillings.length;
+      let totalParticipants = 0;
+      let contractFees = 0;
+      let venueFees = 0;
+
+      billingReport.courseRunBillings.forEach((billing: any) => {
+        totalParticipants += billing.courseRun?.courseRunLearners?.length || 0;
+        contractFees += toNumber(billing.contractInvoiceAmount) ?? 0;
+        venueFees += toNumber(billing.venueInvoiceAmount) ?? 0;
+      });
+
+      const totalAmount = contractFees + venueFees;
 
       return res.json({
         success: true,
         data: {
           ...billingReport,
           courseRunBillings: normalizedCourseRunBillings,
-          contractFees: billingReport.contractFees?.toNumber() ?? 0,
-          venueFees: billingReport.venueFees?.toNumber() ?? 0,
-          totalAmount: billingReport.totalAmount?.toNumber() ?? 0,
+          totalCourseRuns,
+          totalParticipants,
+          contractFees,
+          venueFees,
+          totalAmount,
         },
       });
     } catch (error) {
@@ -222,14 +291,28 @@ export const billingReportsController = {
         });
       }
 
+      // Compute totals dynamically from courseRunBillings
+      let totalCourseRuns = billingReport.courseRunBillings.length;
+      let totalParticipants = 0;
+      let contractFees = 0;
+      let venueFees = 0;
+
+      billingReport.courseRunBillings.forEach((billing: any) => {
+        totalParticipants += billing.courseRun?.courseRunLearners?.length || 0;
+        contractFees += toNumber(billing.contractInvoiceAmount) ?? 0;
+        venueFees += toNumber(billing.venueInvoiceAmount) ?? 0;
+      });
+
+      const totalAmount = contractFees + venueFees;
+
       // Format export data to return to frontend for client-side XLSX generation
       const exportData = {
         billingMonth: billingReport.billingMonth,
-        totalCourseRuns: billingReport.totalCourseRuns,
-        totalParticipants: billingReport.totalParticipants,
-        contractFees: billingReport.contractFees?.toNumber() ?? 0,
-        venueFees: billingReport.venueFees?.toNumber() ?? 0,
-        totalAmount: billingReport.totalAmount?.toNumber() ?? 0,
+        totalCourseRuns,
+        totalParticipants,
+        contractFees,
+        venueFees,
+        totalAmount,
         status: billingReport.status,
         courseRuns: billingReport.courseRunBillings.map((billing: any) => ({
           courseRunCode: billing.courseRun.serialNumber || '',
@@ -239,23 +322,23 @@ export const billingReportsController = {
           endDate: billing.courseRun.endDatetime,
           venue: billing.courseRun.venue?.name || billing.courseRun.specifiedLocation || '',
           participants: billing.courseRun.courseRunLearners.length,
-          contractFees: billing.contractInvoiceAmount?.toNumber() ?? 0,
-          venueFees: billing.venueInvoiceAmount?.toNumber() ?? 0,
-          totalAmount: (billing.contractInvoiceAmount?.toNumber() ?? 0) + (billing.venueInvoiceAmount?.toNumber() ?? 0),
+          contractFees: toNumber(billing.contractInvoiceAmount) ?? 0,
+          venueFees: toNumber(billing.venueInvoiceAmount) ?? 0,
+          totalAmount: (toNumber(billing.contractInvoiceAmount) ?? 0) + (toNumber(billing.venueInvoiceAmount) ?? 0),
           status: billing.courseRun.status,
           billing: {
-            valueOfWorkDone: billing.valueOfWorkDone?.toNumber() ?? 0,
+            valueOfWorkDone: toNumber(billing.valueOfWorkDone) ?? 0,
             contractFeePBMSBENumber: billing.contractFeePBMSBENumber,
             contractPBMSInvoiceDate: billing.contractPBMSInvoiceDate,
-            contractInvoiceAmount: billing.contractInvoiceAmount?.toNumber() ?? 0,
+            contractInvoiceAmount: toNumber(billing.contractInvoiceAmount) ?? 0,
             venuePBMSBENumber: billing.venuePBMSBENumber,
             venuePBMSInvoiceDate: billing.venuePBMSInvoiceDate,
-            venueInvoiceAmount: billing.venueInvoiceAmount?.toNumber() ?? 0,
+            venueInvoiceAmount: toNumber(billing.venueInvoiceAmount) ?? 0,
             finalRemarks: billing.finalRemarks,
             entries: billing.courseRunBillingEntries.map((entry: any) => ({
               pbmsInvoiceNumber: entry.pbmsInvoiceNumber,
               pbmsInvoiceDate: entry.pbmsInvoiceDate,
-              invoiceAmount: entry.invoiceAmount?.toNumber() ?? 0,
+              invoiceAmount: toNumber(entry.invoiceAmount) ?? 0,
               learners: entry.courseRunLearners.map((crl: any) => ({
                 name: crl.learner?.fullname || '',
                 email: crl.learner?.email || '',

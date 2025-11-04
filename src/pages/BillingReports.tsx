@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,9 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, Download, Search, Calendar } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Eye, Download, Search, X } from "lucide-react";
+import { MonthInput } from "@/components/ui/month-input";
 import { billingReportsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { generateConsolidatedBillingXLSX } from "@/lib/consolidatedBillingExport";
 
 interface BillingReportData {
   id: string;
@@ -34,10 +37,36 @@ export default function BillingReports() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const { toast } = useToast();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadBillingReports();
   }, []);
+
+  // Auto-apply filters when month range changes
+  useEffect(() => {
+    loadBillingReports();
+  }, [startMonth, endMonth]);
+
+  // Auto-search with 2-second debounce
+  useEffect(() => {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout
+    searchTimeoutRef.current = setTimeout(() => {
+      loadBillingReports();
+    }, 2000);
+
+    // Cleanup on unmount
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   const loadBillingReports = async () => {
     try {
@@ -72,6 +101,16 @@ export default function BillingReports() {
 
   const handleSearch = () => {
     loadBillingReports();
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setTimeout(() => loadBillingReports(), 100);
+  };
+
+  const handleClearMonthFilter = () => {
+    setStartMonth("");
+    setEndMonth("");
   };
 
   const handleReset = () => {
@@ -118,66 +157,8 @@ export default function BillingReports() {
       const response = await billingReportsApi.exportConsolidated(reportId);
 
       if (response.success && response.data) {
-        // Import XLSX library dynamically
-        const XLSX = await import("xlsx");
-
-        const exportData = response.data;
-
-        // Create workbook
-        const wb = XLSX.utils.book_new();
-
-        // Summary Sheet
-        const summaryData = [
-          ["Consolidated Billing Report"],
-          ["Month:", exportData.billingMonth],
-          ["Status:", exportData.status?.replace(/_/g, " ")],
-          [""],
-          ["Total Course Runs:", exportData.totalCourseRuns],
-          ["Total Participants:", exportData.totalParticipants],
-          ["Contract Fees:", exportData.contractFees],
-          ["Venue Fees:", exportData.venueFees],
-          ["Total Amount:", exportData.totalAmount],
-        ];
-
-        const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, summaryWS, "Summary");
-
-        // Course Runs Sheet
-        const courseRunsData = [
-          [
-            "Course Run Code",
-            "Course Title",
-            "Course Code",
-            "Start Date",
-            "End Date",
-            "Venue",
-            "Participants",
-            "Contract Fees",
-            "Venue Fees",
-            "Total Amount",
-            "Status",
-          ],
-          ...exportData.courseRuns.map((cr: any) => [
-            cr.courseRunCode,
-            cr.courseTitle,
-            cr.courseCode,
-            cr.startDate ? new Date(cr.startDate).toLocaleDateString("en-GB") : "",
-            cr.endDate ? new Date(cr.endDate).toLocaleDateString("en-GB") : "",
-            cr.venue,
-            cr.participants,
-            cr.contractFees,
-            cr.venueFees,
-            cr.totalAmount,
-            cr.status,
-          ]),
-        ];
-
-        const courseRunsWS = XLSX.utils.aoa_to_sheet(courseRunsData);
-        XLSX.utils.book_append_sheet(wb, courseRunsWS, "Course Runs");
-
-        // Generate and download file
-        const filename = `Consolidated_Billing_Report_${billingMonth.replace(" ", "_")}.xlsx`;
-        XLSX.writeFile(wb, filename);
+        // Use the ExcelJS export function for proper formatting
+        await generateConsolidatedBillingXLSX(response.data);
 
         toast({
           title: "Success",
@@ -270,28 +251,56 @@ export default function BillingReports() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Search by month and hit enter  "
+                    placeholder="Search by month and hit enter"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    className="pl-9"
+                    className="pl-9 pr-9"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={handleClearSearch}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      title="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="startMonth">From:</Label>
                 <div className="relative mt-2">
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
-                  <Input id="startMonth" type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} className="pr-9" />
+                  <MonthInput id="startMonth" value={startMonth} onChange={(value) => setStartMonth(value || "")} />
+                  {startMonth && (
+                    <button
+                      type="button"
+                      onClick={() => setStartMonth("")}
+                      className="absolute right-10 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10"
+                      title="Clear start month"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="endMonth">To:</Label>
                 <div className="relative mt-2">
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
-                  <Input id="endMonth" type="month" value={endMonth} onChange={(e) => setEndMonth(e.target.value)} className="pr-9" />
+                  <MonthInput id="endMonth" value={endMonth} onChange={(value) => setEndMonth(value || "")} />
+                  {endMonth && (
+                    <button
+                      type="button"
+                      onClick={() => setEndMonth("")}
+                      className="absolute right-10 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10"
+                      title="Clear end month"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -321,7 +330,40 @@ export default function BillingReports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.length === 0 ? (
+                  {loading ? (
+                    // Loading skeleton
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-4 w-12 ml-auto" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-4 w-12 ml-auto" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-4 w-20 ml-auto" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-4 w-20 ml-auto" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-4 w-24 ml-auto" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-28" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Skeleton className="h-8 w-8 rounded" />
+                            <Skeleton className="h-8 w-8 rounded" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : reports.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         No billing reports found
