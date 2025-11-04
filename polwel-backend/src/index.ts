@@ -34,6 +34,7 @@ import referencesRoutes from './routes/references';
 import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import trainerDashboardRoutes from './routes/trainerDashboard';
 import profileRoutes from './routes/profile';
+import billingReportsRoutes from './routes/billingReports';
 import { startCourseRunStatusJob, evaluateCourseRunStatusesNow } from './jobs/courseRunStatusJob';
 import dashboardRoutes from './routes/dashboard';
 
@@ -167,6 +168,7 @@ app.use('/api/references', authenticate, referencesRoutes);
 app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
 app.use('/api/trainer', trainerDashboardRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/billing-reports', billingReportsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware

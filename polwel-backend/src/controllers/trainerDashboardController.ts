@@ -128,7 +128,7 @@ export const getTrainerDashboard = async (req: AuthenticatedRequest, res: Respon
           gte: new Date()
         },
         status: {
-          in: ['ACTIVE', 'PUBLISHED', 'ONGOING']
+          in: ['ACTIVE', 'CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS']
         }
       }
     });

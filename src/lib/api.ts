@@ -1730,6 +1730,37 @@ export const createTrainerBlockout = trainerBlockoutsApi.create;
 export const updateTrainerBlockout = trainerBlockoutsApi.update;
 export const deleteTrainerBlockout = trainerBlockoutsApi.delete;
 
+// Billing Reports API
+export const billingReportsApi = {
+  /**
+   * Get all billing reports with optional filtering
+   */
+  list: async (params?: { search?: string; startMonth?: string; endMonth?: string }) => {
+    const query = new URLSearchParams();
+    if (params) {
+      if (params.search) query.append('search', params.search);
+      if (params.startMonth) query.append('startMonth', params.startMonth);
+      if (params.endMonth) query.append('endMonth', params.endMonth);
+    }
+    const queryString = query.toString();
+    return apiRequest(`/billing-reports${queryString ? `?${queryString}` : ''}`, { method: 'GET' });
+  },
+
+  /**
+   * Get specific billing report detail
+   */
+  detail: async (id: string) => {
+    return apiRequest(`/billing-reports/${id}`, { method: 'GET' });
+  },
+
+  /**
+   * Export consolidated billing report to XLSX
+   */
+  exportConsolidated: async (id: string) => {
+    return apiRequest(`/billing-reports/${id}/export`, { method: 'GET' });
+  },
+};
+
 export default {
   polwelUsersApi,
   trainersApi,
@@ -1741,4 +1772,5 @@ export default {
   venuesApi,
   referencesApi,
   trainerDashboardApi,
+  billingReportsApi,
 };

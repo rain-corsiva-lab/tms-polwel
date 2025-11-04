@@ -43,6 +43,103 @@ const buildErrorResponse = (method: string, userMessage: string, error: unknown)
 };
 
 /**
+ * Get billing month string from date (format: "March 2025")
+ */
+const getBillingMonthString = (dateInput: Date | string): string => {
+  // Accept either a Date or an ISO date string
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  // Business rule: if the course run end date falls on or before the 7th of the month,
+  // it is considered part of the previous month's billing cycle.
+  // Example: end on 2 Nov => counts to October.
+  const day = date.getDate();
+  let year = date.getFullYear();
+  let month = date.getMonth(); // 0-based
+
+  if (day <= 7) {
+    // move to previous month
+    month -= 1;
+    if (month < 0) {
+      month = 11;
+      year -= 1;
+    }
+  }
+
+  return `${monthNames[month]} ${year}`;
+};
+
+/**
+ * Find or create billing report for the given month
+ */
+const findOrCreateBillingReport = async (billingMonth: string): Promise<string> => {
+  let billingReport = await prisma.billingReport.findFirst({
+    where: {
+      billingMonth,
+      deletedAt: null,
+    },
+  });
+
+  if (!billingReport) {
+    billingReport = await prisma.billingReport.create({
+      data: {
+        billingMonth,
+        totalCourseRuns: 0,
+        totalParticipants: 0,
+        contractFees: 0,
+        venueFees: 0,
+        totalAmount: 0,
+        status: 'ALL_INCOMPLETED',
+      },
+    });
+  }
+
+  return billingReport.id;
+};
+
+/**
+ * Calculate billing report status based on connected course runs
+ * ALL_COMPLETED: All course runs are COMPLETED
+ * MIXED_STATUS: Some course runs are COMPLETED, some are not
+ * ALL_INCOMPLETED: No course runs are COMPLETED
+ */
+const calculateBillingReportStatus = async (billingReportId: string): Promise<'ALL_COMPLETED' | 'MIXED_STATUS' | 'ALL_INCOMPLETED'> => {
+  const billingReport = await prisma.billingReport.findUnique({
+    where: { id: billingReportId },
+    include: {
+      courseRunBillings: {
+        where: { deletedAt: null },
+        include: {
+          courseRun: {
+            select: { status: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!billingReport || billingReport.courseRunBillings.length === 0) {
+    return 'ALL_INCOMPLETED';
+  }
+
+  const completedCount = billingReport.courseRunBillings.filter(
+    (billing) => billing.courseRun.status === 'COMPLETED'
+  ).length;
+  const totalCount = billingReport.courseRunBillings.length;
+
+  if (completedCount === 0) {
+    return 'ALL_INCOMPLETED';
+  } else if (completedCount === totalCount) {
+    return 'ALL_COMPLETED';
+  } else {
+    return 'MIXED_STATUS';
+  }
+};
+
+/**
  * Calculate venue final fee based on fee type, participants, and venue limits
  */
 const calculateVenueFinalFee = async (courseRunId: string): Promise<number> => {
@@ -201,9 +298,7 @@ const ALLOWED_COURSE_STATUSES: CourseStatus[] = [
   'IN_PROGRESS',
   'COMPLETED',
   'CANCELLED',
-  'ARCHIVED',
-  'PUBLISHED',
-  'ONGOING'
+  'INCOMPLETED'
 ];
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -768,7 +863,6 @@ export const courseRunController = {
               },
             },
           },
-          billingReport: true,
         },
       });
 
@@ -790,7 +884,7 @@ export const courseRunController = {
 
       const transformedCourseRun = {
         ...courseRun,
-        courseRunLearners: courseRun.courseRunLearners.map((enrollment) => {
+        courseRunLearners: courseRun.courseRunLearners?.map((enrollment: any) => {
           const learner = enrollment.learner;
           const clientOrganization = learner?.clientOrganization || null;
           const coordinator = learner?.trainingCoordinator || null;
@@ -3345,11 +3439,19 @@ export const courseRunController = {
         return;
       }
 
+      // Auto-connect to billing report based on course run end date
+      let billingReportId: string | null = null;
+      if (courseRun.endDatetime) {
+        const billingMonthString = getBillingMonthString(courseRun.endDatetime);
+        billingReportId = await findOrCreateBillingReport(billingMonthString);
+      }
+
       // Create or update billing record
       const billing = await prisma.courseRunBilling.upsert({
         where: { courseRunId },
         create: {
           courseRunId,
+          billingReportId,
           valueOfWorkDone: valueOfWorkDone ? parseInt(valueOfWorkDone) : null,
           contractFeePBMSBENumber: contractFeePBMSBENumber || null,
           contractPBMSInvoiceDate: contractPBMSInvoiceDate ? new Date(contractPBMSInvoiceDate) : null,
@@ -3360,6 +3462,7 @@ export const courseRunController = {
           finalRemarks: finalRemarks || null,
         },
         update: {
+          billingReportId,
           valueOfWorkDone: valueOfWorkDone ? parseInt(valueOfWorkDone) : null,
           contractFeePBMSBENumber: contractFeePBMSBENumber || null,
           contractPBMSInvoiceDate: contractPBMSInvoiceDate ? new Date(contractPBMSInvoiceDate) : null,
@@ -3435,11 +3538,82 @@ export const courseRunController = {
         }
       }
 
-      // Update course run status to COMPLETED
+      // Determine completeness: a course run is considered COMPLETED only when
+      // all learners have been associated with a billing entry. If one or more
+      // learners are not present in any billing entry, mark as INCOMPLETED.
+      const unassignedLearnersCount = await prisma.courseRunLearner.count({
+        where: {
+          courseRunId: courseRunId,
+          deletedAt: null,
+          courseRunBillingEntryId: null,
+        },
+      });
+
+      const newStatus = unassignedLearnersCount > 0 ? 'INCOMPLETED' : 'COMPLETED';
+
       await prisma.courseRun.update({
         where: { id: courseRunId },
-        data: { status: 'COMPLETED' },
+        data: { status: newStatus },
       });
+
+      // Update billing report totals if connected
+      if (billingReportId) {
+        const allBillings = await prisma.courseRunBilling.findMany({
+          where: {
+            billingReportId,
+            deletedAt: null,
+          },
+          include: {
+            courseRun: {
+              include: {
+                courseRunLearners: true,
+              },
+            },
+          },
+        });
+
+        let totalRuns = 0;
+        let totalPax = 0;
+        let totalContractFees = 0;
+        let totalVenueFees = 0;
+
+        for (const bill of allBillings) {
+          totalRuns++;
+          totalPax += bill.courseRun.courseRunLearners.length;
+          
+          const contractFee = bill.contractInvoiceAmount 
+            ? (typeof bill.contractInvoiceAmount === 'object' && 'toNumber' in bill.contractInvoiceAmount 
+                ? bill.contractInvoiceAmount.toNumber() 
+                : Number(bill.contractInvoiceAmount))
+            : 0;
+          
+          const venueFee = bill.venueInvoiceAmount 
+            ? (typeof bill.venueInvoiceAmount === 'object' && 'toNumber' in bill.venueInvoiceAmount 
+                ? bill.venueInvoiceAmount.toNumber() 
+                : Number(bill.venueInvoiceAmount))
+            : 0;
+
+          totalContractFees += contractFee;
+          totalVenueFees += venueFee;
+        }
+
+        const totalAmount = totalContractFees + totalVenueFees;
+
+        // Calculate billing report status based on course run statuses
+        const calculatedStatus = await calculateBillingReportStatus(billingReportId);
+
+        await prisma.billingReport.update({
+          where: { id: billingReportId },
+          data: {
+            totalCourseRuns: totalRuns,
+            totalParticipants: totalPax,
+            contractFees: totalContractFees,
+            venueFees: totalVenueFees,
+            totalAmount,
+            status: calculatedStatus,
+          },
+        });
+      }
 
       res.json({
         success: true,

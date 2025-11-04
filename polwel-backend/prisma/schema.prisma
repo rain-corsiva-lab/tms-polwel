@@ -204,7 +204,6 @@ model CourseRun {
   updatedAt                      DateTime                        @updatedAt
   adminFee                       Decimal?                        @db.Decimal(10, 2)
   baseCourseFee                  Decimal?                        @db.Decimal(10, 2)
-  billingReportId                String?
   contingencyFee                 Decimal?                        @db.Decimal(10, 2)
   courseRunType                  CourseRunType?
   deletedAt                      DateTime?
@@ -226,7 +225,6 @@ model CourseRun {
   courseRunLearnerAttendances    CourseRunLearnerAttendance[]
   courseRunLearners              CourseRunLearner[]
   courseRunTrainers              CourseRunTrainer[]
-  billingReport                  BillingReport?                  @relation(fields: [billingReportId], references: [id])
   course                         Course                          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   venue                          Venue?                          @relation(fields: [venueId], references: [id])
   trainerAssignmentEmailHistory  TrainerAssignmentEmailHistory[]
@@ -240,7 +238,6 @@ model CourseRun {
 
   @@index([courseId], map: "course_runs_courseId_fkey")
   @@index([venueId], map: "course_runs_venueId_fkey")
-  @@index([billingReportId], map: "course_runs_billingReportId_fkey")
   @@index([cancelledById], map: "course_runs_cancelledById_fkey")
   @@map("course_runs")
 }
@@ -248,6 +245,7 @@ model CourseRun {
 model CourseRunBilling {
   id                      String                  @id @default(cuid())
   courseRunId             String                  @unique
+  billingReportId         String?
   valueOfWorkDone         Int?
   contractFeePBMSBENumber String?
   contractPBMSInvoiceDate DateTime?
@@ -261,7 +259,9 @@ model CourseRunBilling {
   deletedAt               DateTime?
   courseRunBillingEntries CourseRunBillingEntry[]
   courseRun               CourseRun               @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  billingReport           BillingReport?          @relation(fields: [billingReportId], references: [id], onDelete: SetNull)
 
+  @@index([billingReportId])
   @@map("course_run_billings")
 }
 
@@ -587,13 +587,20 @@ model Media {
 }
 
 model BillingReport {
-  id         String      @id @default(cuid())
-  name       String
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  deletedAt  DateTime?
-  courseRuns CourseRun[]
+  id                   String              @id @default(cuid())
+  billingMonth         String              // Month in format "March 2025"
+  totalCourseRuns      Int                 @default(0)
+  totalParticipants    Int                 @default(0)
+  contractFees         Decimal?            @db.Decimal(15, 2)
+  venueFees            Decimal?            @db.Decimal(15, 2)
+  totalAmount          Decimal?            @db.Decimal(15, 2)
+  status               BillingStatus       @default(ALL_INCOMPLETED)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  deletedAt            DateTime?
+  courseRunBillings    CourseRunBilling[]
 
+  @@unique([billingMonth])
   @@map("billing_reports")
 }
 
@@ -683,10 +690,11 @@ enum CourseStatus {
   IN_PROGRESS
   PENDING_BILLING
   COMPLETED
+  INCOMPLETED
   CANCELLED
-  ARCHIVED
-  PUBLISHED
-  ONGOING
+  // ARCHIVED
+  // PUBLISHED
+  // ONGOING
 }
 
 enum ConfirmationEmailStatus {
@@ -755,4 +763,10 @@ enum AttendanceStatus {
 enum EnrollmentStatus {
   ENROLLED
   WITHDRAWN
+}
+
+enum BillingStatus {
+  ALL_COMPLETED
+  MIXED_STATUS
+  ALL_INCOMPLETED
 }

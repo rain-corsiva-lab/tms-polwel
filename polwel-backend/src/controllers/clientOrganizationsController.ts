@@ -1279,8 +1279,8 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
         status: run.status,
       };
 
-      const isCompleted = run.status === 'COMPLETED' || run.status === 'PENDING_BILLING' || (end && end < now);
-      const isOngoing = run.status === 'ONGOING' || run.status === 'IN_PROGRESS' || (start && start <= now && (!end || end >= now));
+      const isCompleted = run.status === 'COMPLETED' || run.status === 'INCOMPLETED' || (end && end < now);
+      const isOngoing = run.status === 'IN_PROGRESS' || run.status === 'ACTIVE' || (start && start <= now && (!end || end >= now));
       if (isCompleted) completed.push(item);
       else if (isOngoing) inProgress.push(item);
     });

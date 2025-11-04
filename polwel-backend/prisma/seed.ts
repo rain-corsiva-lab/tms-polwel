@@ -76,7 +76,7 @@ async function main() {
   // Create POLWEL Users
   const johnTan = await prisma.user.create({
     data: {
-      email: 'john.tan@polwel.org',
+      email: 'kukuhthewow@gmail.com',
       password: hashedPassword,
       name: 'John Tan',
       role: UserRole.POLWEL,
@@ -391,10 +391,9 @@ async function main() {
       materials: ['Leadership Workbook', 'Case Studies', 'Assessment Tools', 'Action Planning Templates'],
       // status: CourseStatus.ACTIVE,
       venue: 'Main Training Room',
-      trainers: ['John Smith', 'Sarah Johnson'],
       certificates: 'polwel',
       remarks: 'Course will be postponed if minimum participants not met',
-      courseOutline: {
+      courseOutline: JSON.stringify({
         "modules": [
           {
             "module": "Module 1: Leadership Foundations", 
@@ -412,7 +411,7 @@ async function main() {
             "topics": ["Team building and motivation", "Performance management", "Action planning and implementation"]
           }
         ]
-      },
+      }),
       targetAudience: 'Middle managers, team leaders, and aspiring executives',
   defaultCourseFee: 800.0,
   venueFee: 150.0,
@@ -444,10 +443,9 @@ async function main() {
       materials: ['EQ Assessment Tools', 'Practical Exercises', 'Reference Guide'],
       // status: CourseStatus.ACTIVE,
       venue: 'Conference Hall A',
-      trainers: ['Jennifer Lee'],
       certificates: 'partner',
       remarks: '',
-      courseOutline: {
+      courseOutline: JSON.stringify({
         "modules": [
           {
             "module": "Morning Session: EQ Foundations",
@@ -460,7 +458,7 @@ async function main() {
             "topics": ["Empathy building exercises", "Communication under pressure", "Workplace EQ scenarios"]
           }
         ]
-      },
+      }),
       targetAudience: 'All professionals seeking to improve interpersonal skills',
   defaultCourseFee: 300.0,
     venueFee: 80.0,
@@ -492,10 +490,9 @@ async function main() {
       materials: ['Strategy Toolkit', 'Case Study Collection', 'Planning Templates'],
       // status: CourseStatus.DRAFT,
       venue: 'Online Platform',
-      trainers: ['Michael Brown', 'Excellence Training Partners'],
       certificates: 'polwel',
       remarks: 'Hybrid delivery with online and in-person components',
-      courseOutline: {
+      courseOutline: JSON.stringify({
         "modules": [
           {
             "module": "Day 1: Strategic Analysis",
@@ -508,7 +505,7 @@ async function main() {
             "topics": ["Action planning", "Risk assessment", "Performance metrics", "Change management"]
           }
         ]
-      },
+      }),
       targetAudience: 'Senior managers, directors, and strategic planning professionals',
   defaultCourseFee: 600.0,
     venueFee: 0.0, // Online delivery
@@ -540,10 +537,9 @@ async function main() {
       materials: ['Mindset Assessment', 'Personal Development Plan', 'Resource Library'],
       // status: CourseStatus.ACTIVE,
       venue: 'Main Training Room',
-      trainers: ['David Chen'],
       certificates: 'no',
       remarks: 'Highly interactive workshop with practical exercises',
-      courseOutline: {
+      courseOutline: JSON.stringify({
         "modules": [
           {
             "module": "Session 1: Mindset Foundations",
@@ -556,7 +552,7 @@ async function main() {
             "topics": ["Overcoming limiting beliefs", "Goal setting strategies", "Action planning"]
           }
         ]
-      },
+      }),
       targetAudience: 'All employees seeking personal and professional development',
   defaultCourseFee: 250.0,
     venueFee: 50.0,
@@ -577,7 +573,7 @@ async function main() {
       startDatetime: new Date('2024-02-15T09:00:00Z'),
       endDatetime: new Date('2024-02-16T17:00:00Z'),
       venueId: orchardHotel.id,
-      status: CourseStatus.PUBLISHED,
+      status: CourseStatus.COMPLETED,
       remarks: 'Premium leadership program with experienced trainer',
     },
   });
@@ -588,7 +584,7 @@ async function main() {
       startDatetime: new Date('2024-02-20T09:00:00Z'),
       endDatetime: new Date('2024-02-20T17:00:00Z'),
       venueId: polwelLearningPod.id,
-      status: CourseStatus.PUBLISHED,
+      status: CourseStatus.COMPLETED,
       remarks: 'Interactive communication skills workshop',
     },
   });
@@ -728,20 +724,129 @@ async function main() {
 
   console.log('⚙️  Created system settings');
 
-  // Sprint 3: Create Billing Reports (2 records)
-  const billingReport2025Q1 = await prisma.billingReport.create({
+  // Sprint 3: Create Billing Reports for Jan 2025 - Nov 2025
+  const billingReportJan2025 = await prisma.billingReport.create({
     data: {
-      name: 'Q1 2025 Billing Report',
+      billingMonth: 'January 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
     },
   });
 
-  const billingReport2025Q2 = await prisma.billingReport.create({
+  const billingReportFeb2025 = await prisma.billingReport.create({
     data: {
-      name: 'Q2 2025 Billing Report',
+      billingMonth: 'February 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
     },
   });
 
-  console.log('📊 Created billing reports');
+  const billingReportMar2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'March 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportApr2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'April 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportMay2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'May 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportJun2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'June 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportJul2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'July 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportAug2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'August 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportSep2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'September 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportOct2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'October 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  const billingReportNov2025 = await prisma.billingReport.create({
+    data: {
+      billingMonth: 'November 2025',
+      totalCourseRuns: 0,
+      totalParticipants: 0,
+      contractFees: 0,
+      venueFees: 0,
+      totalAmount: 0,
+    },
+  });
+
+  console.log('📊 Created billing reports (Jan-Nov 2025)');
 
   // Sprint 3: Create Media files (4 records - 2 per billing report)
   const media1 = await prisma.media.create({
@@ -915,7 +1020,6 @@ async function main() {
       otherFee: 150.00,
       adminFee: 75.00,
       contingencyFee: 100.00,
-      billingReportId: billingReport2025Q1.id,
     },
   });
 
@@ -936,7 +1040,6 @@ async function main() {
       otherFee: 50.00,
       adminFee: 35.00,
       contingencyFee: 65.00,
-      billingReportId: billingReport2025Q1.id,
     },
   });
 
@@ -960,7 +1063,6 @@ async function main() {
       adminFee: 15.00,
       contingencyFee: 30.00,
       status: 'CONFIRMED',
-      billingReportId: billingReport2025Q2.id,
     },
   });
 
@@ -983,7 +1085,6 @@ async function main() {
       adminFee: 50.00,
       contingencyFee: 80.00,
       status: 'PENDING',
-      billingReportId: billingReport2025Q2.id,
     },
   });
 
@@ -1622,7 +1723,7 @@ async function main() {
   console.log('- System Settings: 6');
   console.log('');
   console.log('🔑 Default Login Credentials:');
-  console.log('- Admin: john.tan@polwel.org / password123');
+  console.log('- Admin: kukuhthewow@gmail.com / password123');
   console.log('- Training Coordinator: mary.lim@spf.gov.sg / password123');
   console.log('- Trainer: david.chen@training.com / password123');
   console.log('- Learner: raj.kumar@spf.gov.sg / password123');

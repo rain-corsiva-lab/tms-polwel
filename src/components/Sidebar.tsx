@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Users, GraduationCap, Building2, Shield, ChevronDown, ChevronRight, BookOpen, Calendar, ClipboardList } from "lucide-react";
+import { Users, GraduationCap, Building2, Shield, ChevronDown, ChevronRight, BookOpen, Calendar, ClipboardList, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Can } from "../lib/casl/Can";
@@ -25,7 +25,7 @@ const userManagementItems: MenuItem[] = [
 
 const courseManagementItems: MenuItem[] = [
   { name: "Courses", href: "/courses", icon: BookOpen, subject: "CourseVenue" },
-  // { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
   { name: "Venue Management", href: "/venue-setup", icon: Building2, subject: "CourseVenue" },
 ];
 
@@ -191,7 +191,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* Post Run Management - Standalone Menu Item */}
-        {/* {postRunManagementVisible && (
+        {postRunManagementVisible && (
           <Can I="view" a="PostCourseRun">
             <NavLink
               to="/post-run-management"
@@ -206,7 +206,25 @@ const Sidebar = ({ className }: SidebarProps) => {
               Post Run Management
             </NavLink>
           </Can>
-        )} */}
+        )}
+
+        {/* Billing Reports - Standalone Menu Item */}
+        {postRunManagementVisible && (
+          <Can I="view" a="PostCourseRun">
+            <NavLink
+              to="/billing-reports"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                )
+              }
+            >
+              <FileText className="mr-3 h-5 w-5" />
+              Billing Reports
+            </NavLink>
+          </Can>
+        )}
       </nav>
     </aside>
   );

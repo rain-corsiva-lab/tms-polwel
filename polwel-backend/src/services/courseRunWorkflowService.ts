@@ -50,7 +50,7 @@ export interface LearnerEmailReport {
 }
 
 const DEFAULT_STATUS_BY_TYPE: Partial<Record<CourseRunType, CourseStatus>> = {
-  OPEN: 'PUBLISHED',
+  OPEN: 'CONFIRMED',
   DEDICATED: 'PENDING',
   TALKS: 'PENDING',
   CUSTOMIZED: 'DRAFT',
@@ -106,7 +106,7 @@ const WORKFLOW_ACTIONS: Record<CourseRunWorkflowAction, WorkflowActionDefinition
     label: 'Archive Run',
     description: 'Archive the run once all activities are concluded.',
     from: [],
-    to: 'ARCHIVED',
+    to: 'CANCELLED',
   },
   RESET_TO_DRAFT: {
     key: 'RESET_TO_DRAFT',
@@ -467,7 +467,7 @@ export const courseRunWorkflowService = {
           gte: now, // Not yet ended
         },
         status: {
-          in: ['CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS', 'ACTIVE', 'PUBLISHED'],
+          in: ['CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS', 'ACTIVE'],
         },
       },
       data: {

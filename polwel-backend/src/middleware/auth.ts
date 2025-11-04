@@ -78,6 +78,8 @@ export const authenticateToken = async (
       
       // Verify user still exists and is active
       try {
+        console.log('[AUTH MIDDLEWARE] Token payload:', { userId: payload.userId, email: payload.email, role: payload.role });
+        
         const user = await prisma.user.findUnique({
           where: { id: payload.userId },
           select: {
@@ -89,7 +91,10 @@ export const authenticateToken = async (
           }
         });
 
+        console.log('[AUTH MIDDLEWARE] User lookup result:', user ? 'Found' : 'Not found', { userId: payload.userId });
+
         if (!user) {
+          console.error('[AUTH MIDDLEWARE] User not found in database:', { userId: payload.userId, tokenEmail: payload.email });
           res.status(403).json({ 
             error: 'User not found',
             code: 'USER_NOT_FOUND'

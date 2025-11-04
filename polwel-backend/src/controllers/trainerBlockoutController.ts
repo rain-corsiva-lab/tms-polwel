@@ -307,7 +307,7 @@ export const trainerBlockoutController = {
             lte: end
           },
           status: {
-            in: ['ACTIVE', 'PUBLISHED', 'ONGOING']
+            in: ['ACTIVE', 'CONFIRMED', 'IN_PROGRESS']
           }
         },
         include: {

@@ -45,8 +45,8 @@ export const getGlobalDashboardMetrics = async (req: AuthenticatedRequest, res: 
           status: {
             in: [
               CourseStatus.ACTIVE,
-              CourseStatus.PUBLISHED,
-              CourseStatus.ONGOING,
+              CourseStatus.CONFIRMED,
+              CourseStatus.COMPLETED,
             ],
           },
         },

@@ -4,7 +4,7 @@ import { PERMISSIONS } from './upsertMissingPermissions';
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'john.tan@polwel.org';
+  const email = 'kukuhthewow@gmail.com';
   console.log(`Granting all permissions to ${email}...`);
 
   const user = await prisma.user.findUnique({ where: { email } });
