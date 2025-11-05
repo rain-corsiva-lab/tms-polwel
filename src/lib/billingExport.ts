@@ -68,7 +68,7 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
       },
     };
 
-    // Define column widths - all in one row layout
+    // Define column widths - align with consolidated billing format
     worksheet.columns = [
       { width: 30 }, // A: Title
       { width: 15 }, // B: Course Run #
@@ -82,21 +82,25 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
       { width: 15 }, // J: Value of Work Done
       { width: 15 }, // K: PBMS Ref (Invoice)
       { width: 15 }, // L: PBMS Invoice Date
-      { width: 15 }, // M: Contract PBMS BE
-      { width: 15 }, // N: Contract Invoice Date
-      { width: 15 }, // O: Contract Amount
-      { width: 15 }, // P: Venue PBMS BE
-      { width: 15 }, // Q: Venue Invoice Date
-      { width: 15 }, // R: Venue Amount
-      { width: 30 }, // S: Remarks
+      { width: 30 }, // M: Discount List
+      { width: 30 }, // N: Billing Remarks
+      { width: 15 }, // O: Invoice Amount
+      { width: 15 }, // P: Contract PBMS BE
+      { width: 15 }, // Q: Contract Invoice Date
+      { width: 15 }, // R: Contract Amount
+      { width: 15 }, // S: Venue PBMS BE
+      { width: 15 }, // T: Venue Invoice Date
+      { width: 15 }, // U: Venue Amount
+      { width: 15 }, // V: Total Fee
+      { width: 30 }, // W: Remarks
     ];
 
     worksheet.views = [{ state: 'frozen', ySplit: 3 }];
 
     worksheet.views = [{ state: 'frozen', ySplit: 3 }];
 
-    // Title row
-    worksheet.mergeCells('A1:S1');
+  // Title row
+  worksheet.mergeCells('A1:W1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = `PDCS Estimated Billing for Month of ${new Date().toLocaleDateString('en-US', {
       month: 'long',
@@ -105,8 +109,8 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
     titleCell.font = { bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // Note row
-    worksheet.mergeCells('A2:S2');
+  // Note row
+  worksheet.mergeCells('A2:W2');
     const noteCell = worksheet.getCell('A2');
     noteCell.value = '(All figures to exclude GST)';
     noteCell.font = { italic: true, size: 10 };
@@ -126,12 +130,16 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
       'Value of Work Done',
       'PBMS Ref',
       'PBMS Invoice',
+      'Discount List',
+      'Billing Remarks',
+      'Invoice Amount',
       'Contract PBMS BE',
       'Contract Invoice Date',
       'Contract Amount',
       'Venue PBMS BE',
       'Venue Invoice Date',
       'Venue Amount',
+      'Total Fee',
       'Remarks',
     ];
 
@@ -168,12 +176,12 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
       for (let col = 1; col <= 10; col++) {
         worksheet.mergeCells(startRow, col, endRow, col);
       }
-      // Also merge contract and venue columns (M-R)
-      for (let col = 13; col <= 18; col++) {
+      // Also merge contract and venue columns (P-U)
+      for (let col = 16; col <= 21; col++) {
         worksheet.mergeCells(startRow, col, endRow, col);
       }
-      // Merge remarks column (S)
-      worksheet.mergeCells(startRow, 19, endRow, 19);
+      // Merge final remarks column (W)
+      worksheet.mergeCells(startRow, 23, endRow, 23);
     }
 
     // Fill in the course data (merged cells - only set on first row)
@@ -216,72 +224,127 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
     // J: Value of Work Done
     setCurrency(firstDataRow.getCell(10), valueOfWorkDone);
 
-    // M-O: Contract Fees (merged)
-    firstDataRow.getCell(13).value = billing.contractFeePBMSBENumber || '';
-    firstDataRow.getCell(13).alignment = { horizontal: 'center', vertical: 'middle' };
-    
-    firstDataRow.getCell(14).value = billing.contractPBMSInvoiceDate
+    // P-R: Contract Fees (merged)
+    firstDataRow.getCell(16).value = billing.contractFeePBMSBENumber || '';
+    firstDataRow.getCell(16).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    firstDataRow.getCell(17).value = billing.contractPBMSInvoiceDate
       ? new Date(billing.contractPBMSInvoiceDate).toLocaleDateString('en-GB')
       : '';
-    firstDataRow.getCell(14).alignment = { horizontal: 'center', vertical: 'middle' };
-    
-    const contractAmount = typeof billing.contractInvoiceAmount === 'number' 
-      ? billing.contractInvoiceAmount 
-      : billing.contractInvoiceAmount ? Number(billing.contractInvoiceAmount) : null;
-    setCurrency(firstDataRow.getCell(15), contractAmount);
+    firstDataRow.getCell(17).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // P-R: Venue Fees (merged)
-    firstDataRow.getCell(16).value = billing.venuePBMSBENumber || '';
-    firstDataRow.getCell(16).alignment = { horizontal: 'center', vertical: 'middle' };
-    
-    firstDataRow.getCell(17).value = billing.venuePBMSInvoiceDate
+    const contractAmount = typeof billing.contractInvoiceAmount === 'number'
+      ? billing.contractInvoiceAmount
+      : billing.contractInvoiceAmount ? Number(billing.contractInvoiceAmount) : null;
+    setCurrency(firstDataRow.getCell(18), contractAmount);
+
+    // S-U: Venue Fees (merged)
+    firstDataRow.getCell(19).value = billing.venuePBMSBENumber || '';
+    firstDataRow.getCell(19).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    firstDataRow.getCell(20).value = billing.venuePBMSInvoiceDate
       ? new Date(billing.venuePBMSInvoiceDate).toLocaleDateString('en-GB')
       : '';
-    firstDataRow.getCell(17).alignment = { horizontal: 'center', vertical: 'middle' };
-    
-    const venueAmount = typeof billing.venueInvoiceAmount === 'number' 
-      ? billing.venueInvoiceAmount 
+    firstDataRow.getCell(20).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    const venueAmount = typeof billing.venueInvoiceAmount === 'number'
+      ? billing.venueInvoiceAmount
       : billing.venueInvoiceAmount ? Number(billing.venueInvoiceAmount) : null;
-    setCurrency(firstDataRow.getCell(18), venueAmount);
+    setCurrency(firstDataRow.getCell(21), venueAmount);
 
-    // S: Remarks (merged)
-    firstDataRow.getCell(19).value = billing.finalRemarks || '';
-    firstDataRow.getCell(19).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+    // V: Total Fee (Contract + Venue)
+    const contractAmt = contractAmount || 0;
+    const venueAmt = venueAmount || 0;
+    setCurrency(firstDataRow.getCell(22), contractAmt + venueAmt);
 
-    // Apply borders to all cells in first data row
-    applyRowBorders(firstDataRow, 1, 19);
+    // W: Remarks (merged)
+    firstDataRow.getCell(23).value = billing.finalRemarks || '';
+    firstDataRow.getCell(23).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+
+  // Apply borders to all cells in first data row
+  applyRowBorders(firstDataRow, 1, 23);
     firstDataRow.height = 24 * numBillingRows;
 
-    // Fill in billing entries (columns K-L only, not merged)
+    // Fill in billing entries (columns K-O not merged)
     if (billingEntries.length === 0) {
       const row = worksheet.getRow(startRow);
-      setCurrency(row.getCell(11), valueOfWorkDone);
+      row.getCell(11).value = '';
+      row.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
+      applyBorder(row.getCell(11));
+
       row.getCell(12).value = '';
       row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
-      applyBorder(row.getCell(11));
       applyBorder(row.getCell(12));
+
+      row.getCell(13).value = '';
+      row.getCell(13).alignment = { horizontal: 'left', vertical: 'middle' };
+      applyBorder(row.getCell(13));
+
+      row.getCell(14).value = '';
+      row.getCell(14).alignment = { horizontal: 'left', vertical: 'middle' };
+      applyBorder(row.getCell(14));
+
+      row.getCell(15).value = '';
+      row.getCell(15).alignment = { horizontal: 'right', vertical: 'middle' };
+      applyBorder(row.getCell(15));
     } else {
       billingEntries.forEach((entry: any, index: number) => {
         const row = worksheet.getRow(startRow + index);
-        const invoiceAmount = typeof entry.invoiceAmount === 'number' 
-          ? entry.invoiceAmount 
-          : entry.invoiceAmount ? Number(entry.invoiceAmount) : null;
-        
+
         // K: PBMS Ref (invoice number)
         row.getCell(11).value = entry.pbmsInvoiceNumber || '';
         row.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
         applyBorder(row.getCell(11));
-        
+
         // L: PBMS Invoice Date
         row.getCell(12).value = entry.pbmsInvoiceDate
           ? new Date(entry.pbmsInvoiceDate).toLocaleDateString('en-GB')
           : '';
         row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
         applyBorder(row.getCell(12));
-        
+
+        // M: Discount List - format: [discount_name percentage% - count]
+        let discountList = '';
+        if (entry.learners && Array.isArray(entry.learners)) {
+          const discountMap = new Map<string, { percentage: number; count: number }>();
+
+          entry.learners.forEach((learner: any) => {
+            const discountName = learner.discountName || 'no discount';
+            const discountPercentage = learner.discountPercentage || 0;
+            const key = `${discountName}_${discountPercentage}`;
+
+            if (discountMap.has(key)) {
+              discountMap.get(key)!.count += 1;
+            } else {
+              discountMap.set(key, { percentage: discountPercentage, count: 1 });
+            }
+          });
+
+          const discountArray = Array.from(discountMap.entries()).map(([key, data]) => {
+            const discountName = key.split('_')[0];
+            return `[${discountName} ${data.percentage}% - ${data.count}]`;
+          });
+
+          discountList = discountArray.join(', ');
+        }
+        row.getCell(13).value = discountList;
+        row.getCell(13).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        applyBorder(row.getCell(13));
+
+        // N: Billing Remarks
+        row.getCell(14).value = entry.remarks || '';
+        row.getCell(14).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        applyBorder(row.getCell(14));
+
+        // O: Invoice Amount
+        setCurrency(row.getCell(15), typeof entry.invoiceAmount === 'number' ? entry.invoiceAmount : entry.invoiceAmount ? Number(entry.invoiceAmount) : null);
+        applyBorder(row.getCell(15));
+
         row.height = 24;
       });
-    }    const buffer = await workbook.xlsx.writeBuffer();
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });

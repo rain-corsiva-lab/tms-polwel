@@ -58,7 +58,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       },
     };
 
-    // Define column widths - same as post-run format
+    // Define column widths - same as post-run format plus Total Fee column
     worksheet.columns = [
       { width: 30 }, // A: Title
       { width: 15 }, // B: Course Run #
@@ -72,32 +72,36 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       { width: 15 }, // J: Value of Work Done
       { width: 15 }, // K: PBMS Ref (Invoice)
       { width: 15 }, // L: PBMS Invoice Date
-      { width: 15 }, // M: Contract PBMS BE
-      { width: 15 }, // N: Contract Invoice Date
-      { width: 15 }, // O: Contract Amount
-      { width: 15 }, // P: Venue PBMS BE
-      { width: 15 }, // Q: Venue Invoice Date
-      { width: 15 }, // R: Venue Amount
-      { width: 30 }, // S: Remarks
+      { width: 30 }, // M: Discount List
+      { width: 25 }, // N: Entry Remarks
+      { width: 12 }, // O: Invoice Amount
+      { width: 15 }, // P: Contract PBMS BE
+      { width: 15 }, // Q: Contract Invoice Date
+      { width: 15 }, // R: Contract Amount
+      { width: 15 }, // S: Venue PBMS BE
+      { width: 15 }, // T: Venue Invoice Date
+      { width: 15 }, // U: Venue Amount
+      { width: 15 }, // V: Total Fee (NEW)
+      { width: 30 }, // W: Final Remarks
     ];
 
     worksheet.views = [{ state: 'frozen', ySplit: 3 }];
 
     // Title row
-    worksheet.mergeCells('A1:S1');
+    worksheet.mergeCells('A1:W1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = `PDCS Estimated Billing for Month of ${exportData.billingMonth}`;
     titleCell.font = { bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     // Note row
-    worksheet.mergeCells('A2:S2');
+    worksheet.mergeCells('A2:W2');
     const noteCell = worksheet.getCell('A2');
     noteCell.value = '(All figures to exclude GST)';
     noteCell.font = { italic: true, size: 10 };
     noteCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // Header row with all columns
+    // Header row with all columns including Total Fee
     const headers = [
       'Title',
       'Course Run #',
@@ -111,13 +115,17 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       'Value of Work Done',
       'PBMS Ref',
       'PBMS Invoice',
+      'Discount List',
+      'Entry Remarks',
+      'Invoice Amount',
       'Contract PBMS BE',
       'Contract Invoice Date',
       'Contract Amount',
       'Venue PBMS BE',
       'Venue Invoice Date',
       'Venue Amount',
-      'Remarks',
+      'Total Fee',
+      'Final Remarks',
     ];
 
     const headerRow = worksheet.getRow(3);
@@ -125,8 +133,8 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       const cell = headerRow.getCell(index + 1);
       cell.value = header;
       // Color coding: Red for important fields, Yellow for data fields
-      const redColumns = [0, 9]; // Title, Value of Work Done
-      const yellowColumns = [1, 2, 3, 6, 10, 11, 12, 13, 14, 15, 16, 17]; // All data columns
+      const redColumns = [0, 9, 21]; // Title, Value of Work Done, Total Fee
+      const yellowColumns = [1, 2, 3, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // All data columns
       const fillColor = redColumns.includes(index) ? 'FFFF4C4C' : yellowColumns.includes(index) ? 'FFFFFF99' : 'FFE2E8F0';
       formatHeadingCell(cell, fillColor);
     });
@@ -158,17 +166,17 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
         ? `${new Date(courseRun.startDate).toLocaleDateString('en-GB')} - ${new Date(courseRun.endDate).toLocaleDateString('en-GB')}`
         : '';
 
-      // Merge columns A-J and M-S across all billing rows if there are multiple entries
+      // Merge columns A-J and P-V across all billing rows if there are multiple entries
       if (numBillingRows > 1) {
         for (let col = 1; col <= 10; col++) {
           worksheet.mergeCells(startRow, col, endRow, col);
         }
-        // Also merge contract and venue columns (M-R)
-        for (let col = 13; col <= 18; col++) {
+        // Also merge contract and venue columns (P-U)
+        for (let col = 16; col <= 21; col++) {
           worksheet.mergeCells(startRow, col, endRow, col);
         }
-        // Merge remarks column (S)
-        worksheet.mergeCells(startRow, 19, endRow, 19);
+        // Merge final remarks column (W)
+        worksheet.mergeCells(startRow, 23, endRow, 23);
       }
 
       // Fill in the course data (merged cells - only set on first row)
@@ -211,49 +219,73 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       // J: Value of Work Done
       setCurrency(firstDataRow.getCell(10), valueOfWorkDone);
 
-      // M: Contract PBMS BE
-      firstDataRow.getCell(13).value = billing.contractFeePBMSBENumber || '';
-      firstDataRow.getCell(13).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // N: Contract Invoice Date
-      firstDataRow.getCell(14).value = billing.contractPBMSInvoiceDate
-        ? new Date(billing.contractPBMSInvoiceDate).toLocaleDateString('en-GB')
-        : '';
-      firstDataRow.getCell(14).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // O: Contract Amount
-      setCurrency(firstDataRow.getCell(15), billing.contractInvoiceAmount);
-
-      // P: Venue PBMS BE
-      firstDataRow.getCell(16).value = billing.venuePBMSBENumber || '';
+      // P: Contract PBMS BE
+      firstDataRow.getCell(16).value = billing.contractFeePBMSBENumber || '';
       firstDataRow.getCell(16).alignment = { horizontal: 'center', vertical: 'middle' };
       
-      // Q: Venue Invoice Date
-      firstDataRow.getCell(17).value = billing.venuePBMSInvoiceDate
-        ? new Date(billing.venuePBMSInvoiceDate).toLocaleDateString('en-GB')
+      // Q: Contract Invoice Date
+      firstDataRow.getCell(17).value = billing.contractPBMSInvoiceDate
+        ? new Date(billing.contractPBMSInvoiceDate).toLocaleDateString('en-GB')
         : '';
       firstDataRow.getCell(17).alignment = { horizontal: 'center', vertical: 'middle' };
       
-      // R: Venue Amount
-      setCurrency(firstDataRow.getCell(18), billing.venueInvoiceAmount);
+      // R: Contract Amount
+      setCurrency(firstDataRow.getCell(18), billing.contractInvoiceAmount);
 
-      // S: Remarks
-      firstDataRow.getCell(19).value = billing.finalRemarks || '';
-      firstDataRow.getCell(19).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+      // S: Venue PBMS BE
+      firstDataRow.getCell(19).value = billing.venuePBMSBENumber || '';
+      firstDataRow.getCell(19).alignment = { horizontal: 'center', vertical: 'middle' };
+      
+      // T: Venue Invoice Date
+      firstDataRow.getCell(20).value = billing.venuePBMSInvoiceDate
+        ? new Date(billing.venuePBMSInvoiceDate).toLocaleDateString('en-GB')
+        : '';
+      firstDataRow.getCell(20).alignment = { horizontal: 'center', vertical: 'middle' };
+      
+      // U: Venue Amount
+      setCurrency(firstDataRow.getCell(21), billing.venueInvoiceAmount);
+
+      // V: Total Fee (Contract + Venue)
+      const contractAmount = billing.contractInvoiceAmount || 0;
+      const venueAmount = billing.venueInvoiceAmount || 0;
+      const totalFee = contractAmount + venueAmount;
+      setCurrency(firstDataRow.getCell(22), totalFee);
+
+      // W: Final Remarks
+      firstDataRow.getCell(23).value = billing.finalRemarks || '';
+      firstDataRow.getCell(23).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
 
       // Apply borders to all cells in first data row
-      applyRowBorders(firstDataRow, 1, 19);
+      applyRowBorders(firstDataRow, 1, 23);
       firstDataRow.height = 24 * numBillingRows;
 
-      // Fill in billing entries (columns K-L only, not merged)
+      // Fill in billing entries (columns K-O only, not merged)
       if (billingEntries.length === 0) {
         const row = worksheet.getRow(startRow);
+        // K: PBMS Ref
         row.getCell(11).value = '';
         row.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
+        applyBorder(row.getCell(11));
+        
+        // L: PBMS Invoice Date
         row.getCell(12).value = '';
         row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
-        applyBorder(row.getCell(11));
         applyBorder(row.getCell(12));
+        
+        // M: Discount List
+        row.getCell(13).value = '';
+        row.getCell(13).alignment = { horizontal: 'left', vertical: 'middle' };
+        applyBorder(row.getCell(13));
+        
+        // N: Entry Remarks
+        row.getCell(14).value = '';
+        row.getCell(14).alignment = { horizontal: 'left', vertical: 'middle' };
+        applyBorder(row.getCell(14));
+        
+        // O: Invoice Amount
+        row.getCell(15).value = '';
+        row.getCell(15).alignment = { horizontal: 'right', vertical: 'middle' };
+        applyBorder(row.getCell(15));
       } else {
         billingEntries.forEach((entry: any, index: number) => {
           const row = worksheet.getRow(startRow + index);
@@ -268,12 +300,122 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
           row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
           applyBorder(row.getCell(12));
           
+          // M: Discount List - format: [discount_name percentage% - count]
+          let discountList = '';
+          if (entry.learners && Array.isArray(entry.learners)) {
+            const discountMap = new Map<string, { percentage: number; count: number }>();
+            
+            entry.learners.forEach((learner: any) => {
+              const discountName = learner.discountName || 'No Discount';
+              const discountPercentage = learner.discountPercentage || 0;
+              const key = `${discountName}_${discountPercentage}`;
+              
+              if (discountMap.has(key)) {
+                discountMap.get(key)!.count += 1;
+              } else {
+                discountMap.set(key, { percentage: discountPercentage, count: 1 });
+              }
+            });
+            
+            const discountArray = Array.from(discountMap.entries()).map(([key, data]) => {
+              const discountName = key.split('_')[0];
+              return `[${discountName} ${data.percentage}% - ${data.count}]`;
+            });
+            
+            discountList = discountArray.join(', ');
+          }
+          row.getCell(13).value = discountList;
+          row.getCell(13).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+          applyBorder(row.getCell(13));
+          
+          // N: Entry Remarks
+          row.getCell(14).value = entry.remarks || '';
+          row.getCell(14).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+          applyBorder(row.getCell(14));
+          
+          // O: Invoice Amount
+          setCurrency(row.getCell(15), entry.invoiceAmount);
+          applyBorder(row.getCell(15));
+          
           row.height = 24;
         });
       }
 
       currentRow += numBillingRows;
     }
+
+    // Add summary totals row
+    const summaryRow = worksheet.getRow(currentRow + 1);
+    
+    // Calculate totals from all course runs
+    let totalCourseRuns = 0;
+    let totalParticipants = 0;
+    let totalContractFees = 0;
+    let totalVenueFees = 0;
+    
+    for (const courseRun of courseRuns) {
+      totalCourseRuns += 1;
+      totalParticipants += courseRun.participants || 0;
+      const billing = courseRun.billing || {};
+      totalContractFees += billing.contractInvoiceAmount || 0;
+      totalVenueFees += billing.venueInvoiceAmount || 0;
+    }
+    
+    const totalAllFees = totalContractFees + totalVenueFees;
+    
+    // A: Label
+    summaryRow.getCell(1).value = 'TOTAL';
+    summaryRow.getCell(1).font = { bold: true };
+    summaryRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    applyBorder(summaryRow.getCell(1));
+    
+    // B-G: Empty cells with borders
+    for (let col = 2; col <= 7; col++) {
+      applyBorder(summaryRow.getCell(col));
+    }
+    
+    // E: Total Participants (in Qty column)
+    summaryRow.getCell(5).value = totalParticipants;
+    summaryRow.getCell(5).font = { bold: true };
+    summaryRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+    applyBorder(summaryRow.getCell(5));
+    
+    // H-P: Empty cells with borders
+    for (let col = 8; col <= 16; col++) {
+      applyBorder(summaryRow.getCell(col));
+    }
+    
+    // Q: Empty with border
+    applyBorder(summaryRow.getCell(17));
+    
+    // R: Total Contract Fees
+    setCurrency(summaryRow.getCell(18), totalContractFees);
+    summaryRow.getCell(18).font = { bold: true };
+    applyBorder(summaryRow.getCell(18));
+    
+    // S: Empty with border
+    applyBorder(summaryRow.getCell(19));
+    
+    // T: Empty with border
+    applyBorder(summaryRow.getCell(20));
+    
+    // U: Total Venue Fees
+    setCurrency(summaryRow.getCell(21), totalVenueFees);
+    summaryRow.getCell(21).font = { bold: true };
+    applyBorder(summaryRow.getCell(21));
+    
+    // V: Total All Fees
+    setCurrency(summaryRow.getCell(22), totalAllFees);
+    summaryRow.getCell(22).font = { bold: true, color: { argb: 'FFFF0000' } }; // Red font
+    applyBorder(summaryRow.getCell(22));
+    
+    // W: Total Course Runs as text
+    summaryRow.getCell(23).value = `Total Runs: ${totalCourseRuns}`;
+    summaryRow.getCell(23).font = { bold: true };
+    summaryRow.getCell(23).alignment = { horizontal: 'left', vertical: 'middle' };
+    applyBorder(summaryRow.getCell(23));
+    
+    summaryRow.height = 24;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {

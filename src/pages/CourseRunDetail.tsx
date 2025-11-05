@@ -192,6 +192,10 @@ const CourseRunDetail: React.FC = () => {
   const initEditData = useCallback((cr: CourseRunDetailData) => {
     const start = cr.startDatetime ? new Date(cr.startDatetime) : null;
     const end = cr.endDatetime ? new Date(cr.endDatetime) : null;
+    // prefer courseRun-level overrides, then venue defaults
+    const venueMax = cr.venueMaxParticipant ?? cr.venue?.maxParticipants ?? "";
+    const perHeadFromCr = cr.perHeadFeeIfMaxExceed ?? cr.venuePerHeadIfExceed ?? cr.venue?.perHeadPriceIfMaxExceed ?? "";
+
     setEditData({
       serialNumber: cr.serialNumber || "",
       courseRunType: cr.courseRunType || "",
@@ -209,9 +213,11 @@ const CourseRunDetail: React.FC = () => {
       individualRegistrationRequired: !!cr.individualRegistrationRequired,
       remarks: cr.remarks || "",
       baseCourseFee: cr.baseCourseFee ?? "",
-      venueFee: cr.venueFee ?? "",
-      venueMaxParticipant: cr.venueMaxParticipant ?? "",
-      perHeadFeeIfMaxExceed: cr.perHeadFeeIfMaxExceed ?? "",
+      contractFees: cr.contractFees ?? "",
+      venueFee: cr.venueFee ?? cr.venue?.fee ?? "",
+      venueMaxParticipant: venueMax,
+      perHeadFeeIfMaxExceed: perHeadFromCr,
+      venuePerHeadIfExceed: perHeadFromCr,
       otherFee: cr.otherFee ?? "",
       adminFee: cr.adminFee ?? "",
       contingencyFee: cr.contingencyFee ?? "",
@@ -560,10 +566,12 @@ const CourseRunDetail: React.FC = () => {
           }
           // Auto-fill max participants and per-head exceed fee
           if (venue.maxParticipants !== undefined && venue.maxParticipants !== null) {
-            updated.venueMaxParticipants = venue.maxParticipants;
+            updated.venueMaxParticipant = venue.maxParticipants;
           }
           if (venue.perHeadPriceIfMaxExceed !== undefined && venue.perHeadPriceIfMaxExceed !== null) {
+            // populate both variants to be safe for backend naming
             updated.perHeadFeeIfMaxExceed = venue.perHeadPriceIfMaxExceed;
+            updated.venuePerHeadIfExceed = venue.perHeadPriceIfMaxExceed;
           }
         }
       }
@@ -607,6 +615,18 @@ const CourseRunDetail: React.FC = () => {
         return;
       }
 
+      // Additional validation: when fee type is PER_VENUE and venue max is provided, it must be >= 1
+      if (editData.feeType === "PER_VENUE") {
+        if (editData.venueMaxParticipant !== "") {
+          const maxVal = Number(editData.venueMaxParticipant);
+          if (isNaN(maxVal) || maxVal < 1) {
+            toast.error("Max Participants (Venue) must be at least 1 for PER_VENUE fee type");
+            setEditSubmitting(false);
+            return;
+          }
+        }
+      }
+
       const startDatetime = editData.startDate && editData.startTime ? new Date(`${editData.startDate}T${editData.startTime}`).toISOString() : null;
       const endDatetime = editData.endDate && editData.endTime ? new Date(`${editData.endDate}T${editData.endTime}`).toISOString() : null;
 
@@ -624,9 +644,17 @@ const CourseRunDetail: React.FC = () => {
         individualRegistrationRequired: !!editData.individualRegistrationRequired,
         remarks: editData.remarks || null,
         baseCourseFee: editData.baseCourseFee === "" ? null : Number(editData.baseCourseFee),
+        contractFees: editData.contractFees === "" ? null : Number(editData.contractFees),
         venueFee: editData.venueFee === "" ? null : Number(editData.venueFee),
-        venueMaxParticipant: editData.venueMaxParticipants === "" ? null : Number(editData.venueMaxParticipants),
+        venueMaxParticipant: editData.venueMaxParticipant === "" ? null : Number(editData.venueMaxParticipant),
         perHeadFeeIfMaxExceed: editData.perHeadFeeIfMaxExceed === "" ? null : Number(editData.perHeadFeeIfMaxExceed),
+        // some APIs/DB columns use venuePerHeadIfExceed naming - include both to be compatible
+        venuePerHeadIfExceed:
+          editData.venuePerHeadIfExceed === ""
+            ? editData.perHeadFeeIfMaxExceed === ""
+              ? null
+              : Number(editData.perHeadFeeIfMaxExceed)
+            : Number(editData.venuePerHeadIfExceed),
         otherFee: editData.otherFee === "" ? null : Number(editData.otherFee),
         adminFee: editData.adminFee === "" ? null : Number(editData.adminFee),
         contingencyFee: editData.contingencyFee === "" ? null : Number(editData.contingencyFee),
@@ -1567,128 +1595,127 @@ const CourseRunDetail: React.FC = () => {
                   <CardContent>
                     {(() => {
                       const participants = courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length ?? 0;
-                      const baseFee = safeNumber(courseRun.venueFee ?? courseRun.venue?.fee ?? 0);
-                      const maxP = courseRun.venueMaxParticipant ?? courseRun.venue?.maxParticipants ?? 0;
-                      const perHeadExceed = safeNumber(courseRun.perHeadFeeIfMaxExceed ?? courseRun.venue?.perHeadPriceIfMaxExceed ?? 0);
-                      const finalFee = safeNumber(courseRun.venueFinalFee ?? 0);
 
-                      if (courseRun.feeType === "PER_HEAD") {
+                      // Prefer editData values when in editing mode so the preview updates live
+                      const feeTypeVal = isEditing ? editData?.feeType || courseRun.feeType : courseRun.feeType;
+
+                      const baseFee = safeNumber(
+                        isEditing ? editData?.venueFee ?? courseRun.venueFee ?? courseRun.venue?.fee : courseRun.venueFee ?? courseRun.venue?.fee,
+                        0
+                      );
+
+                      const maxP = isEditing
+                        ? editData?.venueMaxParticipant !== "" && editData?.venueMaxParticipant !== undefined
+                          ? Number(editData.venueMaxParticipant)
+                          : courseRun.venueMaxParticipant ?? courseRun.venue?.maxParticipants ?? 0
+                        : courseRun.venueMaxParticipant ?? courseRun.venue?.maxParticipants ?? 0;
+
+                      const perHeadExceed = safeNumber(
+                        isEditing
+                          ? editData?.perHeadFeeIfMaxExceed ?? editData?.venuePerHeadIfExceed
+                          : courseRun.perHeadFeeIfMaxExceed ?? courseRun.venue?.perHeadPriceIfMaxExceed,
+                        0
+                      );
+
+                      // compute final fee locally for preview
+                      let finalFeeCalc = 0;
+                      if (feeTypeVal === "PER_HEAD") {
+                        finalFeeCalc = baseFee * participants;
+                      } else if (feeTypeVal === "PER_VENUE") {
+                        if (maxP > 0 && participants > maxP && perHeadExceed > 0) {
+                          finalFeeCalc = baseFee + (participants - maxP) * perHeadExceed;
+                        } else {
+                          finalFeeCalc = baseFee;
+                        }
+                      } else {
+                        // fixed or unspecified - fall back to stored final fee
+                        finalFeeCalc = safeNumber(courseRun.venueFinalFee ?? 0);
+                      }
+
+                      if (feeTypeVal === "PER_HEAD") {
                         return (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
-                              <div>
-                                <p className="text-xs text-gray-600 mb-1">Participants (Enrolled)</p>
-                                <p className="text-2xl font-bold text-blue-600">{participants}</p>
+                          <div className="space-y-3">
+                            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Participants</span>
+                                <span className="font-semibold text-blue-700">{participants}</span>
                               </div>
-                              <div>
-                                <p className="text-xs text-gray-600 mb-1">Per Head Rate</p>
-                                <p className="text-2xl font-bold text-blue-600">{currency(baseFee)}</p>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Per Head Rate</span>
+                                <span className="font-semibold text-blue-700">{currency(baseFee)}</span>
                               </div>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                              <p className="text-sm text-gray-600 mb-2">Calculation Formula:</p>
-                              <div className="font-mono text-sm bg-white p-3 rounded border">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-blue-600 font-semibold">{participants}</span>
-                                  <span className="text-gray-400">×</span>
-                                  <span className="text-blue-600 font-semibold">{currency(baseFee)}</span>
-                                  <span className="text-gray-400">=</span>
-                                  <span className="text-green-600 font-bold text-lg">{currency(finalFee)}</span>
+                              <div className="pt-2 border-t border-blue-200">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium text-gray-700">Formula</span>
+                                  <span className="text-sm font-mono text-gray-600">
+                                    {participants} × {currency(baseFee)}
+                                  </span>
                                 </div>
                               </div>
                             </div>
                             <div className="flex items-center justify-between p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                              <span className="text-sm font-medium text-gray-700">Final Venue Fee:</span>
-                              <span className="text-2xl font-bold text-green-700">{currency(finalFee)}</span>
+                              <span className="text-sm font-semibold text-gray-700">Final Fee</span>
+                              <span className="text-xl font-bold text-green-700">{currency(finalFeeCalc)}</span>
                             </div>
                           </div>
                         );
                       }
 
-                      if (courseRun.feeType === "PER_VENUE") {
+                      if (feeTypeVal === "PER_VENUE") {
                         const hasExcess = maxP > 0 && participants > maxP && perHeadExceed > 0;
                         const excess = hasExcess ? participants - maxP : 0;
                         const excessFee = hasExcess ? excess * perHeadExceed : 0;
 
                         return (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
-                              <div>
-                                <p className="text-xs text-gray-600 mb-1">Participants</p>
-                                <p className="text-2xl font-bold text-blue-600">{participants}</p>
+                          <div className="space-y-3">
+                            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Participants</span>
+                                <span className="font-semibold text-blue-700">{participants}</span>
                               </div>
-                              <div>
-                                <p className="text-xs text-gray-600 mb-1">Base Venue Fee</p>
-                                <p className="text-2xl font-bold text-blue-600">{currency(baseFee)}</p>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Venue Fee</span>
+                                <span className="font-semibold text-blue-700">{currency(baseFee)} per venue</span>
                               </div>
-                              <div>
-                                <p className="text-xs text-gray-600 mb-1">Max Capacity</p>
-                                <p className="text-2xl font-bold text-blue-600">{maxP || "∞"}</p>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Max Participant</span>
+                                <span className="font-semibold text-blue-700">{maxP || "Not Set"}</span>
                               </div>
+                              {maxP > 0 && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600">Per Head if Exceed Max</span>
+                                  <span className="font-semibold text-blue-700">{currency(perHeadExceed)}</span>
+                                </div>
+                              )}
+                              {hasExcess && (
+                                <div className="pt-2 border-t border-orange-200 bg-orange-50 -mx-4 -mb-4 px-4 py-2 rounded-b-lg">
+                                  <div className="flex justify-between items-center text-orange-700">
+                                    <span className="text-sm font-medium">⚠ Exceeded by {excess} pax</span>
+                                    <span className="font-semibold">{currency(excessFee)}</span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-
-                            {hasExcess && (
-                              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <AlertCircle className="h-4 w-4 text-orange-600" />
-                                  <p className="text-sm font-medium text-orange-800">Capacity Exceeded</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 mt-3">
-                                  <div>
-                                    <p className="text-xs text-gray-600">Extra Participants</p>
-                                    <p className="text-lg font-bold text-orange-600">{excess}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-600">Per Head Excess Fee</p>
-                                    <p className="text-lg font-bold text-orange-600">{currency(perHeadExceed)}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                              <p className="text-sm text-gray-600 mb-2">Calculation Formula:</p>
-                              <div className="font-mono text-sm bg-white p-3 rounded border space-y-1">
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                              <div className="text-sm text-gray-600 mb-2">Formula:</div>
+                              <div className="font-mono text-sm">
                                 {hasExcess ? (
-                                  <>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-gray-600">Base Fee:</span>
-                                      <span className="text-blue-600 font-semibold">{currency(baseFee)}</span>
+                                  <div className="space-y-1">
+                                    <div>
+                                      {currency(baseFee)} + (({participants} - {maxP}) × {currency(perHeadExceed)})
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-gray-600">Excess Fee:</span>
-                                      <span className="text-blue-600 font-semibold">
-                                        ({participants} - {maxP})
-                                      </span>
-                                      <span className="text-gray-400">×</span>
-                                      <span className="text-blue-600 font-semibold">{currency(perHeadExceed)}</span>
-                                      <span className="text-gray-400">=</span>
-                                      <span className="text-orange-600 font-semibold">{currency(excessFee)}</span>
+                                    <div className="text-gray-500">
+                                      = {currency(baseFee)} + {currency(excessFee)}
                                     </div>
-                                    <div className="border-t pt-2 mt-2 flex items-center gap-2">
-                                      <span className="text-gray-600">Total:</span>
-                                      <span className="text-blue-600 font-semibold">{currency(baseFee)}</span>
-                                      <span className="text-gray-400">+</span>
-                                      <span className="text-orange-600 font-semibold">{currency(excessFee)}</span>
-                                      <span className="text-gray-400">=</span>
-                                      <span className="text-green-600 font-bold text-lg">{currency(finalFee)}</span>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-gray-600">Base Fee:</span>
-                                    <span className="text-blue-600 font-semibold">{currency(baseFee)}</span>
-                                    <span className="text-gray-400">=</span>
-                                    <span className="text-green-600 font-bold text-lg">{currency(finalFee)}</span>
-                                    <span className="text-xs text-gray-500">(within capacity)</span>
                                   </div>
+                                ) : (
+                                  <div>{currency(baseFee)} (within capacity)</div>
                                 )}
                               </div>
                             </div>
-
                             <div className="flex items-center justify-between p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                              <span className="text-sm font-medium text-gray-700">Final Venue Fee:</span>
-                              <span className="text-2xl font-bold text-green-700">{currency(finalFee)}</span>
+                              <span className="text-sm font-semibold text-gray-700">Final Fee</span>
+                              <span className="text-xl font-bold text-green-700">{currency(finalFeeCalc)}</span>
                             </div>
                           </div>
                         );
@@ -1698,7 +1725,7 @@ const CourseRunDetail: React.FC = () => {
                       return (
                         <div className="p-4 bg-gray-50 rounded-lg text-center">
                           <p className="text-sm text-gray-600 mb-2">No fee calculation formula available</p>
-                          <p className="text-2xl font-bold text-gray-700">{currency(finalFee)}</p>
+                          <p className="text-2xl font-bold text-gray-700">{currency(finalFeeCalc)}</p>
                         </div>
                       );
                     })()}
