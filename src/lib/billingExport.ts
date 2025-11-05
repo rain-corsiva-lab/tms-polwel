@@ -176,8 +176,8 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
       for (let col = 1; col <= 10; col++) {
         worksheet.mergeCells(startRow, col, endRow, col);
       }
-      // Also merge contract and venue columns (P-U)
-      for (let col = 16; col <= 21; col++) {
+      // Also merge contract and venue columns (P-V) including Total Fee
+      for (let col = 16; col <= 22; col++) {
         worksheet.mergeCells(startRow, col, endRow, col);
       }
       // Merge final remarks column (W)
@@ -305,12 +305,26 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
 
         // M: Discount List - format: [discount_name percentage% - count]
         let discountList = '';
-        if (entry.learners && Array.isArray(entry.learners)) {
+        if (entry.courseRunLearners && Array.isArray(entry.courseRunLearners)) {
           const discountMap = new Map<string, { percentage: number; count: number }>();
+          
+          // Parse course discounts array to create a lookup map
+          const discountLookup = new Map<string, string>();
+          if (courseRun.course?.discounts && Array.isArray(courseRun.course.discounts)) {
+            (courseRun.course.discounts as any[]).forEach((discount: any) => {
+              if (discount.id) {
+                discountLookup.set(discount.id, discount.name || 'Discount');
+              }
+            });
+          }
 
-          entry.learners.forEach((learner: any) => {
-            const discountName = learner.discountName || 'no discount';
-            const discountPercentage = learner.discountPercentage || 0;
+          entry.courseRunLearners.forEach((learner: any) => {
+            // Map discountId to discount name from course discounts
+            const discountId = learner.discountId;
+            const discountName = discountId && discountLookup.has(discountId) 
+              ? discountLookup.get(discountId)! 
+              : 'No Discount';
+            const discountPercentage = learner.discountPercentage ? Number(learner.discountPercentage) : 0;
             const key = `${discountName}_${discountPercentage}`;
 
             if (discountMap.has(key)) {
@@ -322,7 +336,7 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
 
           const discountArray = Array.from(discountMap.entries()).map(([key, data]) => {
             const discountName = key.split('_')[0];
-            return `[${discountName} ${data.percentage}% - ${data.count}]`;
+            return `[${discountName} ${data.percentage}% = ${data.count}]`;
           });
 
           discountList = discountArray.join(', ');

@@ -259,7 +259,14 @@ export const billingReportsController = {
             include: {
               courseRun: {
                 include: {
-                  course: true,
+                  course: {
+                    select: {
+                      id: true,
+                      title: true,
+                      courseCode: true,
+                      discounts: true,
+                    },
+                  },
                   venue: true,
                   courseRunLearners: {
                     where: { deletedAt: null },
@@ -326,6 +333,7 @@ export const billingReportsController = {
           venueFees: toNumber(billing.venueInvoiceAmount) ?? 0,
           totalAmount: (toNumber(billing.contractInvoiceAmount) ?? 0) + (toNumber(billing.venueInvoiceAmount) ?? 0),
           status: billing.courseRun.status,
+          courseDiscounts: billing.courseRun.course?.discounts || [],
           billing: {
             valueOfWorkDone: toNumber(billing.valueOfWorkDone) ?? 0,
             contractFeePBMSBENumber: billing.contractFeePBMSBENumber,
@@ -342,6 +350,8 @@ export const billingReportsController = {
               learners: entry.courseRunLearners.map((crl: any) => ({
                 name: crl.learner?.fullname || '',
                 email: crl.learner?.email || '',
+                discountId: crl.discountId,
+                discountPercentage: toNumber(crl.discountPercentage) ?? 0,
               })),
               remarks: entry.remarks,
             })),

@@ -3594,7 +3594,15 @@ export const courseRunController = {
           deletedAt: null,
         },
         include: {
-          course: true,
+          course: {
+            select: {
+              id: true,
+              title: true,
+              courseCode: true,
+              defaultCourseFee: true,
+              discounts: true,
+            },
+          },
           venue: true,
           courseRunBilling: {
             include: {

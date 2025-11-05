@@ -171,8 +171,8 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
         for (let col = 1; col <= 10; col++) {
           worksheet.mergeCells(startRow, col, endRow, col);
         }
-        // Also merge contract and venue columns (P-U)
-        for (let col = 16; col <= 21; col++) {
+        // Also merge contract and venue columns (P-V) including Total Fee
+        for (let col = 16; col <= 22; col++) {
           worksheet.mergeCells(startRow, col, endRow, col);
         }
         // Merge final remarks column (W)
@@ -303,11 +303,24 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
           // M: Discount List - format: [discount_name percentage% - count]
           let discountList = '';
           if (entry.learners && Array.isArray(entry.learners)) {
+            // Create discount lookup from course discounts array
+            const discountLookup = new Map<string, string>();
+            if (courseRun.courseDiscounts && Array.isArray(courseRun.courseDiscounts)) {
+              (courseRun.courseDiscounts as any[]).forEach((discount: any) => {
+                if (discount.id) {
+                  discountLookup.set(discount.id, discount.name || 'Discount');
+                }
+              });
+            }
+
+            // Map learners' discount IDs to names and group by discount
             const discountMap = new Map<string, { percentage: number; count: number }>();
             
             entry.learners.forEach((learner: any) => {
-              const discountName = learner.discountName || 'No Discount';
-              const discountPercentage = learner.discountPercentage || 0;
+              const discountName = discountLookup.has(learner.discountId)
+                ? discountLookup.get(learner.discountId)!
+                : 'No Discount';
+              const discountPercentage = Number(learner.discountPercentage) || 0;
               const key = `${discountName}_${discountPercentage}`;
               
               if (discountMap.has(key)) {
@@ -319,7 +332,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
             
             const discountArray = Array.from(discountMap.entries()).map(([key, data]) => {
               const discountName = key.split('_')[0];
-              return `[${discountName} ${data.percentage}% - ${data.count}]`;
+              return `[${discountName} ${data.percentage}% = ${data.count}]`;
             });
             
             discountList = discountArray.join(', ');
