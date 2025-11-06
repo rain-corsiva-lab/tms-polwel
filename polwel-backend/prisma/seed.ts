@@ -727,122 +727,67 @@ async function main() {
   // Sprint 3: Create Billing Reports for Jan 2025 - Nov 2025
   const billingReportJan2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'January 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'January 2025'
     },
   });
 
   const billingReportFeb2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'February 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'February 2025'
     },
   });
 
   const billingReportMar2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'March 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'March 2025'
     },
   });
 
   const billingReportApr2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'April 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'April 2025'
     },
   });
 
   const billingReportMay2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'May 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'May 2025'
     },
   });
 
   const billingReportJun2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'June 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'June 2025'
     },
   });
 
   const billingReportJul2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'July 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'July 2025'
     },
   });
 
   const billingReportAug2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'August 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'August 2025'
     },
   });
 
   const billingReportSep2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'September 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'September 2025'
     },
   });
 
   const billingReportOct2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'October 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'October 2025'
     },
   });
 
   const billingReportNov2025 = await prisma.billingReport.create({
     data: {
-      billingMonth: 'November 2025',
-      totalCourseRuns: 0,
-      totalParticipants: 0,
-      contractFees: 0,
-      venueFees: 0,
-      totalAmount: 0,
+      billingMonth: 'November 2025'
     },
   });
 

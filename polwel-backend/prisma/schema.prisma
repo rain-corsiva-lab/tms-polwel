@@ -148,7 +148,9 @@ model Course {
   defaultCourseFee   Float           @default(0)
   discounts          Json?
   contractFees       Float           @default(0)
-  venueFeeType       String?
+  venueFeeType       FeeType?        @default(PER_HEAD)
+  venueMaxParticipants Int?
+  perHeadPriceIfMaxExceed Decimal?  @db.Decimal(10, 2)
   bookings           Booking[]
   runs               CourseRun[]
   creator            User?           @relation("CourseCreator", fields: [createdBy], references: [id])

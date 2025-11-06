@@ -538,6 +538,15 @@ const createCourseRunSchema = z.object({
   contingencyFee: z.number().nullable().optional(),
   status: z.enum(['DRAFT', 'PENDING', 'CONFIRMED_PENDING_TA_APPROVAL', 'ACTIVE', 'CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'PUBLISHED', 'ONGOING']).optional(),
   billingReportId: z.string().nullable().optional(),
+  trainers: z
+    .array(
+      z.object({
+        trainerId: z.string(),
+        trainerBaseAmount: z.number().nullable().optional(),
+        additionalCost: z.number().nullable().optional(),
+      })
+    )
+    .optional(),
 });
 
 const cancelCourseRunSchema = z
@@ -939,6 +948,10 @@ export const courseRunController = {
     try {
       const data = createCourseRunSchema.parse(req.body);
 
+      // Extract trainers array before creating course run
+      const trainers = data.trainers || [];
+      delete (data as any).trainers; // Remove from data to avoid Prisma error
+
       // Convert date strings to Date objects if provided
       const courseRunData: any = {
         ...data,
@@ -977,6 +990,18 @@ export const courseRunController = {
           },
         },
       });
+
+      // Create trainer assignments if provided
+      if (trainers.length > 0) {
+        await prisma.courseRunTrainer.createMany({
+          data: trainers.map((t: any) => ({
+            courseRunId: courseRun.id,
+            trainerId: t.trainerId,
+            trainerBaseAmount: t.trainerBaseAmount ?? null,
+            additionalCost: t.additionalCost ?? null,
+          })),
+        });
+      }
 
       // Calculate and persist venue final fee after creation
       try {

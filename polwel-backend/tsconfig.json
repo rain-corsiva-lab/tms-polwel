@@ -33,7 +33,7 @@
     "isolatedModules": true,
     "noEmitOnError": true,
     "preserveConstEnums": true,
-  // "ignoreDeprecations": "6.0",
+    // "ignoreDeprecations": "6.0",
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"],

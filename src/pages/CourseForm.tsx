@@ -44,6 +44,8 @@ interface FormState {
   discounts: any[];
   minParticipants: number;
   maxParticipants: number | string;
+  venueMaxParticipants: number | string;
+  perHeadPriceIfMaxExceed: number | string;
 }
 
 const initialForm: FormState = {
@@ -58,7 +60,7 @@ const initialForm: FormState = {
   trainer: [],
   contractFees: 0,
   venueFee: 0,
-  venueFeeType: "",
+  venueFeeType: "PER_HEAD",
   venue: "",
   specifiedLocation: "",
   certificates: "polwel",
@@ -67,6 +69,8 @@ const initialForm: FormState = {
   discounts: [],
   minParticipants: 1,
   maxParticipants: "",
+  venueMaxParticipants: "",
+  perHeadPriceIfMaxExceed: "",
 };
 
 const CourseForm: React.FC = () => {
@@ -254,17 +258,18 @@ const CourseForm: React.FC = () => {
 
   const handleVenueSelect = (venue: any) => {
     if (venue?.fee !== undefined && venue?.feeType) {
-      const vType = String(venue.feeType);
-      const feeTypeSuffix = vType === "PER_HEAD" || vType === "per_head" ? "/ head" : "/ venue";
+      const vType = String(venue.feeType).toUpperCase();
       setFormData((prev) => ({
         ...prev,
         venueFee: venue.fee,
-        venueFeeType: feeTypeSuffix,
+        venueFeeType: vType,
+        venueMaxParticipants: venue.maxParticipants || "",
+        perHeadPriceIfMaxExceed: venue.perHeadPriceIfMaxExceed || "",
       }));
 
       toast({
         title: "Venue Fee Updated",
-        description: `Venue expenses auto-filled to $${venue.fee} ${feeTypeSuffix}`,
+        description: `Venue expenses auto-filled to $${venue.fee} ${vType === "PER_HEAD" ? "per head" : vType === "PER_VENUE" ? "per venue" : "fixed"}`,
       });
     }
   };
@@ -336,6 +341,8 @@ const CourseForm: React.FC = () => {
       discounts: formData.discounts,
       minParticipants: formData.minParticipants,
       maxParticipants: formData.maxParticipants || undefined,
+      venueMaxParticipants: formData.venueMaxParticipants || undefined,
+      perHeadPriceIfMaxExceed: formData.perHeadPriceIfMaxExceed ? parseFloat(formData.perHeadPriceIfMaxExceed.toString()) : undefined,
     };
     try {
       if (isEdit && id) {
@@ -429,7 +436,7 @@ const CourseForm: React.FC = () => {
                 <CardTitle>Revenues & Expenses</CardTitle>
               </CardHeader>
               <CardContent>
-                <FeesRevenueTab formData={formData as any} onInputChange={handleInputChange as any} />
+                <FeesRevenueTab formData={formData as any} onInputChange={handleInputChange as any} venues={refs.venues} selectedVenueId={formData.venue} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -222,22 +222,41 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
 
     setSaving(true);
     try {
-      const records = snapshot.learners.map((learner) => {
-        const dayRecord = learner.attendance.find((entry) => entry.day === selectedDay);
-        return {
-          learnerId: learner.learnerId,
-          attendAM: dayRecord?.attendAM ?? false,
-          attendPM: dayRecord?.attendPM ?? false,
-        };
+      // Save all days, not just the selected day
+      // Group all attendance records by day
+      const dayRecordsMap = new Map<number, Array<{ learnerId: string; attendAM: boolean; attendPM: boolean }>>();
+
+      snapshot.learners.forEach((learner) => {
+        learner.attendance.forEach((dayRecord) => {
+          if (!dayRecordsMap.has(dayRecord.day)) {
+            dayRecordsMap.set(dayRecord.day, []);
+          }
+          dayRecordsMap.get(dayRecord.day)!.push({
+            learnerId: learner.learnerId,
+            attendAM: dayRecord.attendAM,
+            attendPM: dayRecord.attendPM,
+          });
+        });
       });
 
-      const response = await courseRunsApi.saveAttendance(courseRunId, {
-        day: selectedDay,
-        records,
-      });
+      // Save each day's attendance
+      let lastResponse: any = null;
+      for (const [day, records] of dayRecordsMap.entries()) {
+        const response = await courseRunsApi.saveAttendance(courseRunId, {
+          day,
+          records,
+        });
 
-      if (response?.success && response.attendance) {
-        const nextSnapshot: AttendanceSnapshot = response.attendance;
+        if (!response?.success) {
+          throw new Error(response?.error || `Failed to save attendance for Day ${day}`);
+        }
+
+        lastResponse = response;
+      }
+
+      // Update snapshot with the last response
+      if (lastResponse?.success && lastResponse.attendance) {
+        const nextSnapshot: AttendanceSnapshot = lastResponse.attendance;
         setSnapshot(nextSnapshot);
 
         setSelectedDay((prev) => {
@@ -251,7 +270,7 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
 
         toast({
           title: "Attendance saved",
-          description: `Attendance for Day ${selectedDay} has been updated.`,
+          description: `Attendance for all days has been updated successfully.`,
         });
 
         onOpenChange(false);
@@ -259,12 +278,6 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
         if (onSaved) {
           onSaved();
         }
-      } else {
-        toast({
-          title: "Failed to save attendance",
-          description: response?.error || "Please verify the data and try again.",
-          variant: "destructive",
-        });
       }
     } catch (error: any) {
       console.error("Attendance save error", error);
@@ -276,7 +289,7 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
     } finally {
       setSaving(false);
     }
-  }, [courseRunId, onOpenChange, onSaved, selectedDay, snapshot, toast]);
+  }, [courseRunId, onOpenChange, onSaved, snapshot, toast]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

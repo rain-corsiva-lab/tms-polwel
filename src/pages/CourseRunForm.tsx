@@ -95,7 +95,7 @@ const CourseRunForm: React.FC = () => {
   // Form state
   const [formData, setFormData] = useState<CourseRunFormData>({
     serialNumber: "",
-    courseRunType: "",
+    courseRunType: "OPEN", // Set default to OPEN
     courseId: courseId || "",
     courseCode: "",
     startDate: "",
@@ -439,6 +439,19 @@ const CourseRunForm: React.FC = () => {
       const startDatetime = formData.startDate && formData.startTime ? new Date(`${formData.startDate}T${formData.startTime}`).toISOString() : null;
       const endDatetime = formData.endDate && formData.endTime ? new Date(`${formData.endDate}T${formData.endTime}`).toISOString() : null;
 
+      // Get venue fee and fee type from selected venue
+      const selectedVenue = venues.find((v) => v.id === formData.venueId);
+      const venueFee = selectedVenue?.fee ?? null;
+      // Convert venue fee type to uppercase enum value
+      const venueFeeType = selectedVenue?.feeType ? String(selectedVenue.feeType).toUpperCase() : null;
+
+      // Prepare trainer assignments
+      const trainerAssignments = formData.selectedTrainers.map((trainerId) => ({
+        trainerId,
+        trainerBaseAmount: formData.baseAmount ?? null,
+        additionalCost: formData.additionalCosts ?? null,
+      }));
+
       const submissionData = {
         serialNumber: formData.serialNumber,
         courseRunType: formData.courseRunType,
@@ -446,6 +459,8 @@ const CourseRunForm: React.FC = () => {
         startDatetime,
         endDatetime,
         venueId: formData.venueId || null,
+        venueFee: venueFee,
+        feeType: venueFeeType, // Include fee type from venue
         venueMaxParticipant: formData.venueMaxParticipants ?? null,
         perHeadFeeIfMaxExceed: formData.perHeadFeeIfMaxExceed ?? null,
         venueType: formData.venueType,
@@ -456,7 +471,8 @@ const CourseRunForm: React.FC = () => {
         remarks: formData.remarks,
         baseCourseFee: formData.baseAmount,
         otherFee: formData.additionalCosts,
-        status: isDraft ? "DRAFT" : "ACTIVE",
+        status: isDraft ? "DRAFT" : "CONFIRMED_PENDING_TA_APPROVAL", // Change to CONFIRMED_PENDING_TA_APPROVAL
+        trainers: trainerAssignments, // Include trainer assignments
       };
 
       const response = await courseRunsApi.create(submissionData);

@@ -575,6 +575,12 @@ const CourseRunDetail: React.FC = () => {
           }
         }
       }
+
+      // If individualRegistrationRequired is changed to false and we're on learner-particulars tab, switch to course-info
+      if (field === "individualRegistrationRequired" && value === false && activeTab === "learner-particulars") {
+        setActiveTab("course-info");
+      }
+
       return updated;
     });
   };
@@ -720,7 +726,13 @@ const CourseRunDetail: React.FC = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="course-info">Course Run Information</TabsTrigger>
-              <TabsTrigger value="learner-particulars">Learner Particulars ({courseRun.courseRunLearners?.length || 0})</TabsTrigger>
+              <TabsTrigger
+                value="learner-particulars"
+                disabled={!courseRun.individualRegistrationRequired}
+                className={!courseRun.individualRegistrationRequired ? "opacity-50 cursor-not-allowed" : ""}
+              >
+                Learner Particulars ({courseRun.courseRunLearners?.length || 0})
+              </TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
               <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
             </TabsList>

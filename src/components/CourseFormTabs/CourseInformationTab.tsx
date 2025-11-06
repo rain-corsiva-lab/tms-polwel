@@ -372,6 +372,8 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
         </div>
       </div>
 
+      {/* Fee-related fields moved to FeesRevenueTab */}
+
       {/* Certificate Generation */}
       <div className="space-y-4">
         <Label className="text-base font-semibold">Certificate Generation</Label>
