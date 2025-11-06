@@ -191,7 +191,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* Post Run Management - Standalone Menu Item */}
-        {postRunManagementVisible && (
+        {/* {postRunManagementVisible && (
           <Can I="view" a="PostCourseRun">
             <NavLink
               to="/post-run-management"
@@ -206,10 +206,10 @@ const Sidebar = ({ className }: SidebarProps) => {
               Post Run Management
             </NavLink>
           </Can>
-        )}
+        )} */}
 
         {/* Billing Reports - Standalone Menu Item */}
-        {postRunManagementVisible && (
+        {/* {postRunManagementVisible && (
           <Can I="view" a="PostCourseRun">
             <NavLink
               to="/billing-reports"
@@ -224,7 +224,7 @@ const Sidebar = ({ className }: SidebarProps) => {
               Billing Reports
             </NavLink>
           </Can>
-        )}
+        )} */}
       </nav>
     </aside>
   );

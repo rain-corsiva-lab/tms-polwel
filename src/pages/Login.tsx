@@ -230,7 +230,7 @@ const Login = () => {
   // Pre-fill with test credentials for development
   const fillTestCredentials = (role: string) => {
     const testAccounts = {
-      admin: { email: "john.tan@polwel.org", password: "password123" },
+      admin: { email: "kukuhthewow@gmail.coms", password: "password123" },
       coordinator: { email: "mary.lim@spf.gov.sg", password: "password123" },
       trainer: { email: "david.chen@training.com", password: "password123" },
       learner: { email: "raj.kumar@spf.gov.sg", password: "password123" },
