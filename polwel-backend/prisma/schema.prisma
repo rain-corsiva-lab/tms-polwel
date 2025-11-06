@@ -315,8 +315,6 @@ model Venue {
   contacts                Json?
   feeType                 FeeType     @default(PER_VENUE)
   fee                     Float       @default(0)
-  maxParticipants         Int?
-  perHeadPriceIfMaxExceed Decimal?    @db.Decimal(10, 2)
   status                  VenueStatus @default(ACTIVE)
   remarks                 String?     @db.Text
   createdAt               DateTime    @default(now())
@@ -332,7 +330,7 @@ model Venue {
   @@map("venues")
 }
 
-model MfaChallenge {
+model MfaChallenge {s
   id           String   @id @default(cuid())
   userId       String   @unique
   codeHash     String

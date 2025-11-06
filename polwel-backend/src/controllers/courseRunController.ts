@@ -146,9 +146,13 @@ const calculateVenueFinalFee = async (courseRunId: string): Promise<number> => {
         select: {
           feeType: true,
           fee: true,
-          maxParticipants: true,
-          perHeadPriceIfMaxExceed: true,
         },
+      },
+      course: {
+        select: {
+          venueMaxParticipants: true,
+          perHeadPriceIfMaxExceed: true,
+        }
       },
       courseRunLearners: {
         where: {
@@ -174,9 +178,9 @@ const calculateVenueFinalFee = async (courseRunId: string): Promise<number> => {
     let finalFee = venue.fee;
 
     // If max participants is set and exceeded, add per-head charges
-    if (venue.maxParticipants && venue.perHeadPriceIfMaxExceed && participantCount > venue.maxParticipants) {
-      const excessParticipants = participantCount - venue.maxParticipants;
-      const excessFee = excessParticipants * Number(venue.perHeadPriceIfMaxExceed);
+    if (courseRun.course?.venueMaxParticipants && courseRun.course?.perHeadPriceIfMaxExceed && participantCount > courseRun.course.venueMaxParticipants) {
+      const excessParticipants = participantCount - courseRun.course.venueMaxParticipants;
+      const excessFee = excessParticipants * Number(courseRun.course.perHeadPriceIfMaxExceed);
       finalFee += excessFee;
     }
 

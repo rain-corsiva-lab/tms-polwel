@@ -29,7 +29,7 @@
   "description": "",
   "dependencies": {
     "@casl/ability": "^6.7.3",
-    "@prisma/client": "^6.13.0",
+    "@prisma/client": "^6.19.0",
     "@types/archiver": "^7.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/nodemailer": "^6.4.17",
@@ -51,7 +51,6 @@
     "nodemailer": "^7.0.5",
     "path-to-regexp": "^6.2.1",
     "pdfkit": "^0.17.2",
-    "prisma": "^6.13.0",
     "sanitize-html": "^2.13.0"
   },
   "devDependencies": {
@@ -67,6 +66,7 @@
     "@types/pdfkit": "^0.17.3",
     "@types/sanitize-html": "^2.16.0",
     "nodemon": "^3.1.10",
+    "prisma": "^6.19.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.2"
