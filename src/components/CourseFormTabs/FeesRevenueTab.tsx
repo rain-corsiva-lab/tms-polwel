@@ -104,8 +104,8 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
               id="venueMaxParticipants"
               type="number"
               min="1"
-              value={formData.venueMaxParticipants || ""}
-              onChange={(e) => onInputChange("venueMaxParticipants", e.target.value)}
+              value={typeof formData.venueMaxParticipants === "number" ? formData.venueMaxParticipants : formData.venueMaxParticipants || ""}
+              onChange={(e) => onInputChange("venueMaxParticipants", e.target.value ? parseInt(e.target.value, 10) : "")}
               placeholder="Enter maximum participants"
             />
             <p className="text-sm text-muted-foreground">Override maximum allowed participants for this venue</p>
@@ -118,8 +118,8 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
               type="number"
               step="0.01"
               min="0"
-              value={formData.perHeadPriceIfMaxExceed || ""}
-              onChange={(e) => onInputChange("perHeadPriceIfMaxExceed", e.target.value)}
+              value={typeof formData.perHeadPriceIfMaxExceed === "number" ? formData.perHeadPriceIfMaxExceed : formData.perHeadPriceIfMaxExceed || ""}
+              onChange={(e) => onInputChange("perHeadPriceIfMaxExceed", e.target.value ? parseFloat(e.target.value) : "")}
               placeholder="0.00"
             />
             <p className="text-sm text-muted-foreground">Fee per participant if maximum is exceeded</p>

@@ -41,7 +41,9 @@ const CourseCreateSchema = z.object({
   contractFees: z.number().default(0),
   venueFee: z.number().default(0), // used as Venue Expenses
   venueFeeType: z.string().optional(), // Fee type suffix (/ venue or / head)
-  discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional()
+  discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional(),
+  venueMaxParticipants: z.number().int().positive().nullable().optional(),
+  perHeadPriceIfMaxExceed: z.number().nullable().optional()
 });
 
 const CourseUpdateSchema = CourseCreateSchema.partial();
@@ -299,6 +301,8 @@ export const coursesController = {
       if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
       if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
       if (data.discounts !== undefined) courseData.discounts = data.discounts;
+      if (data.venueMaxParticipants !== undefined) courseData.venueMaxParticipants = data.venueMaxParticipants;
+      if (data.perHeadPriceIfMaxExceed !== undefined) courseData.perHeadPriceIfMaxExceed = data.perHeadPriceIfMaxExceed;
 
       const course = await prisma.course.create({
         data: courseData,
@@ -458,6 +462,9 @@ export const coursesController = {
           } else {
             if (key === 'courseCode' && typeof value === 'string') {
               updateData.courseCode = value.toUpperCase();
+            } else if (key === 'venueMaxParticipants' || key === 'perHeadPriceIfMaxExceed') {
+              // Explicitly handle nullable venue pricing fields
+              updateData[key] = value;
             } else {
               updateData[key] = value;
             }

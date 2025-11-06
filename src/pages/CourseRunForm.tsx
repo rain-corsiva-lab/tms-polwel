@@ -218,22 +218,38 @@ const CourseRunForm: React.FC = () => {
   const handleCourseChange = async (selectedCourseId: string) => {
     const selectedCourse = courses.find((c) => c.id === selectedCourseId);
     if (selectedCourse) {
-      const newFormData = {
-        ...formData,
-        courseId: selectedCourseId,
-        courseCode: selectedCourse.courseCode || "",
-        selectedTrainers: [], // Clear selected trainers when course changes
-      };
+      // Get full course details including all fields
+      try {
+        const response = await fetch(`/api/courses/${selectedCourseId}`);
+        const data = await response.json();
+        if (data.success && data.data.course) {
+          const course = data.data.course;
+          // Create new form data with course details and reset trainers
+          const newFormData = {
+            ...formData,
+            courseId: selectedCourseId,
+            courseCode: course.courseCode || "",
+            selectedTrainers: [], // Clear selected trainers when course changes
+            // Auto-populate venue-related fields from course
+            maxClassSize: course.venueMaxParticipants || course.maxParticipants || undefined,
+            minClassSize: course.minParticipants || undefined,
+            venueFinalFee: course.venueFee || undefined,
+            venueMaxParticipants: course.venueMaxParticipants || undefined,
+            perHeadFeeIfMaxExceed: course.perHeadPriceIfMaxExceed || undefined,
+          };
 
-      // Regenerate serial number if start date exists
-      if (newFormData.startDate) {
-        newFormData.serialNumber = generateSerialNumber(selectedCourse.courseCode || "", newFormData.startDate);
+          // Regenerate serial number if start date exists
+          if (newFormData.startDate) {
+            newFormData.serialNumber = generateSerialNumber(course.courseCode || "", newFormData.startDate);
+          }
+
+          setFormData(newFormData);
+        }
+        // Fetch available trainers for this course
+        await filterTrainersByCourse(selectedCourseId);
+      } catch (error) {
+        console.error("Error fetching course details:", error);
       }
-
-      setFormData(newFormData);
-
-      // Filter trainers based on course
-      await filterTrainersByCourse(selectedCourseId);
     }
   };
 

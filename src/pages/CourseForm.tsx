@@ -207,6 +207,8 @@ const CourseForm: React.FC = () => {
             discounts: Array.isArray(c.discounts) ? c.discounts : [],
             minParticipants: c.minParticipants || 1,
             maxParticipants: c.maxParticipants || "",
+            venueMaxParticipants: c.venueMaxParticipants || "",
+            perHeadPriceIfMaxExceed: c.perHeadPriceIfMaxExceed || "",
           }));
           setLastAutoCourseCode(generatedCode);
           if (c.courseCode) {
@@ -250,6 +252,19 @@ const CourseForm: React.FC = () => {
       if (shouldAutoApply) {
         setCourseCodeManuallyEdited(false);
       }
+      return;
+    }
+
+    // Handle numeric fields for venue pricing
+    if (field === "venueMaxParticipants" && typeof value === "string") {
+      const numValue = value ? parseInt(value, 10) : "";
+      setFormData((prev) => ({ ...prev, [field]: numValue }));
+      return;
+    }
+
+    if (field === "perHeadPriceIfMaxExceed" && typeof value === "string") {
+      const numValue = value ? parseFloat(value) : "";
+      setFormData((prev) => ({ ...prev, [field]: numValue }));
       return;
     }
 
@@ -320,6 +335,14 @@ const CourseForm: React.FC = () => {
     }
 
     setLoading((l) => ({ ...l, submitting: true }));
+
+    // Debug: log the form data before submission
+    console.log("Form data before submission:", {
+      venueMaxParticipants: formData.venueMaxParticipants,
+      perHeadPriceIfMaxExceed: formData.perHeadPriceIfMaxExceed,
+      venueFeeType: formData.venueFeeType,
+    });
+
     const payload: any = {
       courseCode: formData.courseCode,
       title: formData.title,
@@ -340,10 +363,13 @@ const CourseForm: React.FC = () => {
       defaultCourseFee: formData.defaultCourseFee,
       discounts: formData.discounts,
       minParticipants: formData.minParticipants,
-      maxParticipants: formData.maxParticipants || undefined,
-      venueMaxParticipants: formData.venueMaxParticipants || undefined,
-      perHeadPriceIfMaxExceed: formData.perHeadPriceIfMaxExceed ? parseFloat(formData.perHeadPriceIfMaxExceed.toString()) : undefined,
+      maxParticipants: formData.maxParticipants && formData.maxParticipants !== "" ? parseInt(formData.maxParticipants.toString()) : null,
+      venueMaxParticipants: formData.venueMaxParticipants && formData.venueMaxParticipants !== "" ? parseInt(formData.venueMaxParticipants.toString()) : null,
+      perHeadPriceIfMaxExceed:
+        formData.perHeadPriceIfMaxExceed && formData.perHeadPriceIfMaxExceed !== "" ? parseFloat(formData.perHeadPriceIfMaxExceed.toString()) : null,
     };
+
+    console.log("Payload being sent:", payload);
     try {
       if (isEdit && id) {
         await coursesApi.update(id, payload);
