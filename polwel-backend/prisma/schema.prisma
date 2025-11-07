@@ -76,23 +76,24 @@ model User {
 }
 
 model Partner {
-  id                  String          @id @default(cuid())
+  id                  String             @id @default(cuid())
   name                String
-  email               String?         @db.VarChar(255)
-  status              UserStatus      @default(ACTIVE)
+  email               String?            @db.VarChar(255)
+  status              UserStatus         @default(ACTIVE)
   pointOfContact      String?
   contactNumber       String?
   contactDesignation  String?
   coursesAssigned     Json?
   onboardingDate      DateTime?
-  notes               String?         @db.Text
+  notes               String?            @db.Text
   partnerOrganization String?
-  bio                 String?         @db.Text
-  experience          String?         @db.Text
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  bio                 String?            @db.Text
+  experience          String?            @db.Text
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   deletedAt           DateTime?
   coursePartners      CoursePartner[]
+  courseRunPartners   CourseRunPartner[]
 
   @@map("partners")
 }
@@ -227,6 +228,7 @@ model CourseRun {
   courseRunLearnerAttendances    CourseRunLearnerAttendance[]
   courseRunLearners              CourseRunLearner[]
   courseRunTrainers              CourseRunTrainer[]
+  courseRunPartners              CourseRunPartner[]
   course                         Course                          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   venue                          Venue?                          @relation(fields: [venueId], references: [id])
   trainerAssignmentEmailHistory  TrainerAssignmentEmailHistory[]
@@ -303,6 +305,22 @@ model CourseRunTrainer {
   @@index([courseRunId])
   @@index([trainerId])
   @@map("course_run_trainers")
+}
+
+model CourseRunPartner {
+  id          String    @id @default(cuid())
+  courseRunId String
+  partnerId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  courseRun   CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  partner     Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([courseRunId, partnerId])
+  @@index([courseRunId])
+  @@index([partnerId])
+  @@map("course_run_partners")
 }
 
 model Venue {

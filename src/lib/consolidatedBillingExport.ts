@@ -58,7 +58,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       },
     };
 
-    // Define column widths - same as post-run format plus Total Fee column
+    // Define column widths - same as post-run format plus new columns
     worksheet.columns = [
       { width: 30 }, // A: Title
       { width: 15 }, // B: Course Run #
@@ -81,27 +81,29 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       { width: 15 }, // S: Venue PBMS BE
       { width: 15 }, // T: Venue Invoice Date
       { width: 15 }, // U: Venue Amount
-      { width: 15 }, // V: Total Fee (NEW)
-      { width: 30 }, // W: Final Remarks
+      { width: 15 }, // V: Trainer Fees (NEW)
+      { width: 15 }, // W: Additional Fees (NEW)
+      { width: 15 }, // X: Total Fee
+      { width: 30 }, // Y: Final Remarks
     ];
 
     worksheet.views = [{ state: 'frozen', ySplit: 3 }];
 
     // Title row
-    worksheet.mergeCells('A1:W1');
+    worksheet.mergeCells('A1:Y1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = `PDCS Estimated Billing for Month of ${exportData.billingMonth}`;
     titleCell.font = { bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     // Note row
-    worksheet.mergeCells('A2:W2');
+    worksheet.mergeCells('A2:Y2');
     const noteCell = worksheet.getCell('A2');
     noteCell.value = '(All figures to exclude GST)';
     noteCell.font = { italic: true, size: 10 };
     noteCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // Header row with all columns including Total Fee
+    // Header row with all columns including new fee columns
     const headers = [
       'Title',
       'Course Run #',
@@ -124,6 +126,8 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       'Venue PBMS BE',
       'Venue Invoice Date',
       'Venue Amount',
+      'Trainer Fees',
+      'Additional Fees',
       'Total Fee',
       'Final Remarks',
     ];
@@ -133,8 +137,8 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       const cell = headerRow.getCell(index + 1);
       cell.value = header;
       // Color coding: Red for important fields, Yellow for data fields
-      const redColumns = [0, 9, 21]; // Title, Value of Work Done, Total Fee
-      const yellowColumns = [1, 2, 3, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // All data columns
+      const redColumns = [0, 9, 23]; // Title, Value of Work Done, Total Fee
+      const yellowColumns = [1, 2, 3, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]; // All data columns including new fees
       const fillColor = redColumns.includes(index) ? 'FFFF4C4C' : yellowColumns.includes(index) ? 'FFFFFF99' : 'FFE2E8F0';
       formatHeadingCell(cell, fillColor);
     });
@@ -166,17 +170,17 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
         ? `${new Date(courseRun.startDate).toLocaleDateString('en-GB')} - ${new Date(courseRun.endDate).toLocaleDateString('en-GB')}`
         : '';
 
-      // Merge columns A-J and P-V across all billing rows if there are multiple entries
+      // Merge columns A-J and P-X across all billing rows if there are multiple entries
       if (numBillingRows > 1) {
         for (let col = 1; col <= 10; col++) {
           worksheet.mergeCells(startRow, col, endRow, col);
         }
-        // Also merge contract and venue columns (P-V) including Total Fee
-        for (let col = 16; col <= 22; col++) {
+        // Also merge contract and venue columns (P-X) including new fee columns and Total Fee
+        for (let col = 16; col <= 24; col++) {
           worksheet.mergeCells(startRow, col, endRow, col);
         }
-        // Merge final remarks column (W)
-        worksheet.mergeCells(startRow, 23, endRow, 23);
+        // Merge final remarks column (Y)
+        worksheet.mergeCells(startRow, 25, endRow, 25);
       }
 
       // Fill in the course data (merged cells - only set on first row)
@@ -245,18 +249,26 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       // U: Venue Amount
       setCurrency(firstDataRow.getCell(21), billing.venueInvoiceAmount);
 
-      // V: Total Fee (Contract + Venue)
+      // V: Trainer Fees (NEW)
+      const trainerFees = courseRun.trainerFees || 0;
+      setCurrency(firstDataRow.getCell(22), trainerFees);
+
+      // W: Additional Fees (NEW)
+      const additionalFees = courseRun.additionalFees || 0;
+      setCurrency(firstDataRow.getCell(23), additionalFees);
+
+      // X: Total Fee (Contract + Venue)
       const contractAmount = billing.contractInvoiceAmount || 0;
       const venueAmount = billing.venueInvoiceAmount || 0;
       const totalFee = contractAmount + venueAmount;
-      setCurrency(firstDataRow.getCell(22), totalFee);
+      setCurrency(firstDataRow.getCell(24), totalFee);
 
-      // W: Final Remarks
-      firstDataRow.getCell(23).value = billing.finalRemarks || '';
-      firstDataRow.getCell(23).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+      // Y: Final Remarks
+      firstDataRow.getCell(25).value = billing.finalRemarks || '';
+      firstDataRow.getCell(25).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
 
       // Apply borders to all cells in first data row
-      applyRowBorders(firstDataRow, 1, 23);
+      applyRowBorders(firstDataRow, 1, 25);
       firstDataRow.height = 24 * numBillingRows;
 
       // Fill in billing entries (columns K-O only, not merged)

@@ -814,6 +814,17 @@ export const courseRunController = {
               },
             },
           },
+          courseRunPartners: {
+            include: {
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
           courseRunLearners: {
             where: {
               deletedAt: null,
@@ -2403,6 +2414,88 @@ export const courseRunController = {
     } catch (error) {
       console.error('Error updating trainer assignments:', error);
       res.status(500).json(buildErrorResponse('courseRunController.updateTrainerAssignments', 'Failed to update trainer assignments', error));
+    }
+  },
+
+  // Update partner assignments for a course run
+  async updatePartnerAssignments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { partners } = req.body;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID is required',
+        });
+        return;
+      }
+
+      if (!Array.isArray(partners)) {
+        res.status(400).json({
+          success: false,
+          error: 'Partners must be an array',
+        });
+        return;
+      }
+
+      // Verify course run exists
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id: id },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({
+          success: false,
+          error: 'Course run not found',
+        });
+        return;
+      }
+
+      // Delete existing partner assignments and create new ones
+      await prisma.$transaction(async (tx) => {
+        // Delete all existing partner assignments
+        await tx.courseRunPartner.deleteMany({
+          where: { courseRunId: id },
+        });
+
+        // Create new partner assignments
+        if (partners.length > 0) {
+          await tx.courseRunPartner.createMany({
+            data: partners.map((p: any) => ({
+              courseRunId: id,
+              partnerId: p.partnerId,
+            })),
+          });
+        }
+      });
+
+      // Fetch updated course run with partners
+      const updated = await prisma.courseRun.findUnique({
+        where: { id: id },
+        include: {
+          courseRunPartners: {
+            include: {
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Partner assignments updated successfully',
+        courseRun: updated,
+      });
+    } catch (error) {
+      console.error('Error updating partner assignments:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.updatePartnerAssignments', 'Failed to update partner assignments', error));
     }
   },
 

@@ -35,6 +35,9 @@ export const billingReportsController = {
                 include: {
                   course: true,
                   courseRunLearners: true,
+                  courseRunTrainers: {
+                    where: { deletedAt: null },
+                  },
                 },
               },
             },
@@ -115,6 +118,8 @@ export const billingReportsController = {
         let totalParticipants = 0;
         let contractFees = 0;
         let venueFees = 0;
+        let totalTrainerFees = 0;
+        let totalAdditionalFees = 0;
 
         report.courseRunBillings.forEach((billing: any) => {
           // Sum participants
@@ -123,6 +128,20 @@ export const billingReportsController = {
           // Sum fees
           contractFees += toNumber(billing.contractInvoiceAmount) ?? 0;
           venueFees += toNumber(billing.venueInvoiceAmount) ?? 0;
+
+          // Sum trainer fees (trainerBaseAmount + additionalCost)
+          const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
+          courseRunTrainers.forEach((trainer: any) => {
+            const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
+            const additionalCost = toNumber(trainer.additionalCost) ?? 0;
+            totalTrainerFees += baseAmount + additionalCost;
+          });
+
+          // Sum additional fees (contingencyFee + adminFee + otherFee)
+          const contingencyFee = toNumber(billing.courseRun?.contingencyFee) ?? 0;
+          const adminFee = toNumber(billing.courseRun?.adminFee) ?? 0;
+          const otherFee = toNumber(billing.courseRun?.otherFee) ?? 0;
+          totalAdditionalFees += contingencyFee + adminFee + otherFee;
         });
 
         const totalAmount = contractFees + venueFees;
@@ -134,6 +153,8 @@ export const billingReportsController = {
           contractFees,
           venueFees,
           totalAmount,
+          totalTrainerFees,
+          totalAdditionalFees,
         };
       });
 
@@ -176,6 +197,9 @@ export const billingReportsController = {
                   course: true,
                   venue: true,
                   courseRunLearners: true,
+                  courseRunTrainers: {
+                    where: { deletedAt: null },
+                  },
                 },
               },
             },
@@ -205,11 +229,27 @@ export const billingReportsController = {
       let totalParticipants = 0;
       let contractFees = 0;
       let venueFees = 0;
+      let totalTrainerFees = 0;
+      let totalAdditionalFees = 0;
 
       billingReport.courseRunBillings.forEach((billing: any) => {
         totalParticipants += billing.courseRun?.courseRunLearners?.length || 0;
         contractFees += toNumber(billing.contractInvoiceAmount) ?? 0;
         venueFees += toNumber(billing.venueInvoiceAmount) ?? 0;
+
+        // Sum trainer fees
+        const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
+        courseRunTrainers.forEach((trainer: any) => {
+          const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
+          const additionalCost = toNumber(trainer.additionalCost) ?? 0;
+          totalTrainerFees += baseAmount + additionalCost;
+        });
+
+        // Sum additional fees
+        const contingencyFee = toNumber(billing.courseRun?.contingencyFee) ?? 0;
+        const adminFee = toNumber(billing.courseRun?.adminFee) ?? 0;
+        const otherFee = toNumber(billing.courseRun?.otherFee) ?? 0;
+        totalAdditionalFees += contingencyFee + adminFee + otherFee;
       });
 
       const totalAmount = contractFees + venueFees;
@@ -224,6 +264,8 @@ export const billingReportsController = {
           contractFees,
           venueFees,
           totalAmount,
+          totalTrainerFees,
+          totalAdditionalFees,
         },
       });
     } catch (error) {
@@ -274,6 +316,9 @@ export const billingReportsController = {
                       learner: true,
                     },
                   },
+                  courseRunTrainers: {
+                    where: { deletedAt: null },
+                  },
                 },
               },
               courseRunBillingEntries: {
@@ -303,11 +348,27 @@ export const billingReportsController = {
       let totalParticipants = 0;
       let contractFees = 0;
       let venueFees = 0;
+      let totalTrainerFees = 0;
+      let totalAdditionalFees = 0;
 
       billingReport.courseRunBillings.forEach((billing: any) => {
         totalParticipants += billing.courseRun?.courseRunLearners?.length || 0;
         contractFees += toNumber(billing.contractInvoiceAmount) ?? 0;
         venueFees += toNumber(billing.venueInvoiceAmount) ?? 0;
+
+        // Sum trainer fees
+        const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
+        courseRunTrainers.forEach((trainer: any) => {
+          const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
+          const additionalCost = toNumber(trainer.additionalCost) ?? 0;
+          totalTrainerFees += baseAmount + additionalCost;
+        });
+
+        // Sum additional fees
+        const contingencyFee = toNumber(billing.courseRun?.contingencyFee) ?? 0;
+        const adminFee = toNumber(billing.courseRun?.adminFee) ?? 0;
+        const otherFee = toNumber(billing.courseRun?.otherFee) ?? 0;
+        totalAdditionalFees += contingencyFee + adminFee + otherFee;
       });
 
       const totalAmount = contractFees + venueFees;
@@ -320,43 +381,63 @@ export const billingReportsController = {
         contractFees,
         venueFees,
         totalAmount,
+        totalTrainerFees,
+        totalAdditionalFees,
         status: billingReport.status,
-        courseRuns: billingReport.courseRunBillings.map((billing: any) => ({
-          courseRunCode: billing.courseRun.serialNumber || '',
-          courseTitle: billing.courseRun.course?.title || '',
-          courseCode: billing.courseRun.course?.courseCode || '',
-          startDate: billing.courseRun.startDatetime,
-          endDate: billing.courseRun.endDatetime,
-          venue: billing.courseRun.venue?.name || billing.courseRun.specifiedLocation || '',
-          participants: billing.courseRun.courseRunLearners.length,
-          contractFees: toNumber(billing.contractInvoiceAmount) ?? 0,
-          venueFees: toNumber(billing.venueInvoiceAmount) ?? 0,
-          totalAmount: (toNumber(billing.contractInvoiceAmount) ?? 0) + (toNumber(billing.venueInvoiceAmount) ?? 0),
-          status: billing.courseRun.status,
-          courseDiscounts: billing.courseRun.course?.discounts || [],
-          billing: {
-            valueOfWorkDone: toNumber(billing.valueOfWorkDone) ?? 0,
-            contractFeePBMSBENumber: billing.contractFeePBMSBENumber,
-            contractPBMSInvoiceDate: billing.contractPBMSInvoiceDate,
-            contractInvoiceAmount: toNumber(billing.contractInvoiceAmount) ?? 0,
-            venuePBMSBENumber: billing.venuePBMSBENumber,
-            venuePBMSInvoiceDate: billing.venuePBMSInvoiceDate,
-            venueInvoiceAmount: toNumber(billing.venueInvoiceAmount) ?? 0,
-            finalRemarks: billing.finalRemarks,
-            entries: billing.courseRunBillingEntries.map((entry: any) => ({
-              pbmsInvoiceNumber: entry.pbmsInvoiceNumber,
-              pbmsInvoiceDate: entry.pbmsInvoiceDate,
-              invoiceAmount: toNumber(entry.invoiceAmount) ?? 0,
-              learners: entry.courseRunLearners.map((crl: any) => ({
-                name: crl.learner?.fullname || '',
-                email: crl.learner?.email || '',
-                discountId: crl.discountId,
-                discountPercentage: toNumber(crl.discountPercentage) ?? 0,
+        courseRuns: billingReport.courseRunBillings.map((billing: any) => {
+          // Calculate trainer fees for this course run
+          const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
+          const trainerFees = courseRunTrainers.reduce((sum: number, trainer: any) => {
+            const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
+            const additionalCost = toNumber(trainer.additionalCost) ?? 0;
+            return sum + baseAmount + additionalCost;
+          }, 0);
+
+          // Calculate additional fees for this course run
+          const contingencyFee = toNumber(billing.courseRun?.contingencyFee) ?? 0;
+          const adminFee = toNumber(billing.courseRun?.adminFee) ?? 0;
+          const otherFee = toNumber(billing.courseRun?.otherFee) ?? 0;
+          const additionalFees = contingencyFee + adminFee + otherFee;
+
+          return {
+            courseRunCode: billing.courseRun.serialNumber || '',
+            courseTitle: billing.courseRun.course?.title || '',
+            courseCode: billing.courseRun.course?.courseCode || '',
+            startDate: billing.courseRun.startDatetime,
+            endDate: billing.courseRun.endDatetime,
+            venue: billing.courseRun.venue?.name || billing.courseRun.specifiedLocation || '',
+            participants: billing.courseRun.courseRunLearners.length,
+            contractFees: toNumber(billing.contractInvoiceAmount) ?? 0,
+            venueFees: toNumber(billing.venueInvoiceAmount) ?? 0,
+            totalAmount: (toNumber(billing.contractInvoiceAmount) ?? 0) + (toNumber(billing.venueInvoiceAmount) ?? 0),
+            trainerFees,
+            additionalFees,
+            status: billing.courseRun.status,
+            courseDiscounts: billing.courseRun.course?.discounts || [],
+            billing: {
+              valueOfWorkDone: toNumber(billing.valueOfWorkDone) ?? 0,
+              contractFeePBMSBENumber: billing.contractFeePBMSBENumber,
+              contractPBMSInvoiceDate: billing.contractPBMSInvoiceDate,
+              contractInvoiceAmount: toNumber(billing.contractInvoiceAmount) ?? 0,
+              venuePBMSBENumber: billing.venuePBMSBENumber,
+              venuePBMSInvoiceDate: billing.venuePBMSInvoiceDate,
+              venueInvoiceAmount: toNumber(billing.venueInvoiceAmount) ?? 0,
+              finalRemarks: billing.finalRemarks,
+              entries: billing.courseRunBillingEntries.map((entry: any) => ({
+                pbmsInvoiceNumber: entry.pbmsInvoiceNumber,
+                pbmsInvoiceDate: entry.pbmsInvoiceDate,
+                invoiceAmount: toNumber(entry.invoiceAmount) ?? 0,
+                learners: entry.courseRunLearners.map((crl: any) => ({
+                  name: crl.learner?.fullname || '',
+                  email: crl.learner?.email || '',
+                  discountId: crl.discountId,
+                  discountPercentage: toNumber(crl.discountPercentage) ?? 0,
+                })),
+                remarks: entry.remarks,
               })),
-              remarks: entry.remarks,
-            })),
-          },
-        })),
+            },
+          };
+        }),
       };
 
       // Return data as JSON with a downloadUrl property that signals frontend to download

@@ -1453,6 +1453,13 @@ export const courseRunsApi = {
     });
   },
 
+  updatePartnerAssignments: async (courseRunId: string, partners: Array<{partnerId: string}>) => {
+    return apiRequest(`/course-runs/${courseRunId}/partner-assignments`, {
+      method: 'PUT',
+      body: JSON.stringify({ partners }),
+    });
+  },
+
   // Mark course run as confirmed (PENDING → CONFIRMED_PENDING_TA_APPROVAL)
   markAsConfirmed: async (courseRunId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/mark-confirmed`, {

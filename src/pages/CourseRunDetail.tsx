@@ -102,6 +102,14 @@ interface CourseRunDetailData {
       partnerOrganization?: string;
     };
   }>;
+  courseRunPartners?: Array<{
+    id: string;
+    partner: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }>;
   courseRunLearners: Array<{
     id: string;
     enrollmentStatus: string;
@@ -147,6 +155,12 @@ const CourseRunDetail: React.FC = () => {
     [trainerId: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null };
   }>({});
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+
+  // Partner Assignment Edit Mode
+  const [availablePartners, setAvailablePartners] = useState<any[]>([]);
+  const [partnerAssignments, setPartnerAssignments] = useState<{
+    [partnerId: string]: { selected: boolean };
+  }>({});
 
   // Withdrawal Dialog State
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
@@ -351,12 +365,16 @@ const CourseRunDetail: React.FC = () => {
     if (!courseRun) return;
 
     try {
-      // Fetch available trainers from the course
+      // Fetch available trainers and partners from the course
       const courseResponse = await coursesApi.getById(courseRun.course?.id || "");
       const course = courseResponse?.data?.course || courseResponse?.data || courseResponse;
 
       if (course && Array.isArray(course.courseTrainers)) {
         setAvailableTrainers(course.courseTrainers.map((ct: any) => ct.trainer));
+      }
+
+      if (course && Array.isArray(course.coursePartners)) {
+        setAvailablePartners(course.coursePartners.map((cp: any) => cp.partner));
       }
 
       // Initialize trainer assignments from current courseRunTrainers
@@ -369,11 +387,20 @@ const CourseRunDetail: React.FC = () => {
         };
       });
 
+      // Initialize partner assignments from current courseRunPartners
+      const partnerAssigns: { [key: string]: { selected: boolean } } = {};
+      if (courseRun.courseRunPartners) {
+        courseRun.courseRunPartners.forEach((crp: any) => {
+          partnerAssigns[crp.partner.id] = { selected: true };
+        });
+      }
+
       setTrainerAssignments(assignments);
+      setPartnerAssignments(partnerAssigns);
       setIsEditingTrainers(true);
     } catch (error) {
-      console.error("Error loading trainers:", error);
-      toast.error("Failed to load trainers");
+      console.error("Error loading trainers and partners:", error);
+      toast.error("Failed to load trainers and partners");
     }
   };
 
@@ -390,21 +417,32 @@ const CourseRunDetail: React.FC = () => {
           additionalCost: data.additionalCost === null || data.additionalCost === undefined ? null : Number(data.additionalCost),
         }));
 
+      // Prepare partner assignments data
+      const selectedPartners = Object.entries(partnerAssignments)
+        .filter(([_, data]) => data.selected)
+        .map(([partnerId, _]) => ({
+          partnerId,
+        }));
+
       // Call API to update trainer assignments
       await courseRunsApi.updateTrainerAssignments(courseRun.id, selectedTrainers);
 
-      toast.success("Trainer assignments updated successfully!");
+      // Call API to update partner assignments
+      await courseRunsApi.updatePartnerAssignments(courseRun.id, selectedPartners);
+
+      toast.success("Trainer and partner assignments updated successfully!");
       setIsEditingTrainers(false);
       loadCourseRunDetail();
     } catch (error: any) {
-      console.error("Error saving trainer assignments:", error);
-      toast.error(error?.response?.data?.message || "Failed to update trainer assignments");
+      console.error("Error saving assignments:", error);
+      toast.error(error?.response?.data?.message || "Failed to update assignments");
     }
   };
 
   const handleCancelTrainerEdit = () => {
     setIsEditingTrainers(false);
     setTrainerAssignments({});
+    setPartnerAssignments({});
   };
 
   const toggleTrainerSelection = (trainerId: string) => {
@@ -414,6 +452,15 @@ const CourseRunDetail: React.FC = () => {
         selected: !prev[trainerId]?.selected,
         baseFee: prev[trainerId]?.baseFee === undefined ? null : prev[trainerId]?.baseFee ?? null,
         additionalCost: prev[trainerId]?.additionalCost === undefined ? null : prev[trainerId]?.additionalCost ?? null,
+      },
+    }));
+  };
+
+  const togglePartnerSelection = (partnerId: string) => {
+    setPartnerAssignments((prev) => ({
+      ...prev,
+      [partnerId]: {
+        selected: !prev[partnerId]?.selected,
       },
     }));
   };
@@ -1430,6 +1477,110 @@ const CourseRunDetail: React.FC = () => {
                             </div>
                           </CardContent>
                         </Card>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Partner Assignment Section */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Building className="h-5 w-5 mr-2" />
+                      {isEditingTrainers ? "Select Partners" : "Partner Assignment"}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {isEditingTrainers
+                        ? `${Object.values(partnerAssignments).filter((a) => a.selected).length} partner(s) selected`
+                        : `${courseRun.courseRunPartners?.length || 0} partner(s) assigned`}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isEditingTrainers ? (
+                    // EDIT MODE - Checkbox selection for partners (NO fee fields)
+                    <>
+                      {availablePartners.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Building className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
+                          <p className="text-lg font-medium mb-2 text-gray-600">No partners available</p>
+                          <p className="text-sm text-gray-500">Please add partners to the course first.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {availablePartners.map((partner) => {
+                            const isSelected = partnerAssignments[partner.id]?.selected || false;
+
+                            return (
+                              <Card key={partner.id} className={`p-4 ${isSelected ? "border-green-500 border-2" : ""}`}>
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => togglePartnerSelection(partner.id)}
+                                      className="rounded h-5 w-5 mt-1"
+                                    />
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                      <Building className="h-5 w-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium">{partner.name}</h4>
+                                      <p className="text-sm text-gray-500">{partner.email}</p>
+                                    </div>
+                                  </div>
+                                  <Badge variant={isSelected ? "default" : "secondary"}>{isSelected ? "Selected" : "Available"}</Badge>
+                                </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {Object.values(partnerAssignments).some((a) => a.selected) && (
+                        <Card className="bg-green-50 border-green-200 mt-4">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-lg font-medium text-green-800">Partner Assignment Summary</span>
+                              <div className="text-right">
+                                <div className="text-xl font-bold text-green-800">
+                                  {Object.values(partnerAssignments).filter((a) => a.selected).length} partner(s) assigned
+                                </div>
+                                <div className="text-sm text-green-600">No fees for partners</div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  ) : (
+                    // READ-ONLY MODE
+                    <>
+                      {courseRun.courseRunPartners && courseRun.courseRunPartners.length > 0 ? (
+                        courseRun.courseRunPartners.map((assignment) => (
+                          <Card key={assignment.id} className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                  <Building className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">{assignment.partner.name}</h4>
+                                  <p className="text-sm text-gray-500">{assignment.partner.email}</p>
+                                </div>
+                              </div>
+                              <Badge variant="default">Assigned</Badge>
+                            </div>
+                          </Card>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <Building className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
+                          <p className="text-lg font-medium mb-2 text-gray-600">No partners assigned</p>
+                          <p className="text-sm text-gray-500">Assign partners to this course run if needed.</p>
+                        </div>
                       )}
                     </>
                   )}

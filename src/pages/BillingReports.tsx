@@ -21,6 +21,8 @@ interface BillingReportData {
   contractFees: number;
   venueFees: number;
   totalAmount: number;
+  totalTrainerFees: number;
+  totalAdditionalFees: number;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -324,6 +326,8 @@ export default function BillingReports() {
                     <TableHead className="text-right">Total Participants</TableHead>
                     <TableHead className="text-right">Contract Fees ($)</TableHead>
                     <TableHead className="text-right">Venue Fees ($)</TableHead>
+                    <TableHead className="text-right">Trainer Fees ($)</TableHead>
+                    <TableHead className="text-right">Additional Fees ($)</TableHead>
                     <TableHead className="text-right">Total Amount ($)</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -350,6 +354,12 @@ export default function BillingReports() {
                           <Skeleton className="h-4 w-20 ml-auto" />
                         </TableCell>
                         <TableCell className="text-right">
+                          <Skeleton className="h-4 w-20 ml-auto" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-4 w-20 ml-auto" />
+                        </TableCell>
+                        <TableCell className="text-right">
                           <Skeleton className="h-4 w-24 ml-auto" />
                         </TableCell>
                         <TableCell>
@@ -365,7 +375,7 @@ export default function BillingReports() {
                     ))
                   ) : reports.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                         No billing reports found
                       </TableCell>
                     </TableRow>
@@ -377,6 +387,8 @@ export default function BillingReports() {
                         <TableCell className="text-right">{report.totalParticipants}</TableCell>
                         <TableCell className="text-right">{formatCurrency(report.contractFees)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(report.venueFees)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(report.totalTrainerFees || 0)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(report.totalAdditionalFees || 0)}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(report.totalAmount)}</TableCell>
                         <TableCell>{getStatusBadge(report.status)}</TableCell>
                         <TableCell className="text-right">
@@ -427,7 +439,15 @@ export default function BillingReports() {
                     <p className="text-sm text-muted-foreground">Venue Fees</p>
                     <p className="text-2xl font-bold mt-1">${formatCurrency(selectedReport.venueFees)}</p>
                   </div>
-                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 md:col-span-2">
+                  <div className="bg-card border rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground">Trainer Fees</p>
+                    <p className="text-2xl font-bold mt-1">${formatCurrency(selectedReport.totalTrainerFees || 0)}</p>
+                  </div>
+                  <div className="bg-card border rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground">Additional Fees</p>
+                    <p className="text-2xl font-bold mt-1">${formatCurrency(selectedReport.totalAdditionalFees || 0)}</p>
+                  </div>
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 md:col-span-3">
                     <p className="text-sm text-muted-foreground">Total Amount</p>
                     <p className="text-2xl font-bold mt-1 text-primary">${formatCurrency(selectedReport.totalAmount)}</p>
                   </div>
@@ -447,6 +467,8 @@ export default function BillingReports() {
                         <TableHead className="text-right">Participants</TableHead>
                         <TableHead className="text-right">Contract Fees ($)</TableHead>
                         <TableHead className="text-right">Venue Fees ($)</TableHead>
+                        <TableHead className="text-right">Trainer Fees ($)</TableHead>
+                        <TableHead className="text-right">Additional Fees ($)</TableHead>
                         <TableHead className="text-right">Total Amount ($)</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
@@ -457,6 +479,21 @@ export default function BillingReports() {
                           const courseRun = billing.courseRun;
                           const contractFee = Number(billing.contractInvoiceAmount) || 0;
                           const venueFee = Number(billing.venueInvoiceAmount) || 0;
+
+                          // Calculate trainer fees
+                          const courseRunTrainers = courseRun?.courseRunTrainers || [];
+                          const trainerFees = courseRunTrainers.reduce((sum: number, trainer: any) => {
+                            const baseAmount = Number(trainer.trainerBaseAmount) || 0;
+                            const additionalCost = Number(trainer.additionalCost) || 0;
+                            return sum + baseAmount + additionalCost;
+                          }, 0);
+
+                          // Calculate additional fees
+                          const contingencyFee = Number(courseRun?.contingencyFee) || 0;
+                          const adminFee = Number(courseRun?.adminFee) || 0;
+                          const otherFee = Number(courseRun?.otherFee) || 0;
+                          const additionalFees = contingencyFee + adminFee + otherFee;
+
                           const total = contractFee + venueFee;
 
                           return (
@@ -468,6 +505,8 @@ export default function BillingReports() {
                               <TableCell className="text-right">{courseRun?.courseRunLearners?.length || 0}</TableCell>
                               <TableCell className="text-right">{formatCurrency(contractFee)}</TableCell>
                               <TableCell className="text-right">{formatCurrency(venueFee)}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(trainerFees)}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(additionalFees)}</TableCell>
                               <TableCell className="text-right font-semibold">{formatCurrency(total)}</TableCell>
                               <TableCell>
                                 <Badge className={courseRun?.status === "COMPLETED" ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}>
@@ -479,7 +518,7 @@ export default function BillingReports() {
                         })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                             No course runs found in this billing report
                           </TableCell>
                         </TableRow>
