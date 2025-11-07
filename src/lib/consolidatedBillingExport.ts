@@ -257,10 +257,10 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       const additionalFees = courseRun.additionalFees || 0;
       setCurrency(firstDataRow.getCell(23), additionalFees);
 
-      // X: Total Fee (Contract + Venue)
+      // X: Total Fee (Contract + Venue + Trainer + Additional)
       const contractAmount = billing.contractInvoiceAmount || 0;
       const venueAmount = billing.venueInvoiceAmount || 0;
-      const totalFee = contractAmount + venueAmount;
+      const totalFee = contractAmount + venueAmount + trainerFees + additionalFees;
       setCurrency(firstDataRow.getCell(24), totalFee);
 
       // Y: Final Remarks
@@ -377,6 +377,8 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
     let totalParticipants = 0;
     let totalContractFees = 0;
     let totalVenueFees = 0;
+    let totalTrainerFees = 0;
+    let totalAdditionalFees = 0;
     
     for (const courseRun of courseRuns) {
       totalCourseRuns += 1;
@@ -384,9 +386,11 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       const billing = courseRun.billing || {};
       totalContractFees += billing.contractInvoiceAmount || 0;
       totalVenueFees += billing.venueInvoiceAmount || 0;
+      totalTrainerFees += courseRun.trainerFees || 0;
+      totalAdditionalFees += courseRun.additionalFees || 0;
     }
     
-    const totalAllFees = totalContractFees + totalVenueFees;
+    const totalAllFees = totalContractFees + totalVenueFees + totalTrainerFees + totalAdditionalFees;
     
     // A: Label
     summaryRow.getCell(1).value = 'TOTAL';
@@ -429,18 +433,120 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
     summaryRow.getCell(21).font = { bold: true };
     applyBorder(summaryRow.getCell(21));
     
-    // V: Total All Fees
-    setCurrency(summaryRow.getCell(22), totalAllFees);
-    summaryRow.getCell(22).font = { bold: true, color: { argb: 'FFFF0000' } }; // Red font
+    // V: Total Trainer Fees
+    setCurrency(summaryRow.getCell(22), totalTrainerFees);
+    summaryRow.getCell(22).font = { bold: true };
     applyBorder(summaryRow.getCell(22));
     
-    // W: Total Course Runs as text
-    summaryRow.getCell(23).value = `Total Runs: ${totalCourseRuns}`;
+    // W: Total Additional Fees
+    setCurrency(summaryRow.getCell(23), totalAdditionalFees);
     summaryRow.getCell(23).font = { bold: true };
-    summaryRow.getCell(23).alignment = { horizontal: 'left', vertical: 'middle' };
     applyBorder(summaryRow.getCell(23));
     
+    // X: Total All Fees (moved from V to X due to new columns)
+    setCurrency(summaryRow.getCell(24), totalAllFees);
+    summaryRow.getCell(24).font = { bold: true, color: { argb: 'FFFF0000' } }; // Red font
+    applyBorder(summaryRow.getCell(24));
+    
+    // Y: Total Course Runs as text (moved from W to Y)
+    summaryRow.getCell(25).value = `Total Runs: ${totalCourseRuns}`;
+    summaryRow.getCell(25).font = { bold: true };
+    summaryRow.getCell(25).alignment = { horizontal: 'left', vertical: 'middle' };
+    applyBorder(summaryRow.getCell(25));
+    
     summaryRow.height = 24;
+
+    // Apply auto-fit for columns based on content and wrapping
+    const columnWidths = [
+      { min: 25, max: 40 },  // A: Title
+      { min: 12, max: 18 },  // B: Course Run #
+      { min: 12, max: 16 },  // C: Billing Rate
+      { min: 12, max: 16 },  // D: Before GST
+      { min: 8, max: 12 },   // E: Qty
+      { min: 10, max: 14 },  // F: Unit (HEAD)
+      { min: 12, max: 18 },  // G: Number of Unit
+      { min: 18, max: 26 },  // H: Course Duration
+      { min: 8, max: 12 },   // I: Project
+      { min: 12, max: 18 },  // J: Value of Work Done
+      { min: 12, max: 18 },  // K: PBMS Ref (Invoice)
+      { min: 12, max: 18 },  // L: PBMS Invoice Date
+      { min: 28, max: 40 },  // M: Discount List (needs wrapping)
+      { min: 25, max: 40 },  // N: Entry Remarks (needs wrapping)
+      { min: 12, max: 18 },  // O: Invoice Amount
+      { min: 12, max: 18 },  // P: Contract PBMS BE
+      { min: 12, max: 18 },  // Q: Contract Invoice Date
+      { min: 12, max: 18 },  // R: Contract Amount
+      { min: 12, max: 18 },  // S: Venue PBMS BE
+      { min: 12, max: 18 },  // T: Venue Invoice Date
+      { min: 12, max: 18 },  // U: Venue Amount
+      { min: 12, max: 18 },  // V: Trainer Fees
+      { min: 12, max: 18 },  // W: Additional Fees
+      { min: 12, max: 18 },  // X: Total Fee
+      { min: 28, max: 40 },  // Y: Final Remarks (needs wrapping)
+    ];
+
+    // Auto-fit columns with content-based widths
+    worksheet.columns.forEach((col, index) => {
+      if (columnWidths[index]) {
+        const { min, max } = columnWidths[index];
+        let maxLength = min;
+        
+        // Check all cells in this column for content length
+        worksheet.getColumn(index + 1).eachCell((cell) => {
+          if (cell.value) {
+            const cellLength = String(cell.value).length;
+            maxLength = Math.max(maxLength, Math.min(cellLength * 1.1, max));
+          }
+        });
+        
+        col.width = Math.max(min, Math.min(maxLength, max));
+      }
+    });
+
+    // Apply text wrapping and adjust row heights for wrapped text
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 3) { // Skip header rows
+        row.eachCell((cell) => {
+          // Column letters for wrapping (M, N, Y)
+          const wrapColumns = ['M', 'N', 'Y'];
+          // Apply wrapping to cells that may have long content
+          if (wrapColumns.includes(String(cell.col))) {
+            cell.alignment = { 
+              wrapText: true, 
+              horizontal: 'left', 
+              vertical: 'top',
+              shrinkToFit: false
+            };
+          } else {
+            // Ensure all cells have proper alignment
+            if (!cell.alignment || !cell.alignment.vertical) {
+              cell.alignment = { 
+                ...cell.alignment,
+                vertical: 'middle',
+                shrinkToFit: false
+              };
+            }
+          }
+        });
+        
+        // Auto-adjust row height based on content
+        let maxLines = 1;
+        row.eachCell((cell) => {
+          if (cell.value && ['M', 'N', 'Y'].includes(String(cell.col))) {
+            const lines = String(cell.value).split('\n').length;
+            const width = worksheet.getColumn(String(cell.col)).width || 30;
+            const estLines = Math.ceil(String(cell.value).length / (width * 1.5));
+            maxLines = Math.max(maxLines, Math.max(lines, estLines));
+          }
+        });
+        
+        // Set row height based on lines (approximately 15 pixels per line)
+        row.height = Math.max(24, Math.min(maxLines * 15, 80));
+      }
+    });
+
+    // Ensure header row has adequate height
+    if (worksheet.getRow(3)) worksheet.getRow(3).height = 35;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {

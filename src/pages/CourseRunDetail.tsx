@@ -1923,7 +1923,7 @@ const CourseRunDetail: React.FC = () => {
         courseRunId={id!}
         enrollment={selectedEnrollment}
         baseCourseFee={courseRun?.baseCourseFee || 0}
-        discounts={(courseRun?.course?.discounts || []).map((d: any) => ({ id: d.id, name: d.name || "", percentage: d.discountPercentage ?? 0 }))}
+        discounts={(courseRun?.course?.discounts || []).map((d: any) => ({ id: d.id, name: d.name || "", percentage: d.percentage ?? 0 }))}
         onSuccess={handleEnrollmentSuccess}
       />
 

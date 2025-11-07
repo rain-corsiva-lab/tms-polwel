@@ -144,7 +144,7 @@ export const billingReportsController = {
           totalAdditionalFees += contingencyFee + adminFee + otherFee;
         });
 
-        const totalAmount = contractFees + venueFees;
+        const totalAmount = contractFees + venueFees + totalTrainerFees + totalAdditionalFees;
 
         return {
           ...report,
@@ -252,7 +252,7 @@ export const billingReportsController = {
         totalAdditionalFees += contingencyFee + adminFee + otherFee;
       });
 
-      const totalAmount = contractFees + venueFees;
+      const totalAmount = contractFees + venueFees + totalTrainerFees + totalAdditionalFees;
 
       return res.json({
         success: true,
@@ -371,7 +371,7 @@ export const billingReportsController = {
         totalAdditionalFees += contingencyFee + adminFee + otherFee;
       });
 
-      const totalAmount = contractFees + venueFees;
+      const totalAmount = contractFees + venueFees + totalTrainerFees + totalAdditionalFees;
 
       // Format export data to return to frontend for client-side XLSX generation
       const exportData = {
@@ -409,7 +409,7 @@ export const billingReportsController = {
             participants: billing.courseRun.courseRunLearners.length,
             contractFees: toNumber(billing.contractInvoiceAmount) ?? 0,
             venueFees: toNumber(billing.venueInvoiceAmount) ?? 0,
-            totalAmount: (toNumber(billing.contractInvoiceAmount) ?? 0) + (toNumber(billing.venueInvoiceAmount) ?? 0),
+            totalAmount: (toNumber(billing.contractInvoiceAmount) ?? 0) + (toNumber(billing.venueInvoiceAmount) ?? 0) + trainerFees + additionalFees,
             trainerFees,
             additionalFees,
             status: billing.courseRun.status,
