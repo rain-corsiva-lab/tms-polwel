@@ -2,7 +2,7 @@
 
 Apply these fixes to `polwel-backend/src/controllers/courseRunController.ts`:
 
-## Fix 1: markAsConfirmed function
+## Fix 1: markAsConfirmed function test
 
 Replace lines 2189-2232 with:
 
