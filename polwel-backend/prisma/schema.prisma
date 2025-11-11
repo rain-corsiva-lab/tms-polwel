@@ -127,7 +127,7 @@ model Course {
   duration           String
   durationType       String          @default("days")
   maxParticipants    Int             @default(25)
-  minParticipants    Int             @default(1)
+  minParticipants    Int?             @default(1)
   category           String?
   level              String?
   prerequisites      Json?

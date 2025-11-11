@@ -24,7 +24,7 @@ const CourseCreateSchema = z.object({
     return !isNaN(num) && num >= 1;
   }, { message: "Duration must be at least 1" }),
   durationType: z.string().default("days"),
-  maxParticipants: z.number().int().positive().default(25),
+  maxParticipants: z.number().int().positive().nullable().optional(),
   minParticipants: z.number().int().positive().default(1),
   certificates: z.string().default("polwel"),
   certificationType: z.string().optional(),
