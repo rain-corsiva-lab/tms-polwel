@@ -155,7 +155,7 @@ All changes have been implemented without breaking any existing functionality! �
 
 ---
 
-_**User (2025-11-12 07:29Z)**_
+_**User (2025-11-12 07:31Z)**_
 
 oh yeah sorry ,in course run #file:CourseRunForm.tsx #file:CourseRunDetail.tsx in trainer and partner selection , the form validations is at least one partner or one must be selected ,  so if no trainer but got 1 partner then okay . vice versa. please adjust it
 
@@ -163,7 +163,138 @@ oh yeah sorry ,in course run #file:CourseRunForm.tsx #file:CourseRunDetail.tsx i
 
 _**Agent (model copilot/claude-haiku-4.5)**_
 
+I'll update the validation for trainer and partner selection so that at least one of them must be selected (either a trainer OR a partner). Let me first check the current CourseRunForm validation: Now let me update the validation in CourseRunForm to require at least one trainer OR one partner: 
+```
 
+```
+Now let me check the CourseRunDetail for similar validation. Let me look at the handleSave function: Perfect! Now I'll add validation to the handleSaveTrainerAssignments function to ensure at least one trainer OR partner is selected: 
+```
+
+```
+Perfect! Now let me mark the tasks as completed: Perfect! I've successfully updated the validation in both files. Here's a summary of the changes:
+
+## Changes Made
+
+### 1. **`CourseRunForm.tsx`** - Updated validation
+- Modified the `validateForm()` function to check that **at least one trainer OR one partner is selected**
+- The validation now shows the error message: "At least one trainer or partner must be selected"
+- This validation only applies when creating/submitting the course run (not for drafts)
+
+### 2. **`CourseRunDetail.tsx`** - Added validation to trainer/partner assignment
+- Modified the `handleSaveTrainerAssignments()` function to validate before saving
+- Added a check that ensures **at least one trainer OR one partner is selected**
+- If neither is selected, it shows the error message: "At least one trainer or partner must be selected"
+- The function now returns early and prevents the API call if validation fails
+
+## Validation Logic
+The new validation allows:
+- ✅ 1+ trainers, 0 partners
+- ✅ 0 trainers, 1+ partners  
+- ✅ 1+ trainers, 1+ partners
+- ❌ 0 trainers, 0 partners (shows error)
+
+Both the form creation and the edit mode now have consistent validation requirements for trainer/partner selection!
+
+---
+
+_**User (2025-11-12 07:49Z)**_
+
+i got this error when i ty to save course #file:CourseForm.tsx 
+
+{
+    "success": false,
+    "message": "Failed to create course",
+    "error": "\nInvalid `prisma.course.create()` invocation in\n/www/wwwroot/polwelpdms/polwel-backend/src/controllers/coursesController.ts:333:42\n\n  330 if (data.venueMaxParticipants !== undefined) courseData.venueMaxParticipants = data.venueMaxParticipants;\n  331 if (data.perHeadPriceIfMaxExceed !== undefined) courseData.perHeadPriceIfMaxExceed = data.perHeadPriceIfMaxExceed;\n  332 \n→ 333 const course = await prisma.course.create({\n        data: {\n          title: \"Test V2 9\",\n          certificates: \"polwel\",\n          creator: {\n          ~~~~~~~\n            connect: {\n              id: \"cmhnfijtz0003p40dvby63bz4\"\n            }\n          },\n          courseCode: \"TV9\",\n          description: \"\",\n          learningObjectives: \"\",\n          courseOutline: \"\",\n          category: \"Self-awareness\",\n          objectives: [],\n          prerequisites: [],\n          materials: [],\n          duration: \"3\",\n          durationType: \"days\",\n          maxParticipants: null,\n          minParticipants: 1,\n          venue: \"cmhnfijxs000sp40dbcuy2347\",\n          specifiedLocation: \"\",\n          remarks: \"\",\n          status: \"ACTIVE\",\n          defaultCourseFee: 0,\n          contractFees: 0,\n          venueFee: 300,\n          venueFeeType: \"PER_VENUE\",\n          discounts: [],\n          venueMaxParticipants: 10,\n          perHeadPriceIfMaxExceed: 30,\n      ?   id?: String,\n      ?   level?: String | Null,\n      ?   targetAudience?: String | Null,\n      ?   syllabus?: String | Null,\n      ?   assessmentMethod?: String | Null,\n      ?   certificationType?: String | Null,\n      ?   createdAt?: DateTime,\n      ?   updatedAt?: DateTime,\n      ?   createdBy?: String | Null,\n      ?   bookings?: BookingUncheckedCreateNestedManyWithoutCourseInput,\n      ?   runs?: CourseRunUncheckedCreateNestedManyWithoutCourseInput,\n      ?   trainerFees?: TrainerFeeUncheckedCreateNestedManyWithoutCourseInput,\n      ?   courseTrainers?: CourseTrainerUncheckedCreateNestedManyWithoutCourseInput,\n      ?   coursePartners?: CoursePartnerUncheckedCreateNestedManyWithoutCourseInput\n        },\n        include: {\n          creator: {\n            select: {\n              id: true,\n              name: true,\n              email: true\n            }\n          }\n        }\n      })\n\nUnknown argument `creator`. Available options are marked with ?."
+}
+
+Payload : 
+category
+: 
+"Self-awareness"
+certificates
+: 
+"polwel"
+contractFees
+: 
+0
+courseCode
+: 
+"TV9"
+courseOutline
+: 
+""
+defaultCourseFee
+: 
+0
+description
+: 
+""
+discounts
+: 
+[]
+duration
+: 
+"3"
+durationType
+: 
+"days"
+learningObjectives
+: 
+""
+maxParticipants
+: 
+null
+minParticipants
+: 
+1
+perHeadPriceIfMaxExceed
+: 
+30
+remarks
+: 
+""
+specifiedLocation
+: 
+""
+title
+: 
+"Test V2 9"
+trainers
+: 
+["cmhob46jo003mp4txvd9val73"]
+0
+: 
+"cmhob46jo003mp4txvd9val73"
+venue
+: 
+"cmhnfijxs000sp40dbcuy2347"
+venueFee
+: 
+300
+venueFeeType
+: 
+"PER_VENUE"
+venueMaxParticipants
+: 
+10
+
+
+please fix it 
+
+also in course form when im in second tab and click next tab button, its suddenly trying to save course automatically , this is  not correct , please fix it 
+
+
+also in course run form #file:CourseRunForm.tsx #file:CourseRunDetail.tsx   we need to change the position of COurse selection , course code on the top of serial number and course run type , i dont know why in front end its still not like that , please fix it , ensure all working as expected
+
+please fix it 
+
+---
+
+_**Agent (model copilot/claude-haiku-4.5)**_
+
+I'll fix all these issues. Let me start by addressing them one by one. ## Issue 1: Fix Backend Course Creation Error
+
+The error shows that the backend is trying to use `creator` as a relation connection, but it should use `createdBy` field instead. Let me check and fix the coursesController: 
 
 ---
 

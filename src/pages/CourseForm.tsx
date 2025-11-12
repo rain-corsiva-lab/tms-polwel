@@ -509,11 +509,23 @@ const CourseForm: React.FC = () => {
           )}
 
           {activeTab === "information" ? (
-            <Button type="button" onClick={() => setActiveTab("fees")}>
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab("fees");
+              }}
+            >
               Next: Revenues & Expenses
             </Button>
           ) : activeTab === "fees" ? (
-            <Button type="button" onClick={() => setActiveTab("discounts")}>
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab("discounts");
+              }}
+            >
               Next: Discounts
             </Button>
           ) : (
