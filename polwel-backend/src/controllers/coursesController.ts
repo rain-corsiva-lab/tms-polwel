@@ -256,9 +256,7 @@ export const coursesController = {
       const courseData: any = {
         title: data.title,
         certificates: data.certificates,
-        creator: {
-          connect: { id: userId }
-        }
+        createdBy: userId
       };
 
       if (data.courseCode) {
