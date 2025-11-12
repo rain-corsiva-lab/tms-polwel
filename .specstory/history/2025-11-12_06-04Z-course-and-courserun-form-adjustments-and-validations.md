@@ -456,7 +456,7 @@ I'm planning to revert the code to use `createdBy` on course creation but add a 
 
 ---
 
-_**User (2025-11-12 08:23Z)**_
+_**User (2025-11-12 08:24Z)**_
 
 @agent Try Again
 
@@ -465,6 +465,53 @@ _**User (2025-11-12 08:23Z)**_
 _**Agent (model copilot/gpt-5-codex)**_
 
 **Diagnosing Prisma create argument errors**
+
+---
+
+_**User (2025-11-12 08:24Z)**_
+
+@agent Try Again
+
+---
+
+_**Agent (model copilot/gpt-5-codex)**_
+
+
+
+---
+
+_**User (2025-11-12 08:24Z)**_
+
+@agent Try Again
+
+---
+
+_**Agent (model copilot/gpt-5-codex)**_
+
+**Diagnosing Prisma schema and client issues**I brought the controller back to how Prisma expects the schema to be used:
+
+- `createdBy` is now just a string on the payload, matching the schema (`Course.createdBy` is a simple `String?` field).  
+- We’re no longer trying to use the `creator` relation during the create call.
+- No `include: { creator: … }` is used anywhere in the create or update paths, so Prisma won’t reject the request.
+- The backend builds cleanly (`npm run build` succeeds).
+
+If you still see the same error in your deployed environment, regenerate the Prisma client there so it picks up the schema (`npx prisma generate`) and redeploy.
+
+---
+
+_**User (2025-11-12 08:31Z)**_
+
+its still error , lets just remove createdby in all related database , backend and front end plesae , on course module
+
+---
+
+_**Agent (model copilot/claude-sonnet-4.5)**_
+
+Okay, I'll remove all `createdBy` references from the Course module. Let me start: 
+```
+
+```
+Now I need to remove the relation from User model too: 
 
 ---
 

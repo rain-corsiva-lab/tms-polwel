@@ -56,7 +56,6 @@ model User {
   courseRunLearnerAttendanceEdits CourseRunLearnerAttendance[]
   courseRunTrainers               CourseRunTrainer[]
   courseTrainers                  CourseTrainer[]                 @relation("CourseTrainers")
-  coursesCreated                  Course[]                        @relation("CourseCreator")
   learnersAsTrainingCoordinator   Learner[]
   trainerAssignmentEmailHistory   TrainerAssignmentEmailHistory[]
   trainerBlockouts                TrainerBlockout[]
@@ -143,7 +142,6 @@ model Course {
   status             CourseStatus    @default(ACTIVE)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
-  createdBy          String?
   courseCode         String?         @unique @db.VarChar(50)
   specifiedLocation  String?
   defaultCourseFee   Float           @default(0)
@@ -154,12 +152,10 @@ model Course {
   perHeadPriceIfMaxExceed Decimal?  @db.Decimal(10, 2)
   bookings           Booking[]
   runs               CourseRun[]
-  creator            User?           @relation("CourseCreator", fields: [createdBy], references: [id])
   trainerFees        TrainerFee[]
   courseTrainers     CourseTrainer[]
   coursePartners     CoursePartner[]
 
-  @@index([createdBy], map: "courses_createdBy_fkey")
   @@map("courses")
 }
 

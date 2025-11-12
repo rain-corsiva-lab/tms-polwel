@@ -85,18 +85,9 @@ export const coursesController = {
         where.certificates = certificates as string;
       }
 
-      // Get courses with creator info
+      // Get courses
       const courses = await prisma.course.findMany({
         where,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        },
         orderBy: {
           [sortBy as string]: sortOrder as 'asc' | 'desc'
         },
@@ -147,13 +138,6 @@ export const coursesController = {
       const course = await prisma.course.findUnique({
         where: { id },
         include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          },
           courseTrainers: {
             include: {
               trainer: {
@@ -255,8 +239,7 @@ export const coursesController = {
       // Create course data object
       const courseData: any = {
         title: data.title,
-        certificates: data.certificates,
-        createdBy: userId
+        certificates: data.certificates
       };
 
       if (data.courseCode) {
@@ -749,12 +732,7 @@ export const coursesController = {
         select: {
           id: true,
           title: true,
-          createdAt: true,
-          creator: {
-            select: {
-              name: true
-            }
-          }
+          createdAt: true
         }
       });
 
