@@ -220,16 +220,7 @@ export const venuesController = {
       } as any; // Type assertion for Prisma compatibility
 
       const venue = await prisma.venue.create({
-        data: dataToCreate,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
+        data: dataToCreate
       });
 
       // Transform venue to match frontend expectations

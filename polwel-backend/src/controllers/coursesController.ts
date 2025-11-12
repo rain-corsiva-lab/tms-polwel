@@ -331,16 +331,7 @@ export const coursesController = {
       if (data.perHeadPriceIfMaxExceed !== undefined) courseData.perHeadPriceIfMaxExceed = data.perHeadPriceIfMaxExceed;
 
       const course = await prisma.course.create({
-        data: courseData,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
+        data: courseData
       });
 
       // Handle trainers and partners via pivot tables if provided
@@ -528,16 +519,7 @@ export const coursesController = {
 
       const updatedCourse = await prisma.course.update({
         where: { id },
-        data: updateData,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
+        data: updateData
       });
 
       // Handle trainers and partners via pivot tables if provided
