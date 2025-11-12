@@ -219,6 +219,32 @@ export const coursesController = {
       const data = validation.data;
       const userId = req.user?.userId;
 
+      // Additional business validations
+      const validationErrors: string[] = [];
+
+      // Validate trainer requirement
+      if (!req.body.trainers || !Array.isArray(req.body.trainers) || req.body.trainers.length === 0) {
+        validationErrors.push('At least one trainer is required');
+      }
+
+      // Validate venue pricing fields when venueFeeType is PER_VENUE
+      if (data.venueFeeType === 'PER_VENUE') {
+        if (!data.venueMaxParticipants || data.venueMaxParticipants <= 0) {
+          validationErrors.push('Max Participants (Venue) is required and must be greater than 0 when Venue Fee Type is Per Venue');
+        }
+        if (data.perHeadPriceIfMaxExceed === null || data.perHeadPriceIfMaxExceed === undefined || data.perHeadPriceIfMaxExceed < 0) {
+          validationErrors.push('Per Head Price If Max Exceed is required and must be 0 or greater when Venue Fee Type is Per Venue');
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors.map(msg => ({ message: msg }))
+        });
+      }
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -416,6 +442,34 @@ export const coursesController = {
       }
 
       const data = validation.data;
+
+      // Additional business validations
+      const validationErrors: string[] = [];
+
+      // Validate trainer requirement if trainers array is provided
+      if (req.body.trainers !== undefined) {
+        if (!Array.isArray(req.body.trainers) || req.body.trainers.length === 0) {
+          validationErrors.push('At least one trainer is required');
+        }
+      }
+
+      // Validate venue pricing fields when venueFeeType is PER_VENUE
+      if (data.venueFeeType === 'PER_VENUE') {
+        if (!data.venueMaxParticipants || data.venueMaxParticipants <= 0) {
+          validationErrors.push('Max Participants (Venue) is required and must be greater than 0 when Venue Fee Type is Per Venue');
+        }
+        if (data.perHeadPriceIfMaxExceed === null || data.perHeadPriceIfMaxExceed === undefined || data.perHeadPriceIfMaxExceed < 0) {
+          validationErrors.push('Per Head Price If Max Exceed is required and must be 0 or greater when Venue Fee Type is Per Venue');
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors.map(msg => ({ message: msg }))
+        });
+      }
 
       // Create update data object, only including defined fields
       const updateData: any = {};

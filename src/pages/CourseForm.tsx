@@ -84,6 +84,7 @@ const CourseForm: React.FC = () => {
   const [formData, setFormData] = useState<FormState>(initialForm);
   const [courseCodeManuallyEdited, setCourseCodeManuallyEdited] = useState(false);
   const [lastAutoCourseCode, setLastAutoCourseCode] = useState("");
+  const [activeTab, setActiveTab] = useState<string>("information");
   // Removed financial calculations per new simplified requirements
 
   const sanitizeCourseCode = (value: string) =>
@@ -315,6 +316,21 @@ const CourseForm: React.FC = () => {
       errors.push("Course code must be at most 5 characters");
     }
 
+    // Validate trainer requirement
+    if (!formData.trainer || formData.trainer.length === 0) {
+      errors.push("At least one trainer is required");
+    }
+
+    // Validate venue pricing fields when venueFeeType is PER_VENUE
+    if (formData.venueFeeType === "PER_VENUE") {
+      if (!formData.venueMaxParticipants || formData.venueMaxParticipants === "" || Number(formData.venueMaxParticipants) <= 0) {
+        errors.push("Max Participants (Venue) is required and must be greater than 0 when Venue Fee Type is Per Venue");
+      }
+      if (formData.perHeadPriceIfMaxExceed === "" || formData.perHeadPriceIfMaxExceed === undefined || Number(formData.perHeadPriceIfMaxExceed) < 0) {
+        errors.push("Per Head Price If Max Exceed is required and must be 0 or greater when Venue Fee Type is Per Venue");
+      }
+    }
+
     if (errors.length > 0) {
       toast({
         title: "Validation Error",
@@ -431,7 +447,7 @@ const CourseForm: React.FC = () => {
         <p className="text-muted-foreground">{isEdit ? "Update course information and pricing." : "Create a new course."}</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Tabs defaultValue="information" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="information">Information</TabsTrigger>
             <TabsTrigger value="fees">Revenues & Expenses</TabsTrigger>
@@ -478,13 +494,34 @@ const CourseForm: React.FC = () => {
           </TabsContent>
         </Tabs>
         <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={() => navigate(isEdit && id ? `/courses/detail/${id}` : "/courses")}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={loading.submitting}>
-            {loading.submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading.submitting ? (isEdit ? "Updating..." : "Creating...") : isEdit ? "Update Course" : "Create Course"}
-          </Button>
+          {activeTab === "information" ? (
+            <Button type="button" variant="outline" onClick={() => navigate(isEdit && id ? `/courses/detail/${id}` : "/courses")}>
+              Cancel
+            </Button>
+          ) : activeTab === "fees" ? (
+            <Button type="button" variant="outline" onClick={() => setActiveTab("information")}>
+              Previous: Information
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setActiveTab("fees")}>
+              Previous: Revenues & Expenses
+            </Button>
+          )}
+
+          {activeTab === "information" ? (
+            <Button type="button" onClick={() => setActiveTab("fees")}>
+              Next: Revenues & Expenses
+            </Button>
+          ) : activeTab === "fees" ? (
+            <Button type="button" onClick={() => setActiveTab("discounts")}>
+              Next: Discounts
+            </Button>
+          ) : (
+            <Button type="submit" disabled={loading.submitting}>
+              {loading.submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading.submitting ? (isEdit ? "Updating..." : "Creating...") : isEdit ? "Update Course" : "Create Course"}
+            </Button>
+          )}
         </div>
       </form>
     </div>

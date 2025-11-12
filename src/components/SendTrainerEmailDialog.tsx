@@ -109,7 +109,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
                 <p className="font-medium mb-2">Course Run Details:</p>
                 <ul className="space-y-1 ml-4">
                   <li>Course: {courseRunDetails.courseName}</li>
-                  <li>Serial Number: {courseRunDetails.serialNumber}</li>
+                  <li>Course Serial Number: {courseRunDetails.serialNumber}</li>
                   <li>Start Date: {courseRunDetails.startDate}</li>
                   <li>End Date: {courseRunDetails.endDate}</li>
                   <li>Venue: {courseRunDetails.venue}</li>

@@ -661,7 +661,7 @@ class EmailService {
 
     const total = baseFee + (additionalCost || 0);
 
-    const textBody = `Dear ${name},\n\nYou have been assigned as a trainer for the following course run:\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Serial Number: ${courseRunDetails.serialNumber || ''}\n- Start Date: ${formatDate(courseRunDetails.startDate)}\n- End Date: ${formatDate(courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}\n\nYour Compensation:\n- Base Fee: ${formatCurrency(baseFee)}\n${additionalCost > 0 ? `- Additional Cost: ${formatCurrency(additionalCost)}\n` : ''}- Total: ${formatCurrency(total)}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Please confirm your availability for this course run.\n\nBest regards,\nPolwel Training Team`;
+    const textBody = `Dear ${name},\n\nYou have been assigned as a trainer for the following course run:\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Course Serial Number: ${courseRunDetails.serialNumber || ''}\n- Start Date: ${formatDate(courseRunDetails.startDate)}\n- End Date: ${formatDate(courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}\n\nYour Compensation:\n- Base Fee: ${formatCurrency(baseFee)}\n${additionalCost > 0 ? `- Additional Cost: ${formatCurrency(additionalCost)}\n` : ''}- Total: ${formatCurrency(total)}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Please confirm your availability for this course run.\n\nBest regards,\nPolwel Training Team`;
 
     const html = `<!DOCTYPE html>
     <html lang="en">
@@ -722,7 +722,7 @@ class EmailService {
                         <span class="detail-value">${courseRunDetails.course || 'N/A'}</span>
                       </div>
                       <div class="detail-row">
-                        <span class="detail-label">Serial Number:</span>
+                        <span class="detail-label">Course Serial Number:</span>
                         <span class="detail-value">${courseRunDetails.serialNumber || '—'}</span>
                       </div>
                       <div class="detail-row">
@@ -920,7 +920,7 @@ class EmailService {
                         <div class="details-card">
                           <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 12px; font-size: 15px;">📋 Course Run Details</div>
                           <div class="detail-row">
-                            <span class="detail-label">Serial Number:</span>
+                            <span class="detail-label">Course Serial Number:</span>
                             <span class="detail-value">${serialNumber || '—'}</span>
                           </div>
                           <div class="detail-row">

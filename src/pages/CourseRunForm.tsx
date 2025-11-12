@@ -220,10 +220,9 @@ const CourseRunForm: React.FC = () => {
     if (selectedCourse) {
       // Get full course details including all fields
       try {
-        const response = await fetch(`/api/courses/${selectedCourseId}`);
-        const data = await response.json();
-        if (data.success && data.data.course) {
-          const course = data.data.course;
+        const response = await coursesApi.getById(selectedCourseId);
+        if (response?.success && response?.data?.course) {
+          const course = response.data.course;
           // Create new form data with course details and reset trainers
           const newFormData = {
             ...formData,
@@ -405,7 +404,7 @@ const CourseRunForm: React.FC = () => {
 
     if (!isDraft) {
       // Required field validations for full submission
-      if (!formData.serialNumber) newErrors.serialNumber = "Serial Number is required";
+      if (!formData.serialNumber) newErrors.serialNumber = "Course Serial Number is required";
       if (!formData.courseRunType) newErrors.courseRunType = "Course Run Type is required";
       if (!formData.courseId) newErrors.courseId = "Course is required";
       if (!formData.startDate) newErrors.startDate = "Start Date is required";
@@ -418,6 +417,10 @@ const CourseRunForm: React.FC = () => {
       }
       if (formData.baseAmount !== undefined && formData.baseAmount < 0) {
         newErrors.baseAmount = "Base Amount must be 0 or greater";
+      }
+      // At least one trainer or partner must be selected
+      if (!formData.selectedTrainers || formData.selectedTrainers.length === 0) {
+        newErrors.trainers = "At least one trainer or partner must be selected";
       }
     }
 
@@ -558,9 +561,33 @@ const CourseRunForm: React.FC = () => {
               <div>
                 <h3 className="text-lg font-medium mb-4">Basic Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Serial Number */}
+                  {/* Course */}
                   <div>
-                    <Label htmlFor="serialNumber">Serial Number *</Label>
+                    <Label htmlFor="course">Course *</Label>
+                    <Select value={formData.courseId} onValueChange={handleCourseChange}>
+                      <SelectTrigger className={errors.courseId ? "border-red-500" : ""}>
+                        <SelectValue placeholder="Select a course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>
+                            {course.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.courseId && <p className="text-sm text-red-500 mt-1">{errors.courseId}</p>}
+                  </div>
+
+                  {/* Course Code - Disabled */}
+                  <div>
+                    <Label htmlFor="courseCode">Course Code</Label>
+                    <Input id="courseCode" value={formData.courseCode} disabled className="bg-gray-50" />
+                  </div>
+
+                  {/* Course Serial Number */}
+                  <div>
+                    <Label htmlFor="serialNumber">Course Serial Number *</Label>
                     <Input
                       id="serialNumber"
                       value={formData.serialNumber}
@@ -586,30 +613,6 @@ const CourseRunForm: React.FC = () => {
                       </SelectContent>
                     </Select>
                     {errors.courseRunType && <p className="text-sm text-red-500 mt-1">{errors.courseRunType}</p>}
-                  </div>
-
-                  {/* Course */}
-                  <div>
-                    <Label htmlFor="course">Course *</Label>
-                    <Select value={formData.courseId} onValueChange={handleCourseChange}>
-                      <SelectTrigger className={errors.courseId ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Select a course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {courses.map((course) => (
-                          <SelectItem key={course.id} value={course.id}>
-                            {course.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.courseId && <p className="text-sm text-red-500 mt-1">{errors.courseId}</p>}
-                  </div>
-
-                  {/* Course Code - Disabled */}
-                  <div>
-                    <Label htmlFor="courseCode">Course Code</Label>
-                    <Input id="courseCode" value={formData.courseCode} disabled className="bg-gray-50" />
                   </div>
                 </div>
               </div>

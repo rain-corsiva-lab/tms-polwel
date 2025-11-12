@@ -424,6 +424,12 @@ const CourseRunDetail: React.FC = () => {
           partnerId,
         }));
 
+      // Validate that at least one trainer or partner is selected
+      if (selectedTrainers.length === 0 && selectedPartners.length === 0) {
+        toast.error("At least one trainer or partner must be selected");
+        return;
+      }
+
       // Call API to update trainer assignments
       await courseRunsApi.updateTrainerAssignments(courseRun.id, selectedTrainers);
 
@@ -645,7 +651,7 @@ const CourseRunDetail: React.FC = () => {
 
       // Required fields list (excluding optional ones specified by user)
       const requiredFields: { key: string; label: string }[] = [
-        { key: "serialNumber", label: "Serial Number" },
+        { key: "serialNumber", label: "Course Serial Number" },
         { key: "courseRunType", label: "Course Run Type" },
         { key: "courseId", label: "Course" },
         { key: "startDate", label: "Start Date" },
@@ -805,15 +811,6 @@ const CourseRunDetail: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Serial Number</Label>
-                      <Input value={isEditing ? editData?.serialNumber : courseRun.serialNumber || ""} disabled className="bg-gray-50" />
-                      <p className="text-xs text-gray-500">Auto-generated from Course Code + Start Date</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Course Code</Label>
-                      <Input value={isEditing ? editData?.courseCode : courseRun.course?.courseCode || ""} disabled className="bg-gray-50" />
-                    </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label className="text-sm font-medium">Course</Label>
                       {isEditing ? (
@@ -832,6 +829,15 @@ const CourseRunDetail: React.FC = () => {
                       ) : (
                         <Input value={courseRun.course?.title || "Untitled"} disabled className="bg-gray-50" />
                       )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Course Code</Label>
+                      <Input value={isEditing ? editData?.courseCode : courseRun.course?.courseCode || ""} disabled className="bg-gray-50" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Course Serial Number</Label>
+                      <Input value={isEditing ? editData?.serialNumber : courseRun.serialNumber || ""} disabled className="bg-gray-50" />
+                      <p className="text-xs text-gray-500">Auto-generated from Course Code + Start Date</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Course Run Type</Label>

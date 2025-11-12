@@ -1111,7 +1111,7 @@ const CourseRuns: React.FC = () => {
                   <span className="text-gray-600">Course:</span> <span className="font-semibold text-gray-900">{trainerApprovalDialog.courseRun.title}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-gray-600">Serial Number:</span>{" "}
+                  <span className="text-gray-600">Course Serial Number:</span>{" "}
                   <span className="font-medium text-gray-700">{trainerApprovalDialog.courseRun.code}</span>
                 </div>
                 <div className="text-sm">
