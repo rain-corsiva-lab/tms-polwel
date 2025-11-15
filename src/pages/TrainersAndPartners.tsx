@@ -99,7 +99,9 @@ const TrainersAndPartners = () => {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [partnersLoading, setPartnersLoading] = useState(false);
+  const [isInitialPartnersLoad, setIsInitialPartnersLoad] = useState(true);
   const [deletedTrainers, setDeletedTrainers] = useState<Trainer[]>([]);
   const [deletedPartners, setDeletedPartners] = useState<Partner[]>([]);
   const [exporting, setExporting] = useState(false);
@@ -290,6 +292,7 @@ const TrainersAndPartners = () => {
       });
     } finally {
       setLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -326,6 +329,7 @@ const TrainersAndPartners = () => {
       });
     } finally {
       setPartnersLoading(false);
+      setIsInitialPartnersLoad(false);
     }
   };
 
@@ -479,32 +483,51 @@ const TrainersAndPartners = () => {
   // Fetch trainers on component mount and when filters change
   useEffect(() => {
     fetchTrainers();
-  }, [pagination.page, searchQuery, statusFilter]);
-
-  // When perPage changes, reset to page 1 so the new limit is applied immediately
-  useEffect(() => {
-    // reset to page 1 and immediately fetch with new limit
-    setPagination((p) => ({ ...p, page: 1 }));
-    fetchTrainers(1, perPage);
-  }, [perPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, statusFilter, perPage]);
 
   // Fetch partners on component mount and when filters change
   useEffect(() => {
     fetchPartners();
-  }, [partnersPagination.page, searchQuery, statusFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnersPagination.page, statusFilter, partnersPerPage]);
 
-  // When partnersPerPage changes, reset partners page to 1 so the new limit is applied immediately
+  // Debounced search for trainers
   useEffect(() => {
-    // reset to page 1 and immediately fetch with new limit
-    setPartnersPagination((p) => ({ ...p, page: 1 }));
-    fetchPartners(1, partnersPerPage);
-  }, [partnersPerPage]);
+    const t = setTimeout(() => {
+      setPagination((p) => ({ ...p, page: 1 }));
+      fetchTrainers(1);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  // Debounced search for partners
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPartnersPagination((p) => ({ ...p, page: 1 }));
+      fetchPartners(1);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Calculate stats from pagination totals (reflects database totals, not just current page)
   const totalTrainers = pagination.total || 0;
   const totalPartners = partnersPagination.total || 0;
   // Keep pending trainers as array filter for the dialog display
   const pendingTrainers = trainers.filter((trainer) => trainer.status === "PENDING");
+
+  // Handle search
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setPagination((p) => ({ ...p, page: 1 }));
+    setPartnersPagination((p) => ({ ...p, page: 1 }));
+  };
 
   const handleTrainerBlockoutAdd = (blockout: Omit<TrainerBlockout, "id">) => {
     const newBlockout = {
@@ -743,39 +766,43 @@ const TrainersAndPartners = () => {
           <AddTrainerDialog onTrainerCreated={fetchTrainers} />
         </div>
       </div>
-      {filterOpen && (
-        <Card className="border-dashed mb-4">
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-end gap-4">
-              <div>
-                <label className="block text-xs font-medium mb-1">Status</label>
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input placeholder="Search by name or email..." value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="pl-10" />
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div className="w-full sm:w-48">
+                <label className="sr-only" htmlFor="statusFilterSelect">
+                  Status
+                </label>
                 <select
+                  id="statusFilterSelect"
                   value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPagination((p) => ({ ...p, page: 1 }));
-                    setPartnersPagination((p) => ({ ...p, page: 1 }));
-                  }}
-                  className="h-9 rounded-md border bg-background px-3 py-1 text-sm"
+                  onChange={(e) => handleStatusFilter(e.target.value)}
+                  className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
                 >
-                  <option value="">All</option>
+                  <option value="">All Statuses</option>
                   <option value="ACTIVE">Active</option>
                   <option value="PENDING">Pending</option>
                   <option value="INACTIVE">Inactive</option>
                   <option value="LOCKED">Locked</option>
                 </select>
               </div>
-              {statusFilter && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => setStatusFilter("")} className="text-xs">
-                  <X className="h-3 w-3 mr-1" /> Clear
-                </Button>
-              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
-      {loading ? (
+      {isInitialLoad && loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -892,235 +919,228 @@ const TrainersAndPartners = () => {
             </TabsList>
 
             <TabsContent value="trainers" className="space-y-6">
-              {/* Search Input for Trainers */}
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search trainers by name or email..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setPagination((p) => ({ ...p, page: 1 }));
-                    }}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
               <Card>
                 <CardHeader>
                   <CardTitle>Associate Trainers</CardTitle>
                   <CardDescription>Manage individual trainers and their availability</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="cursor-pointer hover:bg-muted transition-colors" onClick={() => handleTrainerSort("name")}>
-                          <div className="flex items-center gap-2">
-                            <span>Name {renderTrainerSortIcon("name")}</span>
-                          </div>
-                        </TableHead>
-                        <TableHead className="cursor-pointer hover:bg-muted transition-colors" onClick={() => handleTrainerSort("email")}>
-                          <div className="flex items-center gap-2">
-                            <span>Email {renderTrainerSortIcon("email")}</span>
-                          </div>
-                        </TableHead>
-                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
-                          <div className="flex items-center gap-2">
-                            <span onClick={() => handleTrainerSort("status")}>Status {renderTrainerSortIcon("status")}</span>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <Filter className={cn("h-3 w-3", trainerFilters.status.length > 0 && "text-primary")} />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-2">
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center pb-2 border-b">
-                                    <span className="text-sm font-medium">Filter by Status</span>
-                                    {trainerFilters.status.length > 0 && (
-                                      <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("status", [])}>
-                                        Clear
-                                      </Button>
-                                    )}
-                                  </div>
-                                  <Command>
-                                    <CommandInput placeholder="Search status..." />
-                                    <CommandList>
-                                      <CommandEmpty>No results found.</CommandEmpty>
-                                      <CommandGroup>
-                                        {getTrainerUniqueValues("status").map((value) => (
-                                          <CommandItem
-                                            key={value}
-                                            onSelect={() => {
-                                              const newFilters = trainerFilters.status.includes(value)
-                                                ? trainerFilters.status.filter((v) => v !== value)
-                                                : [...trainerFilters.status, value];
-                                              handleTrainerFilterChange("status", newFilters);
-                                            }}
-                                          >
-                                            <div className="flex items-center gap-2">
-                                              <div
-                                                className={cn(
-                                                  "w-4 h-4 border rounded flex items-center justify-center",
-                                                  trainerFilters.status.includes(value) && "bg-primary border-primary"
-                                                )}
-                                              >
-                                                {trainerFilters.status.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
-                                              </div>
-                                              <span>{value}</span>
-                                            </div>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </TableHead>
-                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
-                          <div className="flex items-center gap-2">
-                            <span onClick={() => handleTrainerSort("partnerOrganization")}>
-                              Partner Organization {renderTrainerSortIcon("partnerOrganization")}
-                            </span>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <Filter className={cn("h-3 w-3", trainerFilters.partnerOrganization.length > 0 && "text-primary")} />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-2">
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center pb-2 border-b">
-                                    <span className="text-sm font-medium">Filter by Partner Organization</span>
-                                    {trainerFilters.partnerOrganization.length > 0 && (
-                                      <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("partnerOrganization", [])}>
-                                        Clear
-                                      </Button>
-                                    )}
-                                  </div>
-                                  <Command>
-                                    <CommandInput placeholder="Search organizations..." />
-                                    <CommandList>
-                                      <CommandEmpty>No results found.</CommandEmpty>
-                                      <CommandGroup>
-                                        {getTrainerUniqueValues("partnerOrganization").map((value) => (
-                                          <CommandItem
-                                            key={value}
-                                            onSelect={() => {
-                                              const newFilters = trainerFilters.partnerOrganization.includes(value)
-                                                ? trainerFilters.partnerOrganization.filter((v) => v !== value)
-                                                : [...trainerFilters.partnerOrganization, value];
-                                              handleTrainerFilterChange("partnerOrganization", newFilters);
-                                            }}
-                                          >
-                                            <div className="flex items-center gap-2">
-                                              <div
-                                                className={cn(
-                                                  "w-4 h-4 border rounded flex items-center justify-center",
-                                                  trainerFilters.partnerOrganization.includes(value) && "bg-primary border-primary"
-                                                )}
-                                              >
-                                                {trainerFilters.partnerOrganization.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
-                                              </div>
-                                              <span>{value}</span>
-                                            </div>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedTrainers.map((trainer) => (
-                        <TableRow key={trainer.id}>
-                          <TableCell className="font-medium">
-                            <Link to={`/trainers/${trainer.id}`} className="hover:underline text-primary">
-                              {trainer.name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>{trainer.email}</TableCell>
-                          <TableCell>
-                            <Badge variant={trainer.status === "ACTIVE" ? "default" : "secondary"}>{trainer.status}</Badge>
-                          </TableCell>
-                          <TableCell>{trainer.partnerOrganization || "-"}</TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <EditTrainerDialog trainer={trainer} onTrainerUpdated={fetchTrainers} />
-                              <SafeDropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
-                                    <MoreHorizontal className="h-4 w-4" />
+                  <div className="relative overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="cursor-pointer hover:bg-muted transition-colors" onClick={() => handleTrainerSort("name")}>
+                            <div className="flex items-center gap-2">
+                              <span>Name {renderTrainerSortIcon("name")}</span>
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:bg-muted transition-colors" onClick={() => handleTrainerSort("email")}>
+                            <div className="flex items-center gap-2">
+                              <span>Email {renderTrainerSortIcon("email")}</span>
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                            <div className="flex items-center gap-2">
+                              <span onClick={() => handleTrainerSort("status")}>Status {renderTrainerSortIcon("status")}</span>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <Filter className={cn("h-3 w-3", trainerFilters.status.length > 0 && "text-primary")} />
                                   </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {trainer.status === "PENDING" && (
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-2">
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between items-center pb-2 border-b">
+                                      <span className="text-sm font-medium">Filter by Status</span>
+                                      {trainerFilters.status.length > 0 && (
+                                        <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("status", [])}>
+                                          Clear
+                                        </Button>
+                                      )}
+                                    </div>
+                                    <Command>
+                                      <CommandInput placeholder="Search status..." />
+                                      <CommandList>
+                                        <CommandEmpty>No results found.</CommandEmpty>
+                                        <CommandGroup>
+                                          {getTrainerUniqueValues("status").map((value) => (
+                                            <CommandItem
+                                              key={value}
+                                              onSelect={() => {
+                                                const newFilters = trainerFilters.status.includes(value)
+                                                  ? trainerFilters.status.filter((v) => v !== value)
+                                                  : [...trainerFilters.status, value];
+                                                handleTrainerFilterChange("status", newFilters);
+                                              }}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <div
+                                                  className={cn(
+                                                    "w-4 h-4 border rounded flex items-center justify-center",
+                                                    trainerFilters.status.includes(value) && "bg-primary border-primary"
+                                                  )}
+                                                >
+                                                  {trainerFilters.status.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                                </div>
+                                                <span>{value}</span>
+                                              </div>
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                            <div className="flex items-center gap-2">
+                              <span onClick={() => handleTrainerSort("partnerOrganization")}>
+                                Partner Organization {renderTrainerSortIcon("partnerOrganization")}
+                              </span>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <Filter className={cn("h-3 w-3", trainerFilters.partnerOrganization.length > 0 && "text-primary")} />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-2">
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between items-center pb-2 border-b">
+                                      <span className="text-sm font-medium">Filter by Partner Organization</span>
+                                      {trainerFilters.partnerOrganization.length > 0 && (
+                                        <Button variant="ghost" size="sm" onClick={() => handleTrainerFilterChange("partnerOrganization", [])}>
+                                          Clear
+                                        </Button>
+                                      )}
+                                    </div>
+                                    <Command>
+                                      <CommandInput placeholder="Search organizations..." />
+                                      <CommandList>
+                                        <CommandEmpty>No results found.</CommandEmpty>
+                                        <CommandGroup>
+                                          {getTrainerUniqueValues("partnerOrganization").map((value) => (
+                                            <CommandItem
+                                              key={value}
+                                              onSelect={() => {
+                                                const newFilters = trainerFilters.partnerOrganization.includes(value)
+                                                  ? trainerFilters.partnerOrganization.filter((v) => v !== value)
+                                                  : [...trainerFilters.partnerOrganization, value];
+                                                handleTrainerFilterChange("partnerOrganization", newFilters);
+                                              }}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <div
+                                                  className={cn(
+                                                    "w-4 h-4 border rounded flex items-center justify-center",
+                                                    trainerFilters.partnerOrganization.includes(value) && "bg-primary border-primary"
+                                                  )}
+                                                >
+                                                  {trainerFilters.partnerOrganization.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                                </div>
+                                                <span>{value}</span>
+                                              </div>
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedTrainers.map((trainer) => (
+                          <TableRow key={trainer.id}>
+                            <TableCell className="font-medium">
+                              <Link to={`/trainers/${trainer.id}`} className="hover:underline text-primary">
+                                {trainer.name}
+                              </Link>
+                            </TableCell>
+                            <TableCell>{trainer.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={trainer.status === "ACTIVE" ? "default" : "secondary"}>{trainer.status}</Badge>
+                            </TableCell>
+                            <TableCell>{trainer.partnerOrganization || "-"}</TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <EditTrainerDialog trainer={trainer} onTrainerUpdated={fetchTrainers} />
+                                <SafeDropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {trainer.status === "PENDING" && (
+                                      <DropdownMenuItem
+                                        onClick={async () => {
+                                          try {
+                                            await trainersApi.resendSetup(trainer.id);
+                                            toast({
+                                              title: "Setup Email Sent",
+                                              description: `Onboarding email has been resent to ${trainer.name}`,
+                                            });
+                                          } catch (error: any) {
+                                            toast({
+                                              title: "Failed to Send Email",
+                                              description: error.message || "Could not resend setup email. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <Mail className="h-4 w-4 mr-2" />
+                                        Resend Onboarding Email
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem
                                       onClick={async () => {
                                         try {
-                                          await trainersApi.resendSetup(trainer.id);
+                                          if (!trainer.email) {
+                                            throw new Error("Trainer has no email address");
+                                          }
+                                          await polwelUsersApi.sendPasswordResetLink(trainer.id);
                                           toast({
-                                            title: "Setup Email Sent",
-                                            description: `Onboarding email has been resent to ${trainer.name}`,
+                                            title: "Password Reset Link Sent",
+                                            description: `Password reset link has been sent to ${trainer.email}`,
                                           });
                                         } catch (error: any) {
                                           toast({
-                                            title: "Failed to Send Email",
-                                            description: error.message || "Could not resend setup email. Please try again.",
+                                            title: "Failed to Send Reset",
+                                            description: error?.message || "Could not send password reset link. Please try again.",
                                             variant: "destructive",
                                           });
                                         }
                                       }}
                                     >
                                       <Mail className="h-4 w-4 mr-2" />
-                                      Resend Onboarding Email
+                                      Send Password Reset Link
                                     </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuItem
-                                    onClick={async () => {
-                                      try {
-                                        if (!trainer.email) {
-                                          throw new Error("Trainer has no email address");
-                                        }
-                                        await polwelUsersApi.sendPasswordResetLink(trainer.id);
-                                        toast({
-                                          title: "Password Reset Link Sent",
-                                          description: `Password reset link has been sent to ${trainer.email}`,
-                                        });
-                                      } catch (error: any) {
-                                        toast({
-                                          title: "Failed to Send Reset",
-                                          description: error?.message || "Could not send password reset link. Please try again.",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Send Password Reset Link
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDeleteTrainer(trainer.id, trainer.name)} className="text-red-600">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Trainer
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </SafeDropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                                    <DropdownMenuItem onClick={() => handleDeleteTrainer(trainer.id, trainer.name)} className="text-red-600">
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Trainer
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </SafeDropdownMenu>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {loading && !isInitialLoad && (
+                      <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                        <p className="text-sm text-gray-600">Refreshing trainers&hellip;</p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
                 <div className="px-4">
                   <PaginationControls
@@ -1135,18 +1155,6 @@ const TrainersAndPartners = () => {
             </TabsContent>
 
             <TabsContent value="partners" className="space-y-6">
-              <div className="relative flex-1 mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search partners by name or email..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setPagination((p) => ({ ...p, page: 1 }));
-                  }}
-                  className="pl-10"
-                />
-              </div>
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1175,177 +1183,185 @@ const TrainersAndPartners = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="cursor-pointer" onClick={() => handlePartnerSort("partnerName")}>
-                          <span>Partner Name {renderPartnerSortIcon("partnerName")}</span>
-                        </TableHead>
-                        <TableHead className="cursor-pointer hover:bg-muted transition-colors">
-                          <div className="flex items-center gap-2">
-                            <span onClick={() => handlePartnerSort("status")}>Status {renderPartnerSortIcon("status")}</span>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <Filter className={cn("h-3 w-3", partnerFilters.status.length > 0 && "text-primary")} />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-2">
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center pb-2 border-b">
-                                    <span className="text-sm font-medium">Filter by Status</span>
-                                    {partnerFilters.status.length > 0 && (
-                                      <Button variant="ghost" size="sm" onClick={() => handlePartnerFilterChange("status", [])}>
-                                        Clear
-                                      </Button>
-                                    )}
-                                  </div>
-                                  <Command>
-                                    <CommandInput placeholder="Search status..." />
-                                    <CommandList>
-                                      <CommandEmpty>No results found.</CommandEmpty>
-                                      <CommandGroup>
-                                        {getPartnerUniqueValues("status").map((value) => (
-                                          <CommandItem
-                                            key={value}
-                                            onSelect={() => {
-                                              const newFilters = partnerFilters.status.includes(value)
-                                                ? partnerFilters.status.filter((v) => v !== value)
-                                                : [...partnerFilters.status, value];
-                                              handlePartnerFilterChange("status", newFilters);
-                                            }}
-                                          >
-                                            <div className="flex items-center gap-2">
-                                              <div
-                                                className={cn(
-                                                  "w-4 h-4 border rounded flex items-center justify-center",
-                                                  partnerFilters.status.includes(value) && "bg-primary border-primary"
-                                                )}
-                                              >
-                                                {partnerFilters.status.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
-                                              </div>
-                                              <span>{value}</span>
-                                            </div>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </TableHead>
-                        <TableHead onClick={() => handlePartnerSort("contactNumber")} className="cursor-pointer hover:bg-muted transition-colors">
-                          Contact Info {renderPartnerSortIcon("contactNumber")}
-                        </TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {partnersLoading ? (
+                  <div className="relative overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8">
-                            Loading partners...
-                          </TableCell>
-                        </TableRow>
-                      ) : partners.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8">
-                            No partners found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        sortedPartners.map((partner) => (
-                          <TableRow key={partner.id}>
-                            <TableCell className="font-medium">
-                              <div>
-                                <div className="text-sm font-medium">{partner.partnerName}</div>
-                                <div className="text-xs text-muted-foreground">Contact: {partner.pointOfContact}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  partner.status === "ACTIVE"
-                                    ? "default"
-                                    : partner.status === "PENDING"
-                                    ? "secondary"
-                                    : partner.status === "INACTIVE"
-                                    ? "destructive"
-                                    : "outline"
-                                }
-                              >
-                                {partner.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                <div>{partner.contactNumber}</div>
-                                <div className="text-xs text-muted-foreground">{partner.contactDesignation}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <AddPartnerDialog
-                                  mode="edit"
-                                  partner={partner}
-                                  onSuccess={() => {
-                                    fetchPartners();
-                                    toast({
-                                      title: "Partner Updated",
-                                      description: "Partner details have been updated successfully.",
-                                    });
-                                  }}
-                                />
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={async () => {
-                                        const nextStatus = partner.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-                                        try {
-                                          await partnersApi.update(partner.id, { status: nextStatus });
-                                          await fetchPartners();
-                                          toast({
-                                            title: `Partner ${nextStatus === "ACTIVE" ? "Activated" : "Deactivated"}`,
-                                            description: `${partner.partnerName} is now ${nextStatus.toLowerCase()}.`,
-                                          });
-                                        } catch (error) {
-                                          console.error("Failed to update partner status", error);
-                                          toast({ title: "Update failed", description: "Could not change partner status.", variant: "destructive" });
-                                        }
-                                      }}
-                                    >
-                                      {partner.status === "ACTIVE" ? (
-                                        <>
-                                          <Ban className="h-4 w-4 mr-2" />
-                                          Mark Inactive
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle className="h-4 w-4 mr-2" />
-                                          Mark Active
-                                        </>
+                          <TableHead className="cursor-pointer" onClick={() => handlePartnerSort("partnerName")}>
+                            <span>Partner Name {renderPartnerSortIcon("partnerName")}</span>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:bg-muted transition-colors">
+                            <div className="flex items-center gap-2">
+                              <span onClick={() => handlePartnerSort("status")}>Status {renderPartnerSortIcon("status")}</span>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <Filter className={cn("h-3 w-3", partnerFilters.status.length > 0 && "text-primary")} />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-2">
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between items-center pb-2 border-b">
+                                      <span className="text-sm font-medium">Filter by Status</span>
+                                      {partnerFilters.status.length > 0 && (
+                                        <Button variant="ghost" size="sm" onClick={() => handlePartnerFilterChange("status", [])}>
+                                          Clear
+                                        </Button>
                                       )}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleDeletePartner(partner.id, partner.partnerName)} className="text-red-600">
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete Partner
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
+                                    </div>
+                                    <Command>
+                                      <CommandInput placeholder="Search status..." />
+                                      <CommandList>
+                                        <CommandEmpty>No results found.</CommandEmpty>
+                                        <CommandGroup>
+                                          {getPartnerUniqueValues("status").map((value) => (
+                                            <CommandItem
+                                              key={value}
+                                              onSelect={() => {
+                                                const newFilters = partnerFilters.status.includes(value)
+                                                  ? partnerFilters.status.filter((v) => v !== value)
+                                                  : [...partnerFilters.status, value];
+                                                handlePartnerFilterChange("status", newFilters);
+                                              }}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <div
+                                                  className={cn(
+                                                    "w-4 h-4 border rounded flex items-center justify-center",
+                                                    partnerFilters.status.includes(value) && "bg-primary border-primary"
+                                                  )}
+                                                >
+                                                  {partnerFilters.status.includes(value) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                                </div>
+                                                <span>{value}</span>
+                                              </div>
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </TableHead>
+                          <TableHead onClick={() => handlePartnerSort("contactNumber")} className="cursor-pointer hover:bg-muted transition-colors">
+                            Contact Info {renderPartnerSortIcon("contactNumber")}
+                          </TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {partnersLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-8">
+                              Loading partners...
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        ) : partners.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-8">
+                              No partners found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          sortedPartners.map((partner) => (
+                            <TableRow key={partner.id}>
+                              <TableCell className="font-medium">
+                                <div>
+                                  <div className="text-sm font-medium">{partner.partnerName}</div>
+                                  <div className="text-xs text-muted-foreground">Contact: {partner.pointOfContact}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    partner.status === "ACTIVE"
+                                      ? "default"
+                                      : partner.status === "PENDING"
+                                      ? "secondary"
+                                      : partner.status === "INACTIVE"
+                                      ? "destructive"
+                                      : "outline"
+                                  }
+                                >
+                                  {partner.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div>{partner.contactNumber}</div>
+                                  <div className="text-xs text-muted-foreground">{partner.contactDesignation}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <AddPartnerDialog
+                                    mode="edit"
+                                    partner={partner}
+                                    onSuccess={() => {
+                                      fetchPartners();
+                                      toast({
+                                        title: "Partner Updated",
+                                        description: "Partner details have been updated successfully.",
+                                      });
+                                    }}
+                                  />
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={async () => {
+                                          const nextStatus = partner.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+                                          try {
+                                            await partnersApi.update(partner.id, { status: nextStatus });
+                                            await fetchPartners();
+                                            toast({
+                                              title: `Partner ${nextStatus === "ACTIVE" ? "Activated" : "Deactivated"}`,
+                                              description: `${partner.partnerName} is now ${nextStatus.toLowerCase()}.`,
+                                            });
+                                          } catch (error) {
+                                            console.error("Failed to update partner status", error);
+                                            toast({ title: "Update failed", description: "Could not change partner status.", variant: "destructive" });
+                                          }
+                                        }}
+                                      >
+                                        {partner.status === "ACTIVE" ? (
+                                          <>
+                                            <Ban className="h-4 w-4 mr-2" />
+                                            Mark Inactive
+                                          </>
+                                        ) : (
+                                          <>
+                                            <CheckCircle className="h-4 w-4 mr-2" />
+                                            Mark Active
+                                          </>
+                                        )}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleDeletePartner(partner.id, partner.partnerName)} className="text-red-600">
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete Partner
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                    {partnersLoading && !isInitialPartnersLoad && (
+                      <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                        <p className="text-sm text-gray-600">Refreshing partners&hellip;</p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
                 <div className="px-4">
                   <PaginationControls
