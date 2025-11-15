@@ -486,15 +486,20 @@ const TrainerDetail = () => {
               <div className="space-y-3">
                 {selectedDateEvents.courseRuns.map((run: any) => (
                   <div key={run.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <span className="font-medium">{run.courseName}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span className="font-medium">{run.course?.title || run.courseName}</span>
+                      </div>
+                      <Badge variant={run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "outline" : "default"}>
+                        {run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "Tentative" : "Scheduled"}
+                      </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground space-y-1">
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
                         <span>
-                          {run.startTime} - {run.endTime}
+                          {formatDate(new Date(run.startDate.split("T")[0]))} - {formatDate(new Date(run.endDate.split("T")[0]))}
                         </span>
                       </div>
                       {run.venue && (

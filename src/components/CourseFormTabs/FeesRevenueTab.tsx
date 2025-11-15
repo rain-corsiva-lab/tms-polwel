@@ -33,7 +33,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center text-sm">
-            <DollarSign className="h-4 w-4 mr-2" />
+            {/* <DollarSign className="h-4 w-4 mr-2" /> */}
             Revenue
           </CardTitle>
         </CardHeader>

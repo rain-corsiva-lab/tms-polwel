@@ -125,20 +125,17 @@ const corsOptions: CorsOptions = {
 // Middleware
 app.use(helmet());
 app.use(limiter);
+
+// CORS must be applied before other middleware
 app.use(cors(corsOptions));
+
+// Note: OPTIONS * is handled by CORS middleware above
+// app.options('*', cors(corsOptions));
+
 app.use(apiLogger); // Add comprehensive API logging
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Handle preflight OPTIONS requests globally
-// app.options('*', (req, res) => {
-//   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-//   res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
-//   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-//   res.header('Access-Control-Allow-Credentials', 'true');
-//   res.sendStatus(200);
-// });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -178,7 +175,7 @@ app.use(errorHandler);
 
 // Start server
 const startServer = () => {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`🚀 POLWEL API Server running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`⚠️  Database connection will be established after Prisma setup`);
@@ -189,6 +186,13 @@ const startServer = () => {
 
     startCourseRunStatusJob();
   });
+
+  // Configure server timeouts to prevent connection drops
+  // Keep-alive timeout should be longer than the client's timeout
+  server.keepAliveTimeout = 65000; // 65 seconds
+  server.headersTimeout = 66000; // 66 seconds (must be longer than keepAliveTimeout)
+  
+  console.log('⏱️  Server timeouts configured: keepAlive=65s, headers=66s');
 };
 
 startServer();

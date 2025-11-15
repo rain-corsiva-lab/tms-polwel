@@ -13,6 +13,7 @@ import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import PaginationControls from "../components/ui/pagination";
+import DateInput from "../components/ui/date-input";
 import { courseRunsApi } from "../lib/api";
 import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
@@ -863,11 +864,10 @@ const CourseRuns: React.FC = () => {
                 <Label htmlFor="startDateFilter" className="text-sm mb-1 block">
                   Start Date From
                 </Label>
-                <Input
+                <DateInput
                   id="startDateFilter"
-                  type="date"
                   value={startDateFilter}
-                  onChange={(e) => handleStartDateFilter(e.target.value)}
+                  onChange={(isoDate) => handleStartDateFilter(isoDate || "")}
                   className="w-full sm:w-48"
                 />
               </div>
@@ -875,7 +875,7 @@ const CourseRuns: React.FC = () => {
                 <Label htmlFor="endDateFilter" className="text-sm mb-1 block">
                   End Date To
                 </Label>
-                <Input id="endDateFilter" type="date" value={endDateFilter} onChange={(e) => handleEndDateFilter(e.target.value)} className="w-full sm:w-48" />
+                <DateInput id="endDateFilter" value={endDateFilter} onChange={(isoDate) => handleEndDateFilter(isoDate || "")} className="w-full sm:w-48" />
               </div>
               {(startDateFilter || endDateFilter) && (
                 <div className="flex items-end">
@@ -977,17 +977,17 @@ const CourseRuns: React.FC = () => {
                         <div className="flex items-center space-x-3">
                           {/* Color indicator circle */}
                           <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                            className={`w-full h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
                               courseRun.minSize && courseRun.enrolled >= courseRun.minSize ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
                             }`}
                             title={courseRun.minSize && courseRun.enrolled >= courseRun.minSize ? "Minimum class size reached" : "Below minimum class size"}
                           >
-                            {courseRun.enrolled}
+                            {courseRun.enrolled} / {courseRun.minSize ?? "—"}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          {/* <div className="text-xs text-gray-500">
                             <div>Min: {courseRun.minSize ?? "—"}</div>
                             <div>Max: {courseRun.maxSize ?? "—"}</div>
-                          </div>
+                          </div> */}
                         </div>
                       </TableCell>
                       <TableCell>

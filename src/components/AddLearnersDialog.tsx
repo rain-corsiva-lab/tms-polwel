@@ -27,6 +27,7 @@ interface Course {
 interface CourseRun {
   id: string;
   course: Course;
+  baseCourseFee?: number | null;
 }
 
 interface Organization {
@@ -257,7 +258,8 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 }) => {
   // Runtime guard
   const resolvedCourseRunId = courseRun?.id || courseRunId || "";
-  const effectiveBaseFee = courseRun?.course?.defaultCourseFee ?? baseCourseFee ?? 0;
+  // Use baseCourseFee from course run data (preferred), fall back to baseCourseFee prop, then course default fee
+  const effectiveBaseFee = courseRun?.baseCourseFee ?? baseCourseFee ?? courseRun?.course?.defaultCourseFee ?? 0;
   const discountsList: any[] = (courseRun?.course?.discounts as any[]) || [];
 
   if (!courseRun && !courseRunId) {
@@ -1271,12 +1273,12 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
               <Input value={data.buNumber} disabled className="bg-gray-50" />
             </div>
             <div className="space-y-2">
-              <Label>Payment Mode *</Label>
+              <Label>Payment Mode (Optional)</Label>
               <SearchableSelect
                 value={data.paymentMode}
                 onValueChange={(value) => setData((prev) => ({ ...prev, paymentMode: value }))}
                 options={paymentModeOptions}
-                placeholder="Select payment mode"
+                placeholder="Select payment mode (optional)"
               />
             </div>
           </div>
@@ -1455,12 +1457,12 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
             <Input value={data.buNumber} disabled className="bg-gray-50" />
           </div>
           <div className="space-y-2">
-            <Label>Payment Mode *</Label>
+            <Label>Payment Mode (Optional)</Label>
             <SearchableSelect
               value={data.paymentMode}
               onValueChange={(value) => setData((prev) => ({ ...prev, paymentMode: value }))}
               options={paymentModeOptions}
-              placeholder="Select payment mode"
+              placeholder="Select payment mode (optional)"
             />
           </div>
         </CardContent>

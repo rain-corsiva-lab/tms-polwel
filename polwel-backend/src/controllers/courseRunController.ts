@@ -4201,6 +4201,7 @@ export const courseRunController = {
               trainer: {
                 select: {
                   name: true,
+                  email: true,
                 },
               },
             },
@@ -4213,6 +4214,7 @@ export const courseRunController = {
               partner: {
                 select: {
                   name: true,
+                  email: true,
                 },
               },
             },
@@ -4222,8 +4224,13 @@ export const courseRunController = {
               enrollmentStatus: 'ENROLLED',
               deletedAt: null,
             },
-            select: {
-              id: true,
+            include: {
+              learner: {
+                select: {
+                  fullname: true,
+                  email: true,
+                },
+              },
             },
           },
         },
@@ -4245,20 +4252,47 @@ export const courseRunController = {
         'Max Size',
         'Enrolled',
         'Status',
+        'Base Course Fee',
+        'Fee Type',
+        'Venue Fee',
+        'Other Fee',
+        'Admin Fee',
+        'Contingency Fee',
         'Trainers',
         'Partners',
+        'Participants',
       ];
 
       const rows = courseRuns.map((run) => {
-        const trainers = run.courseRunTrainers
-          .map((ct: any) => ct.trainer?.name || '')
-          .filter(Boolean)
-          .join('; ');
+        // Format trainers as JSON-like list (human-readable)
+        const trainersList = run.courseRunTrainers
+          .map((ct: any) => {
+            const name = ct.trainer?.name || 'N/A';
+            const email = ct.trainer?.email || 'N/A';
+            return `{ name: "${name}", email: "${email}" }`;
+          })
+          .join(', ');
+        const trainersJson = trainersList ? `[ ${trainersList} ]` : '[]';
         
-        const partners = run.courseRunPartners
-          .map((cp: any) => cp.partner?.name || '')
-          .filter(Boolean)
-          .join('; ');
+        // Format partners as JSON-like list (human-readable)
+        const partnersList = run.courseRunPartners
+          .map((cp: any) => {
+            const name = cp.partner?.name || 'N/A';
+            const email = cp.partner?.email || 'N/A';
+            return `{ name: "${name}", email: "${email}" }`;
+          })
+          .join(', ');
+        const partnersJson = partnersList ? `[ ${partnersList} ]` : '[]';
+        
+        // Format participants as JSON-like list (human-readable)
+        const participantsList = run.courseRunLearners
+          .map((cl: any) => {
+            const name = cl.learner?.fullname || 'N/A';
+            const email = cl.learner?.email || 'N/A';
+            return `{ name: "${name}", email: "${email}" }`;
+          })
+          .join(', ');
+        const participantsJson = participantsList ? `[ ${participantsList} ]` : '[]';
 
         const startDate = run.startDatetime
           ? new Date(run.startDatetime).toLocaleDateString('en-GB')
@@ -4280,8 +4314,15 @@ export const courseRunController = {
           run.maxClassSize?.toString() || '',
           run.courseRunLearners.length.toString(),
           run.status,
-          trainers,
-          partners,
+          run.baseCourseFee?.toString() || '',
+          run.feeType || '',
+          run.venueFee?.toString() || '',
+          run.otherFee?.toString() || '',
+          run.adminFee?.toString() || '',
+          run.contingencyFee?.toString() || '',
+          trainersJson,
+          partnersJson,
+          participantsJson,
         ];
       });
 

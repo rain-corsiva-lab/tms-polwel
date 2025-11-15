@@ -129,24 +129,26 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
 
   // Get events for selected date
   const getEventsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
-
     // Helper: parse YYYY-MM-DD into local Date at midnight to avoid timezone shifts
     const parseYMD = (s: string) => {
       const [y, m, d] = s.split("-").map(Number);
       return new Date(y, m - 1, d);
     };
 
-    // Filter course runs for the date
-    const courseRunsForDate = courseRuns.filter((run) => run.startDate.startsWith(dateStr));
+    const selectedDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    // Filter course runs for the date - check if date falls within start and end date range
+    const courseRunsForDate = courseRuns.filter((run) => {
+      const runStart = parseYMD(run.startDate.split("T")[0]);
+      const runEnd = parseYMD(run.endDate.split("T")[0]);
+      return selectedDay >= runStart && selectedDay <= runEnd;
+    });
 
     // Filter blockouts for the date (inclusive)
     const blockoutsForDate = blockouts.filter((blockout) => {
       const blockoutStart = parseYMD(blockout.startDate);
       const blockoutEnd = parseYMD(blockout.endDate);
-      // Compare only YMD (strip time)
-      const dY = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      return dY >= blockoutStart && dY <= blockoutEnd;
+      return selectedDay >= blockoutStart && selectedDay <= blockoutEnd;
     });
 
     return {
@@ -278,25 +280,25 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
 
   // Get events for selected date
   const selectedDateEvents = useMemo(() => {
-    const events = [];
-
     // Add blockouts for selected date
     const parseYMD = (s: string) => {
       const [y, m, d] = s.split("-").map(Number);
       return new Date(y, m - 1, d);
     };
 
+    const selectedDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+
     const dayBlockouts = blockouts.filter((blockout) => {
       const start = parseYMD(blockout.startDate);
       const end = parseYMD(blockout.endDate);
-      const dY = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-      return dY >= start && dY <= end;
+      return selectedDay >= start && selectedDay <= end;
     });
 
-    // Add course runs for selected date
+    // Add course runs for selected date - check if selected date falls within course run date range
     const dayCourseRuns = courseRuns.filter((run) => {
-      const runDate = parseISO(run.startDate);
-      return isSameDay(runDate, selectedDate);
+      const runStart = parseYMD(run.startDate.split("T")[0]);
+      const runEnd = parseYMD(run.endDate.split("T")[0]);
+      return selectedDay >= runStart && selectedDay <= runEnd;
     });
 
     return { blockouts: dayBlockouts, courseRuns: dayCourseRuns };
@@ -308,13 +310,13 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
     const scheduledDates: Date[] = [];
     const tentativeDates: Date[] = [];
 
-    blockouts.forEach((blockout) => {
-      // Use safe YMD parsing to avoid timezone shifts
-      const parseYMD = (s: string) => {
-        const [y, m, d] = s.split("-").map(Number);
-        return new Date(y, m - 1, d);
-      };
+    // Use safe YMD parsing to avoid timezone shifts
+    const parseYMD = (s: string) => {
+      const [y, m, d] = s.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    };
 
+    blockouts.forEach((blockout) => {
       const start = parseYMD(blockout.startDate);
       const end = parseYMD(blockout.endDate);
       const currentDate = new Date(start);
@@ -326,18 +328,29 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
     });
 
     courseRuns.forEach((run) => {
-      const runDate = parseISO(run.startDate);
       const status = run.status;
 
-      // Tentative: CONFIRMED_PENDING_TA_APPROVAL
-      if (status === "CONFIRMED_PENDING_TA_APPROVAL") {
-        tentativeDates.push(runDate);
+      // Parse start and end dates
+      const runStart = parseYMD(run.startDate.split("T")[0]);
+      const runEnd = parseYMD(run.endDate.split("T")[0]);
+
+      // Add all dates in the range
+      const currentDate = new Date(runStart);
+      while (currentDate <= runEnd) {
+        const dateToAdd = new Date(currentDate);
+
+        // Tentative: CONFIRMED_PENDING_TA_APPROVAL
+        if (status === "CONFIRMED_PENDING_TA_APPROVAL") {
+          tentativeDates.push(dateToAdd);
+        }
+        // Scheduled Course: CONFIRMED, CONFIRMED_PENDING_CONFIRMATION_EMAILS, ACTIVE, IN_PROGRESS, PENDING_BILLING, COMPLETED
+        else if (["CONFIRMED", "CONFIRMED_PENDING_CONFIRMATION_EMAILS", "ACTIVE", "IN_PROGRESS", "PENDING_BILLING", "COMPLETED"].includes(status)) {
+          scheduledDates.push(dateToAdd);
+        }
+        // Other statuses: Don't show in calendar
+
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-      // Scheduled Course: CONFIRMED, CONFIRMED_PENDING_CONFIRMATION_EMAILS, ACTIVE, IN_PROGRESS, PENDING_BILLING, COMPLETED
-      else if (["CONFIRMED", "CONFIRMED_PENDING_CONFIRMATION_EMAILS", "ACTIVE", "IN_PROGRESS", "PENDING_BILLING", "COMPLETED"].includes(status)) {
-        scheduledDates.push(runDate);
-      }
-      // Other statuses: Don't show in calendar
     });
 
     return {
