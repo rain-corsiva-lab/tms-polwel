@@ -321,25 +321,35 @@ export const coursesController = {
       if (req.body.trainers && Array.isArray(req.body.trainers) && req.body.trainers.length > 0) {
         // Separate trainers (Users) and partners (Partners) based on their existence in respective tables
         const trainersAndPartners = await Promise.all(
-          req.body.trainers.map(async (id: string) => {
-            const user = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+          req.body.trainers.map(async (item: any) => {
+            // Support both string IDs (legacy) and objects with {id, feePerRun, remarks}
+            const itemId = typeof item === 'string' ? item : item.id;
+            const feePerRun = typeof item === 'object' && item.feePerRun !== undefined ? item.feePerRun : (courseData.contractFees || 0);
+            const remarks = typeof item === 'object' && item.remarks ? item.remarks : null;
+            
+            const user = await prisma.user.findUnique({ where: { id: itemId }, select: { id: true, role: true } });
             if (user && user.role === 'TRAINER') {
-              return { type: 'trainer', id };
+              return { type: 'trainer', id: itemId, feePerRun, remarks };
             }
-            const partner = await prisma.partner.findUnique({ where: { id }, select: { id: true } });
+            const partner = await prisma.partner.findUnique({ where: { id: itemId }, select: { id: true } });
             if (partner) {
-              return { type: 'partner', id };
+              return { type: 'partner', id: itemId };
             }
             return null;
           })
         );
 
-        const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer').map((item) => item!.id);
+        const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer');
         const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
 
         if (trainers.length > 0) {
           await prisma.courseTrainer.createMany({
-            data: trainers.map((trainerId) => ({ courseId: course.id, trainerId })),
+            data: trainers.map((trainer) => ({ 
+              courseId: course.id, 
+              trainerId: trainer!.id,
+              feePerRun: trainer!.feePerRun,
+              remarks: trainer!.remarks
+            })),
             skipDuplicates: true
           });
         }
@@ -519,10 +529,15 @@ export const coursesController = {
         if (req.body.trainers.length > 0) {
           // Separate trainers (Users) and partners (Partners)
           const trainersAndPartners = await Promise.all(
-            req.body.trainers.map(async (itemId: string) => {
+            req.body.trainers.map(async (item: any) => {
+              // Support both string IDs (legacy) and objects with {id, feePerRun, remarks}
+              const itemId = typeof item === 'string' ? item : item.id;
+              const feePerRun = typeof item === 'object' && item.feePerRun !== undefined ? item.feePerRun : (data.contractFees || 0);
+              const remarks = typeof item === 'object' && item.remarks ? item.remarks : null;
+              
               const user = await prisma.user.findUnique({ where: { id: itemId }, select: { id: true, role: true } });
               if (user && user.role === 'TRAINER') {
-                return { type: 'trainer', id: itemId };
+                return { type: 'trainer', id: itemId, feePerRun, remarks };
               }
               const partner = await prisma.partner.findUnique({ where: { id: itemId }, select: { id: true } });
               if (partner) {
@@ -532,12 +547,17 @@ export const coursesController = {
             })
           );
 
-          const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer').map((item) => item!.id);
+          const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer');
           const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
 
           if (trainers.length > 0) {
             await prisma.courseTrainer.createMany({
-              data: trainers.map((trainerId) => ({ courseId: id, trainerId })),
+              data: trainers.map((trainer) => ({ 
+                courseId: id, 
+                trainerId: trainer!.id,
+                feePerRun: trainer!.feePerRun,
+                remarks: trainer!.remarks
+              })),
               skipDuplicates: true
             });
           }

@@ -103,7 +103,6 @@ async function main() {
   designation: 'Course Management',
       lastLogin: new Date('2024-01-10T11:15:00Z'),
       passwordExpiry: new Date('2024-04-10'),
-      createdBy: johnTan.id,
     },
   });
 
@@ -118,7 +117,6 @@ async function main() {
   // mfaRemoved
   permissionLevel: 'Staff',
   designation: 'Training Coordination',
-      createdBy: johnTan.id,
     },
   });
 
@@ -141,7 +139,6 @@ async function main() {
       additionalEmails: ['mary.lim.backup@spf.gov.sg'],
       lastLogin: new Date('2024-01-14T16:45:00Z'),
       passwordExpiry: new Date('2024-04-14'),
-      createdBy: johnTan.id,
     },
   });
 
@@ -162,7 +159,6 @@ async function main() {
       contactNumber: '+65 6555 0002',
       lastLogin: new Date('2024-01-15T08:45:00Z'),
       passwordExpiry: new Date('2024-04-15'),
-      createdBy: johnTan.id,
     },
   });
 
@@ -185,7 +181,6 @@ async function main() {
       rating: 4.8,
       lastLogin: new Date('2024-01-13T14:20:00Z'),
       passwordExpiry: new Date('2024-04-13'),
-      createdBy: johnTan.id,
     },
   });
 
@@ -207,7 +202,6 @@ async function main() {
       rating: 4.6,
       lastLogin: new Date('2024-01-12T15:30:00Z'),
       passwordExpiry: new Date('2024-04-12'),
-      createdBy: johnTan.id,
     },
   });
 
@@ -224,7 +218,6 @@ async function main() {
       partnerOrganization: 'Training Solutions Ltd',
       specializations: ['Project Management', 'Leadership'],
       experience: '3 years',
-      createdBy: johnTan.id,
     },
   });
 
@@ -243,7 +236,6 @@ async function main() {
       employeeId: 'SPF001234',
       lastLogin: new Date('2024-01-14T10:20:00Z'),
       passwordExpiry: new Date('2024-04-14'),
-      createdBy: maryLim.id,
     },
   });
 
@@ -262,7 +254,6 @@ async function main() {
       failedLoginAttempts: 5,
       lastLogin: new Date('2024-01-05T14:30:00Z'),
       passwordExpiry: new Date('2024-04-05'),
-      createdBy: ahmadRahman.id,
     },
   });
 
@@ -321,7 +312,6 @@ async function main() {
       fee: 25.0,
       status: VenueStatus.ACTIVE,
       remarks: 'Includes tea break and lunch. Additional AV equipment available on request.',
-      createdBy: johnTan.id,
     },
   });
 
@@ -342,7 +332,6 @@ async function main() {
       fee: 300.0,
       status: VenueStatus.ACTIVE,
       remarks: 'Projector and whiteboard included. Tea/coffee service available.',
-      createdBy: johnTan.id,
     },
   });
 
@@ -363,7 +352,6 @@ async function main() {
       fee: 800.0,
       status: VenueStatus.INACTIVE,
       remarks: 'Premium location with full AV equipment. Catering options available.',
-      createdBy: johnTan.id,
     },
   });
 
@@ -419,7 +407,6 @@ async function main() {
       syllabus: 'Day 1: Leadership Fundamentals, Communication Skills\\nDay 2: Team Management, Performance Coaching\\nDay 3: Strategic Leadership, Change Management',
       assessmentMethod: 'Practical exercises, group discussions, and case study presentations',
       certificationType: 'Certificate of Completion',
-      createdBy: johnTan.id,
     },
   });
 
@@ -466,7 +453,6 @@ async function main() {
       syllabus: 'Morning: EQ Fundamentals, Self-Assessment\\nAfternoon: Practical Applications, Action Planning',
       assessmentMethod: 'Interactive exercises, peer feedback, and self-reflection activities',
       certificationType: 'Certificate of Attendance',
-      createdBy: sarahWong.id,
     },
   });
 
@@ -513,7 +499,6 @@ async function main() {
       syllabus: 'Day 1: Strategic Analysis Tools, Competitive Intelligence\\nDay 2: Strategy Development, Implementation Planning',
       assessmentMethod: 'Strategic case study analysis and presentation of strategic plan',
       certificationType: 'Professional Certificate',
-      createdBy: johnTan.id,
     },
   });
 
@@ -560,7 +545,6 @@ async function main() {
       syllabus: 'Session 1: Mindset Theory, Self-Discovery\\nSession 2: Practical Strategies, Goal Setting',
       assessmentMethod: 'Self-reflection exercises and personal development plan creation',
       certificationType: 'Certificate of Participation',
-      createdBy: sarahWong.id,
     },
   });
 
@@ -606,7 +590,6 @@ async function main() {
       paymentReference: 'PAY-2024-001',
       bookingReference: 'BOOK-2024-001',
       confirmedAt: new Date('2024-01-20T10:00:00Z'),
-      createdBy: maryLim.id,
     },
   });
 
@@ -622,7 +605,6 @@ async function main() {
       totalAmount: 200.0,
       paymentStatus: 'PENDING',
       bookingReference: 'BOOK-2024-002',
-      createdBy: ahmadRahman.id,
     },
   });
 

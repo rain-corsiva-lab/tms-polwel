@@ -419,11 +419,9 @@ const PostRunDetail = () => {
       const response = await courseRunsApi.saveBilling(payload);
 
       if (response?.success) {
-        await Swal.fire({
-          icon: "success",
+        toast({
           title: "Success",
-          text: "Billing information saved successfully. Course run marked as completed.",
-          confirmButtonColor: "#3085d6",
+          description: "Billing information saved successfully. Course run marked as completed.",
         });
 
         // Refresh data

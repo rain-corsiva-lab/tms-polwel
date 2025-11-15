@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
 import DateInput from "../components/ui/date-input";
-import TimeInput from "../components/ui/time-input";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, Users } from "lucide-react";
 import { coursesApi, venuesApi, trainersApi, courseRunsApi } from "../lib/api";
@@ -52,9 +51,7 @@ interface CourseRunFormData {
 
   // Schedule
   startDate: string;
-  startTime: string;
   endDate: string;
-  endTime: string;
 
   // Venue & Settings
   venueType: string;
@@ -99,9 +96,7 @@ const CourseRunForm: React.FC = () => {
     courseId: courseId || "",
     courseCode: "",
     startDate: "",
-    startTime: "",
     endDate: "",
-    endTime: "",
     venueType: "",
     venueId: "",
     specifiedLocation: "",
@@ -408,9 +403,7 @@ const CourseRunForm: React.FC = () => {
       if (!formData.courseRunType) newErrors.courseRunType = "Course Run Type is required";
       if (!formData.courseId) newErrors.courseId = "Course is required";
       if (!formData.startDate) newErrors.startDate = "Start Date is required";
-      if (formData.startDate && !formData.startTime) newErrors.startTime = "Start Time is required";
       if (!formData.endDate) newErrors.endDate = "End Date is required";
-      if (formData.endDate && !formData.endTime) newErrors.endTime = "End Time is required";
       if (!formData.venueType) newErrors.venueType = "Venue type is required";
       if (formData.minClassSize !== undefined && formData.minClassSize < 0) {
         newErrors.minClassSize = "Min Class Size must be 0 or greater";
@@ -430,33 +423,26 @@ const CourseRunForm: React.FC = () => {
 
   // Handle form submission
   const handleSubmit = async (isDraft: boolean = false) => {
-    if (!validateForm(isDraft)) {
-      toast.error("Please fix the validation errors");
-      return;
+    // For draft mode, only require course selection
+    if (isDraft) {
+      if (!formData.courseId) {
+        toast.error("Please select a course before saving as draft");
+        return;
+      }
+    } else {
+      // For full submission, validate all fields
+      if (!validateForm(isDraft)) {
+        toast.error("Please fix the validation errors");
+        return;
+      }
     }
-
-    const title = isDraft ? "Save as Draft" : "Create Course Run";
-    const confirmText = isDraft ? "Are you sure you want to save this course run as draft?" : "Are you sure you want to create this course run?";
-
-    const result = await Swal.fire({
-      title,
-      text: confirmText,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#3b82f6",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: isDraft ? "Save Draft" : "Create Course Run",
-      cancelButtonText: "Cancel",
-    });
-
-    if (!result.isConfirmed) return;
 
     setSubmitting(true);
 
     try {
-      // Prepare submission data
-      const startDatetime = formData.startDate && formData.startTime ? new Date(`${formData.startDate}T${formData.startTime}`).toISOString() : null;
-      const endDatetime = formData.endDate && formData.endTime ? new Date(`${formData.endDate}T${formData.endTime}`).toISOString() : null;
+      // Prepare submission data (dates only, time set to 00:00:00)
+      const startDatetime = formData.startDate ? new Date(`${formData.startDate}T00:00:00`).toISOString() : null;
+      const endDatetime = formData.endDate ? new Date(`${formData.endDate}T00:00:00`).toISOString() : null;
 
       // Get venue fee and fee type from selected venue
       const selectedVenue = venues.find((v) => v.id === formData.venueId);
@@ -472,8 +458,8 @@ const CourseRunForm: React.FC = () => {
       }));
 
       const submissionData = {
-        serialNumber: formData.serialNumber,
-        courseRunType: formData.courseRunType,
+        serialNumber: formData.serialNumber || null,
+        courseRunType: formData.courseRunType || null,
         courseId: formData.courseId,
         startDatetime,
         endDatetime,
@@ -482,14 +468,14 @@ const CourseRunForm: React.FC = () => {
         feeType: venueFeeType, // Include fee type from venue
         venueMaxParticipant: formData.venueMaxParticipants ?? null,
         perHeadFeeIfMaxExceed: formData.perHeadFeeIfMaxExceed ?? null,
-        venueType: formData.venueType,
-        specifiedLocation: formData.specifiedLocation,
-        minClassSize: formData.minClassSize,
-        maxClassSize: formData.maxClassSize,
+        venueType: formData.venueType || null, // Send null instead of empty string
+        specifiedLocation: formData.specifiedLocation || null,
+        minClassSize: formData.minClassSize ?? null,
+        maxClassSize: formData.maxClassSize ?? null,
         individualRegistrationRequired: formData.individualRegistrationRequired,
-        remarks: formData.remarks,
-        baseCourseFee: formData.baseAmount,
-        otherFee: formData.additionalCosts,
+        remarks: formData.remarks || null,
+        baseCourseFee: formData.baseAmount ?? null,
+        otherFee: formData.additionalCosts ?? null,
         status: isDraft ? "DRAFT" : "CONFIRMED_PENDING_TA_APPROVAL", // Change to CONFIRMED_PENDING_TA_APPROVAL
         trainers: trainerAssignments, // Include trainer assignments
       };
@@ -497,25 +483,14 @@ const CourseRunForm: React.FC = () => {
       const response = await courseRunsApi.create(submissionData);
 
       if (response.success) {
-        await Swal.fire({
-          title: "Success!",
-          text: `Course run ${isDraft ? "saved as draft" : "created"} successfully`,
-          icon: "success",
-          confirmButtonColor: "#3b82f6",
-        });
-
+        toast.success(`Course run ${isDraft ? "saved as draft" : "created"} successfully`);
         navigate("/course-runs");
       } else {
         throw new Error(response.error || "Failed to create course run");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
-      await Swal.fire({
-        title: "Error",
-        text: error instanceof Error ? error.message : "Failed to create course run",
-        icon: "error",
-        confirmButtonColor: "#ef4444",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to create course run");
     } finally {
       setSubmitting(false);
     }
@@ -632,18 +607,6 @@ const CourseRunForm: React.FC = () => {
                     {errors.startDate && <p className="text-sm text-red-500 mt-1">{errors.startDate}</p>}
                   </div>
 
-                  {/* Start Time */}
-                  <div>
-                    <Label htmlFor="startTime">Start Time *</Label>
-                    <TimeInput
-                      id="startTime"
-                      value={formData.startTime}
-                      onChange={(time) => handleFieldChange("startTime", time || "")}
-                      className={errors.startTime ? "border-red-500" : ""}
-                    />
-                    {errors.startTime && <p className="text-sm text-red-500 mt-1">{errors.startTime}</p>}
-                  </div>
-
                   {/* End Date */}
                   <div>
                     <Label htmlFor="endDate">End Date *</Label>
@@ -654,18 +617,6 @@ const CourseRunForm: React.FC = () => {
                       className={errors.endDate ? "border-red-500" : ""}
                     />
                     {errors.endDate && <p className="text-sm text-red-500 mt-1">{errors.endDate}</p>}
-                  </div>
-
-                  {/* End Time */}
-                  <div>
-                    <Label htmlFor="endTime">End Time *</Label>
-                    <TimeInput
-                      id="endTime"
-                      value={formData.endTime}
-                      onChange={(time) => handleFieldChange("endTime", time || "")}
-                      className={errors.endTime ? "border-red-500" : ""}
-                    />
-                    {errors.endTime && <p className="text-sm text-red-500 mt-1">{errors.endTime}</p>}
                   </div>
                 </div>
               </div>

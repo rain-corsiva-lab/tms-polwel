@@ -49,7 +49,7 @@ const TrainerPartner = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Associate Trainer Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Associate Trainer Dashboard</h1>
           <p className="text-muted-foreground">Manage your profile and training schedule</p>
         </div>
         <div className="flex items-center gap-2">

@@ -450,7 +450,7 @@ const CourseForm: React.FC = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="information">Information</TabsTrigger>
-            <TabsTrigger value="fees">Revenues & Expenses</TabsTrigger>
+            <TabsTrigger value="fees">Fees</TabsTrigger>
             <TabsTrigger value="discounts">Discounts</TabsTrigger>
           </TabsList>
           <TabsContent value="information" className="mt-4">
@@ -475,7 +475,7 @@ const CourseForm: React.FC = () => {
           <TabsContent value="fees" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Revenues & Expenses</CardTitle>
+                <CardTitle>Fees</CardTitle>
               </CardHeader>
               <CardContent>
                 <FeesRevenueTab formData={formData as any} onInputChange={handleInputChange as any} venues={refs.venues} selectedVenueId={formData.venue} />
@@ -504,7 +504,7 @@ const CourseForm: React.FC = () => {
             </Button>
           ) : (
             <Button type="button" variant="outline" onClick={() => setActiveTab("fees")}>
-              Previous: Revenues & Expenses
+              Previous: Fees
             </Button>
           )}
 
@@ -516,7 +516,7 @@ const CourseForm: React.FC = () => {
                 setActiveTab("fees");
               }}
             >
-              Next: Revenues & Expenses
+              Next: Fees
             </Button>
           ) : activeTab === "fees" ? (
             <Button

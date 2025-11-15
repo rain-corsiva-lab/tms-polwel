@@ -14,7 +14,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "ts-node prisma/seed.ts",
+    "db:seed": "ts-node prisma/seed.ts && npm run db:permissions:upsert && npm run db:seed:grant-kukuh",
     "db:seed:grant-kukuh": "ts-node scripts/seedGrantAllPermissionsToJohn.ts",
     "db:permissions:upsert": "ts-node scripts/upsertMissingPermissions.ts",
     "debug:course-run-search": "ts-node scripts/testCourseRunSearch.ts",

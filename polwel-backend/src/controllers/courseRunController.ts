@@ -515,12 +515,14 @@ const getCourseRunsSchema = z.object({
   limit: z.string().optional().transform(val => val ? parseInt(val) : 10),
   search: z.string().optional(),
   status: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 const createCourseRunSchema = z.object({
-  serialNumber: z.string().optional(),
-  courseRunType: z.enum(['OPEN', 'DEDICATED', 'TALKS', 'CUSTOMIZED']).optional(),
-  courseId: z.string(),
+  serialNumber: z.string().optional().nullable(),
+  courseRunType: z.enum(['OPEN', 'DEDICATED', 'TALKS', 'CUSTOMIZED']).optional().nullable(),
+  courseId: z.string().optional(),
   startDatetime: z.string().nullable().optional(),
   endDatetime: z.string().nullable().optional(),
   venueId: z.string().nullable().optional(),
@@ -531,7 +533,7 @@ const createCourseRunSchema = z.object({
   individualRegistrationRequired: z.boolean().nullable().optional(),
   remarks: z.string().nullable().optional(),
   baseCourseFee: z.number().nullable().optional(),
-  feeType: z.enum(['PER_HEAD', 'PER_VENUE', 'FIXED']).optional(),
+  feeType: z.enum(['PER_HEAD', 'PER_VENUE', 'FIXED']).optional().nullable(),
   venueFee: z.number().nullable().optional(),
   venueMaxParticipant: z.number().int().min(1).nullable().optional(),
   perHeadFeeIfMaxExceed: z.number().nullable().optional(),
@@ -540,7 +542,7 @@ const createCourseRunSchema = z.object({
   otherFee: z.number().nullable().optional(),
   adminFee: z.number().nullable().optional(),
   contingencyFee: z.number().nullable().optional(),
-  status: z.enum(['DRAFT', 'PENDING', 'CONFIRMED_PENDING_TA_APPROVAL', 'ACTIVE', 'CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'PUBLISHED', 'ONGOING']).optional(),
+  status: z.enum(['DRAFT', 'PENDING', 'CONFIRMED_PENDING_TA_APPROVAL', 'ACTIVE', 'CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'PUBLISHED', 'ONGOING']).optional().nullable(),
   billingReportId: z.string().nullable().optional(),
   trainers: z
     .array(
@@ -550,7 +552,8 @@ const createCourseRunSchema = z.object({
         additionalCost: z.number().nullable().optional(),
       })
     )
-    .optional(),
+    .optional()
+    .nullable(),
 });
 
 const cancelCourseRunSchema = z
@@ -586,7 +589,7 @@ export const courseRunController = {
   // Get all course runs with pagination, search, and filters
   async getAll(req: Request, res: Response) {
     try {
-  const { page, limit, search, status } = getCourseRunsSchema.parse(req.query);
+  const { page, limit, search, status, startDate, endDate } = getCourseRunsSchema.parse(req.query);
       const skip = (page - 1) * limit;
 
       // Build where clause for filtering
@@ -655,6 +658,20 @@ export const courseRunController = {
       const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : undefined;
       if (normalizedStatus && ALLOWED_COURSE_STATUSES.includes(normalizedStatus as CourseStatus)) {
         where.status = normalizedStatus as CourseStatus;
+      }
+
+      // Add date range filters
+      if (startDate) {
+        where.startDatetime = {
+          ...where.startDatetime,
+          gte: new Date(startDate),
+        };
+      }
+      if (endDate) {
+        where.endDatetime = {
+          ...where.endDatetime,
+          lte: new Date(endDate),
+        };
       }
 
       // Get course runs with related data. Prisma's count() has trouble with some relation filters
@@ -1039,7 +1056,11 @@ export const courseRunController = {
         message: 'Course run created successfully',
       });
     } catch (error) {
-      console.error('Error creating course run:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error creating course run:', errorMessage);
+      if (error instanceof Error && error.stack) {
+        console.error('Stack trace:', error.stack);
+      }
       res.status(500).json(buildErrorResponse('courseRunController.create', 'Failed to create course run', error));
     }
   },
@@ -1121,7 +1142,11 @@ export const courseRunController = {
         message: 'Course run updated successfully',
       });
     } catch (error) {
-      console.error('Error updating course run:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error updating course run:', errorMessage);
+      if (error instanceof Error && error.stack) {
+        console.error('Stack trace:', error.stack);
+      }
       res.status(500).json(buildErrorResponse('courseRunController.update', 'Failed to update course run', error));
     }
   },
@@ -4144,6 +4169,142 @@ export const courseRunController = {
       if (!res.headersSent) {
         res.status(500).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'Failed to generate certificates ZIP', error));
       }
+    }
+  },
+
+  async exportToCSV(req: Request, res: Response) {
+    try {
+      // Fetch all course runs with related data
+      const courseRuns = await prisma.courseRun.findMany({
+        where: {
+          deletedAt: null,
+        },
+        include: {
+          course: {
+            select: {
+              title: true,
+              courseCode: true,
+              category: true,
+            },
+          },
+          venue: {
+            select: {
+              name: true,
+              address: true,
+            },
+          },
+          courseRunTrainers: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              trainer: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          courseRunPartners: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              partner: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          courseRunLearners: {
+            where: {
+              enrollmentStatus: 'ENROLLED',
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+            },
+          },
+        },
+        orderBy: {
+          startDatetime: 'desc',
+        },
+      });
+
+      // Build CSV content
+      const headers = [
+        'Course Code',
+        'Course Title',
+        'Category',
+        'Start Date',
+        'End Date',
+        'Venue',
+        'Location',
+        'Min Size',
+        'Max Size',
+        'Enrolled',
+        'Status',
+        'Trainers',
+        'Partners',
+      ];
+
+      const rows = courseRuns.map((run) => {
+        const trainers = run.courseRunTrainers
+          .map((ct: any) => ct.trainer?.name || '')
+          .filter(Boolean)
+          .join('; ');
+        
+        const partners = run.courseRunPartners
+          .map((cp: any) => cp.partner?.name || '')
+          .filter(Boolean)
+          .join('; ');
+
+        const startDate = run.startDatetime
+          ? new Date(run.startDatetime).toLocaleDateString('en-GB')
+          : '';
+        
+        const endDate = run.endDatetime
+          ? new Date(run.endDatetime).toLocaleDateString('en-GB')
+          : '';
+
+        return [
+          run.course?.courseCode || '',
+          run.course?.title || '',
+          run.course?.category || '',
+          startDate,
+          endDate,
+          run.venue?.name || '',
+          run.venue?.address || run.specifiedLocation || '',
+          run.minClassSize?.toString() || '',
+          run.maxClassSize?.toString() || '',
+          run.courseRunLearners.length.toString(),
+          run.status,
+          trainers,
+          partners,
+        ];
+      });
+
+      // Escape CSV fields
+      const escapeCsvField = (field: string) => {
+        if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      };
+
+      const csvContent = [
+        headers.map(escapeCsvField).join(','),
+        ...rows.map(row => row.map(escapeCsvField).join(',')),
+      ].join('\n');
+
+      res.status(200).json({
+        success: true,
+        data: csvContent,
+      });
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.exportToCSV', 'Failed to export data', error));
     }
   },
 };

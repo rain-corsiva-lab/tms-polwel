@@ -207,8 +207,9 @@ export default function TrainerDashboard() {
       if (!trainerId) throw new Error("Trainer id not available");
       await trainersApi.deleteFee(trainerId, f.id);
       setFeesState((prev) => (prev || []).filter((x: any) => x.id !== f.id));
+      toast({ title: "Fee deleted successfully" });
     } catch (err: any) {
-      Swal.fire({ title: "Error", text: err.message || "Failed", icon: "error" });
+      toast({ title: "Error", description: err.message || "Failed", variant: "destructive" });
     }
   };
 

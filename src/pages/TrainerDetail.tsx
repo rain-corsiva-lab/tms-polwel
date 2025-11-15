@@ -263,9 +263,9 @@ const TrainerDetail = () => {
     try {
       await trainersApi.deleteFee(id, fee.id);
       setFees((prev) => prev.filter((f) => f.id !== fee.id));
-      await Swal.fire({ title: "Deleted", icon: "success", timer: 1500, showConfirmButton: false });
+      toast({ title: "Fee deleted successfully" });
     } catch (e: any) {
-      await Swal.fire({ title: "Error", text: e.message || "Failed", icon: "error" });
+      toast({ title: "Error", description: e.message || "Failed", variant: "destructive" });
     }
   };
 
@@ -400,7 +400,7 @@ const TrainerDetail = () => {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-lg font-semibold">Courses</CardTitle>
-            <Button
+            {/* <Button
               size="sm"
               onClick={() => {
                 setEditingFee(null);
@@ -408,7 +408,7 @@ const TrainerDetail = () => {
               }}
             >
               Add Course Details
-            </Button>
+            </Button> */}
           </CardHeader>
           <CardContent className="p-0">
             {fees.length === 0 ? (
@@ -421,7 +421,7 @@ const TrainerDetail = () => {
                     <TableHead className="font-semibold">Course Name</TableHead>
                     <TableHead className="font-semibold">Fees (per run)</TableHead>
                     <TableHead className="font-semibold">Remarks</TableHead>
-                    <TableHead className="text-right font-semibold">Actions</TableHead>
+                    {/* <TableHead className="text-right font-semibold">Actions</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -433,7 +433,7 @@ const TrainerDetail = () => {
                       <TableCell className="max-w-[250px] truncate" title={f.remarks || ""}>
                         {f.remarks || "-"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      {/* <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             size="sm"
@@ -449,7 +449,7 @@ const TrainerDetail = () => {
                             Remove
                           </Button>
                         </div>
-                      </TableCell>
+                      </TableCell> */}
                     </TableRow>
                   ))}
                 </TableBody>

@@ -467,8 +467,7 @@ const PostRunManagement: React.FC = () => {
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Post Run Management</h1>
-          <p className="text-muted-foreground">Track pending billing runs and review recently completed courses.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Post Run Management</h1>
         </div>
       </div>
 

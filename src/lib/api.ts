@@ -1295,6 +1295,8 @@ export const courseRunsApi = {
     status?: string;
     sortBy?: string;
     sortOrder?: string;
+    startDate?: string;
+    endDate?: string;
   } = {}) => {
     const queryParams = new URLSearchParams();
 
@@ -1360,6 +1362,10 @@ export const courseRunsApi = {
     return apiRequest(`/course-runs/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  exportToCSV: async () => {
+    return apiRequest('/course-runs/export/csv');
   },
 
   // Enroll single learner (backend expects /enroll-learner)

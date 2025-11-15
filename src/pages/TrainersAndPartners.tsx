@@ -526,63 +526,45 @@ const TrainersAndPartners = () => {
 
   // Delete trainer handler
   const handleDeleteTrainer = async (trainerId: string, trainerName: string) => {
-    const result = await Swal.fire({
-      title: "Delete Trainer?",
-      text: `Are you sure you want to delete "${trainerName}"? This action can be undone from the Deleted tab.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
-    });
+    if (!window.confirm(`Are you sure you want to delete "${trainerName}"? This action can be undone from the Deleted tab.`)) {
+      return;
+    }
 
-    if (result.isConfirmed) {
-      try {
-        await trainersApi.delete(trainerId);
-        toast({
-          title: "Trainer Deleted",
-          description: `${trainerName} has been deleted successfully`,
-        });
-        fetchTrainers(); // Refresh list
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete trainer",
-          variant: "destructive",
-        });
-      }
+    try {
+      await trainersApi.delete(trainerId);
+      toast({
+        title: "Trainer Deleted",
+        description: `${trainerName} has been deleted successfully`,
+      });
+      fetchTrainers(); // Refresh list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete trainer",
+        variant: "destructive",
+      });
     }
   };
 
   // Delete partner handler
   const handleDeletePartner = async (partnerId: string, partnerName: string) => {
-    const result = await Swal.fire({
-      title: "Delete Partner?",
-      text: `Are you sure you want to delete "${partnerName}"? This action can be undone from the Deleted tab.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
-    });
+    if (!window.confirm(`Are you sure you want to delete "${partnerName}"? This action can be undone from the Deleted tab.`)) {
+      return;
+    }
 
-    if (result.isConfirmed) {
-      try {
-        await partnersApi.delete(partnerId);
-        toast({
-          title: "Partner Deleted",
-          description: `${partnerName} has been deleted successfully`,
-        });
-        fetchPartners(); // Refresh list
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete partner",
-          variant: "destructive",
-        });
-      }
+    try {
+      await partnersApi.delete(partnerId);
+      toast({
+        title: "Partner Deleted",
+        description: `${partnerName} has been deleted successfully`,
+      });
+      fetchPartners(); // Refresh list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete partner",
+        variant: "destructive",
+      });
     }
   };
 
@@ -738,14 +720,13 @@ const TrainersAndPartners = () => {
     }
   };
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <GraduationCap className="h-6 w-6" />
+          <h2 className="text-3xl font-bold text-foreground flex items-center gap-2">
+            {/* <GraduationCap className="h-6 w-6" /> */}
             Associate Trainers & Training Partners
           </h2>
-          <p className="text-muted-foreground">Manage associate trainers and training partners and their availability</p>
         </div>
         <div className="flex space-x-3">
           {/* <Button variant="outline" onClick={() => setFilterOpen((o) => !o)}>

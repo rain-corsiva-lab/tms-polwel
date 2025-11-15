@@ -162,8 +162,7 @@ const ClientOrganisations = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Client Organisation</h1>
-          <p className="text-muted-foreground">Manage client organisations and their training programs</p>
+          <h1 className="text-3xl font-bold tracking-tight">Client Organisation</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleExport} disabled={exporting}>

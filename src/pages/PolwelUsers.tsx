@@ -330,7 +330,6 @@ export default function PolwelUsers() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">POLWEL Staff Management</h1>
-          <p className="text-muted-foreground">Manage POLWEL staff accounts, permissions, and access controls</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>

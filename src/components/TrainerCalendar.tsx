@@ -306,6 +306,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
   const calendarModifiers = useMemo(() => {
     const blockedDates: Date[] = [];
     const scheduledDates: Date[] = [];
+    const tentativeDates: Date[] = [];
 
     blockouts.forEach((blockout) => {
       // Use safe YMD parsing to avoid timezone shifts
@@ -326,18 +327,30 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
 
     courseRuns.forEach((run) => {
       const runDate = parseISO(run.startDate);
-      scheduledDates.push(runDate);
+      const status = run.status;
+
+      // Tentative: CONFIRMED_PENDING_TA_APPROVAL
+      if (status === "CONFIRMED_PENDING_TA_APPROVAL") {
+        tentativeDates.push(runDate);
+      }
+      // Scheduled Course: CONFIRMED, CONFIRMED_PENDING_CONFIRMATION_EMAILS, ACTIVE, IN_PROGRESS, PENDING_BILLING, COMPLETED
+      else if (["CONFIRMED", "CONFIRMED_PENDING_CONFIRMATION_EMAILS", "ACTIVE", "IN_PROGRESS", "PENDING_BILLING", "COMPLETED"].includes(status)) {
+        scheduledDates.push(runDate);
+      }
+      // Other statuses: Don't show in calendar
     });
 
     return {
       blocked: blockedDates,
       scheduled: scheduledDates,
+      tentative: tentativeDates,
     };
   }, [blockouts, courseRuns]);
 
   const calendarModifiersClassNames = {
     blocked: "bg-red-100 text-red-900 hover:bg-red-200",
     scheduled: "bg-green-100 text-green-900 hover:bg-green-200",
+    tentative: "bg-yellow-100 text-yellow-900 hover:bg-yellow-200",
   };
 
   if (loading) {
@@ -387,10 +400,14 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
           />
           <div className="text-sm space-y-2">
             <p className="font-medium">Select date(s) to manage your availability</p>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-wrap gap-y-2">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded"></div>
                 <span>Scheduled Course</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                <span>Tentative</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded"></div>

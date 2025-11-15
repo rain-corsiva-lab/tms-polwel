@@ -413,23 +413,19 @@ const ClientOrganisationDetail = () => {
       await clientOrganizationsApi.deleteCoordinator(id, coordinatorId);
       setCoordinators((prev) => prev.filter((coord) => coord.id !== coordinatorId));
 
-      // Success message with SweetAlert2
-      await Swal.fire({
+      // Success message with toast
+      toast({
         title: "Deleted!",
-        text: `${coordinatorName} has been deleted successfully.`,
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+        description: `${coordinatorName} has been deleted successfully.`,
       });
     } catch (error: any) {
       console.error("Error deleting coordinator:", error);
 
-      // Error message with SweetAlert2
-      await Swal.fire({
+      // Error message with toast
+      toast({
         title: "Error!",
-        text: error.message || "Failed to delete coordinator. Please try again.",
-        icon: "error",
-        confirmButtonColor: "#dc2626",
+        description: error.message || "Failed to delete coordinator. Please try again.",
+        variant: "destructive",
       });
     }
   };

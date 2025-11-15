@@ -59,7 +59,7 @@ const DEFAULT_STATUS_BY_TYPE: Partial<Record<CourseRunType, CourseStatus>> = {
 const WORKFLOW_ACTIONS: Record<CourseRunWorkflowAction, WorkflowActionDefinition> = {
   SUBMIT: {
     key: 'SUBMIT',
-    label: 'Submit for Approval',
+    label: 'Mark as Active',
     description: 'Move the draft run into the approval queue.',
     from: ['DRAFT'],
     to: 'PENDING',

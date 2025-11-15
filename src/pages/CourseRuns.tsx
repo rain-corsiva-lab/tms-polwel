@@ -137,6 +137,8 @@ const CourseRuns: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [startDateFilter, setStartDateFilter] = useState<string>("");
+  const [endDateFilter, setEndDateFilter] = useState<string>("");
 
   const [perPage, setPerPage] = useState(10);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -213,6 +215,8 @@ const CourseRuns: React.FC = () => {
         limit: limitToUse,
         search: searchTerm.trim() || undefined,
         status: statusFilter !== "ALL" ? statusFilter : undefined,
+        startDate: startDateFilter || undefined,
+        endDate: endDateFilter || undefined,
       });
 
       if (!response.success) {
@@ -295,7 +299,7 @@ const CourseRuns: React.FC = () => {
   useEffect(() => {
     fetchCourseRuns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, statusFilter, perPage]);
+  }, [pagination.page, statusFilter, perPage, startDateFilter, endDateFilter]);
 
   // Debounced search mirroring client organisation page
   useEffect(() => {
@@ -315,6 +319,60 @@ const CourseRuns: React.FC = () => {
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
     setPagination((p) => ({ ...p, page: 1 }));
+  };
+
+  const handleStartDateFilter = (value: string) => {
+    setStartDateFilter(value);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
+
+  const handleEndDateFilter = (value: string) => {
+    setEndDateFilter(value);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      toast({
+        title: "Exporting...",
+        description: "Preparing course runs data for export",
+      });
+
+      const response = await courseRunsApi.exportToCSV();
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Failed to export data");
+      }
+
+      // Convert data to CSV
+      const csvContent = response.data;
+
+      // Create download link
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+
+      const today = new Date().toISOString().split("T")[0];
+      link.setAttribute("href", url);
+      link.setAttribute("download", `course-runs-export-${today}.csv`);
+      link.style.visibility = "hidden";
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Export successful",
+        description: "Course runs data has been exported to CSV",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to export data";
+      toast({
+        title: "Export failed",
+        description: message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -471,6 +529,41 @@ const CourseRuns: React.FC = () => {
   const submitWorkflowAction = async () => {
     if (!workflowDialog.courseRun || !workflowDialog.action) return;
 
+    // Validate required fields before transitioning from DRAFT to PENDING (Mark as Active)
+    if (workflowDialog.action.key === "SUBMIT") {
+      const run = workflowDialog.courseRun;
+      const errors: string[] = [];
+
+      if (!run.title) errors.push("Course is required");
+      if (!run.start) errors.push("Start date and time are required");
+      if (!run.end) errors.push("End date and time are required");
+      if (!run.venueName && !run.venueLocation) errors.push("Venue or location is required");
+      if (!run.minSize || run.minSize <= 0) errors.push("Minimum class size is required");
+      if (!run.maxSize || run.maxSize <= 0) errors.push("Maximum class size is required");
+      if (run.minSize && run.maxSize && run.minSize > run.maxSize) {
+        errors.push("Minimum class size cannot be greater than maximum class size");
+      }
+
+      if (errors.length > 0) {
+        toast({
+          title: "Validation Error",
+          description: (
+            <div>
+              <p>Please complete the following required fields:</p>
+              <ul className="list-disc list-inside mt-2">
+                {errors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          ),
+          variant: "destructive",
+        });
+        setWorkflowDialog((prev) => ({ ...prev, submitting: false }));
+        return;
+      }
+    }
+
     setWorkflowDialog((prev) => ({ ...prev, submitting: true, error: null }));
 
     try {
@@ -497,29 +590,20 @@ const CourseRuns: React.FC = () => {
 
   // Handler for "Mark as Confirmed" button (PENDING → CONFIRMED_PENDING_TA_APPROVAL)
   const handleMarkAsConfirmed = async (courseRun: CourseRunUI) => {
-    const result = await Swal.fire({
-      title: "Mark as Confirmed?",
-      text: `This will mark "${courseRun.title}" as confirmed and pending trainer assignment approval.`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Yes, confirm",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#22c55e",
-      cancelButtonColor: "#6b7280",
-    });
+    if (!window.confirm(`Mark "${courseRun.title}" as confirmed and pending trainer assignment approval?`)) {
+      return;
+    }
 
-    if (result.isConfirmed) {
-      try {
-        await courseRunsApi.markAsConfirmed(courseRun.id);
-        toast({
-          title: "Course Run Confirmed",
-          description: `${courseRun.title} is now pending trainer assignment approval.`,
-        });
-        await fetchCourseRuns();
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to mark as confirmed";
-        toast({ title: "Error", description: message, variant: "destructive" });
-      }
+    try {
+      await courseRunsApi.markAsConfirmed(courseRun.id);
+      toast({
+        title: "Course Run Confirmed",
+        description: `${courseRun.title} is now pending trainer assignment approval.`,
+      });
+      await fetchCourseRuns();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to mark as confirmed";
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
@@ -581,39 +665,27 @@ const CourseRuns: React.FC = () => {
   const handleRejectTrainer = async () => {
     if (!trainerApprovalDialog.courseRun) return;
 
-    const { value: rejectionReason } = await Swal.fire({
-      title: "Reject Trainer Assignment",
-      input: "textarea",
-      inputLabel: "Reason for rejection",
-      inputPlaceholder: "Enter reason for rejection...",
-      showCancelButton: true,
-      confirmButtonText: "Reject",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#6b7280",
-      inputValidator: (value) => {
-        if (!value) {
-          return "Please provide a reason for rejection";
-        }
-      },
-    });
+    const rejectionReason = window.prompt("Please provide a reason for rejection:");
 
-    if (rejectionReason) {
-      setTrainerApprovalDialog((prev) => ({ ...prev, submitting: true }));
+    if (!rejectionReason || rejectionReason.trim() === "") {
+      toast({ title: "Rejection Cancelled", description: "No reason provided.", variant: "destructive" });
+      return;
+    }
 
-      try {
-        await courseRunsApi.rejectTrainerAssignment(trainerApprovalDialog.courseRun.id, { rejectionReason });
-        toast({
-          title: "Trainer Assignment Rejected",
-          description: "The trainer assignment has been rejected.",
-        });
-        closeTrainerApprovalDialog();
-        await fetchCourseRuns();
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to reject trainer assignment";
-        toast({ title: "Error", description: message, variant: "destructive" });
-        setTrainerApprovalDialog((prev) => ({ ...prev, submitting: false }));
-      }
+    setTrainerApprovalDialog((prev) => ({ ...prev, submitting: true }));
+
+    try {
+      await courseRunsApi.rejectTrainerAssignment(trainerApprovalDialog.courseRun.id, { rejectionReason });
+      toast({
+        title: "Trainer Assignment Rejected",
+        description: "The trainer assignment has been rejected.",
+      });
+      closeTrainerApprovalDialog();
+      await fetchCourseRuns();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to reject trainer assignment";
+      toast({ title: "Error", description: message, variant: "destructive" });
+      setTrainerApprovalDialog((prev) => ({ ...prev, submitting: false }));
     }
   };
 
@@ -664,31 +736,22 @@ const CourseRuns: React.FC = () => {
     }
   };
 
-  // Handler for sending training assignment email (with SweetAlert confirmation)
+  // Handler for sending training assignment email
   const handleSendTrainingAssignmentEmail = async (courseRun: CourseRunUI) => {
-    const result = await Swal.fire({
-      title: "Send Training Assignment Email?",
-      text: `This will send training assignment emails to both learners and trainers for "${courseRun.title}".`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Yes, send",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#22c55e",
-      cancelButtonColor: "#6b7280",
-    });
+    if (!window.confirm(`Send training assignment emails to both learners and trainers for "${courseRun.title}"?`)) {
+      return;
+    }
 
-    if (result.isConfirmed) {
-      try {
-        await courseRunsApi.sendTrainingAssignmentEmailToLearners(courseRun.id);
-        toast({
-          title: "Emails Sent",
-          description: "Training assignment emails have been sent and course is now confirmed.",
-        });
-        await fetchCourseRuns();
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to send training assignment emails";
-        toast({ title: "Error", description: message, variant: "destructive" });
-      }
+    try {
+      await courseRunsApi.sendTrainingAssignmentEmailToLearners(courseRun.id);
+      toast({
+        title: "Emails Sent",
+        description: "Training assignment emails have been sent and course is now confirmed.",
+      });
+      await fetchCourseRuns();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send training assignment emails";
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
@@ -737,54 +800,97 @@ const CourseRuns: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Course Run Management</h1>
-          <p className="text-gray-600">Manage and monitor course run schedules and enrollments</p>
+          <h1 className="text-3xl font-bold tracking-tight">Course Run Management</h1>
         </div>
-        <Button onClick={() => navigate("/course-runs/new")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Course Run
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <BookOpen className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button onClick={() => navigate("/course-runs/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Course Run
+          </Button>
+        </div>
       </div>
 
       {/* Filters and Search */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by course title, code, or venue..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search by course title, code, or venue..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Status Filter (native select to avoid popup/portal scroll-jump issues) */}
+              <div className="w-full sm:w-48">
+                <label className="sr-only" htmlFor="statusFilterSelect">
+                  Status
+                </label>
+                <select
+                  id="statusFilterSelect"
+                  value={statusFilter}
+                  onChange={(e) => handleStatusFilter(e.target.value)}
+                  className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
+                >
+                  <option value="ALL">All Statuses</option>
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {status.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Status Filter (native select to avoid popup/portal scroll-jump issues) */}
-            <div className="w-full sm:w-48">
-              <label className="sr-only" htmlFor="statusFilterSelect">
-                Status
-              </label>
-              <select
-                id="statusFilterSelect"
-                value={statusFilter}
-                onChange={(e) => handleStatusFilter(e.target.value)}
-                className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
-              >
-                <option value="ALL">All Statuses</option>
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </select>
+            {/* Date Range Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 sm:flex-none">
+                <Label htmlFor="startDateFilter" className="text-sm mb-1 block">
+                  Start Date From
+                </Label>
+                <Input
+                  id="startDateFilter"
+                  type="date"
+                  value={startDateFilter}
+                  onChange={(e) => handleStartDateFilter(e.target.value)}
+                  className="w-full sm:w-48"
+                />
+              </div>
+              <div className="flex-1 sm:flex-none">
+                <Label htmlFor="endDateFilter" className="text-sm mb-1 block">
+                  End Date To
+                </Label>
+                <Input id="endDateFilter" type="date" value={endDateFilter} onChange={(e) => handleEndDateFilter(e.target.value)} className="w-full sm:w-48" />
+              </div>
+              {(startDateFilter || endDateFilter) && (
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setStartDateFilter("");
+                      setEndDateFilter("");
+                    }}
+                  >
+                    Clear Dates
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -868,13 +974,19 @@ const CourseRuns: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Users className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <div className="text-sm font-medium">
-                              {courseRun.enrolled} / {courseRun.minSize ?? "—"}
-                            </div>
-                            <div className="text-xs text-gray-500">Max: {courseRun.maxSize ?? "—"}</div>
+                        <div className="flex items-center space-x-3">
+                          {/* Color indicator circle */}
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                              courseRun.minSize && courseRun.enrolled >= courseRun.minSize ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                            }`}
+                            title={courseRun.minSize && courseRun.enrolled >= courseRun.minSize ? "Minimum class size reached" : "Below minimum class size"}
+                          >
+                            {courseRun.enrolled}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            <div>Min: {courseRun.minSize ?? "—"}</div>
+                            <div>Max: {courseRun.maxSize ?? "—"}</div>
                           </div>
                         </div>
                       </TableCell>

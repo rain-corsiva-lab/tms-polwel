@@ -32,11 +32,14 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 8080,
-      strictPort: true,
+      strictPort: false,
       hmr: {
         host: 'localhost',
         port: 8080,
       },
+    },
+    optimizeDeps: {
+      exclude: ['@casl/ability'],
     },
     plugins: [
       react(),

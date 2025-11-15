@@ -163,6 +163,8 @@ model CourseTrainer {
   id        String   @id @default(cuid())
   courseId  String
   trainerId String
+  feePerRun Float    @default(0)
+  remarks   String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)

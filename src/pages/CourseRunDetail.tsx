@@ -369,7 +369,14 @@ const CourseRunDetail: React.FC = () => {
       const courseResponse = await coursesApi.getById(courseRun.course?.id || "");
       const course = courseResponse?.data?.course || courseResponse?.data || courseResponse;
 
+      // Store course trainers with their default fees
+      const courseTrainersMap: { [trainerId: string]: { feePerRun: number } } = {};
       if (course && Array.isArray(course.courseTrainers)) {
+        course.courseTrainers.forEach((ct: any) => {
+          if (ct.trainer) {
+            courseTrainersMap[ct.trainer.id] = { feePerRun: ct.feePerRun || 0 };
+          }
+        });
         setAvailableTrainers(course.courseTrainers.map((ct: any) => ct.trainer));
       }
 
@@ -386,6 +393,19 @@ const CourseRunDetail: React.FC = () => {
           additionalCost: crt.additionalCost === null || crt.additionalCost === undefined ? null : Number(crt.additionalCost),
         };
       });
+
+      // For trainers not yet in courseRunTrainers, pre-fill with course default fee
+      if (course && Array.isArray(course.courseTrainers)) {
+        course.courseTrainers.forEach((ct: any) => {
+          if (ct.trainer && !assignments[ct.trainer.id]) {
+            assignments[ct.trainer.id] = {
+              selected: false,
+              baseFee: ct.feePerRun || 0,
+              additionalCost: null,
+            };
+          }
+        });
+      }
 
       // Initialize partner assignments from current courseRunPartners
       const partnerAssigns: { [key: string]: { selected: boolean } } = {};

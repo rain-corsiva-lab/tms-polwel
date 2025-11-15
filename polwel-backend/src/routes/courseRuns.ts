@@ -10,6 +10,9 @@ router.use(authenticateToken);
 // GET /api/course-runs - Get all course runs with pagination and filters
 router.get('/', requirePermissions('course-run.view'), courseRunController.getAll);
 
+// GET /api/course-runs/export/csv - Export all course runs to CSV
+router.get('/export/csv', requirePermissions('course-run.view'), courseRunController.exportToCSV);
+
 // GET /api/course-runs/status-options - Get status options for filters
 router.get('/status-options', requirePermissions('course-run.view'), courseRunController.getStatusOptions);
 
