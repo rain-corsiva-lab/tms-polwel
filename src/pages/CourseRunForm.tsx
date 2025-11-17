@@ -559,7 +559,40 @@ const CourseRunForm: React.FC = () => {
                     <Label htmlFor="courseCode">Course Code</Label>
                     <Input id="courseCode" value={formData.courseCode} disabled className="bg-gray-50" />
                   </div>
+                </div>
+              </div>
 
+              <div>
+                <h3 className="text-lg font-medium mb-4">Schedule</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                  {/* Start Date */}
+                  <div>
+                    <Label htmlFor="startDate">Start Date *</Label>
+                    <DateInput
+                      id="startDate"
+                      value={formData.startDate}
+                      onChange={(date) => handleStartDateChange(date || "")}
+                      className={errors.startDate ? "border-red-500" : ""}
+                    />
+                    {errors.startDate && <p className="text-sm text-red-500 mt-1">{errors.startDate}</p>}
+                  </div>
+
+                  {/* End Date */}
+                  <div>
+                    <Label htmlFor="endDate">End Date *</Label>
+                    <DateInput
+                      id="endDate"
+                      value={formData.endDate}
+                      onChange={(date) => handleEndDateChange(date || "")}
+                      className={errors.endDate ? "border-red-500" : ""}
+                    />
+                    {errors.endDate && <p className="text-sm text-red-500 mt-1">{errors.endDate}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
                   {/* Course Serial Number */}
                   <div>
                     <Label htmlFor="serialNumber">Course Serial Number *</Label>
@@ -588,35 +621,6 @@ const CourseRunForm: React.FC = () => {
                       </SelectContent>
                     </Select>
                     {errors.courseRunType && <p className="text-sm text-red-500 mt-1">{errors.courseRunType}</p>}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-4">Schedule</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Start Date */}
-                  <div>
-                    <Label htmlFor="startDate">Start Date *</Label>
-                    <DateInput
-                      id="startDate"
-                      value={formData.startDate}
-                      onChange={(date) => handleStartDateChange(date || "")}
-                      className={errors.startDate ? "border-red-500" : ""}
-                    />
-                    {errors.startDate && <p className="text-sm text-red-500 mt-1">{errors.startDate}</p>}
-                  </div>
-
-                  {/* End Date */}
-                  <div>
-                    <Label htmlFor="endDate">End Date *</Label>
-                    <DateInput
-                      id="endDate"
-                      value={formData.endDate}
-                      onChange={(date) => handleEndDateChange(date || "")}
-                      className={errors.endDate ? "border-red-500" : ""}
-                    />
-                    {errors.endDate && <p className="text-sm text-red-500 mt-1">{errors.endDate}</p>}
                   </div>
                 </div>
               </div>
@@ -823,7 +827,7 @@ const CourseRunForm: React.FC = () => {
                 )}
               </div>
 
-              <div>
+              {/* <div>
                 <h3 className="text-lg font-medium mb-4">Trainer Fees</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -854,7 +858,7 @@ const CourseRunForm: React.FC = () => {
                     />
                   </div>
                 </div>
-              </div>
+              </div> */}
             </TabsContent>
           </Tabs>
         </CardContent>

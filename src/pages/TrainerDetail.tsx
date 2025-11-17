@@ -433,7 +433,7 @@ const TrainerDetail = () => {
                       <TableCell className="max-w-[250px] truncate" title={f.remarks || ""}>
                         {f.remarks || "-"}
                       </TableCell>
-                      {/* <TableCell className="text-right">
+                      <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             size="sm"
@@ -445,11 +445,11 @@ const TrainerDetail = () => {
                           >
                             Edit
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => deleteFee(f)}>
+                          {/* <Button size="sm" variant="destructive" onClick={() => deleteFee(f)}>
                             Remove
-                          </Button>
+                          </Button> */}
                         </div>
-                      </TableCell> */}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
