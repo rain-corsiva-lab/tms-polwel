@@ -36,7 +36,7 @@ interface FormState {
   contractFees: number;
   venueFee: number;
   venueFeeType: string;
-  venue: string;
+  venueId: string;
   specifiedLocation: string;
   certificates: string;
   remarks: string;
@@ -46,6 +46,7 @@ interface FormState {
   maxParticipants: number | string;
   venueMaxParticipants: number | string;
   perHeadPriceIfMaxExceed: number | string;
+  courseFeeType: string;
 }
 
 const initialForm: FormState = {
@@ -61,7 +62,7 @@ const initialForm: FormState = {
   contractFees: 0,
   venueFee: 0,
   venueFeeType: "PER_HEAD",
-  venue: "",
+  venueId: "",
   specifiedLocation: "",
   certificates: "polwel",
   remarks: "",
@@ -71,6 +72,7 @@ const initialForm: FormState = {
   maxParticipants: "",
   venueMaxParticipants: "",
   perHeadPriceIfMaxExceed: "",
+  courseFeeType: "PER_HEAD",
 };
 
 const CourseForm: React.FC = () => {
@@ -200,7 +202,7 @@ const CourseForm: React.FC = () => {
             contractFees: c.contractFees || 0,
             venueFee: c.venueFee || 0,
             venueFeeType: c.venueFeeType || "",
-            venue: c.venue || "",
+            venueId: c.venueId || "",
             specifiedLocation: c.specifiedLocation || "",
             certificates: c.certificates || "polwel",
             remarks: c.remarks || "",
@@ -372,7 +374,7 @@ const CourseForm: React.FC = () => {
       contractFees: formData.contractFees,
       venueFee: formData.venueFee,
       venueFeeType: formData.venueFeeType,
-      venue: formData.venue,
+      venueId: formData.venueId,
       specifiedLocation: formData.specifiedLocation,
       certificates: formData.certificates,
       remarks: formData.remarks,
@@ -383,6 +385,8 @@ const CourseForm: React.FC = () => {
       venueMaxParticipants: formData.venueMaxParticipants && formData.venueMaxParticipants !== "" ? parseInt(formData.venueMaxParticipants.toString()) : null,
       perHeadPriceIfMaxExceed:
         formData.perHeadPriceIfMaxExceed && formData.perHeadPriceIfMaxExceed !== "" ? parseFloat(formData.perHeadPriceIfMaxExceed.toString()) : null,
+      courseFeeType: formData.courseFeeType,
+      syncRemarksToTrainers: true, // Flag to sync remarks to course_trainers table
     };
 
     console.log("Payload being sent:", payload);
@@ -478,7 +482,7 @@ const CourseForm: React.FC = () => {
                 <CardTitle>Fees</CardTitle>
               </CardHeader>
               <CardContent>
-                <FeesRevenueTab formData={formData as any} onInputChange={handleInputChange as any} venues={refs.venues} selectedVenueId={formData.venue} />
+                <FeesRevenueTab formData={formData as any} onInputChange={handleInputChange as any} venues={refs.venues} selectedVenueId={formData.venueId} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -36,7 +36,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
   const categoryGroups = Array.isArray(categories) ? categories : [];
 
   const handleVenueChange = (venueId: string) => {
-    onInputChange("venue", venueId);
+    onInputChange("venueId", venueId);
 
     // Find the selected venue and trigger auto-fill
     if (onVenueSelect && Array.isArray(venues)) {
@@ -336,7 +336,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="venue">Venue</Label>
-          <Select value={formData.venue} onValueChange={handleVenueChange}>
+          <Select value={formData.venueId} onValueChange={handleVenueChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select venue" />
             </SelectTrigger>

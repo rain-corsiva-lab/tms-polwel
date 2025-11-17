@@ -132,7 +132,7 @@ model Course {
   prerequisites      Json?
   materials          Json?
   venueFee           Float           @default(0)
-  venue              String?
+  venueId            String?
   certificates       String          @default("polwel")
   remarks            String?         @db.Text
   targetAudience     String?         @db.Text
@@ -150,12 +150,15 @@ model Course {
   venueFeeType       FeeType?        @default(PER_HEAD)
   venueMaxParticipants Int?
   perHeadPriceIfMaxExceed Decimal?  @db.Decimal(10, 2)
+  courseFeeType      FeeType?        @default(PER_HEAD)
+  venue              Venue?          @relation(fields: [venueId], references: [id], onDelete: SetNull)
   bookings           Booking[]
   runs               CourseRun[]
   trainerFees        TrainerFee[]
   courseTrainers     CourseTrainer[]
   coursePartners     CoursePartner[]
 
+  @@index([venueId], map: "courses_venueId_fkey")
   @@map("courses")
 }
 
@@ -220,6 +223,8 @@ model CourseRun {
   startDatetime                  DateTime?
   venueType                      VenueType?
   contractFees                   Decimal?                        @db.Decimal(10, 2)
+  additionalCostExceedingCapacity Decimal?                       @db.Decimal(10, 2)
+  courseFeeType                  FeeType?
   bookings                       Booking[]
   confirmationEmailHistory       ConfirmationEmailHistory[]
   courseRunBilling               CourseRunBilling?
@@ -340,6 +345,7 @@ model Venue {
   venueType               VenueType?
   bookings                Booking[]
   courseRuns              CourseRun[]
+  courses                 Course[]
   creator                 User?       @relation(fields: [createdBy], references: [id])
 
   @@index([createdBy], map: "venues_createdBy_fkey")
@@ -544,6 +550,7 @@ model CourseRunLearner {
   updatedAt                     DateTime                   @updatedAt
   deletedAt                     DateTime?
   departmentName                String?
+  paymentMode                   PaymentMode?
   confirmationEmailStatus       ConfirmationEmailStatus    @default(PENDING)
   confirmationEmailLastSentAt   DateTime?
   confirmationEmailHistory      ConfirmationEmailHistory[]

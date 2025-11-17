@@ -37,21 +37,39 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
             Revenue
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-1 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="defaultCourseFee" className="text-sm font-medium">
-              Default Course Fee ($)
-            </Label>
-            <Input
-              id="defaultCourseFee"
-              type="number"
-              step="0.01"
-              min="0"
-              value={formatDisplayValue(formData.defaultCourseFee)}
-              onChange={(e) => handleNumericInputChange("defaultCourseFee", e.target.value)}
-              placeholder="0.00"
-            />
-            <p className="text-xs text-gray-500">Fee charged to learners/client per pax</p>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="courseFeeType" className="text-sm font-medium">
+                Course Fee Type
+              </Label>
+              <Select value={formData.courseFeeType || "PER_HEAD"} onValueChange={(value) => onInputChange("courseFeeType", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select fee type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PER_HEAD">PER HEAD</SelectItem>
+                  <SelectItem value="PER_RUN">PER RUN</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">How course fee is calculated</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="defaultCourseFee" className="text-sm font-medium">
+                Default Course Fee ($)
+              </Label>
+              <Input
+                id="defaultCourseFee"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formatDisplayValue(formData.defaultCourseFee)}
+                onChange={(e) => handleNumericInputChange("defaultCourseFee", e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-gray-500">Fee charged to learners/client {formData.courseFeeType === "PER_RUN" ? "per run" : "per pax"}</p>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -15,8 +15,11 @@ import { Badge } from "../components/ui/badge";
 import PaginationControls from "../components/ui/pagination";
 import DateInput from "../components/ui/date-input";
 import { courseRunsApi } from "../lib/api";
-import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen } from "lucide-react";
+import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen, Filter } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import { Checkbox } from "../components/ui/checkbox";
+import { cn } from "../lib/utils";
 
 // Raw shape from backend
 interface BackendCourseRun {
@@ -140,6 +143,14 @@ const CourseRuns: React.FC = () => {
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [startDateFilter, setStartDateFilter] = useState<string>("");
   const [endDateFilter, setEndDateFilter] = useState<string>("");
+
+  // Excel-style filters
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    venue: [],
+    status: [],
+    courseType: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   const [perPage, setPerPage] = useState(10);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -540,7 +551,7 @@ const CourseRuns: React.FC = () => {
       if (!run.end) errors.push("End date and time are required");
       if (!run.venueName && !run.venueLocation) errors.push("Venue or location is required");
       if (!run.minSize || run.minSize <= 0) errors.push("Minimum class size is required");
-      if (!run.maxSize || run.maxSize <= 0) errors.push("Maximum class size is required");
+      // if (!run.maxSize || run.maxSize <= 0) errors.push("Maximum class size is required");
       if (run.minSize && run.maxSize && run.minSize > run.maxSize) {
         errors.push("Minimum class size cannot be greater than maximum class size");
       }
@@ -789,6 +800,52 @@ const CourseRuns: React.FC = () => {
     });
   };
 
+  // Excel-style filter helper functions
+  const getUniqueValues = (column: "venue" | "status" | "courseType"): string[] => {
+    const values = courseRuns
+      .map((run) => {
+        if (column === "venue") return run.venueName;
+        if (column === "status") return run.status;
+        if (column === "courseType") return run.courseType;
+        return "";
+      })
+      .filter(Boolean);
+    return Array.from(new Set(values)).sort();
+  };
+
+  const handleFilterToggle = (column: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[column] || [];
+      const updated = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [column]: updated };
+    });
+  };
+
+  const clearColumnFilter = (column: string) => {
+    setFilters((prev) => ({ ...prev, [column]: [] }));
+  };
+
+  const hasActiveFilter = (column: string): boolean => {
+    return (filters[column] || []).length > 0;
+  };
+
+  // Apply filters to courseRuns
+  const filteredCourseRuns = courseRuns.filter((run) => {
+    // Venue filter
+    if (filters.venue.length > 0 && !filters.venue.includes(run.venueName)) {
+      return false;
+    }
+    // Status filter
+    if (filters.status.length > 0 && !filters.status.includes(run.status)) {
+      return false;
+    }
+    // Course Type filter
+    if (filters.courseType.length > 0 && !filters.courseType.includes(run.courseType)) {
+      return false;
+    }
+    return true;
+  });
+
   if (isInitialLoad && loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -925,15 +982,126 @@ const CourseRuns: React.FC = () => {
                 <TableRow>
                   <TableHead>Course Details</TableHead>
                   <TableHead>Schedule</TableHead>
-                  <TableHead>Venue</TableHead>
+                  <TableHead>
+                    <Popover open={openFilter === "venue"} onOpenChange={(open) => setOpenFilter(open ? "venue" : null)}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className={cn("h-8 px-2 -ml-2", hasActiveFilter("venue") && "text-primary")}>
+                          Venue
+                          <Filter className={cn("ml-1 h-3 w-3", hasActiveFilter("venue") ? "fill-primary" : "opacity-50")} />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-2" align="start">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between px-2 py-1">
+                            <span className="text-sm font-medium">Filter by Venue</span>
+                            {hasActiveFilter("venue") && (
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("venue")}>
+                                Clear
+                              </Button>
+                            )}
+                          </div>
+                          <div className="max-h-64 overflow-y-auto">
+                            {getUniqueValues("venue").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("venue", value)}
+                              >
+                                <Checkbox
+                                  checked={filters.venue?.includes(value)}
+                                  onCheckedChange={() => handleFilterToggle("venue", value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <span className="text-sm flex-1">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
                   <TableHead>Participants</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Course Type</TableHead>
+                  <TableHead>
+                    <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className={cn("h-8 px-2 -ml-2", hasActiveFilter("status") && "text-primary")}>
+                          Status
+                          <Filter className={cn("ml-1 h-3 w-3", hasActiveFilter("status") ? "fill-primary" : "opacity-50")} />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-2" align="start">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between px-2 py-1">
+                            <span className="text-sm font-medium">Filter by Status</span>
+                            {hasActiveFilter("status") && (
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                                Clear
+                              </Button>
+                            )}
+                          </div>
+                          <div className="max-h-64 overflow-y-auto">
+                            {getUniqueValues("status").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("status", value)}
+                              >
+                                <Checkbox
+                                  checked={filters.status?.includes(value)}
+                                  onCheckedChange={() => handleFilterToggle("status", value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <span className="text-sm flex-1">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
+                  <TableHead>
+                    <Popover open={openFilter === "courseType"} onOpenChange={(open) => setOpenFilter(open ? "courseType" : null)}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className={cn("h-8 px-2 -ml-2", hasActiveFilter("courseType") && "text-primary")}>
+                          Course Type
+                          <Filter className={cn("ml-1 h-3 w-3", hasActiveFilter("courseType") ? "fill-primary" : "opacity-50")} />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-2" align="start">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between px-2 py-1">
+                            <span className="text-sm font-medium">Filter by Course Type</span>
+                            {hasActiveFilter("courseType") && (
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("courseType")}>
+                                Clear
+                              </Button>
+                            )}
+                          </div>
+                          <div className="max-h-64 overflow-y-auto">
+                            {getUniqueValues("courseType").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("courseType", value)}
+                              >
+                                <Checkbox
+                                  checked={filters.courseType?.includes(value)}
+                                  onCheckedChange={() => handleFilterToggle("courseType", value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <span className="text-sm flex-1">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
                   <TableHead className="w-[50px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {courseRuns.length === 0 ? (
+                {filteredCourseRuns.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
                       <div className="text-gray-500">
@@ -948,7 +1116,7 @@ const CourseRuns: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  courseRuns.map((courseRun) => (
+                  filteredCourseRuns.map((courseRun) => (
                     <TableRow key={courseRun.id}>
                       <TableCell>
                         <div>

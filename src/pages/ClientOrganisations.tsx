@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Search, Download, Loader2 } from "lucide-react";
+import { Building2, Search, Download, Loader2, Filter } from "lucide-react";
 import * as XLSX from "xlsx";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 // native select used for status/org-type to avoid portal scroll-jump
 import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
 import { clientOrganizationsApi } from "@/lib/api";
@@ -35,6 +38,13 @@ const ClientOrganisations = () => {
   const [perPage, setPerPage] = useState(10);
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
+
+  // Excel-style filter state
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    status: [],
+    organizationType: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   // No dummy data: always fetch from server. In case of error we show an empty list and surface a toast.
 
@@ -158,6 +168,41 @@ const ClientOrganisations = () => {
     []
   );
 
+  // Excel-style filter functions
+  const getUniqueValues = (field: keyof ClientOrg) => {
+    const values = Array.from(new Set(clientOrgs.map((org) => String(org[field] || "")).filter(Boolean)));
+    return values.sort();
+  };
+
+  const handleFilterToggle = (field: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[field] || [];
+      const newValues = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: newValues };
+    });
+  };
+
+  const clearColumnFilter = (field: string) => {
+    setFilters((prev) => ({ ...prev, [field]: [] }));
+  };
+
+  const hasActiveFilter = (field: string) => {
+    return filters[field] && filters[field].length > 0;
+  };
+
+  // Apply column filters
+  const filteredClientOrgs = clientOrgs.filter((org) => {
+    // Status filter
+    if (filters.status.length > 0 && !filters.status.includes(org.status)) {
+      return false;
+    }
+    // Organization Type filter
+    if (filters.organizationType.length > 0 && org.organizationType && !filters.organizationType.includes(org.organizationType)) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -226,10 +271,80 @@ const ClientOrganisations = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Organisation Type</TableHead>
+              <TableHead>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Organisation Type</span>
+                  <Popover open={openFilter === "organizationType"} onOpenChange={(open) => setOpenFilter(open ? "organizationType" : null)}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("organizationType") && "text-primary")}>
+                        <Filter className="h-3.5 w-3.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-0" align="start">
+                      <div className="p-3 border-b">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Filter by Type</span>
+                          {hasActiveFilter("organizationType") && (
+                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("organizationType")}>
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto p-2">
+                        {getUniqueValues("organizationType").map((value) => (
+                          <div
+                            key={value}
+                            className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                            onClick={() => handleFilterToggle("organizationType", value)}
+                          >
+                            <Checkbox checked={filters.organizationType?.includes(value)} />
+                            <span className="text-sm">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </TableHead>
               <TableHead>Coordinators</TableHead>
               <TableHead>Learners</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Status</span>
+                  <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("status") && "text-primary")}>
+                        <Filter className="h-3.5 w-3.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-0" align="start">
+                      <div className="p-3 border-b">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Filter by Status</span>
+                          {hasActiveFilter("status") && (
+                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto p-2">
+                        {getUniqueValues("status").map((value) => (
+                          <div
+                            key={value}
+                            className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                            onClick={() => handleFilterToggle("status", value)}
+                          >
+                            <Checkbox checked={filters.status?.includes(value)} />
+                            <span className="text-sm">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -243,7 +358,7 @@ const ClientOrganisations = () => {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : clientOrgs.length === 0 ? (
+            ) : filteredClientOrgs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
@@ -253,7 +368,7 @@ const ClientOrganisations = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              clientOrgs.map((org) => (
+              filteredClientOrgs.map((org) => (
                 <TableRow key={org.id}>
                   <TableCell>
                     <Link to={`/client-organisations/${org.id}`} className="text-primary hover:underline">

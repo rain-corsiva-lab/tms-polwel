@@ -11,7 +11,10 @@ import { courseRunsApi } from "@/lib/api";
 import { generateBillingXLSX } from "@/lib/billingExport";
 import { GenerateCertificatesDialog } from "@/components/GenerateCertificatesDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, MoreHorizontal, Search, FileSpreadsheet, Award } from "lucide-react";
+import { Loader2, MoreHorizontal, Search, FileSpreadsheet, Award, Filter } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 interface CourseRunApiRecord {
   id: string;
@@ -285,6 +288,13 @@ const PostRunManagement: React.FC = () => {
   const pendingBucket = useCourseRunBucket("PENDING_BILLING");
   const completedBucket = useCourseRunBucket("COMPLETED");
 
+  // Excel-style filters
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    venue: [],
+    status: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+
   const { refetch: refetchPending, setPerPage: setPendingPerPage, setPage: setPendingPage } = pendingBucket;
   const { refetch: refetchCompleted, setPerPage: setCompletedPerPage, setPage: setCompletedPage } = completedBucket;
 
@@ -347,7 +357,52 @@ const PostRunManagement: React.FC = () => {
     return <span className={`${statusChipBaseClass} ${className}`}>{formatStatusLabel(status)}</span>;
   };
 
+  // Excel-style filter helper functions
+  const getUniqueValues = (runs: CourseRunRow[], column: "venue" | "status"): string[] => {
+    const values = runs
+      .map((run) => {
+        if (column === "venue") return run.venueName;
+        if (column === "status") return run.status;
+        return "";
+      })
+      .filter(Boolean);
+    return Array.from(new Set(values)).sort();
+  };
+
+  const handleFilterToggle = (column: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[column] || [];
+      const updated = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [column]: updated };
+    });
+  };
+
+  const clearColumnFilter = (column: string) => {
+    setFilters((prev) => ({ ...prev, [column]: [] }));
+  };
+
+  const hasActiveFilter = (column: string): boolean => {
+    return (filters[column] || []).length > 0;
+  };
+
+  // Apply filters to bucket runs
+  const applyFilters = (runs: CourseRunRow[]): CourseRunRow[] => {
+    return runs.filter((run) => {
+      // Venue filter
+      if (filters.venue.length > 0 && !filters.venue.includes(run.venueName)) {
+        return false;
+      }
+      // Status filter
+      if (filters.status.length > 0 && !filters.status.includes(run.status)) {
+        return false;
+      }
+      return true;
+    });
+  };
+
   const renderTable = (bucket: CourseRunBucketState, emptyMessage: string, showGenerateBilling = false) => {
+    const filteredRuns = applyFilters(bucket.runs);
+
     if (bucket.loading && bucket.runs.length === 0) {
       return (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
@@ -360,7 +415,7 @@ const PostRunManagement: React.FC = () => {
       return <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{bucket.error}</div>;
     }
 
-    if (bucket.runs.length === 0) {
+    if (filteredRuns.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
           <p>{emptyMessage}</p>
@@ -380,14 +435,88 @@ const PostRunManagement: React.FC = () => {
             <TableRow>
               <TableHead className="min-w-[220px]">Course Run</TableHead>
               <TableHead className="min-w-[180px]">Schedule</TableHead>
-              <TableHead className="min-w-[160px]">Venue</TableHead>
+              <TableHead className="min-w-[160px]">
+                <Popover open={openFilter === "venue"} onOpenChange={(open) => setOpenFilter(open ? "venue" : null)}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className={cn("h-8 px-2 -ml-2", hasActiveFilter("venue") && "text-primary")}>
+                      Venue
+                      <Filter className={cn("ml-1 h-3 w-3", hasActiveFilter("venue") ? "fill-primary" : "opacity-50")} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2" align="start">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between px-2 py-1">
+                        <span className="text-sm font-medium">Filter by Venue</span>
+                        {hasActiveFilter("venue") && (
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("venue")}>
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {getUniqueValues(bucket.runs, "venue").map((value) => (
+                          <div
+                            key={value}
+                            className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                            onClick={() => handleFilterToggle("venue", value)}
+                          >
+                            <Checkbox
+                              checked={filters.venue?.includes(value)}
+                              onCheckedChange={() => handleFilterToggle("venue", value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <span className="text-sm flex-1">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </TableHead>
               <TableHead className="min-w-[100px]">Participants</TableHead>
-              <TableHead className="min-w-[120px]">Status</TableHead>
+              <TableHead className="min-w-[120px]">
+                <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className={cn("h-8 px-2 -ml-2", hasActiveFilter("status") && "text-primary")}>
+                      Status
+                      <Filter className={cn("ml-1 h-3 w-3", hasActiveFilter("status") ? "fill-primary" : "opacity-50")} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2" align="start">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between px-2 py-1">
+                        <span className="text-sm font-medium">Filter by Status</span>
+                        {hasActiveFilter("status") && (
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {getUniqueValues(bucket.runs, "status").map((value) => (
+                          <div
+                            key={value}
+                            className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                            onClick={() => handleFilterToggle("status", value)}
+                          >
+                            <Checkbox
+                              checked={filters.status?.includes(value)}
+                              onCheckedChange={() => handleFilterToggle("status", value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <span className="text-sm flex-1">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </TableHead>
               <TableHead className="w-[60px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bucket.runs.map((run) => (
+            {filteredRuns.map((run) => (
               <TableRow key={run.id}>
                 <TableCell>
                   <div className="font-medium text-foreground">{run.courseTitle}</div>

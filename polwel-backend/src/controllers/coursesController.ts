@@ -29,7 +29,7 @@ const CourseCreateSchema = z.object({
   certificates: z.string().default("polwel"),
   certificationType: z.string().optional(),
   level: z.string().optional(),
-  venue: z.string().optional(),
+  venueId: z.string().optional(),
   specifiedLocation: z.string().optional(),
   remarks: z.string().optional(),
   syllabus: z.string().optional(),
@@ -41,6 +41,7 @@ const CourseCreateSchema = z.object({
   contractFees: z.number().default(0),
   venueFee: z.number().default(0), // used as Venue Expenses
   venueFeeType: z.string().optional(), // Fee type suffix (/ venue or / head)
+  courseFeeType: z.string().optional(), // Course fee type (PER_HEAD or PER_RUN)
   discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional(),
   venueMaxParticipants: z.number().int().positive().nullable().optional(),
   perHeadPriceIfMaxExceed: z.number().nullable().optional()
@@ -297,7 +298,7 @@ export const coursesController = {
       if (data.minParticipants !== undefined) courseData.minParticipants = data.minParticipants;
       if (data.certificationType !== undefined) courseData.certificationType = data.certificationType;
       if (data.level !== undefined) courseData.level = data.level;
-      if (data.venue !== undefined) courseData.venue = data.venue;
+      if (data.venueId !== undefined) courseData.venueId = data.venueId;
       if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
       if (data.remarks !== undefined) courseData.remarks = data.remarks;
       if (data.syllabus !== undefined) courseData.syllabus = data.syllabus;
@@ -309,6 +310,10 @@ export const coursesController = {
       if (data.contractFees !== undefined) courseData.contractFees = data.contractFees;
       if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
       if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
+      if (data.courseFeeType !== undefined) {
+        // Ensure courseFeeType is uppercase to match enum
+        courseData.courseFeeType = String(data.courseFeeType).toUpperCase();
+      }
       if (data.discounts !== undefined) courseData.discounts = data.discounts;
       if (data.venueMaxParticipants !== undefined) courseData.venueMaxParticipants = data.venueMaxParticipants;
       if (data.perHeadPriceIfMaxExceed !== undefined) courseData.perHeadPriceIfMaxExceed = data.perHeadPriceIfMaxExceed;
@@ -343,12 +348,15 @@ export const coursesController = {
         const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
 
         if (trainers.length > 0) {
+          // If syncRemarksToTrainers flag is true, use course-level remarks for all trainers
+          const remarksToUse = req.body.syncRemarksToTrainers ? data.remarks : null;
+          
           await prisma.courseTrainer.createMany({
             data: trainers.map((trainer) => ({ 
               courseId: course.id, 
               trainerId: trainer!.id,
               feePerRun: trainer!.feePerRun,
-              remarks: trainer!.remarks
+              remarks: remarksToUse !== null ? remarksToUse : trainer!.remarks
             })),
             skipDuplicates: true
           });
@@ -503,6 +511,9 @@ export const coursesController = {
             } else if (key === 'venueMaxParticipants' || key === 'perHeadPriceIfMaxExceed') {
               // Explicitly handle nullable venue pricing fields
               updateData[key] = value;
+            } else if (key === 'courseFeeType') {
+              // Ensure courseFeeType is uppercase to match enum
+              updateData[key] = String(value).toUpperCase();
             } else {
               updateData[key] = value;
             }
@@ -551,12 +562,15 @@ export const coursesController = {
           const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
 
           if (trainers.length > 0) {
+            // If syncRemarksToTrainers flag is true, use course-level remarks for all trainers
+            const remarksToUse = req.body.syncRemarksToTrainers ? data.remarks : null;
+            
             await prisma.courseTrainer.createMany({
               data: trainers.map((trainer) => ({ 
                 courseId: id, 
                 trainerId: trainer!.id,
                 feePerRun: trainer!.feePerRun,
-                remarks: trainer!.remarks
+                remarks: remarksToUse !== null ? remarksToUse : trainer!.remarks
               })),
               skipDuplicates: true
             });

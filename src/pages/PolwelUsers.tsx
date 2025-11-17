@@ -8,6 +8,8 @@ import { formatDate } from "../lib/date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Download,
   Filter,
@@ -27,6 +29,7 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
@@ -72,6 +75,12 @@ export default function PolwelUsers() {
   const [filterOpen, setFilterOpen] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
+
+  // Excel-style filter state
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    status: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   // Debug authentication state
   useEffect(() => {
@@ -306,11 +315,42 @@ export default function PolwelUsers() {
     }
   };
 
-  // Compute stats from real data
-  const totalUsers = users.length;
-  const activeUsers = users.filter((user) => user.status === "ACTIVE").length;
-  const pendingUsers = users.filter((user) => user.status === "PENDING").length;
-  const inactiveUsers = users.filter((user) => user.status === "INACTIVE").length;
+  // Excel-style filter functions
+  const getUniqueValues = (field: keyof PolwelUser) => {
+    const values = Array.from(new Set(users.map((u) => String(u[field] || "")).filter(Boolean)));
+    return values.sort();
+  };
+
+  const handleFilterToggle = (field: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[field] || [];
+      const newValues = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: newValues };
+    });
+  };
+
+  const clearColumnFilter = (field: string) => {
+    setFilters((prev) => ({ ...prev, [field]: [] }));
+  };
+
+  const hasActiveFilter = (field: string) => {
+    return filters[field] && filters[field].length > 0;
+  };
+
+  // Apply column filters
+  const filteredUsers = users.filter((user) => {
+    // Status filter
+    if (filters.status.length > 0 && !filters.status.includes(user.status)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Compute stats from filtered data
+  const totalUsers = filteredUsers.length;
+  const activeUsers = filteredUsers.filter((user) => user.status === "ACTIVE").length;
+  const pendingUsers = filteredUsers.filter((user) => user.status === "PENDING").length;
+  const inactiveUsers = filteredUsers.filter((user) => user.status === "INACTIVE").length;
 
   if (loading) {
     return (
@@ -419,13 +459,48 @@ export default function PolwelUsers() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 {/* department and permission level removed */}
-                <TableHead>Status</TableHead>
+                <TableHead>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Status</span>
+                    <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("status") && "text-primary")}>
+                          <Filter className="h-3.5 w-3.5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-0" align="start">
+                        <div className="p-3 border-b">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Filter by Status</span>
+                            {hasActiveFilter("status") && (
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                                Clear
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto p-2">
+                          {getUniqueValues("status").map((value) => (
+                            <div
+                              key={value}
+                              className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                              onClick={() => handleFilterToggle("status", value)}
+                            >
+                              <Checkbox checked={filters.status?.includes(value)} />
+                              <span className="text-sm">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </TableHead>
                 <TableHead>Last Login</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>

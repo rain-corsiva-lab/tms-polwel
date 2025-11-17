@@ -71,6 +71,10 @@ interface CourseRunFormData {
   selectedTrainers: string[];
   baseAmount?: number;
   additionalCosts?: number;
+
+  // New fields
+  courseFeeType?: string;
+  additionalCostExceedingCapacity?: number;
 }
 
 const CourseRunForm: React.FC = () => {
@@ -88,6 +92,8 @@ const CourseRunForm: React.FC = () => {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [availableTrainers, setAvailableTrainers] = useState<Trainer[]>([]); // Filtered trainers based on course
   const [availableVenues, setAvailableVenues] = useState<Venue[]>([]);
+  const [trainerRemarks, setTrainerRemarks] = useState<{ [trainerId: string]: string }>({});
+  const [trainerFees, setTrainerFees] = useState<{ [trainerId: string]: number }>({});
 
   // Form state
   const [formData, setFormData] = useState<CourseRunFormData>({
@@ -107,6 +113,8 @@ const CourseRunForm: React.FC = () => {
     selectedTrainers: [],
     baseAmount: undefined,
     additionalCosts: undefined,
+    courseFeeType: undefined,
+    additionalCostExceedingCapacity: undefined,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -218,6 +226,41 @@ const CourseRunForm: React.FC = () => {
         const response = await coursesApi.getById(selectedCourseId);
         if (response?.success && response?.data?.course) {
           const course = response.data.course;
+          console.log("Course details loaded:", { courseId: course.id, venueField: course.venue });
+
+          // Auto-select venue and venueType from course
+          let autoVenueId = "";
+          let autoVenueType = "";
+
+          // course.venueId is a foreign key to the Venue model
+          if (course.venueId) {
+            const courseVenueId = course.venueId; // This is the venue ID FK
+            const courseVenue = venues.find((v) => v.id === courseVenueId);
+
+            if (courseVenue) {
+              autoVenueType = courseVenue.venueType || "";
+              autoVenueId = courseVenue.id || "";
+
+              console.log("Found course venue:", { venueId: autoVenueId, venueType: autoVenueType, venueName: courseVenue.name });
+
+              // Load venues by type FIRST and wait for it
+              if (autoVenueType) {
+                try {
+                  const venuesResponse = await venuesApi.getAll();
+                  if (venuesResponse.success) {
+                    const filteredList = (venuesResponse.venues || []).filter((v: any) => v.venueType?.toUpperCase() === autoVenueType.toUpperCase());
+                    setAvailableVenues(filteredList);
+                    console.log("Loaded venues for type", autoVenueType, ":", filteredList.length, "venues");
+                  }
+                } catch (err) {
+                  console.error("Error loading venues by type:", err);
+                }
+              }
+            } else {
+              console.warn("Venue ID from course not found in venues list:", courseVenueId);
+            }
+          }
+
           // Create new form data with course details and reset trainers
           const newFormData = {
             ...formData,
@@ -225,11 +268,16 @@ const CourseRunForm: React.FC = () => {
             courseCode: course.courseCode || "",
             selectedTrainers: [], // Clear selected trainers when course changes
             // Auto-populate venue-related fields from course
+            venueType: autoVenueType,
+            venueId: autoVenueId,
             maxClassSize: course.venueMaxParticipants || course.maxParticipants || undefined,
             minClassSize: course.minParticipants || undefined,
+            baseAmount: course.defaultCourseFee || undefined,
             venueFinalFee: course.venueFee || undefined,
             venueMaxParticipants: course.venueMaxParticipants || undefined,
             perHeadFeeIfMaxExceed: course.perHeadPriceIfMaxExceed || undefined,
+            courseFeeType: course.courseFeeType || undefined,
+            additionalCostExceedingCapacity: undefined,
           };
 
           // Regenerate serial number if start date exists
@@ -237,6 +285,8 @@ const CourseRunForm: React.FC = () => {
             newFormData.serialNumber = generateSerialNumber(course.courseCode || "", newFormData.startDate);
           }
 
+          console.log("Setting form data with venue:", { venueType: newFormData.venueType, venueId: newFormData.venueId });
+          // Update form data after venues are loaded
           setFormData(newFormData);
         }
         // Fetch available trainers for this course
@@ -245,9 +295,7 @@ const CourseRunForm: React.FC = () => {
         console.error("Error fetching course details:", error);
       }
     }
-  };
-
-  // Check if trainer has schedule conflict
+  }; // Check if trainer has schedule conflict
   const checkTrainerAvailability = async (trainerId: string, startDate: string, endDate: string): Promise<boolean> => {
     if (!startDate || !endDate) return true; // Can't check without dates
 
@@ -292,8 +340,20 @@ const CourseRunForm: React.FC = () => {
       const course = response?.data?.course || response?.data || response;
 
       if (course && Array.isArray(course.courseTrainers)) {
-        // Extract trainer IDs from courseTrainers pivot table
+        // Extract trainer IDs, remarks, and fees from courseTrainers pivot table
         const courseTrainerIds = course.courseTrainers.map((ct: any) => ct.trainerId);
+        const remarksMap: { [key: string]: string } = {};
+        const feesMap: { [key: string]: number } = {};
+
+        course.courseTrainers.forEach((ct: any) => {
+          if (ct.trainerId) {
+            remarksMap[ct.trainerId] = ct.remarks || "";
+            feesMap[ct.trainerId] = ct.feePerRun || 0;
+          }
+        });
+
+        setTrainerRemarks(remarksMap);
+        setTrainerFees(feesMap);
 
         // Filter trainers to only those connected to this course
         let filtered = trainers.filter((trainer) => courseTrainerIds.includes(trainer.id));
@@ -314,12 +374,30 @@ const CourseRunForm: React.FC = () => {
       } else {
         // If no courseTrainers found, show no trainers
         setAvailableTrainers([]);
+        setTrainerRemarks({});
+        setTrainerFees({});
       }
     } catch (error) {
       console.error("Error filtering trainers by course:", error);
       setAvailableTrainers([]);
+      setTrainerRemarks({});
+      setTrainerFees({});
     }
   };
+
+  // Auto-calculate contract fees when trainers are selected
+  useEffect(() => {
+    if (formData.selectedTrainers.length > 0) {
+      const totalFees = formData.selectedTrainers.reduce((sum, trainerId) => {
+        return sum + (trainerFees[trainerId] || 0);
+      }, 0);
+
+      // Only update if different to avoid infinite loop
+      if (formData.baseAmount !== totalFees) {
+        setFormData((prev) => ({ ...prev, baseAmount: totalFees }));
+      }
+    }
+  }, [formData.selectedTrainers, trainerFees]);
 
   // Handle start date change to regenerate serial number and re-filter trainers
   const handleStartDateChange = (date: string) => {
@@ -476,7 +554,7 @@ const CourseRunForm: React.FC = () => {
         remarks: formData.remarks || null,
         baseCourseFee: formData.baseAmount ?? null,
         otherFee: formData.additionalCosts ?? null,
-        status: isDraft ? "DRAFT" : "CONFIRMED_PENDING_TA_APPROVAL", // Change to CONFIRMED_PENDING_TA_APPROVAL
+        status: isDraft ? "DRAFT" : "PENDING", // Set to PENDING when all validation passes
         trainers: trainerAssignments, // Include trainer assignments
       };
 
@@ -827,11 +905,29 @@ const CourseRunForm: React.FC = () => {
                 )}
               </div>
 
-              {/* <div>
-                <h3 className="text-lg font-medium mb-4">Trainer Fees</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                {/* <h3 className="text-lg font-medium mb-4">Revenue & Expenses</h3> */}
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="baseAmount">Base Amount *</Label>
+                    <Label htmlFor="courseFeeType">Course Fee Type</Label>
+                    <Select
+                      value={formData.courseFeeType || ""}
+                      onValueChange={(value) => handleFieldChange("courseFeeType", value)}
+                      disabled={!formData.courseId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select fee type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PER_HEAD">Per Head</SelectItem>
+                        <SelectItem value="PER_RUN">Per Run</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">Synced from selected course</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="baseAmount">Base Course Fee</Label>
                     <Input
                       id="baseAmount"
                       type="number"
@@ -840,25 +936,58 @@ const CourseRunForm: React.FC = () => {
                       value={formData.baseAmount || ""}
                       onChange={(e) => handleFieldChange("baseAmount", e.target.value ? parseFloat(e.target.value) : undefined)}
                       placeholder="0"
-                      className={errors.baseAmount ? "border-red-500" : ""}
+                      disabled={!formData.courseId}
                     />
-                    {errors.baseAmount && <p className="text-sm text-red-500 mt-1">{errors.baseAmount}</p>}
+                    <p className="text-xs text-gray-500 mt-1">Synced from selected course</p>
                   </div>
 
                   <div>
-                    <Label htmlFor="additionalCosts">Additional Costs</Label>
+                    <Label htmlFor="contractFees">Contract Fees (Auto-calculated from trainers)</Label>
                     <Input
-                      id="additionalCosts"
+                      id="contractFees"
                       type="number"
                       min="0"
                       step="0.01"
-                      value={formData.additionalCosts || ""}
-                      onChange={(e) => handleFieldChange("additionalCosts", e.target.value ? parseFloat(e.target.value) : undefined)}
+                      value={formData.baseAmount || ""}
+                      onChange={(e) => handleFieldChange("baseAmount", e.target.value ? parseFloat(e.target.value) : undefined)}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Auto-calculated from selected trainers' fees, can be manually edited</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="additionalCostExceedingCapacity">Additional Cost Exceeding Capacity</Label>
+                    <Input
+                      id="additionalCostExceedingCapacity"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.additionalCostExceedingCapacity || ""}
+                      onChange={(e) => handleFieldChange("additionalCostExceedingCapacity", e.target.value ? parseFloat(e.target.value) : undefined)}
                       placeholder="0"
                     />
                   </div>
-                </div>
-              </div> */}
+                </div> */}
+
+                {/* Trainer Remarks Section */}
+                {formData.selectedTrainers.length > 0 && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-medium mb-2">Selected Trainers & Remarks:</h4>
+                    <ul className="space-y-1 text-sm">
+                      {formData.selectedTrainers.map((trainerId) => {
+                        const trainer = availableTrainers.find((t) => t.id === trainerId);
+                        const remarks = trainerRemarks[trainerId] || "No remarks";
+                        const fee = trainerFees[trainerId] || 0;
+                        return (
+                          <li key={trainerId} className="text-gray-700">
+                            - <span className="font-medium">{trainer?.name}</span> (${fee.toFixed(2)}) - {remarks}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

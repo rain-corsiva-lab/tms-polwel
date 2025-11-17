@@ -84,6 +84,7 @@ interface CourseRunDetailData {
   perHeadFeeIfMaxExceed: number | null;
   venuePerHeadIfExceed: number | null;
   contractFees: number | null;
+  additionalCostExceedingCapacity: number | null;
   otherFee: number | null;
   adminFee: number | null;
   contingencyFee: number | null;
@@ -168,6 +169,7 @@ const CourseRunDetail: React.FC = () => {
   const [withdrawalDocument, setWithdrawalDocument] = useState<File | null>(null);
   const [withdrawalSubmitting, setWithdrawalSubmitting] = useState(false);
   const [selectedLearnerForWithdrawal, setSelectedLearnerForWithdrawal] = useState<any>(null);
+  const [courseTrainersRemarks, setCourseTrainersRemarks] = useState<any[]>([]); // Store course trainer remarks
 
   const fileToBase64 = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -228,6 +230,7 @@ const CourseRunDetail: React.FC = () => {
       remarks: cr.remarks || "",
       baseCourseFee: cr.baseCourseFee ?? "",
       contractFees: cr.contractFees ?? "",
+      additionalCostExceedingCapacity: cr.additionalCostExceedingCapacity ?? "",
       venueFee: cr.venueFee ?? cr.venue?.fee ?? "",
       venueMaxParticipant: venueMax,
       perHeadFeeIfMaxExceed: perHeadFromCr,
@@ -253,6 +256,18 @@ const CourseRunDetail: React.FC = () => {
       if (response.success) {
         setCourseRun(response.courseRun);
         initEditData(response.courseRun);
+
+        // Fetch course trainer remarks from course_trainers table
+        if (response.courseRun?.course?.id) {
+          try {
+            const courseResponse = await coursesApi.getById(response.courseRun.course.id);
+            if (courseResponse?.data?.course?.courseTrainers) {
+              setCourseTrainersRemarks(courseResponse.data.course.courseTrainers);
+            }
+          } catch (err) {
+            console.warn("Error fetching course trainer remarks:", err);
+          }
+        }
       } else {
         toast.error("Failed to load course run details");
         navigate("/course-runs");
@@ -450,11 +465,21 @@ const CourseRunDetail: React.FC = () => {
         return;
       }
 
+      // Calculate total trainer fees
+      const totalTrainerFees = calculateTotalTrainerFees();
+
       // Call API to update trainer assignments
       await courseRunsApi.updateTrainerAssignments(courseRun.id, selectedTrainers);
 
       // Call API to update partner assignments
       await courseRunsApi.updatePartnerAssignments(courseRun.id, selectedPartners);
+
+      // Update contract fees with total trainer fees
+      if (totalTrainerFees > 0) {
+        await courseRunsApi.update(courseRun.id, {
+          contractFees: totalTrainerFees,
+        });
+      }
 
       toast.success("Trainer and partner assignments updated successfully!");
       setIsEditingTrainers(false);
@@ -603,7 +628,7 @@ const CourseRunDetail: React.FC = () => {
     }
   };
 
-  const handleEditField = (field: string, value: any) => {
+  const handleEditField = async (field: string, value: any) => {
     setEditData((prev: any) => {
       const updated = { ...prev, [field]: value };
       // Auto update serialNumber when course or startDate changes
@@ -614,6 +639,76 @@ const CourseRunDetail: React.FC = () => {
           updated.serialNumber = generateSerialNumber(theCourse.courseCode, updated.startDate);
         }
       }
+
+      // Auto-select venue and venueType when course changes
+      if (field === "courseId") {
+        // Fetch full course details via AJAX to get all fee fields and venue info
+        coursesApi
+          .getById(value)
+          .then((response) => {
+            if (response?.success && response?.data?.course) {
+              const course = response.data.course;
+              console.log("Course details loaded for edit:", { courseId: course.id, venueField: course.venue });
+
+              // Auto-fill all fee-related fields from course
+              setEditData((prevData: any) => {
+                const autoUpdated = { ...prevData };
+
+                // course.venueId is a foreign key to the Venue model
+                if (course.venueId) {
+                  const courseVenueId = course.venueId; // This is the venue ID FK
+                  const courseVenue = venues.find((v: any) => v.id === courseVenueId);
+
+                  if (courseVenue) {
+                    console.log("Found course venue for edit:", { venueId: courseVenue.id, venueType: courseVenue.venueType, venueName: courseVenue.name });
+
+                    autoUpdated.venueType = courseVenue.venueType || "";
+                    autoUpdated.venueId = courseVenueId;
+
+                    // Filter venues by type
+                    const list = venues.filter((v: any) => v.venueType?.toUpperCase() === courseVenue.venueType?.toUpperCase());
+                    setFilteredVenues(list);
+                    console.log("Filtered venues for type", courseVenue.venueType, ":", list.length, "venues");
+                  } else {
+                    console.warn("Venue ID from course not found in venues list:", courseVenueId);
+                  }
+                }
+
+                // Auto-sync all fee fields from course
+                if (course.defaultCourseFee !== undefined && course.defaultCourseFee !== null) {
+                  autoUpdated.baseCourseFee = course.defaultCourseFee;
+                }
+                if (course.venueFee !== undefined && course.venueFee !== null) {
+                  autoUpdated.venueFee = course.venueFee;
+                }
+                if (course.venueMaxParticipants !== undefined && course.venueMaxParticipants !== null) {
+                  autoUpdated.venueMaxParticipant = course.venueMaxParticipants;
+                  autoUpdated.maxClassSize = course.venueMaxParticipants;
+                }
+                if (course.maxParticipants !== undefined && course.maxParticipants !== null && !autoUpdated.maxClassSize) {
+                  autoUpdated.maxClassSize = course.maxParticipants;
+                }
+                if (course.minParticipants !== undefined && course.minParticipants !== null) {
+                  autoUpdated.minClassSize = course.minParticipants;
+                }
+                if (course.perHeadPriceIfMaxExceed !== undefined && course.perHeadPriceIfMaxExceed !== null) {
+                  autoUpdated.perHeadFeeIfMaxExceed = course.perHeadPriceIfMaxExceed;
+                  autoUpdated.venuePerHeadIfExceed = course.perHeadPriceIfMaxExceed;
+                }
+                if (course.courseFeeType) {
+                  autoUpdated.courseFeeType = course.courseFeeType;
+                }
+
+                console.log("Setting edit data with venue:", { venueType: autoUpdated.venueType, venueId: autoUpdated.venueId });
+                return autoUpdated;
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching course details:", error);
+          });
+      }
+
       if (field === "venueType") {
         const list = venues.filter((v: any) => v.venueType?.toUpperCase() === value.toUpperCase());
         setFilteredVenues(list);
@@ -724,6 +819,7 @@ const CourseRunDetail: React.FC = () => {
         remarks: editData.remarks || null,
         baseCourseFee: editData.baseCourseFee === "" ? null : Number(editData.baseCourseFee),
         contractFees: editData.contractFees === "" ? null : Number(editData.contractFees),
+        additionalCostExceedingCapacity: editData.additionalCostExceedingCapacity === "" ? null : Number(editData.additionalCostExceedingCapacity),
         venueFee: editData.venueFee === "" ? null : Number(editData.venueFee),
         venueMaxParticipant: editData.venueMaxParticipant === "" ? null : Number(editData.venueMaxParticipant),
         perHeadFeeIfMaxExceed: editData.perHeadFeeIfMaxExceed === "" ? null : Number(editData.perHeadFeeIfMaxExceed),
@@ -1352,7 +1448,7 @@ const CourseRunDetail: React.FC = () => {
 
                                 {isSelected && (
                                   <div className="mt-4 space-y-3 pl-14">
-                                    <div className="grid grid-cols-2 gap-4">
+                                    {/* <div className="grid grid-cols-2 gap-4">
                                       <div>
                                         <Label className="text-sm font-medium">Base Fee ($)</Label>
                                         <Input
@@ -1385,7 +1481,7 @@ const CourseRunDetail: React.FC = () => {
                                           className="mt-1"
                                         />
                                       </div>
-                                    </div>
+                                    </div> */}
 
                                     <div className="border-t pt-3">
                                       <div className="flex items-center justify-between">
@@ -1664,6 +1760,40 @@ const CourseRunDetail: React.FC = () => {
                         className={isEditing ? "" : "bg-gray-50"}
                       />
                       <p className="text-xs text-gray-500">Contract/trainer fees paid out</p>
+                    </div>
+
+                    {/* Additional Cost Exceeding Capacity */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Additional Cost Exceeding Capacity ($)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={isEditing ? editData?.additionalCostExceedingCapacity : courseRun.additionalCostExceedingCapacity ?? ""}
+                        disabled={!isEditing}
+                        onChange={(e) => handleEditField("additionalCostExceedingCapacity", e.target.value)}
+                        className={isEditing ? "" : "bg-gray-50"}
+                      />
+                      {/* Display trainer remarks from course_trainers table */}
+                      {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
+                        <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
+                          <p className="font-medium">Trainer Remarks:</p>
+                          <ul className="list-none space-y-1 ml-2">
+                            {courseRun.courseRunTrainers.map((crt) => {
+                              // Find the matching course trainer record to get remarks from course_trainers table
+                              const courseTrainer = courseTrainersRemarks.find((ct: any) => ct.trainerId === crt.trainer.id);
+                              const remarks = courseTrainer?.remarks;
+                              return (
+                                <li key={crt.trainer.id}>
+                                  - {crt.trainer.name} {remarks ? `- ${remarks}` : ""}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 pt-2">No trainers assigned yet</p>
+                      )}
                     </div>
 
                     {/* Venue Fee Type */}
