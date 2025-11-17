@@ -728,3 +728,27 @@ The trainer remarks should now properly display from the `course_trainers` table
 
 ---
 
+_**User (2025-11-17 13:45Z)**_
+
+this error network need to show in toast notification front end error correctly , please fix it : 
+
+
+{success: false, error: "One or more trainers have schedule conflicts",…}
+conflicts
+: 
+[{courseRunId: "cmhwvjpkk0002p4zp74pd5bh3", serialNumber: "CTAW20112025",…}]
+error
+: 
+"One or more trainers have schedule conflicts"
+success
+: 
+false
+
+---
+
+_**Agent (model copilot/claude-haiku-4.5)**_
+
+
+
+---
+

@@ -486,7 +486,23 @@ const CourseRunDetail: React.FC = () => {
       loadCourseRunDetail();
     } catch (error: any) {
       console.error("Error saving assignments:", error);
-      toast.error(error?.response?.data?.message || "Failed to update assignments");
+
+      // Handle API response errors with success: false
+      if (error?.response?.data?.error) {
+        toast.error(error.response.data.error);
+      }
+      // Handle standard HTTP error response
+      else if (error?.response?.data?.message) {
+        toast.error(error.response.data.message);
+      }
+      // Handle error response object
+      else if (error?.error) {
+        toast.error(error.error);
+      }
+      // Default fallback
+      else {
+        toast.error("Failed to update assignments");
+      }
     }
   };
 
