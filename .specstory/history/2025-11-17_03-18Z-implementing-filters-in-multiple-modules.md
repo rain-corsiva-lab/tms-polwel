@@ -728,7 +728,7 @@ The trainer remarks should now properly display from the `course_trainers` table
 
 ---
 
-_**User (2025-11-17 13:45Z)**_
+_**User (2025-11-17 13:47Z)**_
 
 this error network need to show in toast notification front end error correctly , please fix it : 
 
@@ -748,7 +748,42 @@ false
 
 _**Agent (model copilot/claude-haiku-4.5)**_
 
+I'll help you fix the error handling so that network errors are shown correctly in toast notifications. Let me first understand the current error handling in the trainer assignment section. Let me see the rest of the handleSaveTrainerAssignments function to see the current error handling: Now I can see the issue. The error handling in `handleSaveTrainerAssignments` is only checking for `error?.response?.data?.message`, but the API is returning `error` property directly in the response. Let me fix this to properly handle both cases: 
+```
 
+```
+Perfect! I've updated the error handling in the `handleSaveTrainerAssignments` function to properly catch and display the network error. Here's what changed:
+
+**Before:** Only checked `error?.response?.data?.message`
+
+**After:** Now handles multiple error response formats in order:
+1. `error?.response?.data?.error` - API response with `error` property (handles your schedule conflict case)
+2. `error?.response?.data?.message` - Standard HTTP error message
+3. `error?.error` - Direct error object property
+4. Fallback to generic message
+
+Now when the backend returns:
+```json
+{
+  "success": false,
+  "error": "One or more trainers have schedule conflicts",
+  "conflicts": [...]
+}
+```
+
+The toast will correctly display: **"One or more trainers have schedule conflicts"**
+
+---
+
+_**User (2025-11-17 13:50Z)**_
+
+hmm its still show 'Failed to update assignments' instead of real error reason , plesae fix it , also show which trainer and which course run that conflict in toast please
+
+---
+
+_**Agent (model copilot/claude-haiku-4.5)**_
+
+I need to check the current error handling and also look at how the API is responding. Let me first verify the current code: Now let me look at the API calls to understand what's happening. The issue is that the API might be returning a successful response with `success: false` inside it, not throwing an error. Let me check the 
 
 ---
 

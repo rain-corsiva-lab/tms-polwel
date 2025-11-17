@@ -469,7 +469,27 @@ const CourseRunDetail: React.FC = () => {
       const totalTrainerFees = calculateTotalTrainerFees();
 
       // Call API to update trainer assignments
-      await courseRunsApi.updateTrainerAssignments(courseRun.id, selectedTrainers);
+      const trainerResponse = await courseRunsApi.updateTrainerAssignments(courseRun.id, selectedTrainers);
+
+      // Check if the response contains an error (even if HTTP status is 200)
+      if (trainerResponse && !trainerResponse.success && trainerResponse.error) {
+        // Build detailed conflict message with trainer and course run info
+        let errorMessage = trainerResponse.error;
+
+        if (trainerResponse.conflicts && Array.isArray(trainerResponse.conflicts) && trainerResponse.conflicts.length > 0) {
+          const conflictDetails = trainerResponse.conflicts
+            .map((conflict: any) => {
+              const trainerName = conflict.trainerName || conflict.trainer?.name || "Unknown Trainer";
+              const courseRunInfo = conflict.serialNumber || courseRun.serialNumber || "Unknown Course Run";
+              return `${trainerName} - ${courseRunInfo}`;
+            })
+            .join("; ");
+          errorMessage = `${trainerResponse.error}\n\nConflicts:\n${conflictDetails}`;
+        }
+
+        toast.error(errorMessage);
+        return;
+      }
 
       // Call API to update partner assignments
       await courseRunsApi.updatePartnerAssignments(courseRun.id, selectedPartners);
@@ -489,7 +509,21 @@ const CourseRunDetail: React.FC = () => {
 
       // Handle API response errors with success: false
       if (error?.response?.data?.error) {
-        toast.error(error.response.data.error);
+        let errorMessage = error.response.data.error;
+
+        // Add conflict details if available
+        if (error.response.data.conflicts && Array.isArray(error.response.data.conflicts)) {
+          const conflictDetails = error.response.data.conflicts
+            .map((conflict: any) => {
+              const trainerName = conflict.trainerName || conflict.trainer?.name || "Unknown Trainer";
+              const courseRunInfo = conflict.serialNumber || courseRun.serialNumber || "Unknown Course Run";
+              return `${trainerName} - ${courseRunInfo}`;
+            })
+            .join("; ");
+          errorMessage = `${errorMessage}\n\nConflicts:\n${conflictDetails}`;
+        }
+
+        toast.error(errorMessage);
       }
       // Handle standard HTTP error response
       else if (error?.response?.data?.message) {
