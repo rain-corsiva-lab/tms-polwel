@@ -459,12 +459,6 @@ const CourseRunDetail: React.FC = () => {
           partnerId,
         }));
 
-      // Validate that at least one trainer or partner is selected
-      if (selectedTrainers.length === 0 && selectedPartners.length === 0) {
-        toast.error("At least one trainer or partner must be selected");
-        return;
-      }
-
       // Calculate total trainer fees
       const totalTrainerFees = calculateTotalTrainerFees();
 
@@ -499,10 +493,16 @@ const CourseRunDetail: React.FC = () => {
         // Add conflict details if available
         if (error.data.conflicts && Array.isArray(error.data.conflicts) && error.data.conflicts.length > 0) {
           const conflictDetails = error.data.conflicts
-            .map((conflict: any) => {
-              const trainerName = conflict.trainerName || conflict.trainer?.name || "Unknown Trainer";
-              const courseRunInfo = conflict.serialNumber || "Unknown Course Run";
-              return `• ${trainerName} - ${courseRunInfo}`;
+            .flatMap((conflict: any) => {
+              // Each conflict can have multiple trainers that conflict
+              if (conflict.trainers && Array.isArray(conflict.trainers)) {
+                return conflict.trainers.map((trainer: any) => {
+                  const trainerName = trainer.name || "Unknown Trainer";
+                  const courseRunInfo = conflict.serialNumber || "Unknown Course Run";
+                  return `• ${trainerName} - ${courseRunInfo}`;
+                });
+              }
+              return [];
             })
             .join("\n");
           errorMessage = `${errorMessage}\n\n${conflictDetails}`;

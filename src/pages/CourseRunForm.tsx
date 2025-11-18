@@ -489,10 +489,6 @@ const CourseRunForm: React.FC = () => {
       if (formData.baseAmount !== undefined && formData.baseAmount < 0) {
         newErrors.baseAmount = "Base Amount must be 0 or greater";
       }
-      // At least one trainer or partner must be selected
-      if (!formData.selectedTrainers || formData.selectedTrainers.length === 0) {
-        newErrors.trainers = "At least one trainer or partner must be selected";
-      }
     }
 
     setErrors(newErrors);
