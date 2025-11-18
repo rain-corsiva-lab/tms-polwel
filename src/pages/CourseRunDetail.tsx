@@ -934,7 +934,7 @@ const CourseRunDetail: React.FC = () => {
                 Learner Particulars ({courseRun.courseRunLearners?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
-              <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
+              <TabsTrigger value="fees-expenses">Fees</TabsTrigger>
             </TabsList>
 
             {/* Course Run Information Tab */}
@@ -1514,14 +1514,14 @@ const CourseRunDetail: React.FC = () => {
                                       </div>
                                     </div> */}
 
-                                    <div className="border-t pt-3">
+                                    {/* <div className="border-t pt-3">
                                       <div className="flex items-center justify-between">
                                         <span className="font-medium">Total for this trainer:</span>
                                         <span className="font-medium text-lg text-blue-600">
                                           {currency(safeNumber(assignment.baseFee, 0) + safeNumber(assignment.additionalCost, 0))}
                                         </span>
                                       </div>
-                                    </div>
+                                    </div> */}
                                   </div>
                                 )}
                               </Card>
@@ -1567,7 +1567,7 @@ const CourseRunDetail: React.FC = () => {
                             </div>
 
                             <div className="mt-4 space-y-3">
-                              <div>
+                              {/* <div>
                                 <Label className="text-sm font-medium">Trainer Fees</Label>
                                 <div className="mt-1">
                                   <div className="flex items-center justify-between">
@@ -1581,7 +1581,7 @@ const CourseRunDetail: React.FC = () => {
                                     </div>
                                   )}
                                 </div>
-                              </div>
+                              </div> */}
 
                               {assignment.remarks && (
                                 <div>
@@ -1591,14 +1591,14 @@ const CourseRunDetail: React.FC = () => {
                                 </div>
                               )}
 
-                              <div className="border-t pt-3">
+                              {/* <div className="border-t pt-3">
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium">Total for this trainer:</span>
                                   <span className="font-medium">
                                     {currency(safeNumber(assignment.trainerBaseAmount, 0) + safeNumber(assignment.additionalCost, 0))}
                                   </span>
                                 </div>
-                              </div>
+                              </div> */}
                             </div>
                           </Card>
                         ))
@@ -1744,7 +1744,7 @@ const CourseRunDetail: React.FC = () => {
             {/* Fees & Expenses Tab */}
             <TabsContent value="fees-expenses" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Revenue & Expenses</h3>
+                <h3 className="text-lg font-medium">Fees</h3>
               </div>
 
               <div className="space-y-6">
