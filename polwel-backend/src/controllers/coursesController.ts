@@ -13,7 +13,6 @@ const CourseCreateSchema = z.object({
   courseCode: z.string().trim().max(5, "Course code must be at most 5 characters"),
   description: z.string().optional(),
   learningObjectives: z.string().optional(),
-  courseOutline: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   objectives: z.union([z.array(z.string()), z.any()]).default([]),
   targetAudience: z.string().optional(),
@@ -39,9 +38,8 @@ const CourseCreateSchema = z.object({
   // Simplified financial fields
   defaultCourseFee: z.number().default(0),
   contractFees: z.number().default(0),
-  venueFee: z.number().default(0), // used as Venue Expenses
+  venueFee: z.number().optional(), // used as Venue Expenses
   venueFeeType: z.string().optional(), // Fee type suffix (/ venue or / head)
-  courseFeeType: z.string().optional(), // Course fee type (PER_HEAD or PER_RUN)
   discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional(),
   venueMaxParticipants: z.number().int().positive().nullable().optional(),
   perHeadPriceIfMaxExceed: z.number().nullable().optional()
@@ -274,19 +272,6 @@ export const coursesController = {
           allowedSchemes: ['data','http','https']
         });
       }
-      if (data.courseOutline !== undefined) {
-        courseData.courseOutline = sanitizeHtml(data.courseOutline, {
-          allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
-          allowedAttributes: {
-            a: ['href','name','target','rel'],
-            img: ['src','alt','title'],
-            span: ['style'],
-            p: ['style'],
-            div: ['style']
-          },
-          allowedSchemes: ['data','http','https']
-        });
-      }
       if (data.category !== undefined) courseData.category = data.category;
       if (data.objectives !== undefined) courseData.objectives = data.objectives;
       if (data.targetAudience !== undefined) courseData.targetAudience = data.targetAudience;
@@ -310,10 +295,6 @@ export const coursesController = {
       if (data.contractFees !== undefined) courseData.contractFees = data.contractFees;
       if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
       if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
-      if (data.courseFeeType !== undefined) {
-        // Ensure courseFeeType is uppercase to match enum
-        courseData.courseFeeType = String(data.courseFeeType).toUpperCase();
-      }
       if (data.discounts !== undefined) courseData.discounts = data.discounts;
       if (data.venueMaxParticipants !== undefined) courseData.venueMaxParticipants = data.venueMaxParticipants;
       if (data.perHeadPriceIfMaxExceed !== undefined) courseData.perHeadPriceIfMaxExceed = data.perHeadPriceIfMaxExceed;
@@ -493,27 +474,12 @@ export const coursesController = {
               },
               allowedSchemes: ['data','http','https']
             });
-          } else if (key === 'courseOutline' && typeof value === 'string') {
-            updateData.courseOutline = sanitizeHtml(value, {
-              allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
-              allowedAttributes: {
-                a: ['href','name','target','rel'],
-                img: ['src','alt','title'],
-                span: ['style'],
-                p: ['style'],
-                div: ['style']
-              },
-              allowedSchemes: ['data','http','https']
-            });
           } else {
             if (key === 'courseCode' && typeof value === 'string') {
               updateData.courseCode = value.toUpperCase();
             } else if (key === 'venueMaxParticipants' || key === 'perHeadPriceIfMaxExceed') {
               // Explicitly handle nullable venue pricing fields
               updateData[key] = value;
-            } else if (key === 'courseFeeType') {
-              // Ensure courseFeeType is uppercase to match enum
-              updateData[key] = String(value).toUpperCase();
             } else {
               updateData[key] = value;
             }

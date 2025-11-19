@@ -17,7 +17,6 @@ interface VenueCreateRequest {
   description?: string;
   facilities?: string[];
   contacts: Contact[];
-  feeType: 'PER_HEAD' | 'PER_VENUE';
   fee: number;
   maxParticipants?: number;
   perHeadPriceIfMaxExceed?: number;
@@ -67,7 +66,6 @@ export const venuesController = {
       // Transform venues to match frontend expectations
       const transformedVenues = venues.map(venue => ({
         ...venue,
-        feeType: venue.feeType.toLowerCase(), // Convert PER_HEAD to per_head
         contacts: Array.isArray(venue.contacts) ? venue.contacts : [],
         bookingCount: venue._count.bookings,
         courseRunCount: venue._count.courseRuns
@@ -150,7 +148,6 @@ export const venuesController = {
       // Transform venue to match frontend expectations
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(), // Convert PER_HEAD to per_head
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 
@@ -206,7 +203,6 @@ export const venuesController = {
         name: venueData.name.trim(),
         capacity: venueData.capacity || '',
         contacts: JSON.parse(JSON.stringify(validContacts)), // Serialize/deserialize to ensure JSON compatibility
-        feeType: venueData.feeType || 'PER_VENUE',
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',
         venueType: venueData.venueType || 'HOTEL',
@@ -226,7 +222,6 @@ export const venuesController = {
       // Transform venue to match frontend expectations
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(),
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 
@@ -301,7 +296,6 @@ export const venuesController = {
         name: venueData.name.trim(),
         capacity: venueData.capacity || '',
         contacts: JSON.parse(JSON.stringify(validContacts)), // Serialize/deserialize to ensure JSON compatibility
-        feeType: venueData.feeType || 'PER_VENUE',
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',
         venueType: venueData.venueType || 'HOTEL',
@@ -330,7 +324,6 @@ export const venuesController = {
       // Transform venue to match frontend expectations
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(),
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 
@@ -435,7 +428,6 @@ export const venuesController = {
 
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(),
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 

@@ -121,7 +121,6 @@ model Course {
   title              String
   description        String?         @db.Text
   learningObjectives String?         @db.Text
-  courseOutline      String?         @db.Text
   objectives         Json?
   duration           String
   durationType       String          @default("days")
@@ -131,7 +130,7 @@ model Course {
   level              String?
   prerequisites      Json?
   materials          Json?
-  venueFee           Float           @default(0)
+  venueFee           Float?
   venueId            String?
   certificates       String          @default("polwel")
   remarks            String?         @db.Text
@@ -150,7 +149,6 @@ model Course {
   venueFeeType       FeeType?        @default(PER_HEAD)
   venueMaxParticipants Int?
   perHeadPriceIfMaxExceed Decimal?  @db.Decimal(10, 2)
-  courseFeeType      FeeType?        @default(PER_HEAD)
   venue              Venue?          @relation(fields: [venueId], references: [id], onDelete: SetNull)
   bookings           Booking[]
   runs               CourseRun[]
@@ -224,7 +222,6 @@ model CourseRun {
   venueType                      VenueType?
   contractFees                   Decimal?                        @db.Decimal(10, 2)
   additionalCostExceedingCapacity Decimal?                       @db.Decimal(10, 2)
-  courseFeeType                  FeeType?
   bookings                       Booking[]
   confirmationEmailHistory       ConfirmationEmailHistory[]
   courseRunBilling               CourseRunBilling?

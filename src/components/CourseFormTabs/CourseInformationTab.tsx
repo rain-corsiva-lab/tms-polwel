@@ -150,29 +150,6 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
         <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="courseOutline">Course Outline</Label>
-        <div className="border rounded-md">
-          <ReactQuill
-            theme="snow"
-            value={formData.courseOutline || ""}
-            onChange={(value) => onInputChange("courseOutline", value)}
-            placeholder="Enter detailed course outline and modules"
-            modules={{
-              toolbar: [
-                [{ header: [1, 2, 3, false] }],
-                ["bold", "italic", "underline", "strike"],
-                [{ list: "ordered" }, { list: "bullet" }],
-                ["link", "image"],
-                ["clean"],
-              ],
-            }}
-            className="h-48"
-          />
-        </div>
-        <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="duration">Course Duration</Label>

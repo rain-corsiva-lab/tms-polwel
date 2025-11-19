@@ -89,17 +89,6 @@ const VenueArchive = () => {
     }
   };
 
-  const getFeeTypeBadge = (feeType: string) => {
-    switch (feeType?.toLowerCase()) {
-      case "per_head":
-        return <Badge variant="default">Per Head</Badge>;
-      case "per_venue":
-        return <Badge variant="secondary">Per Venue</Badge>;
-      default:
-        return <Badge variant="outline">{feeType}</Badge>;
-    }
-  };
-
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -144,7 +133,6 @@ const VenueArchive = () => {
                 <TableRow>
                   <TableHead>Venue Name</TableHead>
                   <TableHead>Capacity</TableHead>
-                  <TableHead>Fee Type</TableHead>
                   <TableHead>Fee Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -155,7 +143,6 @@ const VenueArchive = () => {
                   <TableRow key={venue.id}>
                     <TableCell className="font-medium">{venue.name}</TableCell>
                     <TableCell>{venue.capacity || "Not specified"}</TableCell>
-                    <TableCell>{getFeeTypeBadge(venue.feeType)}</TableCell>
                     <TableCell>${venue.fee}</TableCell>
                     <TableCell>{getStatusBadge(venue.status || "ACTIVE")}</TableCell>
                     <TableCell>

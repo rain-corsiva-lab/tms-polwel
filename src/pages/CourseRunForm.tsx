@@ -73,7 +73,6 @@ interface CourseRunFormData {
   additionalCosts?: number;
 
   // New fields
-  courseFeeType?: string;
   additionalCostExceedingCapacity?: number;
 }
 
@@ -113,7 +112,7 @@ const CourseRunForm: React.FC = () => {
     selectedTrainers: [],
     baseAmount: undefined,
     additionalCosts: undefined,
-    courseFeeType: undefined,
+
     additionalCostExceedingCapacity: undefined,
   });
 
@@ -276,7 +275,7 @@ const CourseRunForm: React.FC = () => {
             venueFinalFee: course.venueFee || undefined,
             venueMaxParticipants: course.venueMaxParticipants || undefined,
             perHeadFeeIfMaxExceed: course.perHeadPriceIfMaxExceed || undefined,
-            courseFeeType: course.courseFeeType || undefined,
+
             additionalCostExceedingCapacity: undefined,
           };
 

@@ -28,7 +28,6 @@ interface FormState {
   title: string;
   description: string;
   learningObjectives: string;
-  courseOutline: string;
   category: string;
   duration: string;
   durationType: string;
@@ -46,7 +45,6 @@ interface FormState {
   maxParticipants: number | string;
   venueMaxParticipants: number | string;
   perHeadPriceIfMaxExceed: number | string;
-  courseFeeType: string;
 }
 
 const initialForm: FormState = {
@@ -54,7 +52,6 @@ const initialForm: FormState = {
   title: "",
   description: "",
   learningObjectives: "",
-  courseOutline: "",
   category: "",
   duration: "",
   durationType: "days",
@@ -72,7 +69,6 @@ const initialForm: FormState = {
   maxParticipants: "",
   venueMaxParticipants: "",
   perHeadPriceIfMaxExceed: "",
-  courseFeeType: "PER_HEAD",
 };
 
 const CourseForm: React.FC = () => {
@@ -194,7 +190,6 @@ const CourseForm: React.FC = () => {
             title: c.title || "",
             description: c.description || "",
             learningObjectives: c.learningObjectives || "",
-            courseOutline: c.courseOutline || "",
             category: c.category || "",
             duration: c.duration || "",
             durationType: c.durationType || "days",
@@ -366,7 +361,6 @@ const CourseForm: React.FC = () => {
       title: formData.title,
       description: formData.description,
       learningObjectives: formData.learningObjectives,
-      courseOutline: formData.courseOutline,
       category: formData.category,
       duration: formData.duration,
       durationType: formData.durationType,
@@ -385,7 +379,6 @@ const CourseForm: React.FC = () => {
       venueMaxParticipants: formData.venueMaxParticipants && formData.venueMaxParticipants !== "" ? parseInt(formData.venueMaxParticipants.toString()) : null,
       perHeadPriceIfMaxExceed:
         formData.perHeadPriceIfMaxExceed && formData.perHeadPriceIfMaxExceed !== "" ? parseFloat(formData.perHeadPriceIfMaxExceed.toString()) : null,
-      courseFeeType: formData.courseFeeType,
       syncRemarksToTrainers: true, // Flag to sync remarks to course_trainers table
     };
 

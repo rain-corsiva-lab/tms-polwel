@@ -49,17 +49,6 @@ const VenueDetail = () => {
     }
   };
 
-  const getFeeTypeBadge = (feeType: string) => {
-    switch (feeType?.toLowerCase()) {
-      case "per_head":
-        return <Badge variant="default">Per Head</Badge>;
-      case "per_venue":
-        return <Badge variant="secondary">Per Venue</Badge>;
-      default:
-        return <Badge variant="outline">{feeType}</Badge>;
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status?.toUpperCase()) {
       case "ACTIVE":
@@ -129,7 +118,6 @@ const VenueDetail = () => {
             <div className="flex items-center space-x-2 mt-2">
               {getStatusBadge(venue.status)}
               {venue.venueType && getVenueTypeBadge(venue.venueType)}
-              <Badge variant={venue.feeType === "per_head" ? "default" : "secondary"}>{venue.feeType === "per_head" ? "Per Head" : "Per Venue"}</Badge>
             </div>
           </div>
         </div>
@@ -163,9 +151,7 @@ const VenueDetail = () => {
                 <h3 className="font-semibold text-foreground mb-2">Pricing</h3>
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span>
-                    ${venue.fee} {venue.feeType === "per_head" ? "per person" : "per venue"}
-                  </span>
+                  <span>${venue.fee}</span>
                 </div>
               </div>
 
@@ -215,11 +201,6 @@ const VenueDetail = () => {
               <CardTitle>Venue Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Fee Structure</h4>
-                <Badge variant={venue.feeType === "per_head" ? "default" : "secondary"}>{venue.feeType === "per_head" ? "Per Head" : "Per Venue"}</Badge>
-              </div>
-
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-1">Capacity</h4>
                 <p className="text-sm">{venue.capacity}</p>

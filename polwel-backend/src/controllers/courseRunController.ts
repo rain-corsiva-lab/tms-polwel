@@ -144,7 +144,6 @@ const calculateVenueFinalFee = async (courseRunId: string): Promise<number> => {
     include: {
       venue: {
         select: {
-          feeType: true,
           fee: true,
         },
       },
@@ -170,24 +169,16 @@ const calculateVenueFinalFee = async (courseRunId: string): Promise<number> => {
   const participantCount = courseRun.courseRunLearners.length;
   const venue = courseRun.venue;
 
-  if (venue.feeType === 'PER_HEAD') {
-    // Simple per head calculation: fee * participants
-    return venue.fee * participantCount;
-  } else if (venue.feeType === 'PER_VENUE') {
-    // Per venue calculation with overflow handling
-    let finalFee = venue.fee;
+  let finalFee = venue.fee ?? 0;
 
-    // If max participants is set and exceeded, add per-head charges
-    if (courseRun.course?.venueMaxParticipants && courseRun.course?.perHeadPriceIfMaxExceed && participantCount > courseRun.course.venueMaxParticipants) {
-      const excessParticipants = participantCount - courseRun.course.venueMaxParticipants;
-      const excessFee = excessParticipants * Number(courseRun.course.perHeadPriceIfMaxExceed);
-      finalFee += excessFee;
-    }
-
-    return finalFee;
+  // If max participants is set and exceeded, add per-head charges
+  if (courseRun.course?.venueMaxParticipants && courseRun.course?.perHeadPriceIfMaxExceed && participantCount > courseRun.course.venueMaxParticipants) {
+    const excessParticipants = participantCount - courseRun.course.venueMaxParticipants;
+    const excessFee = excessParticipants * Number(courseRun.course.perHeadPriceIfMaxExceed);
+    finalFee += excessFee;
   }
 
-  return 0;
+  return finalFee;
 };
 
 /**
@@ -533,7 +524,6 @@ const createCourseRunSchema = z.object({
   individualRegistrationRequired: z.boolean().nullable().optional(),
   remarks: z.string().nullable().optional(),
   baseCourseFee: z.number().nullable().optional(),
-  feeType: z.enum(['PER_HEAD', 'PER_VENUE', 'FIXED']).optional().nullable(),
   venueFee: z.number().nullable().optional(),
   venueMaxParticipant: z.number().int().min(1).nullable().optional(),
   perHeadFeeIfMaxExceed: z.number().nullable().optional(),
@@ -1035,17 +1025,7 @@ export const courseRunController = {
         });
       }
 
-      // Calculate and persist venue final fee after creation
-      try {
-        const venueFinal = await calculateVenueFinalFee(courseRun.id);
-        if (venueFinal !== undefined && venueFinal !== null) {
-          await prisma.courseRun.update({ where: { id: courseRun.id }, data: { venueFinalFee: venueFinal } });
-          // reflect the change on returned object
-          (courseRun as any).venueFinalFee = venueFinal;
-        }
-      } catch (err) {
-        console.warn('Failed to calculate venue final fee after course run create:', err);
-      }
+      // Venue final fee is calculated on-demand and not persisted
 
       // Convert Decimal fields to numbers for JSON serialization
       const convertedCourseRun = convertDecimalsToNumbers(courseRun);
@@ -1123,16 +1103,7 @@ export const courseRunController = {
         },
       });
 
-      // Recalculate venue final fee if venue or related fields changed
-      try {
-        const venueFinal = await calculateVenueFinalFee(courseRun.id);
-        if (venueFinal !== undefined && venueFinal !== null) {
-          await prisma.courseRun.update({ where: { id: courseRun.id }, data: { venueFinalFee: venueFinal } });
-          (courseRun as any).venueFinalFee = venueFinal;
-        }
-      } catch (err) {
-        console.warn('Failed to calculate venue final fee after course run update:', err);
-      }
+      // Venue final fee is calculated on-demand and not persisted
 
       const convertedCourseRun = convertDecimalsToNumbers(courseRun);
 
@@ -1520,11 +1491,7 @@ export const courseRunController = {
       });
 
       // Recalculate and update venue final fee
-      const venueFinalFee = await calculateVenueFinalFee(courseRunId);
-      await prisma.courseRun.update({
-        where: { id: courseRunId },
-        data: { venueFinalFee },
-      });
+      // Venue final fee is calculated on-demand and not persisted
 
       res.json({
         success: true,
@@ -4315,7 +4282,7 @@ export const courseRunController = {
           run.courseRunLearners.length.toString(),
           run.status,
           run.baseCourseFee?.toString() || '',
-          run.feeType || '',
+          
           run.venueFee?.toString() || '',
           run.otherFee?.toString() || '',
           run.adminFee?.toString() || '',

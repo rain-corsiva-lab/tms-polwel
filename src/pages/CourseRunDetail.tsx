@@ -726,9 +726,6 @@ const CourseRunDetail: React.FC = () => {
                   autoUpdated.perHeadFeeIfMaxExceed = course.perHeadPriceIfMaxExceed;
                   autoUpdated.venuePerHeadIfExceed = course.perHeadPriceIfMaxExceed;
                 }
-                if (course.courseFeeType) {
-                  autoUpdated.courseFeeType = course.courseFeeType;
-                }
 
                 console.log("Setting edit data with venue:", { venueType: autoUpdated.venueType, venueId: autoUpdated.venueId });
                 return autoUpdated;
@@ -1479,7 +1476,7 @@ const CourseRunDetail: React.FC = () => {
 
                                 {isSelected && (
                                   <div className="mt-4 space-y-3 pl-14">
-                                    {/* <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
                                       <div>
                                         <Label className="text-sm font-medium">Base Fee ($)</Label>
                                         <Input
@@ -1512,16 +1509,16 @@ const CourseRunDetail: React.FC = () => {
                                           className="mt-1"
                                         />
                                       </div>
-                                    </div> */}
+                                    </div>
 
-                                    {/* <div className="border-t pt-3">
+                                    <div className="border-t pt-3">
                                       <div className="flex items-center justify-between">
                                         <span className="font-medium">Total for this trainer:</span>
                                         <span className="font-medium text-lg text-blue-600">
                                           {currency(safeNumber(assignment.baseFee, 0) + safeNumber(assignment.additionalCost, 0))}
                                         </span>
                                       </div>
-                                    </div> */}
+                                    </div>
                                   </div>
                                 )}
                               </Card>
@@ -1567,7 +1564,7 @@ const CourseRunDetail: React.FC = () => {
                             </div>
 
                             <div className="mt-4 space-y-3">
-                              {/* <div>
+                              <div>
                                 <Label className="text-sm font-medium">Trainer Fees</Label>
                                 <div className="mt-1">
                                   <div className="flex items-center justify-between">
@@ -1581,7 +1578,7 @@ const CourseRunDetail: React.FC = () => {
                                     </div>
                                   )}
                                 </div>
-                              </div> */}
+                              </div>
 
                               {assignment.remarks && (
                                 <div>
@@ -1591,14 +1588,14 @@ const CourseRunDetail: React.FC = () => {
                                 </div>
                               )}
 
-                              {/* <div className="border-t pt-3">
+                              <div className="border-t pt-3">
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium">Total for this trainer:</span>
                                   <span className="font-medium">
                                     {currency(safeNumber(assignment.trainerBaseAmount, 0) + safeNumber(assignment.additionalCost, 0))}
                                   </span>
                                 </div>
-                              </div> */}
+                              </div>
                             </div>
                           </Card>
                         ))

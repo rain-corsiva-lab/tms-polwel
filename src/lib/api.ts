@@ -1202,7 +1202,6 @@ export interface Course {
   trainers?: string[];
   certificates?: string;
   remarks?: string;
-  courseOutline?: any;
   targetAudience?: string;
   syllabus?: string;
   assessmentMethod?: string;
@@ -1553,7 +1552,6 @@ export interface Venue {
   id: string;
   name: string;
   capacity: string;
-  feeType: "per_head" | "per_venue";
   fee: number;
   maxParticipants?: number;
   perHeadPriceIfMaxExceed?: number;
@@ -1582,7 +1580,6 @@ export interface VenueCreateRequest {
   description?: string;
   facilities?: string[];
   contacts: Contact[];
-  feeType: "PER_HEAD" | "PER_VENUE";
   fee: number;
   maxParticipants?: number;
   perHeadPriceIfMaxExceed?: number;
