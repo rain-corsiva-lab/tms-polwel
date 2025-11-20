@@ -78,6 +78,8 @@ interface Learner {
   discountType?: string;
   discountPercentage?: number;
   courseFee?: number;
+  paymentMode?: string;
+  status?: string;
 }
 
 interface BillingEntry {
@@ -253,6 +255,8 @@ const PostRunDetail = () => {
             // Discount percentage usually on enrollment
             const discountPercentage = Number(en?.discountPercentage ?? l?.discountPercentage ?? 0);
             const discountType = en?.discountType ?? l?.discountType ?? undefined;
+            const paymentMode = en?.paymentMode ?? l?.paymentMode ?? undefined;
+            const status = en?.status ?? l?.status ?? undefined;
 
             return {
               id: l.id, // use learner id consistently for selection
@@ -261,6 +265,8 @@ const PostRunDetail = () => {
               courseFee,
               discountPercentage,
               discountType,
+              paymentMode,
+              status,
             } as Learner;
           })
           .filter(Boolean) as Learner[];
@@ -717,11 +723,20 @@ const PostRunDetail = () => {
                                     })
                                     .map((learner) => {
                                       const isSelected = entry.learnerIds.includes(learner.id);
+                                      // Disable learners with Self Payment, Transition Dollar payment modes, or withdrawn status
+                                      const isDisabled =
+                                        learner.paymentMode === "Self Payment" ||
+                                        learner.paymentMode === "Transition Dollar" ||
+                                        learner.status?.toLowerCase() === "withdrawn";
+
                                       return (
                                         <div
                                           key={learner.id}
-                                          className="flex items-start gap-3 p-2 hover:bg-accent rounded-md cursor-pointer"
+                                          className={`flex items-start gap-3 p-2 rounded-md ${
+                                            isDisabled ? "opacity-50 cursor-not-allowed bg-gray-100" : "hover:bg-accent cursor-pointer"
+                                          }`}
                                           onClick={() => {
+                                            if (isDisabled) return;
                                             const newLearnerIds = isSelected
                                               ? entry.learnerIds.filter((id) => id !== learner.id)
                                               : [...entry.learnerIds, learner.id];
@@ -733,7 +748,18 @@ const PostRunDetail = () => {
                                           </div>
                                           <div className="flex-1 min-w-0">
                                             <div className="font-medium text-sm leading-tight">{learner.name}</div>
-                                            <div className="text-xs text-muted-foreground leading-tight mt-0.5">{learner.email}</div>
+                                            <div className="text-xs text-muted-foreground leading-tight mt-0.5">
+                                              {learner.email}
+                                              {isDisabled && (
+                                                <span className="ml-2 text-red-600 font-medium">
+                                                  (
+                                                  {learner.paymentMode === "Self Payment" || learner.paymentMode === "Transition Dollar"
+                                                    ? "Already Paid"
+                                                    : "Withdrawn"}
+                                                  )
+                                                </span>
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
                                       );

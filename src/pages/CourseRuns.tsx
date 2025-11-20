@@ -268,7 +268,30 @@ const CourseRuns: React.FC = () => {
           };
         })
         // Filter out PENDING_BILLING and COMPLETED from main list
-        .filter((run) => run.status !== "PENDING_BILLING" && run.status !== "COMPLETED");
+        .filter((run) => run.status !== "PENDING_BILLING" && run.status !== "COMPLETED")
+        // Sort by nearest start date to today (ascending from today)
+        .sort((a, b) => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const aStart = a.start ? a.start.getTime() : Infinity;
+          const bStart = b.start ? b.start.getTime() : Infinity;
+
+          // Calculate distance from today
+          const aDistance = Math.abs(aStart - today.getTime());
+          const bDistance = Math.abs(bStart - today.getTime());
+
+          // If both are in the future or both in the past, sort by closest to today
+          if ((aStart >= today.getTime() && bStart >= today.getTime()) || (aStart < today.getTime() && bStart < today.getTime())) {
+            return aDistance - bDistance;
+          }
+
+          // Prioritize future dates over past dates
+          if (aStart >= today.getTime() && bStart < today.getTime()) return -1;
+          if (aStart < today.getTime() && bStart >= today.getTime()) return 1;
+
+          return aDistance - bDistance;
+        });
 
       setCourseRuns(transformed);
 
@@ -879,76 +902,47 @@ const CourseRuns: React.FC = () => {
       {/* Filters and Search */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Search */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search by course title, code, or venue..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              {/* Status Filter (native select to avoid popup/portal scroll-jump issues) */}
-              <div className="w-full sm:w-48">
-                <label className="sr-only" htmlFor="statusFilterSelect">
-                  Status
-                </label>
-                <select
-                  id="statusFilterSelect"
-                  value={statusFilter}
-                  onChange={(e) => handleStatusFilter(e.target.value)}
-                  className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
-                >
-                  <option value="ALL">All Statuses</option>
-                  {statusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {status.replace(/_/g, " ")}
-                    </option>
-                  ))}
-                </select>
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by course title, code, or venue..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-10"
+                />
               </div>
             </div>
 
             {/* Date Range Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 sm:flex-none">
-                <Label htmlFor="startDateFilter" className="text-sm mb-1 block">
-                  Start Date From
-                </Label>
-                <DateInput
-                  id="startDateFilter"
-                  value={startDateFilter}
-                  onChange={(isoDate) => handleStartDateFilter(isoDate || "")}
-                  className="w-full sm:w-48"
-                />
-              </div>
-              <div className="flex-1 sm:flex-none">
-                <Label htmlFor="endDateFilter" className="text-sm mb-1 block">
-                  End Date To
-                </Label>
-                <DateInput id="endDateFilter" value={endDateFilter} onChange={(isoDate) => handleEndDateFilter(isoDate || "")} className="w-full sm:w-48" />
-              </div>
-              {(startDateFilter || endDateFilter) && (
-                <div className="flex items-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setStartDateFilter("");
-                      setEndDateFilter("");
-                    }}
-                  >
-                    Clear Dates
-                  </Button>
-                </div>
-              )}
+            <div className="flex-1 sm:flex-none">
+              <Label htmlFor="startDateFilter" className="text-sm mb-1 block">
+                Start Date From
+              </Label>
+              <DateInput id="startDateFilter" value={startDateFilter} onChange={(isoDate) => handleStartDateFilter(isoDate || "")} className="w-full sm:w-48" />
             </div>
+            <div className="flex-1 sm:flex-none">
+              <Label htmlFor="endDateFilter" className="text-sm mb-1 block">
+                End Date To
+              </Label>
+              <DateInput id="endDateFilter" value={endDateFilter} onChange={(isoDate) => handleEndDateFilter(isoDate || "")} className="w-full sm:w-48" />
+            </div>
+            {(startDateFilter || endDateFilter) && (
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setStartDateFilter("");
+                    setEndDateFilter("");
+                  }}
+                >
+                  Clear Dates
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

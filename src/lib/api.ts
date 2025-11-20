@@ -1169,9 +1169,17 @@ export const clientOrganizationsApi = {
 
 // Organizations API (general)
 export const organizationsApi = {
-  // Get all organizations
-  list: async () => {
-    return apiRequest('/organizations');
+  // Get all organizations with optional type filter
+  list: async (params: { type?: string; status?: string } = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.type) queryParams.append('type', params.type);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/organizations?${queryParams}`);
+  },
+
+  // Get single organization
+  getById: async (id: string) => {
+    return apiRequest(`/organizations/${id}`);
   },
 
   // Get training coordinators for an organization

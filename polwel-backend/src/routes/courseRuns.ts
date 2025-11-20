@@ -106,4 +106,7 @@ router.get('/:id/certificates/:learnerId/pdf', requirePermissions('post-course-r
 // POST /api/course-runs/:id/certificates/bulk-zip - Generate bulk certificates ZIP
 router.post('/:id/certificates/bulk-zip', requirePermissions('post-course-run.view'), courseRunController.generateCertificatesZIP);
 
+// GET /api/course-runs/certificates/download/:learnerId/:courseRunId - Public certificate download (no auth required)
+router.get('/certificates/download/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
+
 export default router;

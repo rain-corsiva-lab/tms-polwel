@@ -138,6 +138,18 @@ const loadCourseRunWithRelations = async (
         };
       };
     };
+    courseRunTrainers: {
+      where: { deletedAt: null };
+      include: {
+        trainer: {
+          select: {
+            id: true;
+            name: true;
+            email: true;
+          };
+        };
+      };
+    };
   };
 }>> => {
   const courseRun = await prisma.courseRun.findFirst({
@@ -155,6 +167,18 @@ const loadCourseRunWithRelations = async (
               email: true,
               contact: true,
               departmentName: true,
+            },
+          },
+        },
+      },
+      courseRunTrainers: {
+        where: { deletedAt: null },
+        include: {
+          trainer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
         },
@@ -439,6 +463,51 @@ export const courseRunWorkflowService = {
       where: { id: courseRunId },
       data: updateData,
     });
+
+    // Send completion emails when course is marked as COMPLETED
+    if (action === 'COMPLETE') {
+      const enrolledLearners = courseRun.courseRunLearners.filter((learner) =>
+        ['ENROLLED'].includes(String(learner.enrollmentStatus || 'ENROLLED'))
+      );
+
+      const baseUrl = process.env.FRONTEND_URL || 'https://tms.polwel.org';
+
+      for (const enrollment of enrolledLearners) {
+        const learner = enrollment.learner;
+        const email = learner?.email?.trim();
+
+        if (!email) continue;
+
+        try {
+          const trainerNames = courseRun.courseRunTrainers
+            .map((ct: any) => ct.trainer?.name)
+            .filter(Boolean)
+            .join(', ');
+
+          const certificateDownloadUrl = `${baseUrl}/api/course-runs/certificates/download/${learner?.id}/${courseRunId}`;
+
+          const emailParams: any = {
+            email,
+            learnerName: learner?.fullname || 'Learner',
+            courseTitle: courseRun.course?.title || 'POLWEL Course',
+            certificateDownloadUrl,
+          };
+
+          if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
+          if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
+          if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
+          if (trainerNames) emailParams.trainerName = trainerNames;
+          if (courseRun.endDatetime) emailParams.completionDate = new Date(courseRun.endDatetime);
+
+          await EmailService.sendCourseCompletionEmail(emailParams);
+
+          console.log(`Sent completion email to ${email}`);
+        } catch (error) {
+          console.error(`Failed to send completion email to ${email}:`, error);
+          // Don't fail the entire completion if email fails
+        }
+      }
+    }
 
     return {
       courseRun: await loadCourseRunWithRelations(prisma, courseRunId),

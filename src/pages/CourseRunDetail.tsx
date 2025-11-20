@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
@@ -149,17 +149,22 @@ const CourseRunDetail: React.FC = () => {
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
 
-  // Trainer Assignment Edit Mode
-  const [isEditingTrainers, setIsEditingTrainers] = useState(false);
+  // Trainer Assignment State (always loaded, no edit mode)
   const [availableTrainers, setAvailableTrainers] = useState<any[]>([]);
   const [trainerAssignments, setTrainerAssignments] = useState<{
     [trainerId: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null };
   }>({});
+  const [initialTrainerAssignments, setInitialTrainerAssignments] = useState<{
+    [trainerId: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null };
+  }>({});
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
 
-  // Partner Assignment Edit Mode
+  // Partner Assignment State (always loaded, no edit mode)
   const [availablePartners, setAvailablePartners] = useState<any[]>([]);
   const [partnerAssignments, setPartnerAssignments] = useState<{
+    [partnerId: string]: { selected: boolean };
+  }>({});
+  const [initialPartnerAssignments, setInitialPartnerAssignments] = useState<{
     [partnerId: string]: { selected: boolean };
   }>({});
 
@@ -247,6 +252,13 @@ const CourseRunDetail: React.FC = () => {
       loadCourseRunDetail();
     }
   }, [id]);
+
+  // Load trainers and partners automatically when course run is loaded
+  useEffect(() => {
+    if (courseRun && courseRun.course?.id) {
+      loadTrainersAndPartners();
+    }
+  }, [courseRun?.id]);
 
   const loadCourseRunDetail = async () => {
     try {
@@ -375,8 +387,17 @@ const CourseRunDetail: React.FC = () => {
     }
   };
 
-  // Trainer Assignment Functions
-  const handleEditTrainers = async () => {
+  // Detect if trainer/partner assignments have changed
+  const hasTrainerChanges = useMemo(() => {
+    const currentState = JSON.stringify(trainerAssignments);
+    const initialState = JSON.stringify(initialTrainerAssignments);
+    const currentPartnerState = JSON.stringify(partnerAssignments);
+    const initialPartnerState = JSON.stringify(initialPartnerAssignments);
+    return currentState !== initialState || currentPartnerState !== initialPartnerState;
+  }, [trainerAssignments, initialTrainerAssignments, partnerAssignments, initialPartnerAssignments]);
+
+  // Trainer Assignment Functions - Load trainers automatically
+  const loadTrainersAndPartners = async () => {
     if (!courseRun) return;
 
     try {
@@ -431,8 +452,9 @@ const CourseRunDetail: React.FC = () => {
       }
 
       setTrainerAssignments(assignments);
+      setInitialTrainerAssignments(JSON.parse(JSON.stringify(assignments))); // Deep copy for comparison
       setPartnerAssignments(partnerAssigns);
-      setIsEditingTrainers(true);
+      setInitialPartnerAssignments(JSON.parse(JSON.stringify(partnerAssigns))); // Deep copy for comparison
     } catch (error) {
       console.error("Error loading trainers and partners:", error);
       toast.error("Failed to load trainers and partners");
@@ -476,7 +498,11 @@ const CourseRunDetail: React.FC = () => {
       }
 
       toast.success("Trainer and partner assignments updated successfully!");
-      setIsEditingTrainers(false);
+
+      // Reset initial state to current state after successful save
+      setInitialTrainerAssignments(JSON.parse(JSON.stringify(trainerAssignments)));
+      setInitialPartnerAssignments(JSON.parse(JSON.stringify(partnerAssignments)));
+
       loadCourseRunDetail();
     } catch (error: any) {
       console.error("Error saving assignments:", error);
@@ -522,9 +548,9 @@ const CourseRunDetail: React.FC = () => {
   };
 
   const handleCancelTrainerEdit = () => {
-    setIsEditingTrainers(false);
-    setTrainerAssignments({});
-    setPartnerAssignments({});
+    // Reset to initial state
+    setTrainerAssignments(JSON.parse(JSON.stringify(initialTrainerAssignments)));
+    setPartnerAssignments(JSON.parse(JSON.stringify(initialPartnerAssignments)));
   };
 
   const toggleTrainerSelection = (trainerId: string) => {
@@ -1404,22 +1430,13 @@ const CourseRunDetail: React.FC = () => {
                     <Mail className="h-4 w-4 mr-2" />
                     Send Trainer Assignment Email
                   </Button>
-                  {!isEditingTrainers ? (
-                    <Button size="sm" onClick={handleEditTrainers}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Trainer Assignment
-                    </Button>
-                  ) : (
-                    <>
-                      <Button variant="outline" size="sm" onClick={handleCancelTrainerEdit}>
-                        Cancel
-                      </Button>
-                      <Button size="sm" onClick={handleSaveTrainerAssignments}>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </Button>
-                    </>
-                  )}
+                  <Button variant="outline" size="sm" onClick={handleCancelTrainerEdit} disabled={!hasTrainerChanges}>
+                    Reset
+                  </Button>
+                  <Button size="sm" onClick={handleSaveTrainerAssignments} disabled={!hasTrainerChanges}>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </Button>
                 </div>
               </div>
 
@@ -1428,207 +1445,117 @@ const CourseRunDetail: React.FC = () => {
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Users className="h-5 w-5 mr-2" />
-                      {isEditingTrainers ? "Select & Configure Trainers" : "Trainer Assignment"}
+                      Select & Configure Trainers
                     </div>
                     <div className="text-sm text-gray-500">
-                      {isEditingTrainers
-                        ? `${Object.values(trainerAssignments).filter((a) => a.selected).length} trainer(s) selected`
-                        : `${courseRun.courseRunTrainers?.length || 0} trainer(s) selected`}
+                      {Object.values(trainerAssignments).filter((a) => a.selected).length} trainer(s) selected
+                      {hasTrainerChanges && <span className="ml-2 text-orange-500">(Unsaved changes)</span>}
                     </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {isEditingTrainers ? (
-                    // EDIT MODE - Accordion style with checkboxes and fee inputs
-                    <>
-                      {availableTrainers.length === 0 ? (
-                        <div className="text-center py-8">
-                          <Users className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
-                          <p className="text-lg font-medium mb-2 text-gray-600">No trainers available</p>
-                          <p className="text-sm text-gray-500">Please add trainers to the course first.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {availableTrainers.map((trainer) => {
-                            const assignment = trainerAssignments[trainer.id] || { selected: false, baseFee: 0, additionalCost: 0 };
-                            const isSelected = assignment.selected;
-
-                            return (
-                              <Card key={trainer.id} className={`p-4 ${isSelected ? "border-blue-500 border-2" : ""}`}>
-                                <div className="flex items-start justify-between mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <input
-                                      type="checkbox"
-                                      checked={isSelected}
-                                      onChange={() => toggleTrainerSelection(trainer.id)}
-                                      className="rounded h-5 w-5 mt-1"
-                                    />
-                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                      <Users className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-medium">{trainer.name}</h4>
-                                      <p className="text-sm text-gray-500">{trainer.partnerOrganization || "Internal Trainer"}</p>
-                                    </div>
-                                  </div>
-                                  <Badge variant={isSelected ? "default" : "secondary"}>{isSelected ? "Selected" : "Available"}</Badge>
-                                </div>
-
-                                {isSelected && (
-                                  <div className="mt-4 space-y-3 pl-14">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <Label className="text-sm font-medium">Base Fee ($)</Label>
-                                        <Input
-                                          id={`trainer-base-${trainer.id}`}
-                                          type="number"
-                                          min="0"
-                                          step="0.01"
-                                          value={assignment.baseFee ?? ""}
-                                          onChange={(e) => {
-                                            const val = e.target.value;
-                                            updateTrainerFee(trainer.id, "baseFee", val === "" ? null : parseFloat(val));
-                                          }}
-                                          placeholder="0.00"
-                                          className="mt-1"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium">Additional Cost ($)</Label>
-                                        <Input
-                                          id={`trainer-add-${trainer.id}`}
-                                          type="number"
-                                          min="0"
-                                          step="0.01"
-                                          value={assignment.additionalCost ?? ""}
-                                          onChange={(e) => {
-                                            const val = e.target.value;
-                                            updateTrainerFee(trainer.id, "additionalCost", val === "" ? null : parseFloat(val));
-                                          }}
-                                          placeholder="0.00"
-                                          className="mt-1"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="border-t pt-3">
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-medium">Total for this trainer:</span>
-                                        <span className="font-medium text-lg text-blue-600">
-                                          {currency(safeNumber(assignment.baseFee, 0) + safeNumber(assignment.additionalCost, 0))}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </Card>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {Object.values(trainerAssignments).some((a) => a.selected) && (
-                        <Card className="bg-blue-50 border-blue-200 mt-4">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-lg font-medium text-blue-800">Assignment Summary</span>
-                              <div className="text-right">
-                                <div className="text-sm text-blue-600">
-                                  {Object.values(trainerAssignments).filter((a) => a.selected).length} trainer(s) assigned
-                                </div>
-                                <div className="text-2xl font-bold text-blue-800">{currency(calculateTotalTrainerFees())}</div>
-                                <div className="text-sm text-blue-600">Total Trainer Fees</div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </>
+                  {/* Always show editable trainer selection */}
+                  {availableTrainers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
+                      <p className="text-lg font-medium mb-2 text-gray-600">No trainers available</p>
+                      <p className="text-sm text-gray-500">Please add trainers to the course first.</p>
+                    </div>
                   ) : (
-                    // READ-ONLY MODE
-                    <>
-                      {courseRun.courseRunTrainers?.length > 0 ? (
-                        courseRun.courseRunTrainers.map((assignment) => (
-                          <Card key={assignment.id} className="p-4">
-                            <div className="flex items-start justify-between">
+                    <div className="space-y-3">
+                      {availableTrainers.map((trainer) => {
+                        const assignment = trainerAssignments[trainer.id] || { selected: false, baseFee: 0, additionalCost: 0 };
+                        const isSelected = assignment.selected;
+
+                        return (
+                          <Card key={trainer.id} className={`p-4 ${isSelected ? "border-blue-500 border-2" : ""}`}>
+                            <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center gap-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleTrainerSelection(trainer.id)}
+                                  className="rounded h-5 w-5 mt-1"
+                                />
                                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                                   <Users className="h-5 w-5 text-blue-600" />
                                 </div>
                                 <div>
-                                  <h4 className="font-medium">{assignment.trainer.name}</h4>
-                                  <p className="text-sm text-gray-500">{assignment.trainer.partnerOrganization || "Internal Trainer"}</p>
+                                  <h4 className="font-medium">{trainer.name}</h4>
+                                  <p className="text-sm text-gray-500">{trainer.partnerOrganization || "Internal Trainer"}</p>
                                 </div>
                               </div>
-                              <Badge variant="default">Selected</Badge>
+                              <Badge variant={isSelected ? "default" : "secondary"}>{isSelected ? "Selected" : "Available"}</Badge>
                             </div>
 
-                            <div className="mt-4 space-y-3">
-                              <div>
-                                <Label className="text-sm font-medium">Trainer Fees</Label>
-                                <div className="mt-1">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm">Base Fee</span>
-                                    <span className="text-sm font-medium">{currency(assignment.trainerBaseAmount || 0)}</span>
+                            {isSelected && (
+                              <div className="mt-4 space-y-3 pl-14">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-sm font-medium">Base Fee ($)</Label>
+                                    <Input
+                                      id={`trainer-base-${trainer.id}`}
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={assignment.baseFee ?? ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        updateTrainerFee(trainer.id, "baseFee", val === "" ? null : parseFloat(val));
+                                      }}
+                                      placeholder="0.00"
+                                      className="mt-1"
+                                    />
                                   </div>
-                                  {assignment.additionalCost > 0 && (
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-sm">Additional Cost</span>
-                                      <span className="text-sm font-medium">{currency(assignment.additionalCost || 0)}</span>
-                                    </div>
-                                  )}
+                                  <div>
+                                    <Label className="text-sm font-medium">Additional Cost ($)</Label>
+                                    <Input
+                                      id={`trainer-add-${trainer.id}`}
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={assignment.additionalCost ?? ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        updateTrainerFee(trainer.id, "additionalCost", val === "" ? null : parseFloat(val));
+                                      }}
+                                      placeholder="0.00"
+                                      className="mt-1"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="border-t pt-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">Total for this trainer:</span>
+                                    <span className="font-medium text-lg text-blue-600">
+                                      {currency(safeNumber(assignment.baseFee, 0) + safeNumber(assignment.additionalCost, 0))}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-
-                              {assignment.remarks && (
-                                <div>
-                                  <Label className="text-sm font-medium">Remarks</Label>
-                                  <p className="text-sm text-gray-600 mt-1">{assignment.remarks}</p>
-                                  <p className="text-xs text-gray-500 mt-1">Remarks cannot be edited</p>
-                                </div>
-                              )}
-
-                              <div className="border-t pt-3">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium">Total for this trainer:</span>
-                                  <span className="font-medium">
-                                    {currency(safeNumber(assignment.trainerBaseAmount, 0) + safeNumber(assignment.additionalCost, 0))}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
+                            )}
                           </Card>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <Users className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
-                          <p className="text-lg font-medium mb-2 text-gray-600">No trainers assigned</p>
-                          <p className="text-sm text-gray-500">Assign trainers to this course run.</p>
-                        </div>
-                      )}
+                        );
+                      })}
+                    </div>
+                  )}
 
-                      {courseRun.courseRunTrainers?.length > 0 && (
-                        <Card className="bg-blue-50 border-blue-200">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-lg font-medium text-blue-800">Assignment Summary</span>
-                              <div className="text-right">
-                                <div className="text-sm text-blue-600">{courseRun.courseRunTrainers.length} trainer(s) assigned</div>
-                                <div className="text-2xl font-bold text-blue-800">
-                                  {currency(
-                                    courseRun.courseRunTrainers.reduce(
-                                      (sum, t) => sum + safeNumber(t.trainerBaseAmount, 0) + safeNumber(t.additionalCost, 0),
-                                      0
-                                    )
-                                  )}
-                                </div>
-                                <div className="text-sm text-blue-600">Total Trainer Fees</div>
-                              </div>
+                  {Object.values(trainerAssignments).some((a) => a.selected) && (
+                    <Card className="bg-blue-50 border-blue-200 mt-4">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-medium text-blue-800">Assignment Summary</span>
+                          <div className="text-right">
+                            <div className="text-sm text-blue-600">
+                              {Object.values(trainerAssignments).filter((a) => a.selected).length} trainer(s) assigned
                             </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </>
+                            <div className="text-2xl font-bold text-blue-800">{currency(calculateTotalTrainerFees())}</div>
+                            <div className="text-sm text-blue-600">Total Trainer Fees</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
                 </CardContent>
               </Card>
@@ -1639,100 +1566,64 @@ const CourseRunDetail: React.FC = () => {
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Building className="h-5 w-5 mr-2" />
-                      {isEditingTrainers ? "Select Partners" : "Partner Assignment"}
+                      Select Partners
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {isEditingTrainers
-                        ? `${Object.values(partnerAssignments).filter((a) => a.selected).length} partner(s) selected`
-                        : `${courseRun.courseRunPartners?.length || 0} partner(s) assigned`}
-                    </div>
+                    <div className="text-sm text-gray-500">{Object.values(partnerAssignments).filter((a) => a.selected).length} partner(s) selected</div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {isEditingTrainers ? (
-                    // EDIT MODE - Checkbox selection for partners (NO fee fields)
-                    <>
-                      {availablePartners.length === 0 ? (
-                        <div className="text-center py-8">
-                          <Building className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
-                          <p className="text-lg font-medium mb-2 text-gray-600">No partners available</p>
-                          <p className="text-sm text-gray-500">Please add partners to the course first.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {availablePartners.map((partner) => {
-                            const isSelected = partnerAssignments[partner.id]?.selected || false;
-
-                            return (
-                              <Card key={partner.id} className={`p-4 ${isSelected ? "border-green-500 border-2" : ""}`}>
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <input
-                                      type="checkbox"
-                                      checked={isSelected}
-                                      onChange={() => togglePartnerSelection(partner.id)}
-                                      className="rounded h-5 w-5 mt-1"
-                                    />
-                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                      <Building className="h-5 w-5 text-green-600" />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-medium">{partner.name}</h4>
-                                      <p className="text-sm text-gray-500">{partner.email}</p>
-                                    </div>
-                                  </div>
-                                  <Badge variant={isSelected ? "default" : "secondary"}>{isSelected ? "Selected" : "Available"}</Badge>
-                                </div>
-                              </Card>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {Object.values(partnerAssignments).some((a) => a.selected) && (
-                        <Card className="bg-green-50 border-green-200 mt-4">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-lg font-medium text-green-800">Partner Assignment Summary</span>
-                              <div className="text-right">
-                                <div className="text-xl font-bold text-green-800">
-                                  {Object.values(partnerAssignments).filter((a) => a.selected).length} partner(s) assigned
-                                </div>
-                                <div className="text-sm text-green-600">No fees for partners</div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </>
+                  {/* Always show editable partner selection */}
+                  {availablePartners.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Building className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
+                      <p className="text-lg font-medium mb-2 text-gray-600">No partners available</p>
+                      <p className="text-sm text-gray-500">Please add partners to the course first.</p>
+                    </div>
                   ) : (
-                    // READ-ONLY MODE
-                    <>
-                      {courseRun.courseRunPartners && courseRun.courseRunPartners.length > 0 ? (
-                        courseRun.courseRunPartners.map((assignment) => (
-                          <Card key={assignment.id} className="p-4">
+                    <div className="space-y-3">
+                      {availablePartners.map((partner) => {
+                        const isSelected = partnerAssignments[partner.id]?.selected || false;
+
+                        return (
+                          <Card key={partner.id} className={`p-4 ${isSelected ? "border-green-500 border-2" : ""}`}>
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => togglePartnerSelection(partner.id)}
+                                  className="rounded h-5 w-5 mt-1"
+                                />
                                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                                   <Building className="h-5 w-5 text-green-600" />
                                 </div>
                                 <div>
-                                  <h4 className="font-medium">{assignment.partner.name}</h4>
-                                  <p className="text-sm text-gray-500">{assignment.partner.email}</p>
+                                  <h4 className="font-medium">{partner.name}</h4>
+                                  <p className="text-sm text-gray-500">{partner.email}</p>
                                 </div>
                               </div>
-                              <Badge variant="default">Assigned</Badge>
+                              <Badge variant={isSelected ? "default" : "secondary"}>{isSelected ? "Selected" : "Available"}</Badge>
                             </div>
                           </Card>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <Building className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
-                          <p className="text-lg font-medium mb-2 text-gray-600">No partners assigned</p>
-                          <p className="text-sm text-gray-500">Assign partners to this course run if needed.</p>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {Object.values(partnerAssignments).some((a) => a.selected) && (
+                    <Card className="bg-green-50 border-green-200 mt-4">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-medium text-green-800">Partner Assignment Summary</span>
+                          <div className="text-right">
+                            <div className="text-xl font-bold text-green-800">
+                              {Object.values(partnerAssignments).filter((a) => a.selected).length} partner(s) assigned
+                            </div>
+                            <div className="text-sm text-green-600">No fees for partners</div>
+                          </div>
                         </div>
-                      )}
-                    </>
+                      </CardContent>
+                    </Card>
                   )}
                 </CardContent>
               </Card>
@@ -1775,19 +1666,11 @@ const CourseRunDetail: React.FC = () => {
                     <CardTitle className="text-sm">Expenses</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Contract Fees */}
+                    {/* Contract Fees - Always Disabled (Auto-calculated from trainer fees) */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Contract Fees ($)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={isEditing ? editData?.contractFees : courseRun.contractFees ?? ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("contractFees", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
-                      <p className="text-xs text-gray-500">Contract/trainer fees paid out</p>
+                      <Input type="number" step="0.01" min="0" value={courseRun.contractFees ?? ""} disabled={true} className="bg-gray-50" />
+                      <p className="text-xs text-gray-500">Auto-calculated from trainer assignments (read-only)</p>
                     </div>
 
                     {/* Additional Cost Exceeding Capacity */}

@@ -40,6 +40,7 @@ async function main() {
       contactEmail: 'contact@spf.gov.sg',
       contactPhone: '+65 6355 0000',
       buNumber: 'SPF-MAIN-001',
+      organizationType: 'SPF',
       status: UserStatus.ACTIVE,
     },
   });
@@ -51,6 +52,7 @@ async function main() {
       contactEmail: 'contact@spf.gov.sg',
       contactPhone: '+65 6555 0001',
       buNumber: 'SPF-AMK-001',
+      organizationType: 'SPF',
       // divisionAddress: 'Ang Mo Kio Police Division HQ, Singapore',
       status: UserStatus.ACTIVE,
     },
@@ -63,6 +65,7 @@ async function main() {
       contactEmail: 'contact@spf.gov.sg',
       contactPhone: '+65 6555 0002',
       buNumber: 'SPF-CCK-001',
+      organizationType: 'SPF',
       // divisionAddress: 'Choa Chu Kang Police Division HQ, Singapore',
       status: UserStatus.ACTIVE,
     },
@@ -378,28 +381,8 @@ async function main() {
       prerequisites: ['2+ years management experience recommended'],
       materials: ['Leadership Workbook', 'Case Studies', 'Assessment Tools', 'Action Planning Templates'],
       // status: CourseStatus.ACTIVE,
-      venue: 'Main Training Room',
       certificates: 'polwel',
       remarks: 'Course will be postponed if minimum participants not met',
-      courseOutline: JSON.stringify({
-        "modules": [
-          {
-            "module": "Module 1: Leadership Foundations", 
-            "duration": "Day 1",
-            "topics": ["Leadership styles and approaches", "Self-assessment and awareness", "Building trust and credibility"]
-          },
-          {
-            "module": "Module 2: Communication & Influence",
-            "duration": "Day 2", 
-            "topics": ["Effective communication strategies", "Influencing without authority", "Active listening and feedback"]
-          },
-          {
-            "module": "Module 3: Team Leadership",
-            "duration": "Day 3",
-            "topics": ["Team building and motivation", "Performance management", "Action planning and implementation"]
-          }
-        ]
-      }),
       targetAudience: 'Middle managers, team leaders, and aspiring executives',
   defaultCourseFee: 800.0,
   venueFee: 150.0,
@@ -429,23 +412,8 @@ async function main() {
       prerequisites: ['None - open to all levels'],
       materials: ['EQ Assessment Tools', 'Practical Exercises', 'Reference Guide'],
       // status: CourseStatus.ACTIVE,
-      venue: 'Conference Hall A',
       certificates: 'partner',
       remarks: '',
-      courseOutline: JSON.stringify({
-        "modules": [
-          {
-            "module": "Morning Session: EQ Foundations",
-            "duration": "4 hours",
-            "topics": ["Understanding emotional intelligence", "Self-awareness techniques", "Emotional triggers identification"]
-          },
-          {
-            "module": "Afternoon Session: Practical Application", 
-            "duration": "4 hours",
-            "topics": ["Empathy building exercises", "Communication under pressure", "Workplace EQ scenarios"]
-          }
-        ]
-      }),
       targetAudience: 'All professionals seeking to improve interpersonal skills',
   defaultCourseFee: 300.0,
     venueFee: 80.0,
@@ -475,23 +443,8 @@ async function main() {
       prerequisites: ['Senior management experience', 'Strategic planning background'],
       materials: ['Strategy Toolkit', 'Case Study Collection', 'Planning Templates'],
       // status: CourseStatus.DRAFT,
-      venue: 'Online Platform',
       certificates: 'polwel',
       remarks: 'Hybrid delivery with online and in-person components',
-      courseOutline: JSON.stringify({
-        "modules": [
-          {
-            "module": "Day 1: Strategic Analysis",
-            "duration": "8 hours", 
-            "topics": ["SWOT and competitive analysis", "Market dynamics", "Strategic frameworks"]
-          },
-          {
-            "module": "Day 2: Strategy Implementation",
-            "duration": "8 hours",
-            "topics": ["Action planning", "Risk assessment", "Performance metrics", "Change management"]
-          }
-        ]
-      }),
       targetAudience: 'Senior managers, directors, and strategic planning professionals',
   defaultCourseFee: 600.0,
     venueFee: 0.0, // Online delivery
@@ -521,23 +474,8 @@ async function main() {
       prerequisites: ['Open to all - no prerequisites'],
       materials: ['Mindset Assessment', 'Personal Development Plan', 'Resource Library'],
       // status: CourseStatus.ACTIVE,
-      venue: 'Main Training Room',
       certificates: 'no',
       remarks: 'Highly interactive workshop with practical exercises',
-      courseOutline: JSON.stringify({
-        "modules": [
-          {
-            "module": "Session 1: Mindset Foundations",
-            "duration": "3 hours",
-            "topics": ["Fixed vs Growth mindset", "Neuroscience of learning", "Self-assessment tools"]
-          },
-          {
-            "module": "Session 2: Practical Application",
-            "duration": "3 hours", 
-            "topics": ["Overcoming limiting beliefs", "Goal setting strategies", "Action planning"]
-          }
-        ]
-      }),
       targetAudience: 'All employees seeking personal and professional development',
   defaultCourseFee: 250.0,
     venueFee: 50.0,

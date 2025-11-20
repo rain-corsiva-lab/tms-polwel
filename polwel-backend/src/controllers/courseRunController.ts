@@ -1320,6 +1320,86 @@ export const courseRunController = {
         deletedAt: courseRun.deletedAt,
       });
 
+      // Send cancellation emails to learners and trainers
+      try {
+        // Fetch enrolled learners
+        const enrollments = await prisma.courseRunLearner.findMany({
+          where: {
+            courseRunId: id,
+            enrollmentStatus: { not: 'WITHDRAWN' },
+          },
+          include: {
+            learner: {
+              select: {
+                id: true,
+                fullname: true,
+                email: true,
+              },
+            },
+          },
+        });
+
+        // Fetch assigned trainers
+        const trainers = await prisma.courseRunTrainer.findMany({
+          where: { courseRunId: id },
+          include: {
+            trainer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        });
+
+        // Send emails to learners
+        const learnerEmailPromises = enrollments.map((enrollment) => {
+          const emailParams: any = {
+            email: enrollment.learner.email ?? '',
+            learnerName: enrollment.learner.fullname,
+            courseTitle: courseRun.course?.title || 'Course',
+            cancellationReason: reason || 'unforeseen circumstances',
+          };
+          if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
+          if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
+          if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
+          if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
+          if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
+          
+          return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
+            console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
+            return false;
+          });
+        });
+
+        // Send emails to trainers
+        const trainerEmailPromises = trainers.map((trainerAssignment) => {
+          const emailParams: any = {
+            email: trainerAssignment.trainer.email ?? '',
+            learnerName: trainerAssignment.trainer.name ?? 'Trainer',
+            courseTitle: courseRun.course?.title || 'Course',
+            cancellationReason: reason || 'unforeseen circumstances',
+          };
+          if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
+          if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
+          if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
+          if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
+          if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
+          
+          return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
+            console.error(`Failed to send cancellation email to trainer ${trainerAssignment.trainer.email}:`, err);
+            return false;
+          });
+        });
+
+        await Promise.all([...learnerEmailPromises, ...trainerEmailPromises]);
+        console.log(`Sent cancellation emails to ${enrollments.length} learners and ${trainers.length} trainers`);
+      } catch (emailError) {
+        console.error('Error sending cancellation emails:', emailError);
+        // Don't fail the cancellation if emails fail
+      }
+
       res.json({
         success: true,
         courseRun: {
@@ -4136,6 +4216,79 @@ export const courseRunController = {
       if (!res.headersSent) {
         res.status(500).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'Failed to generate certificates ZIP', error));
       }
+    }
+  },
+
+  downloadCertificatePublic: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { learnerId, courseRunId } = req.params;
+
+      if (!learnerId || !courseRunId) {
+        res.status(400).json(buildErrorResponse('courseRunController.downloadCertificatePublic', 'Learner ID and course run ID are required', new Error('Missing IDs')));
+        return;
+      }
+
+      // Find the enrollment
+      const enrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          learnerId,
+          courseRunId,
+          enrollmentStatus: 'ENROLLED',
+          deletedAt: null,
+        },
+        include: {
+          learner: {
+            select: {
+              fullname: true,
+            },
+          },
+          courseRun: {
+            include: {
+              course: {
+                select: {
+                  title: true,
+                  courseCode: true,
+                  duration: true,
+                  durationType: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!enrollment) {
+        res.status(404).json(buildErrorResponse('courseRunController.downloadCertificatePublic', 'Certificate not found', new Error('Enrollment not found')));
+        return;
+      }
+
+      // Check if course run is completed
+      if (enrollment.courseRun.status !== 'COMPLETED') {
+        res.status(400).json(buildErrorResponse('courseRunController.downloadCertificatePublic', 'Certificate not available yet', new Error('Course not completed')));
+        return;
+      }
+
+      const certificateData = {
+        learnerName: enrollment.learner.fullname,
+        courseName: enrollment.courseRun.course.title,
+        duration: Number(enrollment.courseRun.course.duration) || 0,
+        durationType: enrollment.courseRun.course.durationType || 'hours',
+        endDate: enrollment.courseRun.endDatetime ? new Date(enrollment.courseRun.endDatetime) : new Date(),
+        courseCode: enrollment.courseRun.course.courseCode ?? '',
+      };
+
+      const pdfBuffer = await buildCertificatePDFBuffer(certificateData);
+
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="Certificate_${certificateData.learnerName.replace(/[^a-z0-9]+/gi, '_')}.pdf"`,
+        'Content-Length': pdfBuffer.length,
+      });
+
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error in downloadCertificatePublic:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.downloadCertificatePublic', 'Failed to download certificate', error));
     }
   },
 

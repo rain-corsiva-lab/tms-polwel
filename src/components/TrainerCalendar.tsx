@@ -72,13 +72,19 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
       const startOfMonth = new Date(monthRef.getFullYear(), monthRef.getMonth(), 1);
       const endOfMonth = new Date(monthRef.getFullYear(), monthRef.getMonth() + 1, 0);
 
+      // Expand date range to include previous and next months to catch overlapping date ranges
+      const expandedStart = new Date(startOfMonth);
+      expandedStart.setMonth(expandedStart.getMonth() - 1);
+      const expandedEnd = new Date(endOfMonth);
+      expandedEnd.setMonth(expandedEnd.getMonth() + 2);
+
       // Load blockouts and course runs
       const [blockoutsResponse, courseRunsResponse] = await Promise.all([
-        getTrainerBlockouts(trainerId, startOfMonth.toISOString().split("T")[0], endOfMonth.toISOString().split("T")[0]),
+        getTrainerBlockouts(trainerId, expandedStart.toISOString().split("T")[0], expandedEnd.toISOString().split("T")[0]),
         isSelfTrainer
           ? trainerDashboardApi.getCourseRuns({
-              startDate: startOfMonth.toISOString().split("T")[0],
-              endDate: endOfMonth.toISOString().split("T")[0],
+              startDate: expandedStart.toISOString().split("T")[0],
+              endDate: expandedEnd.toISOString().split("T")[0],
             })
           : getTrainerCourseRuns(trainerId),
       ]);
@@ -343,7 +349,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
         if (status === "CONFIRMED_PENDING_TA_APPROVAL") {
           tentativeDates.push(dateToAdd);
         }
-        // Scheduled Course: CONFIRMED, CONFIRMED_PENDING_CONFIRMATION_EMAILS, ACTIVE, IN_PROGRESS, PENDING_BILLING, COMPLETED
+        // Confirmed: CONFIRMED, CONFIRMED_PENDING_CONFIRMATION_EMAILS, ACTIVE, IN_PROGRESS, PENDING_BILLING, COMPLETED
         else if (["CONFIRMED", "CONFIRMED_PENDING_CONFIRMATION_EMAILS", "ACTIVE", "IN_PROGRESS", "PENDING_BILLING", "COMPLETED"].includes(status)) {
           scheduledDates.push(dateToAdd);
         }
@@ -363,7 +369,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
   const calendarModifiersClassNames = {
     blocked: "bg-red-100 text-red-900 hover:bg-red-200",
     scheduled: "bg-green-100 text-green-900 hover:bg-green-200",
-    tentative: "bg-yellow-100 text-yellow-900 hover:bg-yellow-200",
+    tentative: "bg-orange-100 text-orange-900 hover:bg-orange-200",
   };
 
   if (loading) {
@@ -416,10 +422,10 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
             <div className="flex items-center space-x-4 flex-wrap gap-y-2">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span>Scheduled Course</span>
+                <span>Confirmed</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                <div className="w-3 h-3 bg-orange-500 rounded"></div>
                 <span>Tentative</span>
               </div>
               <div className="flex items-center space-x-2">

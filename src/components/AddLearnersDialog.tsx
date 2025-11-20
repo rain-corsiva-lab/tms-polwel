@@ -34,6 +34,7 @@ interface Organization {
   id: string;
   name: string;
   buNumber?: string;
+  organizationType?: string;
 }
 
 interface TrainingCoordinator {
@@ -68,6 +69,7 @@ interface SingleRegistrationData {
   designation: string;
   email: string;
   contactNumber: string;
+  organizationType: string;
   division: string;
   departmentName: string;
   buNumber: string;
@@ -93,6 +95,7 @@ interface GroupLearnerData {
 }
 
 interface GroupRegistrationData {
+  organizationType: string;
   division: string;
   departmentName: string;
   buNumber: string;
@@ -289,6 +292,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     designation: "",
     email: "",
     contactNumber: "",
+    organizationType: "",
     division: "",
     departmentName: "",
     buNumber: "",
@@ -307,6 +311,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
   // Group Registration State
   const [groupData, setGroupData] = useState<GroupRegistrationData>({
+    organizationType: "",
     division: "",
     departmentName: "",
     buNumber: "",
@@ -354,6 +359,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           id: org.id,
           name: org.name,
           buNumber: org.buNumber || "",
+          organizationType: org.organizationType || "POLWEL",
         }))
       );
     } catch (error) {
@@ -1156,11 +1162,21 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
     description: [learner.email, learner.clientOrganizationName].filter(Boolean).join(" • "),
   }));
 
-  const organizationOptions: SearchableSelectOption[] = (organizations || []).map((org) => ({
+  // Filter organizations by selected type
+  const filteredOrganizations = data.organizationType ? (organizations || []).filter((org) => org.organizationType === data.organizationType) : [];
+
+  const organizationOptions: SearchableSelectOption[] = filteredOrganizations.map((org) => ({
     value: org.id,
     label: org.name,
     description: org.buNumber ? `BU: ${org.buNumber}` : undefined,
   }));
+
+  const organizationTypeOptions: SearchableSelectOption[] = [
+    { value: "SPF", label: "SPF" },
+    { value: "POLWEL", label: "POLWEL" },
+    { value: "PUBLIC_SECTOR", label: "Public Sector" },
+    { value: "PRIVATE_SECTOR", label: "Private Sector" },
+  ];
 
   const coordinatorOptions: SearchableSelectOption[] = (coordinators || []).map((coord) => ({
     value: coord.id,
@@ -1251,17 +1267,38 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label>Organisation Type *</Label>
+              <SearchableSelect
+                value={data.organizationType}
+                onValueChange={(value) => {
+                  setData((prev) => ({
+                    ...prev,
+                    organizationType: value,
+                    division: "", // Reset division when type changes
+                    buNumber: "",
+                    trainingCoordinatorId: "",
+                    trainingCoordinatorEmail: "",
+                    trainingCoordinatorPhone: "",
+                  }));
+                  setCoordinators([]); // Clear coordinators
+                }}
+                options={organizationTypeOptions}
+                placeholder="Select organisation type"
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Division *</Label>
               <SearchableSelect
                 value={data.division}
                 onValueChange={onOrganizationChange}
                 options={organizationOptions}
                 placeholder="Select division"
-                disabled={isFieldDisabled("division")}
+                disabled={!data.organizationType || isFieldDisabled("division")}
+                emptyMessage={!data.organizationType ? "Select organisation type first" : "No divisions found"}
               />
             </div>
             <div className="space-y-2">
-              <Label>Department</Label>
+              <Label>Department (Optional)</Label>
               <Input
                 value={data.departmentName}
                 onChange={(e) => setData((prev) => ({ ...prev, departmentName: e.target.value }))}
@@ -1398,11 +1435,21 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
   onAddLearner,
   onRemoveLearner,
 }) => {
-  const organizationOptions: SearchableSelectOption[] = (organizations || []).map((org) => ({
+  // Filter organizations by selected type
+  const filteredOrganizations = data.organizationType ? (organizations || []).filter((org) => org.organizationType === data.organizationType) : [];
+
+  const organizationOptions: SearchableSelectOption[] = filteredOrganizations.map((org) => ({
     value: org.id,
     label: org.name,
     description: org.buNumber ? `BU: ${org.buNumber}` : undefined,
   }));
+
+  const organizationTypeOptions: SearchableSelectOption[] = [
+    { value: "SPF", label: "SPF" },
+    { value: "POLWEL", label: "POLWEL" },
+    { value: "PUBLIC_SECTOR", label: "Public Sector" },
+    { value: "PRIVATE_SECTOR", label: "Private Sector" },
+  ];
 
   const coordinatorOptions: SearchableSelectOption[] = (coordinators || []).map((coord) => ({
     value: coord.id,
@@ -1441,11 +1488,37 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Division *</Label>
-            <SearchableSelect value={data.division} onValueChange={onOrganizationChange} options={organizationOptions} placeholder="Select division" />
+            <Label>Organisation Type *</Label>
+            <SearchableSelect
+              value={data.organizationType}
+              onValueChange={(value) => {
+                setData((prev) => ({
+                  ...prev,
+                  organizationType: value,
+                  division: "", // Reset division when type changes
+                  buNumber: "",
+                  trainingCoordinatorId: "",
+                  trainingCoordinatorEmail: "",
+                  trainingCoordinatorPhone: "",
+                }));
+              }}
+              options={organizationTypeOptions}
+              placeholder="Select organisation type"
+            />
           </div>
           <div className="space-y-2">
-            <Label>Department</Label>
+            <Label>Division *</Label>
+            <SearchableSelect
+              value={data.division}
+              onValueChange={onOrganizationChange}
+              options={organizationOptions}
+              placeholder="Select division"
+              disabled={!data.organizationType}
+              emptyMessage={!data.organizationType ? "Select organisation type first" : "No divisions found"}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Department (Optional)</Label>
             <Input
               value={data.departmentName}
               onChange={(e) => setData((prev) => ({ ...prev, departmentName: e.target.value }))}
