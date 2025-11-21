@@ -4,14 +4,17 @@ import { PERMISSIONS } from './upsertMissingPermissions';
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'kukuhthewow@gmail.com';
-  console.log(`Granting all permissions to ${email}...`);
+  const targetEmails = ['kukuhthewow@gmail.com', 'celine.ng@corsivalab.com'];
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    console.error(`User with email ${email} not found`);
-    process.exit(1);
-  }
+  for (const email of targetEmails) {
+    console.log(`Granting all permissions to ${email}...`);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      console.error(`User with email ${email} not found`);
+      // continue to next email instead of exiting so other targets can proceed
+      continue;
+    }
 
   const canonicalNames = new Set(PERMISSIONS.map((p) => p.name));
   const perms = await prisma.permission.findMany({
@@ -28,21 +31,22 @@ async function main() {
     console.warn('⚠️ Missing canonical permissions in DB, please run upsertMissingPermissions:', missing);
   }
 
-  // Delete existing userPermission rows for the user to avoid duplicates
-  await prisma.userPermission.deleteMany({ where: { userId: user.id } });
+    // Delete existing userPermission rows for the user to avoid duplicates
+    await prisma.userPermission.deleteMany({ where: { userId: user.id } });
 
-  const creates = perms.map(p => ({
-    userId: user.id,
-    permissionName: p.name,
-    granted: true,
-  }));
+    const creates = perms.map(p => ({
+      userId: user.id,
+      permissionName: p.name,
+      granted: true,
+    }));
 
-  // Create many
-  for (const c of creates) {
-    await prisma.userPermission.create({ data: c });
+    // Create many
+    for (const c of creates) {
+      await prisma.userPermission.create({ data: c });
+    }
+
+    console.log(`Granted ${creates.length} permissions to ${email}`);
   }
-
-  console.log(`Granted ${creates.length} permissions to ${email}`);
 }
 
 main()

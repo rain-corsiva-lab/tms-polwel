@@ -123,6 +123,21 @@ async function main() {
     },
   });
 
+  // Create Admin user for CorsivaLab
+  const celineNg = await prisma.user.create({
+    data: {
+      email: 'celine.ng@corsivalab.com',
+      password: hashedPassword,
+      name: 'Celine Ng',
+      role: UserRole.POLWEL,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      permissionLevel: 'Administrator',
+      designation: 'Administrator',
+      lastLogin: new Date(),
+    },
+  });
+
   // Create Training Coordinators
   const maryLim = await prisma.user.create({
     data: {
@@ -628,6 +643,19 @@ async function main() {
 
   console.log('🔐 Created permissions');
 
+  // Grant all permissions to the CorsivaLab admin user if present
+  try {
+    const allPermissions = await prisma.permission.findMany();
+    if (celineNg) {
+      for (const p of allPermissions) {
+        await prisma.userPermission.create({ data: { userId: celineNg.id, permissionName: p.name, granted: true } });
+      }
+      console.log(`✅ Granted ${allPermissions.length} permissions to ${celineNg.email}`);
+    }
+  } catch (err) {
+    console.warn('Failed to grant permissions to celine.ng@corsivalab.com', err);
+  }
+
   // Create System Settings
   const systemSettings = [
     { key: 'site_name', value: 'POLWEL Training Management System', description: 'Application name' },
@@ -768,7 +796,6 @@ async function main() {
       email: 'rajesh.kumar@spf.gov.sg',
       contact: '91234567',
       clientOrganizationId: angMoKioDiv.id,
-      paymentMode: 'ULTF',
       departmentName: 'Operations Department',
       trainingCoordinatorId: maryLim.id,
     },
@@ -781,7 +808,6 @@ async function main() {
       email: 'lisa.tan@spf.gov.sg',
       contact: '91234568',
       clientOrganizationId: angMoKioDiv.id,
-      paymentMode: 'ULTF',
       departmentName: 'Investigation Department',
       trainingCoordinatorId: maryLim.id,
     },
@@ -794,7 +820,6 @@ async function main() {
       email: 'ahmad.farid@spf.gov.sg',
       contact: '91234569',
       clientOrganizationId: angMoKioDiv.id,
-      paymentMode: 'TRANSITION_DOLLARS',
       departmentName: 'Traffic Police',
       trainingCoordinatorId: maryLim.id,
     },
@@ -807,7 +832,6 @@ async function main() {
       email: 'michelle.loh@spf.gov.sg',
       contact: '91234570',
       clientOrganizationId: angMoKioDiv.id,
-      paymentMode: 'ULTF',
       departmentName: 'Community Policing',
       trainingCoordinatorId: maryLim.id,
     },
@@ -820,7 +844,6 @@ async function main() {
       email: 'david.wong@spf.gov.sg',
       contact: '91234571',
       clientOrganizationId: choaChuKangDiv.id,
-      paymentMode: 'TRANSITION_DOLLARS',
       departmentName: 'Criminal Investigation',
       trainingCoordinatorId: ahmadRahman.id,
     },
@@ -833,7 +856,6 @@ async function main() {
       email: 'sarah.kim@spf.gov.sg',
       contact: '91234572',
       clientOrganizationId: choaChuKangDiv.id,
-      paymentMode: 'ULTF',
       departmentName: 'Patrol Division',
       trainingCoordinatorId: ahmadRahman.id,
     },
@@ -846,7 +868,6 @@ async function main() {
       email: 'james.teo@spf.gov.sg',
       contact: '91234573',
       clientOrganizationId: choaChuKangDiv.id,
-      paymentMode: 'TRANSITION_DOLLARS',
       departmentName: 'Neighbourhood Police',
       trainingCoordinatorId: ahmadRahman.id,
     },
@@ -859,7 +880,6 @@ async function main() {
       email: 'rachel.lee@spf.gov.sg',
       contact: '91234574',
       clientOrganizationId: choaChuKangDiv.id,
-      paymentMode: 'ULTF',
       departmentName: 'Special Operations',
       trainingCoordinatorId: ahmadRahman.id,
     },
