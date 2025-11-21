@@ -52,6 +52,15 @@ interface SearchableSelectProps {
   className?: string;
 }
 
+// Mapping from display labels to enum values
+const PAYMENT_MODES_MAP: Record<string, string> = {
+  "Self-Payment": "SELF_SPONSORED",
+  "Transition Dollar (TS)": "TRANSITION_DOLLARS",
+  "Unit Local Training Fund (ULTF)": "ULTF",
+  "Company-Sponsored (Non-Home Team)": "COMPANY_BILLING",
+  "Polwel Training Subsidy": "GOVERNMENT_FUNDING",
+};
+
 const PAYMENT_MODES = [
   "Self-Payment",
   "Transition Dollar (TS)",
@@ -351,7 +360,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
   }));
 
   const paymentModeOptions: SearchableSelectOption[] = PAYMENT_MODES.map((mode) => ({
-    value: mode,
+    value: PAYMENT_MODES_MAP[mode],
     label: mode,
   }));
 
@@ -403,10 +412,10 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
           contactNumber: form.contactNumber,
           division: form.division,
           departmentName: form.departmentName,
-          paymentMode: form.paymentMode,
           trainingCoordinatorId: form.trainingCoordinatorId,
         },
         enrollmentData: {
+          paymentMode: form.paymentMode,
           discountId: form.discountId === "none" ? null : form.discountId,
           discountPercentage: form.discountPercentage,
           currentDefaultCourseFee: form.currentDefaultCourseFee,

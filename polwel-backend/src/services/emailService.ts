@@ -107,7 +107,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
                     <tr>
                       <td class="header">
-                        <h1>🎯 Welcome to POLWEL!</h1>
+                        <h1>&#127919; Welcome to POLWEL!</h1>
                         <p>Complete Your Trainer Account Setup</p>
                       </td>
                     </tr>
@@ -215,7 +215,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
                     <tr>
                       <td class="header">
-                        <h1>📋 Welcome to POLWEL!</h1>
+                        <h1>&#128203; Welcome to POLWEL!</h1>
                         <p>Complete Your Training Coordinator Setup</p>
                       </td>
                     </tr>
@@ -224,7 +224,7 @@ class EmailService {
                         <p class="greeting">Hello ${name},</p>
                         <p class="meta">Welcome to the POLWEL Training Management System! You've been added as a Training Coordinator for:</p>
                         <div style="text-align: center;">
-                          <span class="org-badge">🏢 ${organizationName}</span>
+                          <span class="org-badge">&#127970; ${organizationName}</span>
                         </div>
                         <div class="button-card">
                           <a href="${setupUrl}" class="button">Complete Coordinator Setup</a>
@@ -326,7 +326,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
                     <tr>
                       <td class="header">
-                        <h1>🔒 Password Reset Request</h1>
+                        <h1>&#128274; Password Reset Request</h1>
                         <p>POLWEL Training Management System</p>
                       </td>
                     </tr>
@@ -345,7 +345,7 @@ class EmailService {
                             <li><span>3</span><div>Never share your password with anyone. POLWEL will never ask for it.</div></li>
                           </ul>
                         </div>
-                        <div class="warning">⚠️ <strong>Didn&#39;t request this?</strong> If you didn&#39;t request a password reset, please ignore this email or contact our support team immediately to secure your account. Your current password remains unchanged.</div>
+                        <div class="warning">&#9888; <strong>Didn&#39;t request this?</strong> If you didn&#39;t request a password reset, please ignore this email or contact our support team immediately to secure your account. Your current password remains unchanged.</div>
                       </td>
                     </tr>
                     <tr>
@@ -676,6 +676,12 @@ class EmailService {
           .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
           .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
           .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
+          .an1 {
+            vertical-align: middle;
+            place-self: center;
+            position: relative;
+            left: 10px;
+          }
           .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
           .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
           .content { padding: 32px 24px; color: #333333; }
@@ -711,8 +717,8 @@ class EmailService {
       <body>
         <div class="email-container">
           <div class="email-wrapper">
-            <div class="header">
-              <div class="header-icon">✉️</div>
+              <div class="header">
+              <div class="header-icon an1">✉️</div>
               <div class="header-title">Trainer Assignment Notification</div>
               <div class="header-subtitle">Your Course Assignment Details</div>
             </div>
@@ -850,6 +856,30 @@ class EmailService {
       }
     };
 
+    const formatTime = (date?: Date) => {
+      if (!date) return null;
+      try {
+        return new Intl.DateTimeFormat('en-SG', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).format(date).replace(':', '.');
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const getTimeDisplay = () => {
+      const startTime = formatTime(startDate);
+      const endTime = formatTime(endDate);
+      if (startTime && endTime) {
+        const registrationTime = startDate ? formatTime(new Date(startDate.getTime() - 15 * 60000)) : null;
+        const regText = registrationTime ? ` (Registration starts at ${registrationTime})` : '';
+        return `${startTime} to ${endTime}${regText}<br/><span style="font-size: 12px; color: #6b7280;">15 minutes before start time</span>`;
+      }
+      return '09.00 to 17.00 (Registration starts at 08.45)<br/><span style="font-size: 12px; color: #6b7280;">15 minutes before start time</span>';
+    };
+
     const normalizeCc = () => {
       if (!cc) return undefined;
       if (Array.isArray(cc)) {
@@ -887,6 +917,18 @@ class EmailService {
               .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
               .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
               .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
+              .an1 {
+                vertical-align: middle;
+                place-self: center;
+                position: relative;
+                left: 10px;
+              }
+              .an1 {
+                vertical-align: middle;
+                place-self: center;
+                position: relative;
+                left: 10px;
+              }
               .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
               .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
               .content { padding: 32px 24px; color: #333333; }
@@ -919,8 +961,8 @@ class EmailService {
           <body>
             <div class="email-container">
               <div class="email-wrapper">
-                <div class="header">
-                  <div class="header-icon">📋</div>
+                  <div class="header">
+                    <div class="header-icon an1">📋</div>
                   <div class="header-title">Course Confirmation</div>
                   <div class="header-subtitle">Registration Confirmed</div>
                 </div>
@@ -938,7 +980,7 @@ class EmailService {
                     </tr>
                     <tr>
                       <td>Time</td>
-                      <td>0900 to 1700 (Registration starts at 0845)<br/><span style="font-size: 12px; color: #6b7280;">15 minutes before start time</span></td>
+                      <td>${getTimeDisplay()}</td>
                     </tr>
                     <tr>
                       <td>Venue</td>
@@ -1095,7 +1137,7 @@ class EmailService {
             <div class="email-container">
               <div class="email-wrapper">
                 <div class="header">
-                  <div class="header-icon">⚠️</div>
+                  <div class="header-icon an1">⚠️</div>
                   <div class="header-title">Course Cancellation Notice</div>
                   <div class="header-subtitle">Important Update Regarding Your Course</div>
                 </div>
@@ -1274,7 +1316,7 @@ class EmailService {
             <div class="email-container">
               <div class="email-wrapper">
                 <div class="header">
-                  <div class="header-icon">🎓</div>
+                  <div class="header-icon an1">🎓</div>
                   <div class="header-title">Congratulations!</div>
                   <div class="header-subtitle">You've Successfully Completed the Course</div>
                 </div>

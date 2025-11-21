@@ -56,7 +56,6 @@ interface Learner {
   clientOrganizationBuNumber?: string;
   departmentName?: string;
   status?: string;
-  paymentMode?: string;
   trainingCoordinatorId?: string;
   trainingCoordinatorName?: string;
   trainingCoordinatorEmail?: string;
@@ -177,6 +176,15 @@ const IMPORT_TEMPLATE_COLUMNS: Array<{ header: string; key: keyof ImportLearnerR
   { header: "Invoice Remarks", key: "invoiceRemarks" },
   { header: "Remarks", key: "remarks" },
 ];
+
+// Mapping from display labels to enum values
+const PAYMENT_MODES_MAP: Record<string, string> = {
+  "Self-Payment": "SELF_SPONSORED",
+  "Transition Dollar (TS)": "TRANSITION_DOLLARS",
+  "Unit Local Training Fund (ULTF)": "ULTF",
+  "Company-Sponsored (Non-Home Team)": "COMPANY_BILLING",
+  "Polwel Training Subsidy": "GOVERNMENT_FUNDING",
+};
 
 const PAYMENT_MODES = [
   "Self-Payment",
@@ -384,7 +392,6 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         clientOrganizationBuNumber: learner.clientOrganizationBuNumber || learner.clientOrganization?.buNumber || learner.buNumber || "",
         departmentName: learner.departmentName || "",
         status: learner.status || (learner.deletedAt ? "INACTIVE" : "ACTIVE"),
-        paymentMode: learner.paymentMode || "",
         trainingCoordinatorId: learner.trainingCoordinatorId || learner.trainingCoordinator?.id,
         trainingCoordinatorName: learner.trainingCoordinatorName || learner.trainingCoordinator?.name || "",
         trainingCoordinatorEmail: learner.trainingCoordinatorEmail || learner.trainingCoordinator?.email || "",
@@ -714,7 +721,6 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           departmentName: learner.departmentName || "",
           division: learner.clientOrganizationId || prev.division,
           buNumber: learner.clientOrganizationBuNumber || prev.buNumber,
-          paymentMode: learner.paymentMode || prev.paymentMode,
           trainingCoordinatorId: learner.trainingCoordinatorId || prev.trainingCoordinatorId || "",
           trainingCoordinatorEmail: learner.trainingCoordinatorEmail || prev.trainingCoordinatorEmail || "",
           trainingCoordinatorPhone: learner.trainingCoordinatorPhone || prev.trainingCoordinatorPhone || "",
@@ -1190,7 +1196,7 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
   }));
 
   const paymentModeOptions: SearchableSelectOption[] = PAYMENT_MODES.map((mode) => ({
-    value: mode,
+    value: PAYMENT_MODES_MAP[mode],
     label: mode,
   }));
 
@@ -1469,7 +1475,7 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
   }));
 
   const paymentModeOptions: SearchableSelectOption[] = PAYMENT_MODES.map((mode) => ({
-    value: mode,
+    value: PAYMENT_MODES_MAP[mode],
     label: mode,
   }));
 

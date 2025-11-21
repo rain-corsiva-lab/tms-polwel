@@ -633,6 +633,21 @@ const CourseRunDetail: React.FC = () => {
     );
   };
 
+  // Reverse mapping from enum values to display labels
+  const getPaymentModeLabel = (paymentMode: string | null | undefined): string => {
+    const modeMap: Record<string, string> = {
+      SELF_SPONSORED: "Self-Payment",
+      TRANSITION_DOLLARS: "Transition Dollar (TS)",
+      ULTF: "Unit Local Training Fund (ULTF)",
+      COMPANY_BILLING: "Company-Sponsored (Non-Home Team)",
+      GOVERNMENT_FUNDING: "Polwel Training Subsidy",
+      CREDIT_CARD: "Credit Card",
+      BANK_TRANSFER: "Bank Transfer",
+      NOT_APPLICABLE: "Not Applicable",
+    };
+    return modeMap[paymentMode as keyof typeof modeMap] || paymentMode || "-";
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -1296,7 +1311,7 @@ const CourseRunDetail: React.FC = () => {
                                 <TableCell>{learnerRecord.learner.email}</TableCell>
                                 <TableCell>{learnerRecord.learner.contactNumber || "—"}</TableCell>
                                 <TableCell>{learnerRecord.learner.designation || "—"}</TableCell>
-                                <TableCell>{learnerRecord.paymentMode || "Online Payment"}</TableCell>
+                                <TableCell>{getPaymentModeLabel(learnerRecord.paymentMode)}</TableCell>
                                 <TableCell>{getEnrollmentStatusBadge(learnerRecord.enrollmentStatus || "ENROLLED")}</TableCell>
                                 <TableCell>
                                   {learnerRecord.confirmationEmailStatus && (

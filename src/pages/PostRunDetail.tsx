@@ -80,6 +80,8 @@ interface Learner {
   courseFee?: number;
   paymentMode?: string;
   status?: string;
+  attendanceStatus?: string;
+  enrollmentStatus?: string;
 }
 
 interface BillingEntry {
@@ -257,6 +259,8 @@ const PostRunDetail = () => {
             const discountType = en?.discountType ?? l?.discountType ?? undefined;
             const paymentMode = en?.paymentMode ?? l?.paymentMode ?? undefined;
             const status = en?.status ?? l?.status ?? undefined;
+            const attendanceStatus = en?.attendanceStatus ?? undefined;
+            const enrollmentStatus = en?.enrollmentStatus ?? undefined;
 
             return {
               id: l.id, // use learner id consistently for selection
@@ -267,6 +271,8 @@ const PostRunDetail = () => {
               discountType,
               paymentMode,
               status,
+              attendanceStatus,
+              enrollmentStatus,
             } as Learner;
           })
           .filter(Boolean) as Learner[];
@@ -723,11 +729,22 @@ const PostRunDetail = () => {
                                     })
                                     .map((learner) => {
                                       const isSelected = entry.learnerIds.includes(learner.id);
-                                      // Disable learners with Self Payment, Transition Dollar payment modes, or withdrawn status
-                                      const isDisabled =
-                                        learner.paymentMode === "Self Payment" ||
-                                        learner.paymentMode === "Transition Dollar" ||
-                                        learner.status?.toLowerCase() === "withdrawn";
+                                      // Disable learners who are:
+                                      // 1. Absent (attendanceStatus === "ABSENT")
+                                      // 2. Withdrawn (enrollmentStatus === "WITHDRAWN")
+                                      // 3. Self-sponsored payment (paymentMode === "SELF_SPONSORED")
+                                      // 4. Transition Dollars payment (paymentMode === "TRANSITION_DOLLARS")
+                                      const isAbsent = learner.attendanceStatus === "ABSENT";
+                                      const isWithdrawn = learner.enrollmentStatus === "WITHDRAWN";
+                                      const isSelfPayment = learner.paymentMode === "SELF_SPONSORED";
+                                      const isTransitionDollar = learner.paymentMode === "TRANSITION_DOLLARS";
+                                      const isDisabled = isAbsent || isWithdrawn || isSelfPayment || isTransitionDollar;
+
+                                      // Determine reason for being disabled
+                                      let disabledReason = "";
+                                      if (isAbsent) disabledReason = "Absent";
+                                      else if (isWithdrawn) disabledReason = "Withdrawn";
+                                      else if (isSelfPayment || isTransitionDollar) disabledReason = "Already Paid";
 
                                       return (
                                         <div
@@ -750,15 +767,7 @@ const PostRunDetail = () => {
                                             <div className="font-medium text-sm leading-tight">{learner.name}</div>
                                             <div className="text-xs text-muted-foreground leading-tight mt-0.5">
                                               {learner.email}
-                                              {isDisabled && (
-                                                <span className="ml-2 text-red-600 font-medium">
-                                                  (
-                                                  {learner.paymentMode === "Self Payment" || learner.paymentMode === "Transition Dollar"
-                                                    ? "Already Paid"
-                                                    : "Withdrawn"}
-                                                  )
-                                                </span>
-                                              )}
+                                              {isDisabled && <span className="ml-2 text-red-600 font-medium">({disabledReason})</span>}
                                             </div>
                                           </div>
                                         </div>

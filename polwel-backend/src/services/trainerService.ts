@@ -204,8 +204,6 @@ export const fetchTrainerTrainingSummary = async ({
     return value.toISOString().split('T')[0];
   };
 
-  const courseIdsNeedingFallback = new Set<string>();
-
   const items = rows
     .map((row) => {
       const startIso = formatDate(row.courseRun?.startDatetime);
@@ -216,10 +214,6 @@ export const fetchTrainerTrainingSummary = async ({
       const baseAmount = toNumber(row.trainerBaseAmount);
       const additional = toNumber(row.additionalCost);
       let fee = baseAmount + additional;
-
-      if (fee === 0 && row.courseRun?.courseId) {
-        courseIdsNeedingFallback.add(row.courseRun.courseId);
-      }
 
       return {
         id: row.id,
@@ -232,40 +226,7 @@ export const fetchTrainerTrainingSummary = async ({
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
-  let fallbackFees: Record<string, number> = {};
-
-  if (courseIdsNeedingFallback.size > 0) {
-    const fallbackRows = await prisma.trainerFee.findMany({
-      where: {
-        trainerId,
-        courseId: { in: Array.from(courseIdsNeedingFallback) },
-      },
-      select: {
-        courseId: true,
-        feePerRun: true,
-      },
-    });
-
-    fallbackFees = fallbackRows.reduce<Record<string, number>>((acc, row) => {
-      acc[row.courseId] = row.feePerRun ?? 0;
-      return acc;
-    }, {});
-  }
-
-  const decoratedItems = items.map((item) => {
-    let fee = item.fee;
-    if (fee === 0 && item.courseId) {
-      const fallback = fallbackFees[item.courseId];
-      if (fallback !== undefined) {
-        fee = fallback;
-      }
-    }
-
-    return {
-      ...item,
-      fee,
-    };
-  });
+  const decoratedItems = items;
 
   const totalsAggregate = await prisma.courseRunTrainer.aggregate({
     where: whereClause,
@@ -276,37 +237,6 @@ export const fetchTrainerTrainingSummary = async ({
   });
 
   let totalFee = toNumber(totalsAggregate._sum.trainerBaseAmount) + toNumber(totalsAggregate._sum.additionalCost);
-
-  if (courseIdsNeedingFallback.size > 0) {
-    const fallbackMatches = await prisma.courseRunTrainer.findMany({
-      where: {
-        trainerId,
-        deletedAt: null,
-        trainerBaseAmount: null,
-        additionalCost: null,
-        courseRun: {
-          is: courseRunFilter,
-        },
-      },
-      select: {
-        courseRun: {
-          select: {
-            courseId: true,
-          },
-        },
-      },
-    });
-
-    fallbackMatches.forEach((row) => {
-      const courseId = row.courseRun?.courseId;
-      if (courseId) {
-        const fallback = fallbackFees[courseId];
-        if (fallback !== undefined) {
-          totalFee += fallback;
-        }
-      }
-    });
-  }
 
   return {
     items: decoratedItems,

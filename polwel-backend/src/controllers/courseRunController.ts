@@ -846,7 +846,6 @@ export const courseRunController = {
                   contact: true,
                   departmentName: true,
                   clientOrganizationId: true,
-                  paymentMode: true,
                   trainingCoordinatorId: true,
                   clientOrganization: {
                     select: {
@@ -928,7 +927,7 @@ export const courseRunController = {
                   clientOrganization,
                   clientOrganizationName: clientOrganization?.name || null,
                   clientOrganizationBuNumber: clientOrganization?.buNumber || null,
-                  paymentMode: learner.paymentMode || null,
+                  paymentMode: enrollment.paymentMode || null,
                   trainingCoordinatorId: learner.trainingCoordinatorId || null,
                   trainingCoordinator: coordinator
                     ? {
@@ -1520,7 +1519,6 @@ export const courseRunController = {
             contact: data.contactNumber,
             clientOrganizationId: data.division,
             departmentName: data.departmentName,
-            paymentMode: data.paymentMode,
             trainingCoordinatorId: data.trainingCoordinatorId,
           },
         });
@@ -1557,6 +1555,7 @@ export const courseRunController = {
         data: {
           courseRunId,
           learnerId: learner.id,
+          paymentMode: data.paymentMode,
           currentDefaultCourseFee: data.currentDefaultCourseFee,
           discountId: data.discountId,
           discountPercentage: data.discountPercentage,
@@ -1627,7 +1626,6 @@ export const courseRunController = {
               contact: learnerData.contactNumber,
               clientOrganizationId: data.division,
               departmentName: data.departmentName,
-              paymentMode: data.paymentMode,
               trainingCoordinatorId: data.trainingCoordinatorId,
             },
           });
@@ -1657,6 +1655,7 @@ export const courseRunController = {
           data: {
             courseRunId,
             learnerId: learner.id,
+            paymentMode: learnerData.paymentMode || data.paymentMode,
             currentDefaultCourseFee: learnerData.currentDefaultCourseFee,
             discountId: learnerData.discountId,
             discountPercentage: learnerData.discountPercentage,
@@ -1909,7 +1908,6 @@ export const courseRunController = {
               designation: designation || null,
               clientOrganizationId: organization.id,
               departmentName: department || null,
-              paymentMode: paymentMethod || null,
               trainingCoordinatorId: coordinatorId,
             },
           });
@@ -1921,7 +1919,6 @@ export const courseRunController = {
           if (contact) updateData.contact = contact;
           updateData.clientOrganizationId = organization.id;
           if (department) updateData.departmentName = department;
-          if (paymentMethod) updateData.paymentMode = paymentMethod;
           if (coordinatorId) updateData.trainingCoordinatorId = coordinatorId;
 
           if (Object.keys(updateData).length > 0) {
@@ -1956,6 +1953,7 @@ export const courseRunController = {
           data: {
             courseRunId,
             learnerId: learner.id,
+            paymentMode: (paymentMethod as any) || null,
             currentDefaultCourseFee: resolvedBaseFee,
             discountId,
             discountPercentage,
@@ -2024,7 +2022,6 @@ export const courseRunController = {
               contact: true,
               departmentName: true,
               clientOrganizationId: true,
-              paymentMode: true,
               trainingCoordinatorId: true,
               clientOrganization: {
                 select: {
@@ -2067,7 +2064,7 @@ export const courseRunController = {
                 clientOrganization,
                 clientOrganizationName: clientOrganization?.name || null,
                 clientOrganizationBuNumber: clientOrganization?.buNumber || null,
-                paymentMode: learner.paymentMode || null,
+                paymentMode: enrollment.paymentMode || null,
                 trainingCoordinatorId: learner.trainingCoordinatorId || null,
                 trainingCoordinator: coordinator
                   ? {
@@ -2123,7 +2120,6 @@ export const courseRunController = {
             contact: learnerData.contactNumber ?? existing.learner.contact,
             departmentName: learnerData.departmentName ?? existing.learner.departmentName,
             clientOrganizationId: learnerData.division || existing.learner.clientOrganizationId,
-            paymentMode: learnerData.paymentMode ?? existing.learner.paymentMode,
             trainingCoordinatorId: learnerData.trainingCoordinatorId ?? existing.learner.trainingCoordinatorId,
           },
         });
@@ -2141,6 +2137,7 @@ export const courseRunController = {
             feesRemarks: enrollmentData.feesRemarks ?? existing.feesRemarks,
             invoiceNumber: enrollmentData.invoiceNumber ?? existing.invoiceNumber,
             remarks: enrollmentData.remarks ?? existing.remarks,
+            paymentMode: (enrollmentData as any)?.paymentMode ?? existing.paymentMode,
             departmentName:
               (learnerData && learnerData.departmentName !== undefined ? learnerData.departmentName : undefined) ??
               (enrollmentData && enrollmentData.departmentName !== undefined ? enrollmentData.departmentName : undefined) ??

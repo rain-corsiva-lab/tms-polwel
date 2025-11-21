@@ -59,8 +59,6 @@ model User {
   learnersAsTrainingCoordinator   Learner[]
   trainerAssignmentEmailHistory   TrainerAssignmentEmailHistory[]
   trainerBlockouts                TrainerBlockout[]
-  trainerFeesCreated              TrainerFee[]                    @relation("TrainerFeeCreatedBy")
-  trainerFees                     TrainerFee[]
   mfaChallenge                   MfaChallenge?
   permissions                     UserPermission[]
   createdByUser                   User?                           @relation("UserCreatedBy", fields: [createdBy], references: [id])
@@ -152,7 +150,6 @@ model Course {
   venue              Venue?          @relation(fields: [venueId], references: [id], onDelete: SetNull)
   bookings           Booking[]
   runs               CourseRun[]
-  trainerFees        TrainerFee[]
   courseTrainers     CourseTrainer[]
   coursePartners     CoursePartner[]
 
@@ -477,26 +474,6 @@ model SystemSetting {
   @@map("system_settings")
 }
 
-model TrainerFee {
-  id        String   @id @default(cuid())
-  trainerId String
-  courseId  String
-  feePerRun Float    @default(0)
-  remarks   String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy String?
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  creator   User?    @relation("TrainerFeeCreatedBy", fields: [createdBy], references: [id])
-  trainer   User     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
-
-  @@unique([trainerId, courseId])
-  @@index([trainerId])
-  @@index([courseId])
-  @@index([createdBy])
-  @@map("trainer_fees")
-}
-
 model Learner {
   id                          String                       @id @default(cuid())
   fullname                    String
@@ -504,7 +481,6 @@ model Learner {
   email                       String?
   contact                     String?
   clientOrganizationId        String?
-  paymentMode                 String?
   departmentName              String?
   trainingCoordinatorId       String?
   createdAt                   DateTime                     @default(now())
