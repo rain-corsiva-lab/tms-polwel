@@ -107,8 +107,8 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
                     <tr>
                       <td class="header">
-                        <h1>&#127919; Welcome to POLWEL!</h1>
-                        <p>Complete Your Trainer Account Setup</p>
+                        <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">&#127919; Welcome to POLWEL!</h1>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #dbeafe !important;">Complete Your Trainer Account Setup</p>
                       </td>
                     </tr>
                     <tr>
@@ -130,8 +130,8 @@ class EmailService {
                     </tr>
                     <tr>
                       <td class="footer">
-                        &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -215,8 +215,8 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
                     <tr>
                       <td class="header">
-                        <h1>&#128203; Welcome to POLWEL!</h1>
-                        <p>Complete Your Training Coordinator Setup</p>
+                        <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">&#128203; Welcome to POLWEL!</h1>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #dbeafe !important;">Complete Your Training Coordinator Setup</p>
                       </td>
                     </tr>
                     <tr>
@@ -241,8 +241,8 @@ class EmailService {
                     </tr>
                     <tr>
                       <td class="footer">
-                        &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -568,8 +568,8 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
                     <tr>
                       <td class="header">
-                        <h1>👤 Welcome to POLWEL!</h1>
-                        <p>Complete Your Account Setup</p>
+                        <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">👤 Welcome to POLWEL!</h1>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #dbeafe !important;">Complete Your Account Setup</p>
                       </td>
                     </tr>
                     <tr>
@@ -591,8 +591,8 @@ class EmailService {
                     </tr>
                     <tr>
                       <td class="footer">
-                        &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
                       </td>
                     </tr>
                   </table>

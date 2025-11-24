@@ -138,6 +138,91 @@ async function main() {
     },
   });
 
+  // Create additional POLWEL admin users
+  const nazirahBeevi = await prisma.user.create({
+    data: {
+      email: 'nazirah_beevi@polwel.org.sg',
+      password: hashedPassword,
+      name: 'Nazirah Beevi',
+      role: UserRole.POLWEL,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      permissionLevel: 'Administrator',
+      designation: 'Administrator',
+      lastLogin: new Date(),
+    },
+  });
+
+  const stanleyHuang = await prisma.user.create({
+    data: {
+      email: 'stanley_huang@polwel.org.sg',
+      password: hashedPassword,
+      name: 'Stanley Huang',
+      role: UserRole.POLWEL,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      permissionLevel: 'Administrator',
+      designation: 'Administrator',
+      lastLogin: new Date(),
+    },
+  });
+
+  const chunhuaWoo = await prisma.user.create({
+    data: {
+      email: 'chunhua_woo@polwel.org.sg',
+      password: hashedPassword,
+      name: 'Chunhua Woo',
+      role: UserRole.POLWEL,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      permissionLevel: 'Administrator',
+      designation: 'Administrator',
+      lastLogin: new Date(),
+    },
+  });
+
+  const syirainSaifi = await prisma.user.create({
+    data: {
+      email: 'syirain_saifi@polwel.org.sg',
+      password: hashedPassword,
+      name: 'Syirain Saifi',
+      role: UserRole.POLWEL,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      permissionLevel: 'Administrator',
+      designation: 'Administrator',
+      lastLogin: new Date(),
+    },
+  });
+
+  const zhengweiLee = await prisma.user.create({
+    data: {
+      email: 'zhengwei_lee@polwel.org.sg',
+      password: hashedPassword,
+      name: 'Zhengwei Lee',
+      role: UserRole.POLWEL,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      permissionLevel: 'Administrator',
+      designation: 'Administrator',
+      lastLogin: new Date(),
+    },
+  });
+
+  const lenghongGoh = await prisma.user.create({
+    data: {
+      email: 'lenghong_goh@polwel.org.sg',
+      password: hashedPassword,
+      name: 'Lenghong Goh',
+      role: UserRole.POLWEL,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      permissionLevel: 'Administrator',
+      designation: 'Administrator',
+      lastLogin: new Date(),
+    },
+  });
+
   // Create Training Coordinators
   const maryLim = await prisma.user.create({
     data: {

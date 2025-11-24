@@ -651,7 +651,7 @@ export default function TrainerDashboard() {
       </div>
 
       {/* Training Summary at bottom */}
-      <div className="mt-2">
+      <div className="max-w-7xl mx-auto space-y-6 my-5">
         <TrainerTrainingSummary mode="self" />
       </div>
 

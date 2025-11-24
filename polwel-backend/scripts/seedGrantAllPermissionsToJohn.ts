@@ -4,7 +4,16 @@ import { PERMISSIONS } from './upsertMissingPermissions';
 const prisma = new PrismaClient();
 
 async function main() {
-  const targetEmails = ['kukuhthewow@gmail.com', 'celine.ng@corsivalab.com'];
+  const targetEmails = [
+    'kukuhthewow@gmail.com',
+    'celine.ng@corsivalab.com',
+    'nazirah_beevi@polwel.org.sg',
+    'stanley_huang@polwel.org.sg',
+    'chunhua_woo@polwel.org.sg',
+    'syirain_saifi@polwel.org.sg',
+    'zhengwei_lee@polwel.org.sg',
+    'lenghong_goh@polwel.org.sg',
+  ];
 
   for (const email of targetEmails) {
     console.log(`Granting all permissions to ${email}...`);
