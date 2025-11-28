@@ -17,6 +17,15 @@ function getRemarks(obj: any): string | null {
   return (obj as any).remarks ?? (obj as any).reason ?? null;
 }
 
+// Helper function to format date in local timezone to avoid UTC shifts
+function formatLocalDate(value?: Date | null): string {
+  if (!value) return '';
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export const trainerBlockoutController = {
   // Get all blockouts for a trainer
   async getTrainerBlockouts(req: Request, res: Response): Promise<Response | void> {
@@ -80,8 +89,8 @@ export const trainerBlockoutController = {
         id: blockout.id,
         trainerId: blockout.trainerId,
         trainerName: blockout.trainer.name,
-        startDate: blockout.startDate.toISOString().split('T')[0],
-        endDate: blockout.endDate.toISOString().split('T')[0],
+        startDate: formatLocalDate(blockout.startDate),
+        endDate: formatLocalDate(blockout.endDate),
   remarks: getRemarks(blockout),
         description: blockout.description,
         isRecurring: blockout.isRecurring,
@@ -171,7 +180,7 @@ export const trainerBlockoutController = {
         const end = new Date(blockout.endDate);
         
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const dateKey: string = d.toISOString().substring(0, 10); // YYYY-MM-DD format
+          const dateKey: string = formatLocalDate(d); // YYYY-MM-DD format
           if (!groupedBlockouts[dateKey]) {
             groupedBlockouts[dateKey] = [];
           }
@@ -180,8 +189,8 @@ export const trainerBlockoutController = {
             id: blockout.id,
             trainerId: blockout.trainerId,
             trainerName: blockout.trainer.name,
-            startDate: blockout.startDate.toISOString().split('T')[0],
-            endDate: blockout.endDate.toISOString().split('T')[0],
+            startDate: formatLocalDate(blockout.startDate),
+            endDate: formatLocalDate(blockout.endDate),
             remarks: getRemarks(blockout),
             description: blockout.description,
             isRecurring: blockout.isRecurring,
@@ -287,8 +296,8 @@ export const trainerBlockoutController = {
           error: 'Blockout conflicts with existing blockouts',
           conflicts: conflictingBlockouts.map(b => ({
             id: b.id,
-            startDate: b.startDate.toISOString().split('T')[0],
-            endDate: b.endDate.toISOString().split('T')[0],
+            startDate: formatLocalDate(b.startDate),
+            endDate: formatLocalDate(b.endDate),
             remarks: getRemarks(b)
           }))
         });
@@ -324,8 +333,8 @@ export const trainerBlockoutController = {
           conflicts: conflictingCourses.map(c => ({
             id: c.id,
             courseTitle: c.course.title,
-            startDate: c.startDatetime?.toISOString().split('T')[0] || '',
-            endDate: c.endDatetime?.toISOString().split('T')[0] || ''
+            startDate: formatLocalDate(c.startDatetime),
+            endDate: formatLocalDate(c.endDatetime)
           }))
         });
       }
@@ -360,8 +369,8 @@ export const trainerBlockoutController = {
           id: newBlockout.id,
           trainerId: newBlockout.trainerId,
           trainerName: newBlockout.trainer.name,
-          startDate: newBlockout.startDate.toISOString().split('T')[0],
-          endDate: newBlockout.endDate.toISOString().split('T')[0],
+          startDate: formatLocalDate(newBlockout.startDate),
+          endDate: formatLocalDate(newBlockout.endDate),
           remarks: getRemarks(newBlockout),
           description: newBlockout.description,
           isRecurring: newBlockout.isRecurring,
@@ -458,8 +467,8 @@ export const trainerBlockoutController = {
             error: 'Updated blockout would conflict with existing blockouts',
             conflicts: conflictingBlockouts.map(b => ({
                   id: b.id,
-                  startDate: b.startDate.toISOString().split('T')[0],
-                  endDate: b.endDate.toISOString().split('T')[0],
+                  startDate: formatLocalDate(b.startDate),
+                  endDate: formatLocalDate(b.endDate),
                   remarks: getRemarks(b)
                 }))
           });
@@ -494,8 +503,8 @@ export const trainerBlockoutController = {
           id: updatedBlockout.id,
           trainerId: updatedBlockout.trainerId,
           trainerName: updatedBlockout.trainer.name,
-          startDate: updatedBlockout.startDate.toISOString().split('T')[0],
-          endDate: updatedBlockout.endDate.toISOString().split('T')[0],
+          startDate: formatLocalDate(updatedBlockout.startDate),
+          endDate: formatLocalDate(updatedBlockout.endDate),
           remarks: getRemarks(updatedBlockout),
           description: updatedBlockout.description,
           isRecurring: updatedBlockout.isRecurring,
@@ -614,8 +623,8 @@ export const trainerBlockoutController = {
           id: blockout.id,
           trainerId: blockout.trainerId,
           trainerName: blockout.trainer.name,
-          startDate: blockout.startDate.toISOString().split('T')[0],
-          endDate: blockout.endDate.toISOString().split('T')[0],
+          startDate: formatLocalDate(blockout.startDate),
+          endDate: formatLocalDate(blockout.endDate),
           remarks: getRemarks(blockout),
           description: blockout.description,
           isRecurring: blockout.isRecurring,

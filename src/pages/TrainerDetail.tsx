@@ -492,7 +492,7 @@ const TrainerDetail = () => {
                         <span className="font-medium">{run.course?.title || run.courseName}</span>
                       </div>
                       <Badge variant={run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "outline" : "default"}>
-                        {run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "Tentative" : "Scheduled"}
+                        {run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "Tentative" : "Confirmed"}
                       </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground space-y-1">

@@ -1,9 +1,98 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
+import EmailService from '../services/emailService';
 
 const router = express.Router();
+
+// Request password reset (forgot password)
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Find user by email (case insensitive)
+    const user = await prisma.user.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        deletedAt: null,
+        status: {
+          not: 'INACTIVE'
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true
+      }
+    });
+
+    // Always return success to prevent email enumeration
+    // But only send email if user exists and is active
+    if (user) {
+      // Generate secure reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Save token to database
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetToken,
+          resetTokenExpiry: tokenExpiry
+        }
+      });
+
+      // Send password reset email
+      const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+      
+      try {
+        await EmailService.sendPasswordResetEmail(
+          user.email!,
+          user.name,
+          resetUrl
+        );
+        
+        console.log(`Password reset email sent to: ${user.email}`);
+        
+        // Log the password reset request for audit
+        await AuditService.logPasswordChange(
+          user.id,
+          user.id,
+          'Password reset requested via forgot password form',
+          req
+        );
+      } catch (emailError) {
+        console.error('Failed to send password reset email:', emailError);
+        // Don't expose email sending errors to user
+      }
+    } else {
+      // Log failed attempt for security monitoring
+      console.log(`Password reset requested for non-existent/inactive email: ${email}`);
+    }
+
+    // Always return success to prevent email enumeration attacks
+    return res.json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
 
 
 // Verify reset token

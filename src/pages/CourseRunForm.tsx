@@ -274,7 +274,7 @@ const CourseRunForm: React.FC = () => {
             baseAmount: course.defaultCourseFee || undefined,
             venueFinalFee: course.venueFee || undefined,
             venueMaxParticipants: course.venueMaxParticipants || undefined,
-            perHeadFeeIfMaxExceed: course.perHeadPriceIfMaxExceed || undefined,
+            perHeadFeeIfMaxExceed: course.perHeadPriceIfMaxExceed ? parseFloat(String(course.perHeadPriceIfMaxExceed)) : undefined,
 
             additionalCostExceedingCapacity: undefined,
           };
@@ -454,7 +454,7 @@ const CourseRunForm: React.FC = () => {
           ...formData,
           [field]: value,
           venueMaxParticipants: selectedVenue.maxParticipants || undefined,
-          perHeadFeeIfMaxExceed: selectedVenue.perHeadPriceIfMaxExceed || undefined,
+          perHeadFeeIfMaxExceed: selectedVenue.perHeadPriceIfMaxExceed ? parseFloat(String(selectedVenue.perHeadPriceIfMaxExceed)) : undefined,
         });
         // Clear any previous error for venueId
         if (errors.venueId) setErrors({ ...errors, venueId: "" });
