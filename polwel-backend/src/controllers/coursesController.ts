@@ -24,7 +24,7 @@ const CourseCreateSchema = z.object({
   }, { message: "Duration must be at least 1" }),
   durationType: z.string().default("days"),
   maxParticipants: z.number().int().positive().nullable().optional(),
-  minParticipants: z.number().int().positive().default(1),
+  minParticipants: z.union([z.number().int().positive(), z.null()]).transform(val => val ?? 1).default(1),
   certificates: z.string().default("polwel"),
   certificationType: z.string().optional(),
   level: z.string().optional(),
@@ -35,10 +35,10 @@ const CourseCreateSchema = z.object({
   assessmentMethod: z.string().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
   
-  // Simplified financial fields
-  defaultCourseFee: z.number().default(0),
-  contractFees: z.number().default(0),
-  venueFee: z.number().optional(), // used as Venue Expenses
+  // Simplified financial fields - allow null and transform to default
+  defaultCourseFee: z.union([z.number(), z.null()]).transform(val => val ?? 0).default(0),
+  contractFees: z.union([z.number(), z.null()]).transform(val => val ?? 0).default(0),
+  venueFee: z.number().nullable().optional(),
   venueFeeType: z.string().optional(), // Fee type suffix (/ venue or / head)
   discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional(),
   venueMaxParticipants: z.number().int().positive().nullable().optional(),
@@ -283,7 +283,10 @@ export const coursesController = {
       if (data.minParticipants !== undefined) courseData.minParticipants = data.minParticipants;
       if (data.certificationType !== undefined) courseData.certificationType = data.certificationType;
       if (data.level !== undefined) courseData.level = data.level;
-      if (data.venueId !== undefined) courseData.venueId = data.venueId;
+      // Only set venueId if it's a valid non-empty string (prevents foreign key constraint violation)
+      if (data.venueId !== undefined && data.venueId !== null && data.venueId !== '') {
+        courseData.venueId = data.venueId;
+      }
       if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
       if (data.remarks !== undefined) courseData.remarks = data.remarks;
       if (data.syllabus !== undefined) courseData.syllabus = data.syllabus;
@@ -480,6 +483,9 @@ export const coursesController = {
             } else if (key === 'venueMaxParticipants' || key === 'perHeadPriceIfMaxExceed') {
               // Explicitly handle nullable venue pricing fields
               updateData[key] = value;
+            } else if (key === 'venueId') {
+              // Only set venueId if it's a valid non-empty string, otherwise set to null
+              updateData[key] = (value && value !== '') ? value : null;
             } else {
               updateData[key] = value;
             }

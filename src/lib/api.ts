@@ -804,6 +804,31 @@ export const dashboardApi = {
   getGlobalMetrics: async () => {
     return apiRequest('/dashboard/metrics');
   },
+  getActionItems: async () => {
+    return apiRequest('/dashboard/action-items');
+  },
+  getUpcomingRuns: async (date?: string) => {
+    const params = date ? `?date=${date}` : '';
+    return apiRequest(`/dashboard/upcoming-runs${params}`);
+  },
+  getCompletedRunsYTD: async () => {
+    return apiRequest('/dashboard/completed-runs-ytd');
+  },
+  getCompletedRunTypes: async () => {
+    return apiRequest('/dashboard/completed-run-types');
+  },
+  getCompletedByCategory: async () => {
+    return apiRequest('/dashboard/completed-by-category');
+  },
+  getCompletionRate: async () => {
+    return apiRequest('/dashboard/completion-rate');
+  },
+  getCancellationRates: async () => {
+    return apiRequest('/dashboard/cancellation-rates');
+  },
+  getDraftRuns: async () => {
+    return apiRequest('/dashboard/draft-runs');
+  },
 };
 
 // Profile API for authenticated user (generic account profile)

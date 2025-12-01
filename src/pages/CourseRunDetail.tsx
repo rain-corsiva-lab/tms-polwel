@@ -972,7 +972,7 @@ const CourseRunDetail: React.FC = () => {
                 Learner Particulars ({courseRun.courseRunLearners?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
-              <TabsTrigger value="fees-expenses">Fees</TabsTrigger>
+              <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
             </TabsList>
 
             {/* Course Run Information Tab */}
@@ -1647,17 +1647,14 @@ const CourseRunDetail: React.FC = () => {
             {/* Fees & Expenses Tab */}
             <TabsContent value="fees-expenses" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Fees</h3>
+                <h3 className="text-lg font-medium">Revenue & Expenses</h3>
               </div>
 
               <div className="space-y-6">
                 {/* REVENUE SECTION */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center text-sm">
-                      <DollarSign className="h-4 w-4 mr-2" />
-                      Revenue
-                    </CardTitle>
+                    <CardTitle className="flex items-center text-sm">Revenue</CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-1 gap-4">
                     <div className="space-y-2">
@@ -1681,80 +1678,86 @@ const CourseRunDetail: React.FC = () => {
                     <CardTitle className="text-sm">Expenses</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Contract Fees - Always Disabled (Auto-calculated from trainer fees) */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Contract Fees ($)</Label>
-                      <Input type="number" step="0.01" min="0" value={courseRun.contractFees ?? ""} disabled={true} className="bg-gray-50" />
-                      <p className="text-xs text-gray-500">Auto-calculated from trainer assignments (read-only)</p>
+                    {/* Contract Fees & Additional Cost - 2x2 Grid Row 1 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Contract Fees - Always Disabled (Auto-calculated from trainer fees) */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Contract Fees ($)</Label>
+                        <Input type="number" step="0.01" min="0" value={courseRun.contractFees ?? ""} disabled={true} className="bg-gray-50" />
+                        <p className="text-xs text-gray-500">Auto-calculated from trainer assignments (read-only)</p>
+                      </div>
+
+                      {/* Additional Cost Exceeding Capacity */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Additional Cost Exceeding Capacity ($)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={isEditing ? editData?.additionalCostExceedingCapacity : courseRun.additionalCostExceedingCapacity ?? ""}
+                          disabled={!isEditing}
+                          onChange={(e) => handleEditField("additionalCostExceedingCapacity", e.target.value)}
+                          className={isEditing ? "" : "bg-gray-50"}
+                        />
+                        {/* Display trainer remarks from course_trainers table */}
+                        {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
+                          <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
+                            <p className="font-medium">Trainer Remarks:</p>
+                            <ul className="list-none space-y-1 ml-2">
+                              {courseRun.courseRunTrainers.map((crt) => {
+                                // Find the matching course trainer record to get remarks from course_trainers table
+                                const courseTrainer = courseTrainersRemarks.find((ct: any) => ct.trainerId === crt.trainer.id);
+                                const remarks = courseTrainer?.remarks;
+                                return (
+                                  <li key={crt.trainer.id}>
+                                    - {crt.trainer.name} {remarks ? `- ${remarks}` : ""}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 pt-2">No trainers assigned yet</p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Additional Cost Exceeding Capacity */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Additional Cost Exceeding Capacity ($)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={isEditing ? editData?.additionalCostExceedingCapacity : courseRun.additionalCostExceedingCapacity ?? ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("additionalCostExceedingCapacity", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
-                      {/* Display trainer remarks from course_trainers table */}
-                      {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
-                        <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
-                          <p className="font-medium">Trainer Remarks:</p>
-                          <ul className="list-none space-y-1 ml-2">
-                            {courseRun.courseRunTrainers.map((crt) => {
-                              // Find the matching course trainer record to get remarks from course_trainers table
-                              const courseTrainer = courseTrainersRemarks.find((ct: any) => ct.trainerId === crt.trainer.id);
-                              const remarks = courseTrainer?.remarks;
-                              return (
-                                <li key={crt.trainer.id}>
-                                  - {crt.trainer.name} {remarks ? `- ${remarks}` : ""}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-500 pt-2">No trainers assigned yet</p>
-                      )}
-                    </div>
+                    {/* Venue Fee Type & Base Venue Fee - 2x2 Grid Row 2 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Venue Fee Type */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Venue Fee Type</Label>
+                        {isEditing ? (
+                          <Select value={editData?.feeType || ""} onValueChange={(v) => handleEditField("feeType", v)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select fee type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PER_HEAD">PER_HEAD</SelectItem>
+                              <SelectItem value="PER_VENUE">PER_VENUE</SelectItem>
+                              <SelectItem value="FIXED">FIXED</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input value={courseRun.feeType || ""} disabled className="bg-gray-50" />
+                        )}
+                        <p className="text-xs text-gray-500">Pricing model for venue charges</p>
+                      </div>
 
-                    {/* Venue Fee Type */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Venue Fee Type</Label>
-                      {isEditing ? (
-                        <Select value={editData?.feeType || ""} onValueChange={(v) => handleEditField("feeType", v)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select fee type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PER_HEAD">PER_HEAD</SelectItem>
-                            <SelectItem value="PER_VENUE">PER_VENUE</SelectItem>
-                            <SelectItem value="FIXED">FIXED</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input value={courseRun.feeType || ""} disabled className="bg-gray-50" />
-                      )}
-                      <p className="text-xs text-gray-500">Pricing model for venue charges</p>
-                    </div>
-
-                    {/* Base Venue Fee */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={isEditing ? editData?.venueFee : courseRun.venueFee ?? ""}
-                        disabled={!isEditing}
-                        onChange={(e) => handleEditField("venueFee", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
-                      />
-                      <p className="text-xs text-gray-500">Base venue rental fee</p>
+                      {/* Base Venue Fee */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={isEditing ? editData?.venueFee : courseRun.venueFee ?? ""}
+                          disabled={!isEditing}
+                          onChange={(e) => handleEditField("venueFee", e.target.value)}
+                          className={isEditing ? "" : "bg-gray-50"}
+                        />
+                        <p className="text-xs text-gray-500">Base venue rental fee</p>
+                      </div>
                     </div>
 
                     {/* Show venue-specific fields if PER_VENUE fee type */}

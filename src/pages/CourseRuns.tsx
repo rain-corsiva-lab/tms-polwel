@@ -12,6 +12,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import PaginationControls from "../components/ui/pagination";
 import DateInput from "../components/ui/date-input";
 import { courseRunsApi } from "../lib/api";
@@ -144,6 +145,10 @@ const CourseRuns: React.FC = () => {
   const [startDateFilter, setStartDateFilter] = useState<string>("");
   const [endDateFilter, setEndDateFilter] = useState<string>("");
 
+  // Sort options
+  const [sortBy, setSortBy] = useState<"startDatetime" | "updatedAt">("startDatetime");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
   // Excel-style filters
   const [filters, setFilters] = useState<Record<string, string[]>>({
     venue: [],
@@ -229,6 +234,8 @@ const CourseRuns: React.FC = () => {
         status: statusFilter !== "ALL" ? statusFilter : undefined,
         startDate: startDateFilter || undefined,
         endDate: endDateFilter || undefined,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
       });
 
       if (!response.success) {
@@ -267,31 +274,9 @@ const CourseRuns: React.FC = () => {
             },
           };
         })
-        // Filter out PENDING_BILLING and COMPLETED from main list
-        .filter((run) => run.status !== "PENDING_BILLING" && run.status !== "COMPLETED")
-        // Sort by nearest start date to today (ascending from today)
-        .sort((a, b) => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const aStart = a.start ? a.start.getTime() : Infinity;
-          const bStart = b.start ? b.start.getTime() : Infinity;
-
-          // Calculate distance from today
-          const aDistance = Math.abs(aStart - today.getTime());
-          const bDistance = Math.abs(bStart - today.getTime());
-
-          // If both are in the future or both in the past, sort by closest to today
-          if ((aStart >= today.getTime() && bStart >= today.getTime()) || (aStart < today.getTime() && bStart < today.getTime())) {
-            return aDistance - bDistance;
-          }
-
-          // Prioritize future dates over past dates
-          if (aStart >= today.getTime() && bStart < today.getTime()) return -1;
-          if (aStart < today.getTime() && bStart >= today.getTime()) return 1;
-
-          return aDistance - bDistance;
-        });
+        // Filter out PENDING_BILLING and COMPLETED from main list (backend also filters these now)
+        .filter((run) => run.status !== "PENDING_BILLING" && run.status !== "COMPLETED");
+        // Sorting is now handled by backend via sortBy/sortOrder parameters
 
       setCourseRuns(transformed);
 
@@ -334,7 +319,7 @@ const CourseRuns: React.FC = () => {
   useEffect(() => {
     fetchCourseRuns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, statusFilter, perPage, startDateFilter, endDateFilter]);
+  }, [pagination.page, statusFilter, perPage, startDateFilter, endDateFilter, sortBy, sortOrder]);
 
   // Debounced search mirroring client organisation page
   useEffect(() => {
@@ -929,6 +914,31 @@ const CourseRuns: React.FC = () => {
               </Label>
               <DateInput id="endDateFilter" value={endDateFilter} onChange={(isoDate) => handleEndDateFilter(isoDate || "")} className="w-full sm:w-48" />
             </div>
+
+            {/* Sort By */}
+            <div className="flex-1 sm:flex-none">
+              <Label className="text-sm mb-1 block">Sort By</Label>
+              <Select
+                value={`${sortBy}-${sortOrder}`}
+                onValueChange={(value) => {
+                  const [newSortBy, newSortOrder] = value.split("-") as ["startDatetime" | "updatedAt", "asc" | "desc"];
+                  setSortBy(newSortBy);
+                  setSortOrder(newSortOrder);
+                  setPagination((p) => ({ ...p, page: 1 }));
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-52">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="startDatetime-asc">Upcoming Start Date ↑</SelectItem>
+                  <SelectItem value="startDatetime-desc">Latest Start Date ↓</SelectItem>
+                  <SelectItem value="updatedAt-desc">Recently Modified ↓</SelectItem>
+                  <SelectItem value="updatedAt-asc">Oldest Modified ↑</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {(startDateFilter || endDateFilter) && (
               <div>
                 <Button

@@ -152,3 +152,21 @@ body.swal2-shown [data-radix-portal] {
 button.relative.flex.items-center.rounded-sm{
   width: 100%;
 }
+
+/* ReactQuill editor styles - prevent content overflow */
+.quill {
+  display: flex;
+  flex-direction: column;
+}
+
+.quill .ql-container {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.quill .ql-editor {
+  min-height: 140px;
+  max-height: 300px;
+  overflow-y: auto;
+}

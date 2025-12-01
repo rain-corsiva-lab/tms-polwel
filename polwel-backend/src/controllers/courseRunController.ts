@@ -508,6 +508,8 @@ const getCourseRunsSchema = z.object({
   status: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  sortBy: z.enum(['startDatetime', 'updatedAt']).optional().default('startDatetime'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
 });
 
 const createCourseRunSchema = z.object({
@@ -579,7 +581,7 @@ export const courseRunController = {
   // Get all course runs with pagination, search, and filters
   async getAll(req: Request, res: Response) {
     try {
-  const { page, limit, search, status, startDate, endDate } = getCourseRunsSchema.parse(req.query);
+  const { page, limit, search, status, startDate, endDate, sortBy, sortOrder } = getCourseRunsSchema.parse(req.query);
       const skip = (page - 1) * limit;
 
       // Build where clause for filtering
@@ -648,6 +650,12 @@ export const courseRunController = {
       const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : undefined;
       if (normalizedStatus && ALLOWED_COURSE_STATUSES.includes(normalizedStatus as CourseStatus)) {
         where.status = normalizedStatus as CourseStatus;
+      } else {
+        // When no specific status filter is provided, exclude PENDING_BILLING and COMPLETED
+        // These are shown in separate views, not in the main course runs list
+        where.status = {
+          notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED],
+        };
       }
 
       // Add date range filters
@@ -706,7 +714,7 @@ export const courseRunController = {
             },
           },
           orderBy: {
-            startDatetime: 'desc',
+            [sortBy]: sortOrder,
           },
           skip,
           take: limit,

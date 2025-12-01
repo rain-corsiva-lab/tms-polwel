@@ -88,6 +88,16 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
       return;
     }
 
+    // Validate Singapore phone number (8 digits)
+    if (sanitizedContact.length !== 8) {
+      toast({
+        title: "Validation Error",
+        description: "Contact number must be exactly 8 digits (Singapore format).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -176,16 +186,18 @@ export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoord
           </div>
 
           <div>
-            <Label htmlFor="coordinatorContact">Contact Number *</Label>
+            <Label htmlFor="coordinatorContact">Contact Number * (8 digits)</Label>
             <Input
               id="coordinatorContact"
               value={formData.contactNumber}
               inputMode="numeric"
               pattern="[0-9]*"
-              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: digitsOnly(e.target.value) }))}
-              placeholder="Enter contact number"
+              maxLength={8}
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: digitsOnly(e.target.value).slice(0, 8) }))}
+              placeholder="e.g., 91234567"
               disabled={loading}
             />
+            <p className="text-xs text-muted-foreground mt-1">Singapore mobile number format</p>
           </div>
 
           <div>

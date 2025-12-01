@@ -268,7 +268,7 @@ async function main() {
   // Create Trainers
   const davidChen = await prisma.user.create({
     data: {
-      email: 'david.chen@training.com',
+      email: 'kukuhthewow+trainer@gmail.com',
       password: hashedPassword,
       name: 'David Chen',
       role: UserRole.TRAINER,
@@ -1058,7 +1058,418 @@ async function main() {
     },
   });
 
-  console.log('🏃‍♂️ Updated and created course runs');
+  // ==========================================
+  // Additional 20 Course Runs for Dashboard Testing
+  // ==========================================
+  
+  // Helper function to get date relative to today
+  const getRelativeDate = (daysOffset: number, hours: number = 9) => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysOffset);
+    date.setHours(hours, 0, 0, 0);
+    return date;
+  };
+
+  // Course Run 5: Completed - Leadership (OPEN) - January
+  const leadershipRun3 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'LDR-2025-003',
+      courseRunType: 'OPEN',
+      courseId: leadershipCourse.id,
+      startDatetime: new Date('2025-01-10T09:00:00'),
+      endDatetime: new Date('2025-01-12T17:00:00'),
+      venueId: orchardHotel.id,
+      venueType: 'HOTEL',
+      minClassSize: 15,
+      maxClassSize: 25,
+      individualRegistrationRequired: true,
+      baseCourseFee: 800.00,
+      feeType: 'PER_HEAD',
+      venueFee: 300.00,
+      status: 'COMPLETED',
+    },
+  });
+
+  // Course Run 6: Completed - EI (DEDICATED) - January
+  const emotionalIntelligenceRun3 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'EI-2025-003',
+      courseRunType: 'DEDICATED',
+      courseId: emotionalIntelligenceCourse.id,
+      startDatetime: new Date('2025-01-20T09:00:00'),
+      endDatetime: new Date('2025-01-20T17:00:00'),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 10,
+      maxClassSize: 20,
+      individualRegistrationRequired: false,
+      baseCourseFee: 350.00,
+      feeType: 'PER_VENUE',
+      venueFee: 300.00,
+      status: 'COMPLETED',
+    },
+  });
+
+  // Course Run 7: Completed - Strategic Thinking (OPEN) - February
+  const strategicThinkingRun1 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'STR-2025-001',
+      courseRunType: 'OPEN',
+      courseId: strategicThinkingCourse.id,
+      startDatetime: new Date('2025-02-05T09:00:00'),
+      endDatetime: new Date('2025-02-06T17:00:00'),
+      venueId: marinaBayCenter.id,
+      venueType: 'HOTEL',
+      minClassSize: 12,
+      maxClassSize: 15,
+      individualRegistrationRequired: true,
+      baseCourseFee: 600.00,
+      feeType: 'PER_HEAD',
+      venueFee: 800.00,
+      status: 'COMPLETED',
+    },
+  });
+
+  // Course Run 8: Completed - Growth Mindset (DEDICATED) - February
+  const growthMindsetRun1 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'GM-2025-001',
+      courseRunType: 'DEDICATED',
+      courseId: growthMindsetCourse.id,
+      startDatetime: new Date('2025-02-15T09:00:00'),
+      endDatetime: new Date('2025-02-15T15:00:00'),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 15,
+      maxClassSize: 30,
+      individualRegistrationRequired: false,
+      baseCourseFee: 250.00,
+      feeType: 'PER_VENUE',
+      venueFee: 300.00,
+      status: 'COMPLETED',
+    },
+  });
+
+  // Course Run 9: Completed - Leadership (OPEN) - March
+  const leadershipRun4 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'LDR-2025-004',
+      courseRunType: 'OPEN',
+      courseId: leadershipCourse.id,
+      startDatetime: new Date('2025-03-01T09:00:00'),
+      endDatetime: new Date('2025-03-03T17:00:00'),
+      venueId: orchardHotel.id,
+      venueType: 'HOTEL',
+      minClassSize: 15,
+      maxClassSize: 25,
+      individualRegistrationRequired: true,
+      baseCourseFee: 850.00,
+      feeType: 'PER_HEAD',
+      venueFee: 375.00,
+      status: 'COMPLETED',
+    },
+  });
+
+  // Course Run 10: Cancelled - EI (OPEN) - March
+  const emotionalIntelligenceRunCancelled1 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'EI-2025-004',
+      courseRunType: 'OPEN',
+      courseId: emotionalIntelligenceCourse.id,
+      startDatetime: new Date('2025-03-10T09:00:00'),
+      endDatetime: new Date('2025-03-10T17:00:00'),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 12,
+      maxClassSize: 20,
+      individualRegistrationRequired: true,
+      baseCourseFee: 300.00,
+      feeType: 'PER_HEAD',
+      status: 'CANCELLED',
+      cancelledAt: new Date('2025-03-05T10:00:00'),
+      cancelReason: 'Insufficient participants enrolled',
+    },
+  });
+
+  // Course Run 11: Completed - Strategic Thinking (DEDICATED) - March
+  const strategicThinkingRun2 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'STR-2025-002',
+      courseRunType: 'DEDICATED',
+      courseId: strategicThinkingCourse.id,
+      startDatetime: new Date('2025-03-18T09:00:00'),
+      endDatetime: new Date('2025-03-19T17:00:00'),
+      venueId: orchardHotel.id,
+      venueType: 'CLIENT_FACILITY',
+      minClassSize: 8,
+      maxClassSize: 15,
+      individualRegistrationRequired: false,
+      baseCourseFee: 650.00,
+      feeType: 'PER_VENUE',
+      venueFee: 500.00,
+      status: 'COMPLETED',
+    },
+  });
+
+  // Course Run 12: Completed - Growth Mindset (OPEN) - April
+  const growthMindsetRun2 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'GM-2025-002',
+      courseRunType: 'OPEN',
+      courseId: growthMindsetCourse.id,
+      startDatetime: new Date('2025-04-05T09:00:00'),
+      endDatetime: new Date('2025-04-05T15:00:00'),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 15,
+      maxClassSize: 30,
+      individualRegistrationRequired: true,
+      baseCourseFee: 250.00,
+      feeType: 'PER_HEAD',
+      venueFee: 50.00,
+      status: 'COMPLETED',
+    },
+  });
+
+  // Course Run 13: Cancelled - Leadership (OPEN) - April
+  const leadershipRunCancelled1 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'LDR-2025-005',
+      courseRunType: 'OPEN',
+      courseId: leadershipCourse.id,
+      startDatetime: new Date('2025-04-15T09:00:00'),
+      endDatetime: new Date('2025-04-17T17:00:00'),
+      venueId: orchardHotel.id,
+      venueType: 'HOTEL',
+      minClassSize: 15,
+      maxClassSize: 25,
+      individualRegistrationRequired: true,
+      baseCourseFee: 800.00,
+      feeType: 'PER_HEAD',
+      status: 'CANCELLED',
+      cancelledAt: new Date('2025-04-10T14:00:00'),
+      cancelReason: 'Trainer unavailable due to medical emergency',
+    },
+  });
+
+  // Course Run 14: Pending Billing - EI (DEDICATED) - April
+  const emotionalIntelligenceRunBilling = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'EI-2025-005',
+      courseRunType: 'DEDICATED',
+      courseId: emotionalIntelligenceCourse.id,
+      startDatetime: new Date('2025-04-25T09:00:00'),
+      endDatetime: new Date('2025-04-25T17:00:00'),
+      venueId: marinaBayCenter.id,
+      venueType: 'HOTEL',
+      minClassSize: 10,
+      maxClassSize: 18,
+      individualRegistrationRequired: false,
+      baseCourseFee: 400.00,
+      feeType: 'PER_VENUE',
+      venueFee: 800.00,
+      status: 'PENDING_BILLING',
+    },
+  });
+
+  // Course Run 15: Upcoming - Leadership (OPEN) - next week
+  const leadershipRunUpcoming1 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'LDR-2025-006',
+      courseRunType: 'OPEN',
+      courseId: leadershipCourse.id,
+      startDatetime: getRelativeDate(7),
+      endDatetime: getRelativeDate(9, 17),
+      venueId: orchardHotel.id,
+      venueType: 'HOTEL',
+      minClassSize: 15,
+      maxClassSize: 25,
+      individualRegistrationRequired: true,
+      baseCourseFee: 900.00,
+      feeType: 'PER_HEAD',
+      venueFee: 375.00,
+      status: 'CONFIRMED',
+    },
+  });
+
+  // Course Run 16: Upcoming - Strategic Thinking (DEDICATED) - in 10 days
+  const strategicThinkingRunUpcoming = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'STR-2025-003',
+      courseRunType: 'DEDICATED',
+      courseId: strategicThinkingCourse.id,
+      startDatetime: getRelativeDate(10),
+      endDatetime: getRelativeDate(11, 17),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 10,
+      maxClassSize: 15,
+      individualRegistrationRequired: false,
+      baseCourseFee: 700.00,
+      feeType: 'PER_VENUE',
+      venueFee: 300.00,
+      status: 'CONFIRMED_PENDING_TA_APPROVAL',
+    },
+  });
+
+  // Course Run 17: Upcoming - Growth Mindset (OPEN) - in 14 days
+  const growthMindsetRunUpcoming = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'GM-2025-003',
+      courseRunType: 'OPEN',
+      courseId: growthMindsetCourse.id,
+      startDatetime: getRelativeDate(14),
+      endDatetime: getRelativeDate(14, 15),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 15,
+      maxClassSize: 30,
+      individualRegistrationRequired: true,
+      baseCourseFee: 280.00,
+      feeType: 'PER_HEAD',
+      venueFee: 50.00,
+      status: 'CONFIRMED_PENDING_CONFIRMATION_EMAILS',
+    },
+  });
+
+  // Course Run 18: Upcoming - EI (OPEN) - in 3 days
+  const emotionalIntelligenceRunUpcoming = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'EI-2025-006',
+      courseRunType: 'OPEN',
+      courseId: emotionalIntelligenceCourse.id,
+      startDatetime: getRelativeDate(3),
+      endDatetime: getRelativeDate(3, 17),
+      venueId: orchardHotel.id,
+      venueType: 'HOTEL',
+      minClassSize: 12,
+      maxClassSize: 20,
+      individualRegistrationRequired: true,
+      baseCourseFee: 320.00,
+      feeType: 'PER_HEAD',
+      venueFee: 150.00,
+      status: 'ACTIVE',
+    },
+  });
+
+  // Course Run 19: Draft - Leadership
+  const leadershipRunDraft1 = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'LDR-2025-007',
+      courseRunType: 'OPEN',
+      courseId: leadershipCourse.id,
+      startDatetime: getRelativeDate(30),
+      endDatetime: getRelativeDate(32, 17),
+      venueId: orchardHotel.id,
+      venueType: 'HOTEL',
+      minClassSize: 15,
+      maxClassSize: 25,
+      individualRegistrationRequired: true,
+      baseCourseFee: 850.00,
+      feeType: 'PER_HEAD',
+      status: 'DRAFT',
+    },
+  });
+
+  // Course Run 20: Draft - Strategic Thinking
+  const strategicThinkingRunDraft = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'STR-2025-004',
+      courseRunType: 'DEDICATED',
+      courseId: strategicThinkingCourse.id,
+      startDatetime: getRelativeDate(45),
+      endDatetime: getRelativeDate(46, 17),
+      venueId: marinaBayCenter.id,
+      venueType: 'HOTEL',
+      minClassSize: 10,
+      maxClassSize: 15,
+      individualRegistrationRequired: false,
+      baseCourseFee: 650.00,
+      feeType: 'PER_VENUE',
+      status: 'DRAFT',
+    },
+  });
+
+  // Course Run 21: Draft - EI
+  const emotionalIntelligenceRunDraft = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'EI-2025-007',
+      courseRunType: 'OPEN',
+      courseId: emotionalIntelligenceCourse.id,
+      startDatetime: getRelativeDate(60),
+      endDatetime: getRelativeDate(60, 17),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 12,
+      maxClassSize: 20,
+      individualRegistrationRequired: true,
+      baseCourseFee: 300.00,
+      feeType: 'PER_HEAD',
+      status: 'DRAFT',
+    },
+  });
+
+  // Course Run 22: Draft - Growth Mindset
+  const growthMindsetRunDraft = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'GM-2025-004',
+      courseRunType: 'DEDICATED',
+      courseId: growthMindsetCourse.id,
+      startDatetime: getRelativeDate(75),
+      endDatetime: getRelativeDate(75, 15),
+      venueId: polwelLearningPod.id,
+      venueType: 'ON_PREMISE',
+      minClassSize: 15,
+      maxClassSize: 30,
+      individualRegistrationRequired: false,
+      baseCourseFee: 250.00,
+      feeType: 'PER_VENUE',
+      status: 'DRAFT',
+    },
+  });
+
+  // Course Run 23: In Progress - Leadership
+  const leadershipRunInProgress = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'LDR-2025-008',
+      courseRunType: 'OPEN',
+      courseId: leadershipCourse.id,
+      startDatetime: getRelativeDate(-1), // Started yesterday
+      endDatetime: getRelativeDate(1, 17), // Ends tomorrow
+      venueId: orchardHotel.id,
+      venueType: 'HOTEL',
+      minClassSize: 15,
+      maxClassSize: 25,
+      individualRegistrationRequired: true,
+      baseCourseFee: 800.00,
+      feeType: 'PER_HEAD',
+      venueFee: 375.00,
+      status: 'IN_PROGRESS',
+    },
+  });
+
+  // Course Run 24: Cancelled - Strategic Thinking (OPEN) - May
+  const strategicThinkingRunCancelled = await prisma.courseRun.create({
+    data: {
+      serialNumber: 'STR-2025-005',
+      courseRunType: 'OPEN',
+      courseId: strategicThinkingCourse.id,
+      startDatetime: new Date('2025-05-01T09:00:00'),
+      endDatetime: new Date('2025-05-02T17:00:00'),
+      venueId: marinaBayCenter.id,
+      venueType: 'HOTEL',
+      minClassSize: 12,
+      maxClassSize: 15,
+      individualRegistrationRequired: true,
+      baseCourseFee: 600.00,
+      feeType: 'PER_HEAD',
+      status: 'CANCELLED',
+      cancelledAt: new Date('2025-04-28T10:00:00'),
+      cancelReason: 'Venue double booking conflict',
+    },
+  });
+
+  console.log('🏃‍♂️ Updated and created course runs (including 20 additional runs)');
 
   // Sprint 3: Create Course Run Trainers (8 records - 2 per course run)
   const courseRunTrainer1 = await prisma.courseRunTrainer.create({
@@ -1673,8 +2084,15 @@ async function main() {
   console.log('📊 Seeded Data Summary:');
   console.log('- Organizations: 3');
   console.log('- Users: 8 (2 POLWEL, 2 Training Coordinators, 3 Trainers, 2 Learners)');
-  console.log('- Courses: 3');
-  console.log('- Course Runs: 4 (updated with Sprint 3 fields)');
+  console.log('- Courses: 4');
+  console.log('- Course Runs: 24 (4 original + 20 additional for dashboard testing)');
+  console.log('  - Completed: 8');
+  console.log('  - Cancelled: 4');
+  console.log('  - Pending Billing: 1');
+  console.log('  - Upcoming (Confirmed/Active/Pending TA/Pending Emails): 5');
+  console.log('  - In Progress: 1');
+  console.log('  - Draft: 4');
+  console.log('  - Pending: 1');
   console.log('- Venues: 3');
   console.log('- Billing Reports: 2');
   console.log('- Media Files: 4');

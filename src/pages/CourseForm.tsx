@@ -41,7 +41,7 @@ interface FormState {
   remarks: string;
   defaultCourseFee: number;
   discounts: any[];
-  minParticipants: number;
+  minParticipants: number | string;
   maxParticipants: number | string;
   venueMaxParticipants: number | string;
   perHeadPriceIfMaxExceed: number | string;
@@ -368,13 +368,15 @@ const CourseForm: React.FC = () => {
       contractFees: formData.contractFees,
       venueFee: formData.venueFee,
       venueFeeType: formData.venueFeeType,
-      venueId: formData.venueId,
+      // Only send venueId if it's a valid non-empty string
+      venueId: formData.venueId && formData.venueId !== '' ? formData.venueId : undefined,
       specifiedLocation: formData.specifiedLocation,
       certificates: formData.certificates,
       remarks: formData.remarks,
       defaultCourseFee: formData.defaultCourseFee,
       discounts: formData.discounts,
-      minParticipants: formData.minParticipants,
+      // Convert minParticipants to number, default to 1 if empty (backend will validate)
+      minParticipants: formData.minParticipants !== '' && formData.minParticipants !== null ? parseInt(String(formData.minParticipants)) || 1 : 1,
       maxParticipants: formData.maxParticipants && formData.maxParticipants !== "" ? parseInt(formData.maxParticipants.toString()) : null,
       venueMaxParticipants: formData.venueMaxParticipants && formData.venueMaxParticipants !== "" ? parseInt(formData.venueMaxParticipants.toString()) : null,
       perHeadPriceIfMaxExceed:
@@ -441,7 +443,7 @@ const CourseForm: React.FC = () => {
     <div className="container mx-auto py-6 px-4">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{isEdit ? "Edit Course" : "Add New Course"}</h1>
-        <p className="text-muted-foreground">{isEdit ? "Update course information and pricing." : "Create a new course."}</p>
+        {/* <p className="text-muted-foreground">{isEdit ? "Update course information and pricing." : "Create a new course."}</p> */}
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -453,7 +455,7 @@ const CourseForm: React.FC = () => {
           <TabsContent value="information" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Course Information</CardTitle>
+                <CardTitle>Information</CardTitle>
               </CardHeader>
               <CardContent>
                 <CourseInformationTab

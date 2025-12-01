@@ -1,6 +1,20 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Users, GraduationCap, Building2, Shield, ChevronDown, ChevronRight, BookOpen, Calendar, ClipboardList, FileText } from "lucide-react";
+import {
+  Users,
+  GraduationCap,
+  Building2,
+  Shield,
+  ChevronDown,
+  ChevronRight,
+  BookOpen,
+  Calendar,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  AlertCircle,
+  FileWarning,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Can } from "../lib/casl/Can";
@@ -101,6 +115,23 @@ const Sidebar = ({ className }: SidebarProps) => {
       </div>
 
       <nav className="flex-1 px-4 space-y-1">
+        {/* Dashboard - Only for POLWEL users */}
+        {isPolwelUser && (
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              cn(
+                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )
+            }
+          >
+            <LayoutDashboard className="mr-3 h-5 w-5" />
+            Dashboard
+          </NavLink>
+        )}
+
         {/* Trainer Dashboard - Only show for trainers */}
         {user?.role === "TRAINER" && (
           <NavLink
@@ -242,6 +273,55 @@ const Sidebar = ({ className }: SidebarProps) => {
             </NavLink>
           </Can>
         )}
+
+        {/* Waiver Requests - Standalone Menu Item */}
+        {/* {postRunManagementVisible && (
+          <Can I="view" a="PostCourseRun">
+            <NavLink
+              to="/waiver-requests"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                )
+              }
+            >
+              <FileWarning className="mr-3 h-5 w-5" />
+              Waiver Requests
+            </NavLink>
+          </Can>
+        )}
+
+
+        {isPolwelUser && (
+          <NavLink
+            to="/reporting"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )
+            }
+          >
+            <AlertCircle className="mr-3 h-5 w-5" />
+            Reporting
+          </NavLink>
+        )}
+
+        {isPolwelUser && (
+          <NavLink
+            to="/resource-library"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )
+            }
+          >
+            <BookOpen className="mr-3 h-5 w-5" />
+            Resource Library
+          </NavLink>
+        )} */}
       </nav>
     </aside>
   );

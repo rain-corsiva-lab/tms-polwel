@@ -106,7 +106,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Course Description</Label>
-        <div className="border rounded-md">
+        <div className="border rounded-md overflow-hidden" style={{ minHeight: '220px' }}>
           <ReactQuill
             theme="snow"
             value={formData.description}
@@ -121,7 +121,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                 ["clean"],
               ],
             }}
-            className="h-48"
+            style={{ height: '180px' }}
           />
         </div>
         <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
@@ -129,7 +129,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
 
       <div className="space-y-2">
         <Label htmlFor="learningObjectives">Learning Objectives</Label>
-        <div className="border rounded-md">
+        <div className="border rounded-md overflow-hidden" style={{ minHeight: '220px' }}>
           <ReactQuill
             theme="snow"
             value={formData.learningObjectives || ""}
@@ -144,7 +144,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                 ["clean"],
               ],
             }}
-            className="h-48"
+            style={{ height: '180px' }}
           />
         </div>
         <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
@@ -291,10 +291,15 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
             id="minParticipants"
             type="number"
             min="1"
-            value={formData.minParticipants || 1}
-            onChange={(e) => onInputChange("minParticipants", parseInt(e.target.value) || 1)}
-            placeholder="Min pax"
+            value={formData.minParticipants === 0 || formData.minParticipants === "" ? "" : formData.minParticipants}
+            onChange={(e) => {
+              const val = e.target.value;
+              // Allow empty input for better UX - backend will validate minimum of 1
+              onInputChange("minParticipants", val === "" ? "" : parseInt(val) || "");
+            }}
+            placeholder="Min pax (minimum 1)"
           />
+          <p className="text-[10px] text-muted-foreground">Minimum value is 1</p>
         </div>
 
         <div className="space-y-2">
