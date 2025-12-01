@@ -1456,6 +1456,13 @@ export const courseRunsApi = {
     });
   },
 
+  // Remove learner from course run (soft delete)
+  removeLearner: async (courseRunId: string, learnerId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/learners/${learnerId}`, {
+      method: 'DELETE',
+    });
+  },
+
   // Resend confirmation email to a specific learner
   resendLearnerConfirmation: async (courseRunId: string, learnerId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/learners/${learnerId}/resend-confirmation`, {

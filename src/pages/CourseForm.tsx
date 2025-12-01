@@ -369,14 +369,14 @@ const CourseForm: React.FC = () => {
       venueFee: formData.venueFee,
       venueFeeType: formData.venueFeeType,
       // Only send venueId if it's a valid non-empty string
-      venueId: formData.venueId && formData.venueId !== '' ? formData.venueId : undefined,
+      venueId: formData.venueId && formData.venueId !== "" ? formData.venueId : undefined,
       specifiedLocation: formData.specifiedLocation,
       certificates: formData.certificates,
       remarks: formData.remarks,
       defaultCourseFee: formData.defaultCourseFee,
       discounts: formData.discounts,
       // Convert minParticipants to number, default to 1 if empty (backend will validate)
-      minParticipants: formData.minParticipants !== '' && formData.minParticipants !== null ? parseInt(String(formData.minParticipants)) || 1 : 1,
+      minParticipants: formData.minParticipants !== "" && formData.minParticipants !== null ? parseInt(String(formData.minParticipants)) || 1 : 1,
       maxParticipants: formData.maxParticipants && formData.maxParticipants !== "" ? parseInt(formData.maxParticipants.toString()) : null,
       venueMaxParticipants: formData.venueMaxParticipants && formData.venueMaxParticipants !== "" ? parseInt(formData.venueMaxParticipants.toString()) : null,
       perHeadPriceIfMaxExceed:

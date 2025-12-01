@@ -106,7 +106,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Course Description</Label>
-        <div className="border rounded-md overflow-hidden" style={{ minHeight: '220px' }}>
+        <div className="border rounded-md overflow-hidden" style={{ minHeight: "220px" }}>
           <ReactQuill
             theme="snow"
             value={formData.description}
@@ -121,7 +121,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                 ["clean"],
               ],
             }}
-            style={{ height: '180px' }}
+            style={{ height: "180px" }}
           />
         </div>
         <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
@@ -129,7 +129,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
 
       <div className="space-y-2">
         <Label htmlFor="learningObjectives">Learning Objectives</Label>
-        <div className="border rounded-md overflow-hidden" style={{ minHeight: '220px' }}>
+        <div className="border rounded-md overflow-hidden" style={{ minHeight: "220px" }}>
           <ReactQuill
             theme="snow"
             value={formData.learningObjectives || ""}
@@ -144,7 +144,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                 ["clean"],
               ],
             }}
-            style={{ height: '180px' }}
+            style={{ height: "180px" }}
           />
         </div>
         <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>

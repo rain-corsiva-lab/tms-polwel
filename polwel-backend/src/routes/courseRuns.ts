@@ -58,6 +58,9 @@ router.put('/:id/attendance', requirePermissions('course-run.edit'), courseRunCo
 // PUT /api/course-runs/:id/learners/:learnerId - Update learner enrollment
 router.put('/:id/learners/:learnerId', requirePermissions('course-run.edit'), courseRunController.updateEnrollment);
 
+// DELETE /api/course-runs/:id/learners/:learnerId - Remove learner from course run (soft delete)
+router.delete('/:id/learners/:learnerId', requirePermissions('course-run.edit'), courseRunController.removeEnrollment);
+
 // PUT /api/course-runs/:id/trainer-assignments - Update trainer assignments
 router.put('/:id/trainer-assignments', requirePermissions('course-run.edit'), courseRunController.updateTrainerAssignments);
 

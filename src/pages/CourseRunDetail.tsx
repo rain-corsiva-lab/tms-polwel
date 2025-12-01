@@ -387,6 +387,33 @@ const CourseRunDetail: React.FC = () => {
     }
   };
 
+  // Handle remove learner from course run
+  const handleRemoveLearner = async (learnerRecord: any) => {
+    if (!courseRun || !id) return;
+
+    const learnerIdentifier = learnerRecord?.learner?.id || learnerRecord?.learnerId || learnerRecord?.id;
+    const learnerName = learnerRecord?.learner?.fullname || learnerRecord?.fullname || "this learner";
+
+    if (!learnerIdentifier) {
+      toast.error("Unable to determine learner identifier for removal");
+      return;
+    }
+
+    // Simple confirmation using window.confirm
+    const confirmed = window.confirm(`Are you sure you want to remove ${learnerName} from this course run? This action cannot be undone.`);
+
+    if (!confirmed) return;
+
+    try {
+      const response = await courseRunsApi.removeLearner(id, learnerIdentifier);
+      toast.success(response?.message || "Learner removed successfully");
+      loadCourseRunDetail();
+    } catch (error: any) {
+      console.error("Error removing learner:", error);
+      toast.error(error?.message || "Failed to remove learner");
+    }
+  };
+
   // Detect if trainer/partner assignments have changed
   const hasTrainerChanges = useMemo(() => {
     const currentState = JSON.stringify(trainerAssignments);
@@ -1364,7 +1391,9 @@ const CourseRunDetail: React.FC = () => {
                                       >
                                         Mark as Withdrawn
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem>Remove</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleRemoveLearner(learnerRecord)} className="text-red-600 focus:text-red-600">
+                                        Remove
+                                      </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </SafeDropdownMenu>
                                 </TableCell>

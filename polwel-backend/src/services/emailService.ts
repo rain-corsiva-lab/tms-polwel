@@ -206,7 +206,7 @@ class EmailService {
                 .outer { margin: 0 12px; }
                 .content { padding: 28px 22px; }
               }
-            </meta>
+            </style>
           </head>
           <body>
             <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">

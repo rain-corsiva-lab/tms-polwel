@@ -157,16 +157,21 @@ button.relative.flex.items-center.rounded-sm{
 .quill {
   display: flex;
   flex-direction: column;
+  height: 100%;
+}
+
+.quill .ql-toolbar {
+  flex-shrink: 0;
 }
 
 .quill .ql-container {
   flex: 1;
-  overflow-y: auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .quill .ql-editor {
-  min-height: 140px;
-  max-height: 300px;
+  min-height: 120px;
+  max-height: 180px;
   overflow-y: auto;
 }

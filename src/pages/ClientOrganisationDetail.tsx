@@ -376,7 +376,26 @@ const ClientOrganisationDetail = () => {
     if (!id) return;
 
     try {
-      await clientOrganizationsApi.updateCoordinator(id, coordinatorId, coordinatorData);
+      const updatedCoordinator = await clientOrganizationsApi.updateCoordinator(id, coordinatorId, coordinatorData);
+
+      // Immediately update the local state with the returned data
+      setCoordinators((prev) =>
+        prev.map((coord) =>
+          coord.id === coordinatorId
+            ? {
+                ...coord,
+                name: updatedCoordinator.name ?? coord.name,
+                email: updatedCoordinator.email ?? coord.email,
+                contactNumber: updatedCoordinator.contactNumber ?? coord.contactNumber,
+                designation: updatedCoordinator.designation ?? coord.designation,
+                status: updatedCoordinator.status ?? coord.status,
+                isPrimaryCoordinator: updatedCoordinator.isPrimaryCoordinator ?? coord.isPrimaryCoordinator,
+              }
+            : coord
+        )
+      );
+
+      // Also refresh from server for consistency
       await fetchCoordinators();
       // Success toast will be handled by EditCoordinatorDialog
     } catch (error: any) {

@@ -720,7 +720,7 @@ Now I need to update the FormState type in `CourseForm.tsx` to allow empty strin
 
 ---
 
-_**User (2025-12-01 04:54Z)**_
+_**User (2025-12-01 05:11Z)**_
 
 @agent Continue: "Continue to iterate?"
 
@@ -732,7 +732,229 @@ _**Agent (model copilot/claude-opus-4.5)**_
 ```
 
 ```
-Now let me add the sort feature to CourseRuns.tsx. First, let me check the backend to understand what sorting options are available: Let me find the schema definition: 
+Now let me add the sort feature to CourseRuns.tsx. First, let me check the backend to understand what sorting options are available: Let me find the schema definition: Now I understand. Let me update the backend to support sortBy and sortOrder, and then update the frontend: 
+```
+
+```
+Now update the getAll function to use sortBy and sortOrder: 
+```
+
+```
+Now I need to update the orderBy clause: 
+```
+
+```
+Now let me update the frontend `CourseRuns.tsx` to add the sort filter UI: 
+```
+
+```
+Now let me update the fetchCourseRuns function to include sortBy and sortOrder: 
+```
+
+```
+Now let me update the useEffect dependencies to include sort options: 
+```
+
+```
+Now I need to remove the frontend sorting since backend handles it, and add the sort UI. Let me check the current sorting logic: Since the backend now handles sorting, I should remove the frontend sorting and keep just the filtering: 
+```
+
+```
+Now let me add the sort UI next to the End Date filter: Let me find the exact location after "End Date To" filter to add the sort UI: 
+```
+
+```
+Now let me check if Select is imported: I need to import Select components: 
+```
+
+```
+Now I need to update the API to accept the sortBy and sortOrder params. Let me check the API file: The API already supports sortBy and sortOrder. Now let me update the todo list and verify all changes: Let me verify the backend is compiling correctly by restarting PM2: All changes are error-free. Let me provide a summary of all the fixes made:
+
+## Summary of All Fixes
+
+### ✅ 1. Fix venueId Foreign Key Constraint
+**Files:** `coursesController.ts`
+- **Create Course:** Only set `venueId` if it's a valid non-empty string
+- **Update Course:** Handle empty string and null properly by setting to `null` when empty
+- This fixes the "Foreign key constraint violated on the fields: (`venueId`)" error when creating/updating courses without selecting a venue
+
+### ✅ 2. Fix Dashboard Calendar Date Timezone Issue
+**File:** `Home.tsx`
+- Changed from `date.toISOString().split("T")[0]` to manual local date formatting
+- Uses `getFullYear()`, `getMonth()`, `getDate()` to construct `YYYY-MM-DD` format
+- This prevents the off-by-one day issue caused by UTC conversion
+
+### ✅ 3. Fix Rich Text Editor Overflow
+**Files:** 
+- `CourseInformationTab.tsx` - Updated ReactQuill containers with proper height/overflow styling
+- `index.css` - Added global CSS for `.quill` editor styling
+  - Proper flex layout for editor container
+  - `overflow-y: auto` on content area
+  - Min/max height constraints to prevent overflow
+
+### ✅ 4. Fix minParticipants Input UX
+**Files:**
+- `CourseInformationTab.tsx` - Allow empty input value for easier editing
+- `CourseForm.tsx` - Updated type to `number | string` and handle conversion on submit (defaults to 1)
+- Backend already validates minimum of 1 via Zod schema
+
+### ✅ 5. Add Sort Feature to CourseRuns
+**Files:**
+- `courseRunController.ts` - Added `sortBy` and `sortOrder` params to schema and query
+- `CourseRuns.tsx` - Added sort dropdown with options:
+  - Upcoming Start Date ↑ (ascending)
+  - Latest Start Date ↓ (descending)
+  - Recently Modified ↓ (descending by updatedAt)
+  - Oldest Modified ↑ (ascending by updatedAt)
+- Removed frontend sorting since backend now handles it
+
+---
+
+_**User (2025-12-01 06:11Z)**_
+
+okay good but we have some issue still : 
+
+in #file:CourseForm.tsx see pasted image, its not overlapping now but it has 2 vertical scrollbar which is weird, please remove unnecessary one , probably need to set the correct height 
+
+in #file:CourseRunDetail.tsx on learner particulars tab , at the table data we have remove action in threedots , but after we click nothing happens. we need to add remove feature working , ask swal popup confirmation first , if proceed then remove or soft delete it (if delete_at column avail). please dev it with your best practice with proper loading also 
+
+#file:emailService.ts when i try to sent onboarding email for training coordinator , it has no content in it, see pasted image 2 . please fix it . also this might happen in reset password email for training coordinator, plesae check and fix it also 
+
+also in #file:ClientOrganisationDetail.tsx on training coordinators , when i edit a training coordinators (abc@gmail.com) , i change the email to abc11@gmail.com and done its success , but in the table data its shows that its still using the old email abc@mail.com. but when i open edit its successfully changed to abc11@gmail. i tr to change to abc22@gmail.com its success but in the table data still says abc@gmail.com . please fix i t
+
+please develop all of these  front end , backend, database carefully without broke anything , ensure all working properly without any issue , use your best practice. 
+
+
+
+---
+
+_**Agent (model copilot/claude-opus-4.5)**_
+
+I'll analyze and fix all the issues. Let me start by reading the relevant files. Let me continue reading to understand the issues better: Now let me check the courseRunsApi for the remove learner functionality: I see there's no delete learner enrollment endpoint. Let me check the updateEnrollment function and see if I can use it for removal, or need to add a new endpoint: Now I understand. I need to add a delete/remove learner enrollment endpoint. Let me now implement all the fixes: 
+```
+
+```
+Now fix the email service - the issue is using `</meta>` instead of `</style>`: 
+```
+
+```
+Now let me check if there are similar issues in the password reset email: The password reset email looks fine (has proper `</style>` tag). Now let me add the remove learner functionality. First, let me add the backend endpoint: 
+```
+
+```
+Now let me add the `removeEnrollment` controller method: Now I'll add the `removeEnrollment` method after `updateEnrollment`: 
+```
+
+```
+Now let me add the frontend API method: I see there's already a `withdrawLearner` method. Let me add a `removeLearner` method for complete removal: 
+```
+
+```
+Now let me add the onClick handler for the Remove button in CourseRunDetail. First, let me find where the Remove DropdownMenuItem is: [object Object]
+
+---
+
+_**User (2025-12-01 06:24Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+---
+
+_**Agent (model copilot/claude-opus-4.5)**_
+
+I see the learnerRecord structure. Let me check the imports and see how they handle other actions, and also look for the Swal import: I see they use `toast` from sonner. Let me check if there's Swal or another confirmation dialog used elsewhere: It doesn't use Swal, but uses toast and has a dialog for withdrawal. Let me check how the withdrawal flow works to see if we can use a simple confirmation: Let me look at the state declarations and how other confirm dialogs are implemented: I'll add a simple confirmation dialog using `window.confirm` or add a handler with toast for the Remove function. Let me look for where fetchCourseRun or refresh function is: I'll add a state and handler for removing learner. Let me first add the state: Now let me add the handleRemoveLearner function after handleWithdrawLearner. First, let me find where handleWithdrawLearner ends: Now I'll add the handleRemoveLearner function after the handleWithdrawLearner function: 
+```
+
+```
+Now let me add the onClick handler to the Remove DropdownMenuItem: 
+```
+
+```
+Now let me fix the coordinator email table refresh issue. Let me check the `ClientOrganisationDetail.tsx` file: I see that `fetchCoordinators()` is called after update. Let me check what `fetchCoordinators` does: The `fetchCoordinators` looks correct. The issue might be in how the coordinators are displayed. Let me look for where the table renders the email: The table renders `coordinator.email` from the `coordinators` state. The problem might be that the backend is not returning the updated email. Let me check the `updateCoordinator` API endpoint in the backend: Let me check the `updateOrganizationCoordinator` controller: The backend looks correct - it does update the email and returns the updated coordinator. Let me check the frontend API method to see if there's an issue with how the response is handled: The API looks correct. Now let me check the `EditCoordinatorDialog` component to see how it calls the update function: The dialog calls `onCoordinatorUpdate` and doesn't close dialog until after the call succeeds. And in `ClientOrganisationDetail.tsx`, `handleCoordinatorEdit` calls `fetchCoordinators()` after the update:
+
+```tsx
+const handleCoordinatorEdit = async (
+  coordinatorId: string,
+  coordinatorData: { ... }
+) => {
+  if (!id) return;
+  try {
+    await clientOrganizationsApi.updateCoordinator(id, coordinatorId, coordinatorData);
+    await fetchCoordinators();  // This should refresh the data
+    // Success toast will be handled by EditCoordinatorDialog
+  } catch (error: any) {
+    console.error("Error updating coordinator:", error);
+    throw error;
+  }
+};
+```
+
+The code looks correct. Let me check if there's any caching or if the `getOrganizationCoordinators` endpoint is returning the correct data: The backend looks correct. The issue might be a race condition or state update issue. Let me look at the `EditCoordinatorDialog` usage in `ClientOrganisationDetail.tsx` more closely: The flow looks correct. Let me check for any console logs. I think the issue might be in the frontend state where the `editCoordinatorDialog.coordinator` still has the old data.
+
+The issue is that after update, `fetchCoordinators()` fetches new data and updates the `coordinators` state, but the `editCoordinatorDialog.coordinator` might still be pointing to the old coordinator object in memory.
+
+Let me check how `handleEditCoordinatorClick` sets the coordinator: I see. The table is displaying data from the `coordinators` state, and `fetchCoordinators()` updates that state. Let me double-check by looking at the whole flow again.
+
+Actually wait - the issue might be that there's NO actual bug here. The table is reading from the `coordinators` state which is updated by `fetchCoordinators()`. Let me check if there's perhaps some caching in the API: Let me check if there's any issue with how the apiRequest function works: I don't see any caching in the API. The issue might be a race condition - the dialog might be closing before the `fetchCoordinators` call completes.
+
+Let me check again where the issue might be. Looking at the flow:
+
+1. `EditCoordinatorDialog` submits and calls `onCoordinatorUpdate` (which is `handleCoordinatorEdit`)
+2. `handleCoordinatorEdit` calls `await clientOrganizationsApi.updateCoordinator(...)` 
+3. Then calls `await fetchCoordinators()` 
+4. The dialog shows success toast and calls `onOpenChange(false)` to close
+
+The `await` keywords should ensure the fetch completes before the dialog closes. Let me check if there's an issue with the console logs in `fetchCoordinators`:
+
+Actually wait - looking at the log output in `fetchCoordinators`, there's already a log statement. The user said "in the table data its shows that its still using the old email". This could be a visual issue or something with how React is rendering.
+
+Let me think about this differently. The `coordinators` state is updated inside `fetchCoordinators`, but React might not be re-rendering immediately. However, `setCoordinators` should trigger a re-render.
+
+Actually, I notice there's no key prop issue in the table since they're using `coordinator.id` as the key. Let me check if there's a memoization issue: Let me try a different approach - add a more explicit state update after the edit. The issue might be that the `await fetchCoordinators()` doesn't fully wait for the state to update: [object Object]
+
+---
+
+_**User (2025-12-01 06:30Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+---
+
+_**Agent (model copilot/claude-opus-4.5)**_
+
+Let me try an alternative approach - use the returned data from the updateCoordinator API call directly to update the state immediately: 
+```
+
+```
+Now let me update the todo list and restart the backend: There's a CSS error. Let me check the index.css file: I see a duplicate CSS block at the end. Let me fix it: 
+```
+
+```
+Now let me restart the backend: 
+
+---
+
+_**User (2025-12-01 06:34Z)**_
+
+@agent Try Again
+
+---
+
+_**Agent (model copilot/claude-opus-4.5)**_
+
+
+
+---
+
+_**User (2025-12-01 06:34Z)**_
+
+@agent Try Again
+
+---
+
+_**Agent (model copilot/claude-opus-4.5)**_
+
+
 
 ---
 

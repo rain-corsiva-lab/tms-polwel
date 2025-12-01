@@ -276,7 +276,7 @@ const CourseRuns: React.FC = () => {
         })
         // Filter out PENDING_BILLING and COMPLETED from main list (backend also filters these now)
         .filter((run) => run.status !== "PENDING_BILLING" && run.status !== "COMPLETED");
-        // Sorting is now handled by backend via sortBy/sortOrder parameters
+      // Sorting is now handled by backend via sortBy/sortOrder parameters
 
       setCourseRuns(transformed);
 

@@ -2166,6 +2166,48 @@ export const courseRunController = {
     }
   },
 
+  // Remove learner from course run (soft delete)
+  async removeEnrollment(req: Request, res: Response): Promise<void> {
+    try {
+      const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+      const { learnerId } = req.params as any;
+
+      if (!courseRunId || !learnerId) {
+        res.status(400).json({ success: false, error: 'Course run ID and learner ID are required' });
+        return;
+      }
+
+      // Verify enrollment exists
+      const existing = await prisma.courseRunLearner.findUnique({
+        where: { courseRunId_learnerId: { courseRunId, learnerId } },
+      });
+
+      if (!existing) {
+        res.status(404).json({ success: false, error: 'Enrollment not found' });
+        return;
+      }
+
+      if (existing.deletedAt) {
+        res.status(400).json({ success: false, error: 'Enrollment already removed' });
+        return;
+      }
+
+      // Soft delete by setting deletedAt and updating enrollment status
+      await prisma.courseRunLearner.update({
+        where: { courseRunId_learnerId: { courseRunId, learnerId } },
+        data: {
+          deletedAt: new Date(),
+          enrollmentStatus: 'WITHDRAWN',
+        },
+      });
+
+      res.json({ success: true, message: 'Learner removed from course run' });
+    } catch (error) {
+      console.error('Error removing enrollment:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.removeEnrollment', 'Failed to remove enrollment', error));
+    }
+  },
+
   async getAttendance(req: Request, res: Response): Promise<void> {
     try {
       const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
