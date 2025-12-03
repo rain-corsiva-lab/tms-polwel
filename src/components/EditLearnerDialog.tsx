@@ -27,6 +27,7 @@ interface Organization {
   id: string;
   name: string;
   buNumber?: string;
+  organizationType?: string;
 }
 interface Coordinator {
   id: string;
@@ -168,6 +169,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     designation: "",
     email: "",
     contactNumber: "",
+    organizationType: "",
     division: "",
     departmentName: "",
     buNumber: "",
@@ -240,8 +242,12 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
 
       if (learner.clientOrganizationId) {
         const selectedOrg = mapped.find((o) => o.id === learner.clientOrganizationId) ?? null;
-        if (selectedOrg?.buNumber) {
-          setForm((prev) => ({ ...prev, buNumber: selectedOrg.buNumber || prev.buNumber || "" }));
+        if (selectedOrg) {
+          setForm((prev) => ({
+            ...prev,
+            organizationType: selectedOrg.organizationType || "POLWEL",
+            buNumber: selectedOrg.buNumber || prev.buNumber || "",
+          }));
         }
       } else {
         setCoordinators([]);
@@ -266,6 +272,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
         id: org.id,
         name: org.name,
         buNumber: org.buNumber || "",
+        organizationType: org.organizationType || "POLWEL",
       }));
       setOrganizations(mapped);
       return mapped;
@@ -345,6 +352,11 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       trainingCoordinatorEmail: coord.email || "",
       trainingCoordinatorPhone: coord.contactNumber || "",
     }));
+  };
+
+  // Helper function to get division field label based on organization type
+  const getDivisionLabel = () => {
+    return form.organizationType === "SPF" ? "Division" : "Name";
   };
 
   const organizationOptions: SearchableSelectOption[] = organizations.map((org) => ({
@@ -474,15 +486,22 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Division *</Label>
-                <SearchableSelect value={form.division} onValueChange={handleOrganizationChange} options={organizationOptions} placeholder="Select division" />
+                <Label>{getDivisionLabel()} *</Label>
+                <SearchableSelect
+                  value={form.division}
+                  onValueChange={handleOrganizationChange}
+                  options={organizationOptions}
+                  placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Department</Label>
                 <Input value={form.departmentName} onChange={(e) => handleChange("departmentName", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>BU Number</Label>
+                <Label>
+                  BU Number <span className="text-gray-400">(Optional)</span>
+                </Label>
                 <Input value={form.buNumber} disabled className="bg-gray-50" />
               </div>
               <div className="space-y-2">

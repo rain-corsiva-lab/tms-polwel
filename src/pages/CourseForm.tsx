@@ -318,15 +318,9 @@ const CourseForm: React.FC = () => {
       errors.push("At least one trainer is required");
     }
 
-    // Validate venue pricing fields when venueFeeType is PER_VENUE
-    if (formData.venueFeeType === "PER_VENUE") {
-      if (!formData.venueMaxParticipants || formData.venueMaxParticipants === "" || Number(formData.venueMaxParticipants) <= 0) {
-        errors.push("Max Participants (Venue) is required and must be greater than 0 when Venue Fee Type is Per Venue");
-      }
-      if (formData.perHeadPriceIfMaxExceed === "" || formData.perHeadPriceIfMaxExceed === undefined || Number(formData.perHeadPriceIfMaxExceed) < 0) {
-        errors.push("Per Head Price If Max Exceed is required and must be 0 or greater when Venue Fee Type is Per Venue");
-      }
-    }
+    // Note: venueMaxParticipants and perHeadPriceIfMaxExceed are now optional
+    // If provided, they must be valid positive numbers (for venueMaxParticipants)
+    // or non-negative numbers (for perHeadPriceIfMaxExceed)
 
     if (errors.length > 0) {
       toast({

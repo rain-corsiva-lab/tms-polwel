@@ -1162,6 +1162,11 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
     return data.selectedLearnerId && disabledFields.includes(field);
   };
 
+  // Helper function to get division field label based on organization type
+  const getDivisionLabel = () => {
+    return data.organizationType === "SPF" ? "Division" : "Name";
+  };
+
   const learnerOptions: SearchableSelectOption[] = (learners || []).map((learner) => ({
     value: learner.id,
     label: learner.fullname,
@@ -1293,14 +1298,14 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
               />
             </div>
             <div className="space-y-2">
-              <Label>Division *</Label>
+              <Label>{getDivisionLabel()} *</Label>
               <SearchableSelect
                 value={data.division}
                 onValueChange={onOrganizationChange}
                 options={organizationOptions}
-                placeholder="Select division"
+                placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
                 disabled={!data.organizationType || isFieldDisabled("division")}
-                emptyMessage={!data.organizationType ? "Select organisation type first" : "No divisions found"}
+                emptyMessage={!data.organizationType ? "Select organisation type first" : `No ${getDivisionLabel().toLowerCase()}s found`}
               />
             </div>
             <div className="space-y-2">
@@ -1312,7 +1317,9 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
               />
             </div>
             <div className="space-y-2">
-              <Label>BU Number</Label>
+              <Label>
+                BU Number <span className="text-gray-400">(Optional)</span>
+              </Label>
               <Input value={data.buNumber} disabled className="bg-gray-50" />
             </div>
             <div className="space-y-2">
@@ -1444,6 +1451,11 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
   // Filter organizations by selected type
   const filteredOrganizations = data.organizationType ? (organizations || []).filter((org) => org.organizationType === data.organizationType) : [];
 
+  // Helper function to get division field label based on organization type
+  const getDivisionLabel = () => {
+    return data.organizationType === "SPF" ? "Division" : "Name";
+  };
+
   const organizationOptions: SearchableSelectOption[] = filteredOrganizations.map((org) => ({
     value: org.id,
     label: org.name,
@@ -1513,14 +1525,14 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <Label>Division *</Label>
+            <Label>{getDivisionLabel()} *</Label>
             <SearchableSelect
               value={data.division}
               onValueChange={onOrganizationChange}
               options={organizationOptions}
-              placeholder="Select division"
+              placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
               disabled={!data.organizationType}
-              emptyMessage={!data.organizationType ? "Select organisation type first" : "No divisions found"}
+              emptyMessage={!data.organizationType ? "Select organisation type first" : `No ${getDivisionLabel().toLowerCase()}s found`}
             />
           </div>
           <div className="space-y-2">
@@ -1532,7 +1544,9 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <Label>BU Number</Label>
+            <Label>
+              BU Number <span className="text-gray-400">(Optional)</span>
+            </Label>
             <Input value={data.buNumber} disabled className="bg-gray-50" />
           </div>
           <div className="space-y-2">

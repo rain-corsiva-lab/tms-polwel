@@ -124,7 +124,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
               <div className="space-y-2">
                 <Label htmlFor="venueMaxParticipants" className="text-sm font-medium">
-                  Max Participants (Venue)
+                  Max Participants (Venue) <span className="text-gray-400">(Optional)</span>
                 </Label>
                 <Input
                   id="venueMaxParticipants"
@@ -139,7 +139,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
 
               <div className="space-y-2">
                 <Label htmlFor="perHeadPriceIfMaxExceed" className="text-sm font-medium">
-                  Per Head Fee if Max Exceeded ($)
+                  Per Head Fee if Max Exceeded ($) <span className="text-gray-400">(Optional)</span>
                 </Label>
                 <Input
                   id="perHeadPriceIfMaxExceed"

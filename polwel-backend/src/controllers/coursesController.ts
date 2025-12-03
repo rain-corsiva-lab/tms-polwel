@@ -210,13 +210,13 @@ export const coursesController = {
         validationErrors.push('At least one trainer is required');
       }
 
-      // Validate venue pricing fields when venueFeeType is PER_VENUE
+      // Validate venue pricing fields when venueFeeType is PER_VENUE (if provided, they must be valid)
       if (data.venueFeeType === 'PER_VENUE') {
-        if (!data.venueMaxParticipants || data.venueMaxParticipants <= 0) {
-          validationErrors.push('Max Participants (Venue) is required and must be greater than 0 when Venue Fee Type is Per Venue');
+        if (data.venueMaxParticipants !== null && data.venueMaxParticipants !== undefined && data.venueMaxParticipants <= 0) {
+          validationErrors.push('Max Participants (Venue) must be greater than 0 if provided');
         }
-        if (data.perHeadPriceIfMaxExceed === null || data.perHeadPriceIfMaxExceed === undefined || data.perHeadPriceIfMaxExceed < 0) {
-          validationErrors.push('Per Head Price If Max Exceed is required and must be 0 or greater when Venue Fee Type is Per Venue');
+        if (data.perHeadPriceIfMaxExceed !== null && data.perHeadPriceIfMaxExceed !== undefined && data.perHeadPriceIfMaxExceed < 0) {
+          validationErrors.push('Per Head Price If Max Exceed must be 0 or greater if provided');
         }
       }
 
@@ -429,13 +429,13 @@ export const coursesController = {
         }
       }
 
-      // Validate venue pricing fields when venueFeeType is PER_VENUE
+      // Validate venue pricing fields when venueFeeType is PER_VENUE (if provided, they must be valid)
       if (data.venueFeeType === 'PER_VENUE') {
-        if (!data.venueMaxParticipants || data.venueMaxParticipants <= 0) {
-          validationErrors.push('Max Participants (Venue) is required and must be greater than 0 when Venue Fee Type is Per Venue');
+        if (data.venueMaxParticipants !== null && data.venueMaxParticipants !== undefined && data.venueMaxParticipants <= 0) {
+          validationErrors.push('Max Participants (Venue) must be greater than 0 if provided');
         }
-        if (data.perHeadPriceIfMaxExceed === null || data.perHeadPriceIfMaxExceed === undefined || data.perHeadPriceIfMaxExceed < 0) {
-          validationErrors.push('Per Head Price If Max Exceed is required and must be 0 or greater when Venue Fee Type is Per Venue');
+        if (data.perHeadPriceIfMaxExceed !== null && data.perHeadPriceIfMaxExceed !== undefined && data.perHeadPriceIfMaxExceed < 0) {
+          validationErrors.push('Per Head Price If Max Exceed must be 0 or greater if provided');
         }
       }
 
