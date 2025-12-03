@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { trainerDashboardApi, profileApi } from "@/lib/api";
+import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 
 const Profile = () => {
   const { user, apiRequest } = useAuth();
@@ -42,8 +43,8 @@ const Profile = () => {
           setContactNumber(data.data.contactNumber || "");
           setBio(data.data.bio || "");
         }
-      } catch (err) {
-        toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
+      } catch (err: any) {
+        errorHandlers.profileLoad(err, toast);
       } finally {
         setLoading(false);
       }
@@ -78,7 +79,7 @@ const Profile = () => {
       toast({ title: "Success", description: "Profile updated" });
       setProfile(res.data);
     } catch (err: any) {
-      toast({ title: "Error", description: err?.message || "Failed to update profile", variant: "destructive" });
+      errorHandlers.profileUpdate(err, toast);
     }
   };
 

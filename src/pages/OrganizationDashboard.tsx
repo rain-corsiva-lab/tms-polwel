@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { clientOrganizationsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/date";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import PaginationControls from "@/components/ui/pagination";
@@ -120,7 +121,7 @@ const OrganizationDashboard = () => {
     } catch (error: any) {
       toast({
         title: "Error loading dashboard",
-        description: error.message || "Failed to load organization data",
+        description: getErrorMessage(error, "Failed to load organization data"),
         variant: "destructive",
       });
     } finally {
@@ -140,7 +141,7 @@ const OrganizationDashboard = () => {
     } catch (error: any) {
       toast({
         title: "Error loading learners",
-        description: error.message || "Failed to load learners",
+        description: getErrorMessage(error, "Failed to load learners"),
         variant: "destructive",
       });
     }

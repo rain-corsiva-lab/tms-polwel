@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { courseRunsApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 type AttendanceDayRecord = {
   day: number;
@@ -283,7 +284,7 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
       console.error("Attendance save error", error);
       toast({
         title: "Failed to save attendance",
-        description: error?.message || "Please try again shortly.",
+        description: getErrorMessage(error, "Please try again shortly."),
         variant: "destructive",
       });
     } finally {

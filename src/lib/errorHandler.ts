@@ -9,31 +9,56 @@ export interface ErrorInfo {
 }
 
 /**
+ * Extract error message from various error formats
+ * Handles: string errors, Error objects, API response errors, nested error objects
+ */
+export const getErrorMessage = (error: any, fallback: string = 'An unexpected error occurred'): string => {
+  if (!error) return fallback;
+  
+  // String error
+  if (typeof error === 'string') return error;
+  
+  // Check for nested API response patterns first (most specific)
+  if (error?.response?.data?.message) return error.response.data.message;
+  if (error?.response?.data?.error) return error.response.data.error;
+  if (error?.data?.message) return error.data.message;
+  if (error?.data?.error) return error.data.error;
+  
+  // Check for direct error properties
+  if (error?.message && typeof error.message === 'string' && error.message !== '[object Object]') {
+    return error.message;
+  }
+  if (error?.error && typeof error.error === 'string') return error.error;
+  
+  // Check for details field (sometimes used in validation errors)
+  if (error?.details && typeof error.details === 'string') return error.details;
+  
+  // Check for array of errors (validation errors)
+  if (error?.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+    const messages = error.errors
+      .map((e: any) => e?.message || e?.msg || (typeof e === 'string' ? e : null))
+      .filter(Boolean);
+    if (messages.length > 0) return messages.join('. ');
+  }
+  
+  // Try toString if it gives useful info
+  if (error?.toString && typeof error.toString === 'function') {
+    const str = error.toString();
+    if (str && str !== '[object Object]' && str !== 'Error' && !str.startsWith('[object')) {
+      return str;
+    }
+  }
+  
+  return fallback;
+};
+
+/**
  * Parse any error and return consistent, user-friendly error information
  * This function works the same way in local, staging, and production
  */
 export const parseError = (error: any, context?: string): ErrorInfo => {
-  // Better error message extraction to handle objects that stringify to "[object Object]"
-  let errorMessage: string;
-  
-  if (typeof error === 'string') {
-    errorMessage = error;
-  } else if (error?.message && typeof error.message === 'string') {
-    errorMessage = error.message;
-  } else if (error?.error && typeof error.error === 'string') {
-    errorMessage = error.error;
-  } else if (error?.toString && typeof error.toString === 'function') {
-    const stringified = error.toString();
-    // Avoid "[object Object]" by checking if toString actually gives us useful info
-    if (stringified !== '[object Object]' && stringified !== 'Error') {
-      errorMessage = stringified;
-    } else {
-      // Try to extract useful information from the error object
-      errorMessage = JSON.stringify(error, null, 2);
-    }
-  } else {
-    errorMessage = 'An unexpected error occurred';
-  }
+  // Use the helper to extract error message
+  const errorMessage = getErrorMessage(error, 'An unexpected error occurred');
   
   const errorName = error?.name || 'UnknownError';
   const lowerMessage = errorMessage.toLowerCase();
@@ -185,19 +210,87 @@ export const createErrorHandler = (context: string) => {
 
 // Pre-configured error handlers for common operations
 export const errorHandlers = {
+  // User operations
   userUpdate: (error: any, toast: any) => handleError(error, toast, 'update user'),
   userCreate: (error: any, toast: any) => handleError(error, toast, 'create user'),
+  userDelete: (error: any, toast: any) => handleError(error, toast, 'delete user'),
+  
+  // Trainer operations
   trainerUpdate: (error: any, toast: any) => handleError(error, toast, 'update trainer'),
   trainerCreate: (error: any, toast: any) => handleError(error, toast, 'create trainer'),
-  coordinatorUpdate: (error: any, toast: any) => handleError(error, toast, 'update coordinator'),
-  coordinatorCreate: (error: any, toast: any) => handleError(error, toast, 'create coordinator'),
+  trainerDelete: (error: any, toast: any) => handleError(error, toast, 'delete trainer'),
+  trainerRestore: (error: any, toast: any) => handleError(error, toast, 'restore trainer'),
+  
+  // Partner operations
   partnerUpdate: (error: any, toast: any) => handleError(error, toast, 'update partner'),
   partnerCreate: (error: any, toast: any) => handleError(error, toast, 'create partner'),
+  partnerDelete: (error: any, toast: any) => handleError(error, toast, 'delete partner'),
+  partnerRestore: (error: any, toast: any) => handleError(error, toast, 'restore partner'),
+  
+  // Coordinator operations
+  coordinatorUpdate: (error: any, toast: any) => handleError(error, toast, 'update coordinator'),
+  coordinatorCreate: (error: any, toast: any) => handleError(error, toast, 'create coordinator'),
+  coordinatorDelete: (error: any, toast: any) => handleError(error, toast, 'delete coordinator'),
+  
+  // Venue operations
+  venueUpdate: (error: any, toast: any) => handleError(error, toast, 'update venue'),
+  venueCreate: (error: any, toast: any) => handleError(error, toast, 'create venue'),
+  venueDelete: (error: any, toast: any) => handleError(error, toast, 'delete venue'),
+  venueRestore: (error: any, toast: any) => handleError(error, toast, 'restore venue'),
+  venueLoad: (error: any, toast: any) => handleError(error, toast, 'load venue'),
+  
+  // Course operations
+  courseUpdate: (error: any, toast: any) => handleError(error, toast, 'update course'),
+  courseCreate: (error: any, toast: any) => handleError(error, toast, 'create course'),
+  courseDelete: (error: any, toast: any) => handleError(error, toast, 'delete course'),
+  courseLoad: (error: any, toast: any) => handleError(error, toast, 'load course'),
+  
+  // Course Run operations
+  courseRunUpdate: (error: any, toast: any) => handleError(error, toast, 'update course run'),
+  courseRunCreate: (error: any, toast: any) => handleError(error, toast, 'create course run'),
+  courseRunDelete: (error: any, toast: any) => handleError(error, toast, 'delete course run'),
+  courseRunLoad: (error: any, toast: any) => handleError(error, toast, 'load course run'),
+  
+  // Learner operations
+  learnerUpdate: (error: any, toast: any) => handleError(error, toast, 'update learner'),
+  learnerCreate: (error: any, toast: any) => handleError(error, toast, 'create learner'),
+  learnerDelete: (error: any, toast: any) => handleError(error, toast, 'delete learner'),
+  learnerImport: (error: any, toast: any) => handleError(error, toast, 'import learners'),
+  
+  // Organization operations
+  organizationUpdate: (error: any, toast: any) => handleError(error, toast, 'update organization'),
+  organizationCreate: (error: any, toast: any) => handleError(error, toast, 'create organization'),
+  organizationDelete: (error: any, toast: any) => handleError(error, toast, 'delete organization'),
+  organizationLoad: (error: any, toast: any) => handleError(error, toast, 'load organization'),
+  
+  // Profile operations
+  profileUpdate: (error: any, toast: any) => handleError(error, toast, 'update profile'),
+  profileLoad: (error: any, toast: any) => handleError(error, toast, 'load profile'),
+  passwordChange: (error: any, toast: any) => handleError(error, toast, 'change password'),
+  
+  // Billing operations
+  billingCreate: (error: any, toast: any) => handleError(error, toast, 'create billing'),
+  billingUpdate: (error: any, toast: any) => handleError(error, toast, 'update billing'),
+  billingLoad: (error: any, toast: any) => handleError(error, toast, 'load billing'),
+  
+  // Certificate operations
+  certificateGenerate: (error: any, toast: any) => handleError(error, toast, 'generate certificate'),
+  
+  // Waiver operations
+  waiverApprove: (error: any, toast: any) => handleError(error, toast, 'approve waiver'),
+  waiverReject: (error: any, toast: any) => handleError(error, toast, 'reject waiver'),
+  waiverLoad: (error: any, toast: any) => handleError(error, toast, 'load waiver'),
+  
+  // Generic operations
+  dataLoad: (error: any, toast: any) => handleError(error, toast, 'load data'),
+  dataSave: (error: any, toast: any) => handleError(error, toast, 'save data'),
+  dataDelete: (error: any, toast: any) => handleError(error, toast, 'delete data'),
 };
 
 export default {
   parseError,
   handleError,
   createErrorHandler,
-  errorHandlers
+  errorHandlers,
+  getErrorMessage,
 };

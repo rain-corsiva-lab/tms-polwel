@@ -12,6 +12,7 @@ import DateInput from "../components/ui/date-input";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, Users } from "lucide-react";
 import { coursesApi, venuesApi, trainersApi, courseRunsApi } from "../lib/api";
+import { getErrorMessage } from "../lib/errorHandler";
 import Swal from "sweetalert2";
 import { toast } from "sonner";
 
@@ -150,9 +151,9 @@ const CourseRunForm: React.FC = () => {
             handleCourseChange(courseId);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error loading initial data:", error);
-        toast.error("Failed to load form data");
+        toast.error(getErrorMessage(error, "Failed to load form data"));
       } finally {
         setLoading(false);
       }
@@ -559,11 +560,11 @@ const CourseRunForm: React.FC = () => {
         toast.success(`Course run ${isDraft ? "saved as draft" : "created"} successfully`);
         navigate("/course-runs");
       } else {
-        throw new Error(response.error || "Failed to create course run");
+        throw new Error(getErrorMessage(response, "Failed to create course run"));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting form:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create course run");
+      toast.error(getErrorMessage(error, "Failed to create course run"));
     } finally {
       setSubmitting(false);
     }

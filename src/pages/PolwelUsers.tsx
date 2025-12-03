@@ -40,6 +40,7 @@ import { PasswordResetDialog } from "@/components/PasswordResetDialog";
 import { polwelUsersApi, debugAuthState } from "@/lib/api";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { useAuth } from "@/hooks/useAuth";
 
 // Enhanced user data structure for POLWEL users
@@ -218,7 +219,7 @@ export default function PolwelUsers() {
       console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "Failed to delete user",
+        description: getErrorMessage(error, "Failed to delete user"),
         variant: "destructive",
       });
     }
@@ -252,7 +253,7 @@ export default function PolwelUsers() {
       console.error("Error updating user status:", error);
       toast({
         title: "Error",
-        description: "Failed to update user status",
+        description: getErrorMessage(error, "Failed to update user status"),
         variant: "destructive",
       });
     }

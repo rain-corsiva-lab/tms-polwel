@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { venuesApi, type Venue } from "@/lib/api";
+import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 
 const VenueArchive = () => {
   const navigate = useNavigate();
@@ -29,17 +30,13 @@ const VenueArchive = () => {
       } else {
         toast({
           title: "Error",
-          description: response.error || "Failed to load venues",
+          description: getErrorMessage(response, "Failed to load venues"),
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading venues:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load venues",
-        variant: "destructive",
-      });
+      errorHandlers.venueLoad(error, toast);
     } finally {
       setLoading(false);
     }
@@ -62,17 +59,13 @@ const VenueArchive = () => {
       } else {
         toast({
           title: "Error",
-          description: response.error || "Failed to delete venue",
+          description: getErrorMessage(response, "Failed to delete venue"),
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting venue:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete venue",
-        variant: "destructive",
-      });
+      errorHandlers.venueDelete(error, toast);
     }
   };
 

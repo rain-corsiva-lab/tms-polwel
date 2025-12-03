@@ -11,6 +11,7 @@ import { courseRunsApi } from "@/lib/api";
 import { generateBillingXLSX } from "@/lib/billingExport";
 import { GenerateCertificatesDialog } from "@/components/GenerateCertificatesDialog";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { Loader2, MoreHorizontal, Search, FileSpreadsheet, Award, Filter } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -330,7 +331,7 @@ const PostRunManagement: React.FC = () => {
         console.error("Error generating billing report:", error);
         toast({
           title: "Export Failed",
-          description: error.message || "Failed to generate billing report",
+          description: getErrorMessage(error, "Failed to generate billing report"),
           variant: "destructive",
         });
       }

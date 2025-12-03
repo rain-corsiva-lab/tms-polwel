@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trainerDashboardApi, trainersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -85,7 +86,7 @@ export function TrainerTrainingSummary({ trainerId, mode, pageSizeOptions = defa
       console.error("Failed to load training summary", error);
       toast({
         title: "Failed to load training summary",
-        description: error?.message || "Please try again later.",
+        description: getErrorMessage(error, "Please try again later."),
         variant: "destructive",
       });
       setItems([]);

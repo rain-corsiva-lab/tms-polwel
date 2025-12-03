@@ -47,6 +47,7 @@ import StatsCard from "@/components/StatsCard";
 import { useToast } from "@/hooks/use-toast";
 import { trainersApi, partnersApi, polwelUsersApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 
 // Enhanced user data structure for Trainers
 interface Trainer {
@@ -562,12 +563,8 @@ const TrainersAndPartners = () => {
         description: `${trainerName} has been deleted successfully`,
       });
       fetchTrainers(); // Refresh list
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete trainer",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      errorHandlers.trainerDelete(error, toast);
     }
   };
 
@@ -584,12 +581,8 @@ const TrainersAndPartners = () => {
         description: `${partnerName} has been deleted successfully`,
       });
       fetchPartners(); // Refresh list
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete partner",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      errorHandlers.partnerDelete(error, toast);
     }
   };
 
@@ -628,12 +621,8 @@ const TrainersAndPartners = () => {
       });
       fetchDeleted();
       fetchTrainers();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to restore trainer",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      errorHandlers.trainerRestore(error, toast);
     }
   };
 
@@ -647,12 +636,8 @@ const TrainersAndPartners = () => {
       });
       fetchDeleted();
       fetchPartners();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to restore partner",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      errorHandlers.partnerRestore(error, toast);
     }
   };
 
@@ -889,7 +874,7 @@ const TrainersAndPartners = () => {
                                   } catch (error: any) {
                                     toast({
                                       title: "Failed to Send Email",
-                                      description: error.message || "Could not resend setup email. Please try again.",
+                                      description: getErrorMessage(error, "Could not resend setup email. Please try again."),
                                       variant: "destructive",
                                     });
                                   }
@@ -1089,7 +1074,7 @@ const TrainersAndPartners = () => {
                                           } catch (error: any) {
                                             toast({
                                               title: "Failed to Send Email",
-                                              description: error.message || "Could not resend setup email. Please try again.",
+                                              description: getErrorMessage(error, "Could not resend setup email. Please try again."),
                                               variant: "destructive",
                                             });
                                           }

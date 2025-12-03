@@ -509,7 +509,7 @@ model CourseRunLearner {
   feesRemarks                   String?                    @db.Text
   invoiceNumber                 String?
   remarks                       String?                    @db.Text
-  attendanceStatus              AttendanceStatus?          @default(PRESENT)
+  attendanceStatus              AttendanceStatus?          @default(PENDING)
   enrollmentStatus              EnrollmentStatus?          @default(ENROLLED)
   withdrawnReason               String?                    @db.Text
   withdrawnAt                   DateTime?
@@ -754,6 +754,7 @@ enum VenueType {
 }
 
 enum AttendanceStatus {
+  PENDING
   PRESENT
   ABSENT
 }

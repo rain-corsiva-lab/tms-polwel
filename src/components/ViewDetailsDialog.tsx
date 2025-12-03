@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Eye, Calendar, Mail, Shield, Clock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { polwelUsersApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface PolwelUserDetails {
   id: number;
@@ -51,7 +52,7 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
       console.error("Error fetching user details:", error);
       toast({
         title: "Error",
-        description: "Failed to load user details",
+        description: getErrorMessage(error, "Failed to load user details"),
         variant: "destructive",
       });
       setUserDetails(null);

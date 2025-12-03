@@ -18,6 +18,7 @@ import DateInput from "../components/ui/date-input";
 import { courseRunsApi } from "../lib/api";
 import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen, Filter } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
+import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
@@ -214,6 +215,19 @@ const CourseRuns: React.FC = () => {
     cc: "",
     additionalBody: "",
     submitting: false,
+  });
+
+  // State for Send Trainer Email Dialog
+  const [trainerEmailDialog, setTrainerEmailDialog] = useState<{
+    open: boolean;
+    courseRun: CourseRunUI | null;
+    courseRunDetails: any | null;
+    loading: boolean;
+  }>({
+    open: false,
+    courseRun: null,
+    courseRunDetails: null,
+    loading: false,
   });
 
   const totalCount = pagination.total || courseRuns.length;
@@ -756,22 +770,36 @@ const CourseRuns: React.FC = () => {
     }
   };
 
-  // Handler for sending training assignment email
+  // Handler for opening trainer assignment email dialog
   const handleSendTrainingAssignmentEmail = async (courseRun: CourseRunUI) => {
-    if (!window.confirm(`Send training assignment emails to both learners and trainers for "${courseRun.title}"?`)) {
-      return;
-    }
-
     try {
-      await courseRunsApi.sendTrainingAssignmentEmailToLearners(courseRun.id);
-      toast({
-        title: "Emails Sent",
-        description: "Training assignment emails have been sent and course is now confirmed.",
+      setTrainerEmailDialog({
+        open: true,
+        courseRun,
+        courseRunDetails: null,
+        loading: true,
       });
-      await fetchCourseRuns();
+
+      // Fetch course run details to get trainer info
+      const response = await courseRunsApi.getById(courseRun.id);
+      if (response?.success && response.courseRun) {
+        setTrainerEmailDialog((prev) => ({
+          ...prev,
+          courseRunDetails: response.courseRun,
+          loading: false,
+        }));
+      } else {
+        throw new Error("Failed to load course run details");
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to send training assignment emails";
+      const message = err instanceof Error ? err.message : "Failed to load course run details";
       toast({ title: "Error", description: message, variant: "destructive" });
+      setTrainerEmailDialog({
+        open: false,
+        courseRun: null,
+        courseRunDetails: null,
+        loading: false,
+      });
     }
   };
 
@@ -1570,6 +1598,63 @@ const CourseRuns: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Trainer Assignment Email Dialog */}
+      {trainerEmailDialog.open && trainerEmailDialog.courseRunDetails && (
+        <SendTrainerEmailDialog
+          open={trainerEmailDialog.open}
+          onOpenChange={(open) => {
+            if (!open) {
+              setTrainerEmailDialog({
+                open: false,
+                courseRun: null,
+                courseRunDetails: null,
+                loading: false,
+              });
+            }
+          }}
+          courseRunId={trainerEmailDialog.courseRun?.id || ""}
+          trainers={
+            trainerEmailDialog.courseRunDetails?.courseRunTrainers?.map((crt: any) => ({
+              id: crt.trainer?.id || crt.trainerId,
+              name: crt.trainer?.name || "Unknown",
+              email: crt.trainer?.email || "",
+              baseFee: crt.trainerBaseAmount || 0,
+              additionalCost: crt.additionalCost || 0,
+            })) || []
+          }
+          courseRunDetails={{
+            serialNumber: trainerEmailDialog.courseRunDetails?.serialNumber || "",
+            courseName: trainerEmailDialog.courseRunDetails?.course?.title || "",
+            startDate: trainerEmailDialog.courseRunDetails?.startDatetime
+              ? new Date(trainerEmailDialog.courseRunDetails.startDatetime).toLocaleDateString()
+              : "",
+            endDate: trainerEmailDialog.courseRunDetails?.endDatetime ? new Date(trainerEmailDialog.courseRunDetails.endDatetime).toLocaleDateString() : "",
+            venue: trainerEmailDialog.courseRunDetails?.venue?.name || trainerEmailDialog.courseRunDetails?.specifiedLocation || "TBD",
+          }}
+          onSuccess={() => {
+            setTrainerEmailDialog({
+              open: false,
+              courseRun: null,
+              courseRunDetails: null,
+              loading: false,
+            });
+            fetchCourseRuns();
+          }}
+        />
+      )}
+
+      {/* Loading state for trainer email dialog */}
+      {trainerEmailDialog.open && trainerEmailDialog.loading && (
+        <Dialog open={true} onOpenChange={() => {}}>
+          <DialogContent>
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-sm text-muted-foreground">Loading trainer details...</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Eye, Loader2, Filter, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { coursesApi, referencesApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface Course {
   id: string;
@@ -108,7 +109,7 @@ const CourseArchive = () => {
         console.error("Error loading data:", error);
         toast({
           title: "Error",
-          description: "Failed to load courses data",
+          description: getErrorMessage(error, "Failed to load courses data"),
           variant: "destructive",
         });
 
@@ -177,7 +178,7 @@ const CourseArchive = () => {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to delete course",
+          description: getErrorMessage(error, "Failed to delete course"),
           variant: "destructive",
         });
       }
@@ -208,7 +209,7 @@ const CourseArchive = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update course status",
+        description: getErrorMessage(error, "Failed to update course status"),
         variant: "destructive",
       });
     }

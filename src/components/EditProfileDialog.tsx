@@ -11,6 +11,7 @@ import { Check, ChevronsUpDown, Edit, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { trainerDashboardApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface EditProfileDialogProps {
   isOpen: boolean;
@@ -98,7 +99,7 @@ export function EditProfileDialog({ isOpen, onClose, profile, onProfileUpdated }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: getErrorMessage(error, "Failed to update profile. Please try again."),
         variant: "destructive",
       });
     }

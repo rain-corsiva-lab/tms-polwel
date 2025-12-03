@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { courseRunsApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { Award, Download, FileArchive, Loader2, X, FileText } from "lucide-react";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
@@ -97,7 +98,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
       console.error("Error fetching certificate data:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to load certificate data",
+        description: getErrorMessage(error, "Failed to load certificate data"),
         variant: "destructive",
       });
     } finally {
@@ -166,7 +167,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
       console.error("Error downloading certificate:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to download certificate",
+        description: getErrorMessage(error, "Failed to download certificate"),
         variant: "destructive",
       });
     }
@@ -228,7 +229,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
       console.error("Error exporting ZIP:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to export certificates",
+        description: getErrorMessage(error, "Failed to export certificates"),
         variant: "destructive",
       });
     }
@@ -301,7 +302,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
       console.error("Error submitting waiver:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to submit waiver form",
+        description: getErrorMessage(error, "Failed to submit waiver form"),
         variant: "destructive",
       });
     } finally {

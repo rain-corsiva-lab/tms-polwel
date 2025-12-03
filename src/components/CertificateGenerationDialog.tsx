@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { Award, Download, FileDown, Loader2, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -114,7 +115,7 @@ function WaiverDialog({ open, onOpenChange, learner, courseRunId, onSuccess }: W
       console.error("Error submitting waiver:", error);
       toast({
         title: "Submission Failed",
-        description: error.message || "Failed to submit waiver form",
+        description: getErrorMessage(error, "Failed to submit waiver form"),
         variant: "destructive",
       });
     } finally {
@@ -262,7 +263,7 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
       console.error("Error downloading certificate:", error);
       toast({
         title: "Download Failed",
-        description: error.message || "Failed to download certificate",
+        description: getErrorMessage(error, "Failed to download certificate"),
         variant: "destructive",
       });
     } finally {
@@ -315,7 +316,7 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
       console.error("Error exporting certificates:", error);
       toast({
         title: "Export Failed",
-        description: error.message || "Failed to export certificates",
+        description: getErrorMessage(error, "Failed to export certificates"),
         variant: "destructive",
       });
     } finally {

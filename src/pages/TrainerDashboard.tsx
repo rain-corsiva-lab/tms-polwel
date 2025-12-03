@@ -19,6 +19,7 @@ import { Calendar as CalendarIcon, Clock, MapPin, Mail, Phone, Building2, User, 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { trainerDashboardApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { TrainerTrainingSummary } from "@/components/TrainerTrainingSummary";
 
 interface TrainerProfile {
@@ -105,7 +106,7 @@ export default function TrainerDashboard() {
     } catch (error: any) {
       toast({
         title: "Error Loading Dashboard",
-        description: error.message || "Failed to load trainer dashboard",
+        description: getErrorMessage(error, "Failed to load trainer dashboard"),
         variant: "destructive",
       });
     } finally {

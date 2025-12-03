@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { venuesApi, type Contact, type Venue } from "@/lib/api";
+import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 
 interface VenueFormData {
   name: string;
@@ -72,13 +73,9 @@ const VenueForm = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading venue:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load venue data",
-        variant: "destructive",
-      });
+      errorHandlers.venueLoad(error, toast);
     } finally {
       setLoading(false);
     }
@@ -214,17 +211,17 @@ const VenueForm = () => {
       } else {
         toast({
           title: "Error",
-          description: response.error || "Failed to save venue",
+          description: getErrorMessage(response, "Failed to save venue"),
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving venue:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save venue",
-        variant: "destructive",
-      });
+      if (venueId) {
+        errorHandlers.venueUpdate(error, toast);
+      } else {
+        errorHandlers.venueCreate(error, toast);
+      }
     } finally {
       setSubmitting(false);
     }

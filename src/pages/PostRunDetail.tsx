@@ -14,6 +14,7 @@ import DateInput from "@/components/ui/date-input";
 import { useToast } from "@/hooks/use-toast";
 import { courseRunsApi } from "@/lib/api";
 import { formatDate } from "@/lib/date";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { ArrowLeft, Calendar, MapPin, Users, Save, Plus, Trash2, Loader2, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Swal from "sweetalert2";
@@ -287,7 +288,7 @@ const PostRunDetail = () => {
       console.error("Error fetching course run:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to load course run details",
+        description: getErrorMessage(error, "Failed to load course run details"),
         variant: "destructive",
       });
     } finally {
@@ -448,7 +449,7 @@ const PostRunDetail = () => {
       console.error("Error saving billing:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save billing information",
+        description: getErrorMessage(error, "Failed to save billing information"),
         variant: "destructive",
       });
     } finally {

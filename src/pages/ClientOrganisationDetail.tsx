@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { clientOrganizationsApi } from "@/lib/api";
 import { digitsOnly } from "@/lib/utils";
+import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 import Swal from "sweetalert2";
 
 interface TrainingCoordinator {
@@ -225,10 +226,11 @@ const ClientOrganisationDetail = () => {
       });
     } catch (error: any) {
       console.error("Error fetching organization:", error);
-      setError(error.message || "Failed to fetch organization");
+      const errorMessage = getErrorMessage(error, "Failed to fetch organization");
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: "Failed to load organization data. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -250,7 +252,7 @@ const ClientOrganisationDetail = () => {
       console.error("Error fetching coordinators:", error);
       toast({
         title: "Error",
-        description: "Failed to load coordinators. Please try again.",
+        description: getErrorMessage(error, "Failed to load coordinators. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -269,7 +271,7 @@ const ClientOrganisationDetail = () => {
       console.error("Error fetching learners:", error);
       toast({
         title: "Error",
-        description: "Failed to load learners. Please try again.",
+        description: getErrorMessage(error, "Failed to load learners. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -340,7 +342,7 @@ const ClientOrganisationDetail = () => {
       console.error("Error updating organization:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update organization. Please try again.",
+        description: getErrorMessage(error, "Failed to update organization. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -443,7 +445,7 @@ const ClientOrganisationDetail = () => {
       // Error message with toast
       toast({
         title: "Error!",
-        description: error.message || "Failed to delete coordinator. Please try again.",
+        description: getErrorMessage(error, "Failed to delete coordinator. Please try again."),
         variant: "destructive",
       });
     }
@@ -716,7 +718,7 @@ const ClientOrganisationDetail = () => {
                                     } catch (error: any) {
                                       toast({
                                         title: "Failed to Send Email",
-                                        description: error.message || "Could not resend setup email. Please try again.",
+                                        description: getErrorMessage(error, "Could not resend setup email. Please try again."),
                                         variant: "destructive",
                                       });
                                     }
@@ -739,7 +741,7 @@ const ClientOrganisationDetail = () => {
                                   } catch (error: any) {
                                     toast({
                                       title: "Failed to Send Reset",
-                                      description: error?.message || "Could not send password reset link. Please try again.",
+                                      description: getErrorMessage(error, "Could not send password reset link. Please try again."),
                                       variant: "destructive",
                                     });
                                   }
@@ -757,7 +759,11 @@ const ClientOrganisationDetail = () => {
                                     await fetchCoordinators();
                                     toast({ title: `Coordinator ${nextStatus === "ACTIVE" ? "Activated" : "Deactivated"}` });
                                   } catch (error: any) {
-                                    toast({ title: "Failed to update status", description: error.message || "Please try again.", variant: "destructive" });
+                                    toast({
+                                      title: "Failed to update status",
+                                      description: getErrorMessage(error, "Please try again."),
+                                      variant: "destructive",
+                                    });
                                   }
                                 }}
                               >

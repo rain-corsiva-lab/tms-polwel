@@ -11,6 +11,7 @@ import { Eye, Download, Search, X } from "lucide-react";
 import { MonthInput } from "@/components/ui/month-input";
 import { billingReportsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { generateConsolidatedBillingXLSX } from "@/lib/consolidatedBillingExport";
 
 interface BillingReportData {
@@ -85,15 +86,15 @@ export default function BillingReports() {
       } else {
         toast({
           title: "Error",
-          description: "Failed to load billing reports",
+          description: getErrorMessage(response, "Failed to load billing reports"),
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading billing reports:", error);
       toast({
         title: "Error",
-        description: "Failed to load billing reports",
+        description: getErrorMessage(error, "Failed to load billing reports"),
         variant: "destructive",
       });
     } finally {
@@ -133,15 +134,15 @@ export default function BillingReports() {
       } else {
         toast({
           title: "Error",
-          description: "Failed to load report details",
+          description: getErrorMessage(response, "Failed to load report details"),
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading report details:", error);
       toast({
         title: "Error",
-        description: "Failed to load report details",
+        description: getErrorMessage(error, "Failed to load report details"),
         variant: "destructive",
       });
     } finally {
@@ -169,15 +170,15 @@ export default function BillingReports() {
       } else {
         toast({
           title: "Error",
-          description: "Failed to generate export file",
+          description: getErrorMessage(response, "Failed to generate export file"),
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error downloading report:", error);
       toast({
         title: "Error",
-        description: "Failed to download billing report",
+        description: getErrorMessage(error, "Failed to download billing report"),
         variant: "destructive",
       });
     }
