@@ -4104,6 +4104,7 @@ export const courseRunController = {
           waiverReason,
           waiverSupportingDocumentId: waiverDocumentId,
           waiverSubmittedAt: new Date(),
+          waiverStatus: 'PENDING',
         },
         include: {
           learner: {

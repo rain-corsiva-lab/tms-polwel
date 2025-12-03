@@ -922,7 +922,7 @@ const TrainersAndPartners = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Associate Trainers</CardTitle>
-                  <CardDescription>Manage individual trainers and their availability</CardDescription>
+                  {/* <CardDescription>Manage individual trainers and their availability</CardDescription> */}
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="relative overflow-x-auto">
@@ -1160,7 +1160,7 @@ const TrainersAndPartners = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Training Partners</CardTitle>
-                      <CardDescription>Manage Training Partners and their details</CardDescription>
+                      {/* <CardDescription>Manage Training Partners and their details</CardDescription> */}
                     </div>
                     {partnerFilters.status.length > 0 && (
                       <div className="flex items-center gap-2">
@@ -1379,7 +1379,7 @@ const TrainersAndPartners = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Deleted Partners and Trainers</CardTitle>
-                  <CardDescription>View and restore deleted trainers and partners</CardDescription>
+                  {/* <CardDescription>View and restore deleted trainers and partners</CardDescription> */}
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>

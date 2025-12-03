@@ -230,7 +230,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
             <Shield className="h-5 w-5" />
             Edit POLWEL User
           </DialogTitle>
-          <DialogDescription>Update user information and permissions for {user.name}.</DialogDescription>
+          {/* <DialogDescription>Update user information and permissions for {user.name}.</DialogDescription> */}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

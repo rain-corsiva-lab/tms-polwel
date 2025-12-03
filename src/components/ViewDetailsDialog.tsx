@@ -172,7 +172,7 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
             <User className="h-5 w-5" />
             User Details - {userName}
           </DialogTitle>
-          <DialogDescription>Detailed information about this POLWEL user account.</DialogDescription>
+          {/* <DialogDescription>Detailed information about this POLWEL user account.</DialogDescription> */}
         </DialogHeader>
 
         {loading ? (

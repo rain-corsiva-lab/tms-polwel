@@ -163,9 +163,9 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
             <Building2 className="h-5 w-5" />
             {isEditMode ? "Edit Partner" : "Add Training Partner"}
           </DialogTitle>
-          <DialogDescription>
+          {/* <DialogDescription>
             {isEditMode ? "Update partner information and contact details." : "Create a new training partner account. Partners do not have login capability."}
-          </DialogDescription>
+          </DialogDescription> */}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">

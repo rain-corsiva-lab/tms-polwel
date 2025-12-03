@@ -147,7 +147,7 @@ const TrainingCalendar = ({
               <CalendarIcon className="h-5 w-5" />
               <span>Associate Trainer Availability Calendar</span>
             </CardTitle>
-            <CardDescription>View associate trainer blockout dates. Blocked dates show which associate trainers are unavailable.</CardDescription>
+            {/* <CardDescription>View associate trainer blockout dates. Blocked dates show which associate trainers are unavailable.</CardDescription> */}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

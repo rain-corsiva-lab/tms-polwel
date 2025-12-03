@@ -154,7 +154,7 @@ export function AddPolwelUserDialog() {
             <Shield className="h-5 w-5" />
             Add New POLWEL User
           </DialogTitle>
-          <DialogDescription>Create a new POLWEL staff account with appropriate system permissions.</DialogDescription>
+          {/* <DialogDescription>Create a new POLWEL staff account with appropriate system permissions.</DialogDescription> */}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

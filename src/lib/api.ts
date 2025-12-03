@@ -1811,6 +1811,64 @@ export const billingReportsApi = {
   },
 };
 
+// Waiver Requests API
+export const waiversApi = {
+  /**
+   * Get all waiver requests with pagination and filtering
+   */
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    organizationId?: string;
+    courseId?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    const queryString = queryParams.toString();
+    return apiRequest(`/waivers${queryString ? `?${queryString}` : ''}`);
+  },
+
+  /**
+   * Get a single waiver request by ID
+   */
+  getById: async (id: string) => {
+    return apiRequest(`/waivers/${id}`);
+  },
+
+  /**
+   * Get waiver supporting document info
+   */
+  getDocument: async (id: string) => {
+    return apiRequest(`/waivers/${id}/document`);
+  },
+
+  /**
+   * Approve a waiver request
+   */
+  approve: async (id: string, reason?: string) => {
+    return apiRequest(`/waivers/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  /**
+   * Reject a waiver request (reason required)
+   */
+  reject: async (id: string, reason: string) => {
+    return apiRequest(`/waivers/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+};
+
 export default {
   polwelUsersApi,
   trainersApi,
@@ -1823,4 +1881,5 @@ export default {
   referencesApi,
   trainerDashboardApi,
   billingReportsApi,
+  waiversApi,
 };

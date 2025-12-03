@@ -96,12 +96,16 @@ export const getDashboardActionItems = async (req: AuthenticatedRequest, res: Re
           deletedAt: null,
         },
       }),
-      // Count course run learners with waiver request submitted (waiverSubmittedAt not null and waiverReason not null)
+      // Count course run learners with pending waiver request (waiverSubmittedAt not null and status is PENDING or null)
       prisma.courseRunLearner.count({
         where: {
           waiverSubmittedAt: { not: null },
           waiverReason: { not: null },
           deletedAt: null,
+          OR: [
+            { waiverStatus: null },
+            { waiverStatus: 'PENDING' },
+          ],
         },
       }),
       // Count course runs awaiting trainer assignment approval

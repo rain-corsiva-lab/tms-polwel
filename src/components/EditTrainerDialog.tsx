@@ -163,7 +163,7 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Edit Trainer</DialogTitle>
-          <DialogDescription>Update trainer information and specializations.</DialogDescription>
+          {/* <DialogDescription>Update trainer information and specializations.</DialogDescription> */}
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="overflow-y-auto px-6 space-y-4 flex-1">

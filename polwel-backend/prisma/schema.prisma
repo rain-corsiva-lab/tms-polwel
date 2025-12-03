@@ -66,6 +66,7 @@ model User {
   organization                    Organization?                   @relation(fields: [organizationId], references: [id])
   venuesCreated                   Venue[]
   courseRunsCancelled             CourseRun[]                     @relation("CourseRunCancelledBy")
+  waiverReviews                   CourseRunLearner[]              @relation("WaiverReviewedBy")
 
   @@index([createdBy], map: "users_createdBy_fkey")
   @@index([organizationId], map: "users_organizationId_fkey")
@@ -518,6 +519,10 @@ model CourseRunLearner {
   waiverReason                  String?                    @db.Text
   waiverSupportingDocumentId    String?
   waiverSubmittedAt             DateTime?
+  waiverStatus                  WaiverStatus?
+  waiverRejectReason            String?                    @db.Text
+  waiverReviewedAt              DateTime?
+  waiverReviewedBy              String?
   certificateGeneratedAt        DateTime?
   createdAt                     DateTime                   @default(now())
   updatedAt                     DateTime                   @updatedAt
@@ -532,6 +537,7 @@ model CourseRunLearner {
   learner                       Learner                    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
   supportingDocumentWithdrawn   Media?                     @relation("WithdrawnDocument", fields: [supportingDocumentWithdrawnId], references: [id])
   waiverSupportingDocument      Media?                     @relation("WaiverDocument", fields: [waiverSupportingDocumentId], references: [id])
+  waiverReviewer                User?                      @relation("WaiverReviewedBy", fields: [waiverReviewedBy], references: [id])
 
   @@unique([courseRunId, learnerId])
   @@index([courseRunId])
@@ -539,6 +545,7 @@ model CourseRunLearner {
   @@index([courseRunBillingEntryId])
   @@index([supportingDocumentWithdrawnId], map: "course_run_learners_supportingDocumentWithdrawnId_fkey")
   @@index([waiverSupportingDocumentId])
+  @@index([waiverReviewedBy])
   @@map("course_run_learners")
 }
 
@@ -754,6 +761,12 @@ enum AttendanceStatus {
 enum EnrollmentStatus {
   ENROLLED
   WITHDRAWN
+}
+
+enum WaiverStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum BillingStatus {

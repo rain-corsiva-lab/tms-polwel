@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Load environment variables from .env file only (best practice)
 dotenv.config({ override: true });
@@ -35,6 +36,7 @@ import trainerBlockoutsRoutes from './routes/trainerBlockouts';
 import trainerDashboardRoutes from './routes/trainerDashboard';
 import profileRoutes from './routes/profile';
 import billingReportsRoutes from './routes/billingReports';
+import waiverRoutes from './routes/waivers';
 import { startCourseRunStatusJob, evaluateCourseRunStatusesNow } from './jobs/courseRunStatusJob';
 import dashboardRoutes from './routes/dashboard';
 
@@ -137,6 +139,12 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static files from uploads directory
+const uploadsPath = path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(uploadsPath));
+
+console.log(`📁 Static uploads directory configured: ${uploadsPath}`);
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
@@ -166,6 +174,7 @@ app.use('/api/trainer-blockouts', trainerBlockoutsRoutes);
 app.use('/api/trainer', trainerDashboardRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/billing-reports', billingReportsRoutes);
+app.use('/api/waivers', waiverRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware

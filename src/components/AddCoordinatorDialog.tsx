@@ -113,7 +113,7 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
             <UserCheck className="h-5 w-5" />
             Add New Training Coordinator
           </DialogTitle>
-          <DialogDescription>Create a new training coordinator account. User will set password in onboarding flow.</DialogDescription>
+          {/* <DialogDescription>Create a new training coordinator account. User will set password in onboarding flow.</DialogDescription> */}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

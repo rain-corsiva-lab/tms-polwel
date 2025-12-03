@@ -39,7 +39,7 @@ const userManagementItems: MenuItem[] = [
 
 const courseManagementItems: MenuItem[] = [
   { name: "Courses", href: "/courses", icon: BookOpen, subject: "CourseVenue" },
-  { name: "Course Run Management", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
+  { name: "Course Runs", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {
@@ -275,7 +275,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
 
         {/* Waiver Requests - Standalone Menu Item */}
-        {/* {postRunManagementVisible && (
+        {postRunManagementVisible && (
           <Can I="view" a="PostCourseRun">
             <NavLink
               to="/waiver-requests"
@@ -291,37 +291,6 @@ const Sidebar = ({ className }: SidebarProps) => {
             </NavLink>
           </Can>
         )}
-
-
-        {isPolwelUser && (
-          <NavLink
-            to="/reporting"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-              )
-            }
-          >
-            <AlertCircle className="mr-3 h-5 w-5" />
-            Reporting
-          </NavLink>
-        )}
-
-        {isPolwelUser && (
-          <NavLink
-            to="/resource-library"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-              )
-            }
-          >
-            <BookOpen className="mr-3 h-5 w-5" />
-            Resource Library
-          </NavLink>
-        )} */}
       </nav>
     </aside>
   );

@@ -545,7 +545,7 @@ const ClientOrganisationDetail = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Organization Information</CardTitle>
-                <CardDescription>Manage organization details and settings</CardDescription>
+                {/* <CardDescription>Manage organization details and settings</CardDescription> */}
               </div>
               <Button variant={isEditing ? "default" : "outline"} onClick={isEditing ? handleSaveChanges : () => setIsEditing(!isEditing)} disabled={saving}>
                 {saving ? "Saving..." : isEditing ? "Save Changes" : "Edit Information"}
