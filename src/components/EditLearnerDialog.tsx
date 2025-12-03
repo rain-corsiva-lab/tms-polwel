@@ -450,152 +450,154 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>Edit Learner</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Full Name *</Label>
-                <Input value={form.fullName} onChange={(e) => handleChange("fullName", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Designation *</Label>
-                <Input value={form.designation} onChange={(e) => handleChange("designation", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Email *</Label>
-                <Input type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Contact Number</Label>
-                <Input value={form.contactNumber} onChange={(e) => handleChange("contactNumber", e.target.value)} />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Personal Information</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Full Name *</Label>
+                  <Input value={form.fullName} onChange={(e) => handleChange("fullName", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Designation *</Label>
+                  <Input value={form.designation} onChange={(e) => handleChange("designation", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact Number</Label>
+                  <Input value={form.contactNumber} onChange={(e) => handleChange("contactNumber", e.target.value)} />
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Organization Information</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{getDivisionLabel()} *</Label>
-                <SearchableSelect
-                  value={form.division}
-                  onValueChange={handleOrganizationChange}
-                  options={organizationOptions}
-                  placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Input value={form.departmentName} onChange={(e) => handleChange("departmentName", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>
-                  BU Number <span className="text-gray-400">(Optional)</span>
-                </Label>
-                <Input value={form.buNumber} disabled className="bg-gray-50" />
-              </div>
-              <div className="space-y-2">
-                <Label>Payment Mode *</Label>
-                <SearchableSelect
-                  value={form.paymentMode}
-                  onValueChange={(value) => handleChange("paymentMode", value)}
-                  options={paymentModeOptions}
-                  placeholder="Select payment mode"
-                />
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Organization Information</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{getDivisionLabel()} *</Label>
+                  <SearchableSelect
+                    value={form.division}
+                    onValueChange={handleOrganizationChange}
+                    options={organizationOptions}
+                    placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Input value={form.departmentName} onChange={(e) => handleChange("departmentName", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    BU Number <span className="text-gray-400">(Optional)</span>
+                  </Label>
+                  <Input value={form.buNumber} disabled className="bg-gray-50" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Mode *</Label>
+                  <SearchableSelect
+                    value={form.paymentMode}
+                    onValueChange={(value) => handleChange("paymentMode", value)}
+                    options={paymentModeOptions}
+                    placeholder="Select payment mode"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Training Coordinator</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Coordinator Name</Label>
-                <SearchableSelect
-                  value={form.trainingCoordinatorId}
-                  onValueChange={handleCoordinatorChange}
-                  options={coordinatorOptions}
-                  placeholder={coordinators.length ? "Select coordinator" : "No coordinators found"}
-                  disabled={!form.division}
-                  emptyMessage={coordinators.length ? "No results" : "No coordinators found"}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Coordinator Email</Label>
-                <Input value={form.trainingCoordinatorEmail} disabled className="bg-gray-50" />
-              </div>
-              <div className="space-y-2">
-                <Label>Coordinator Phone</Label>
-                <Input value={form.trainingCoordinatorPhone} disabled className="bg-gray-50" />
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Training Coordinator</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Coordinator Name</Label>
+                  <SearchableSelect
+                    value={form.trainingCoordinatorId}
+                    onValueChange={handleCoordinatorChange}
+                    options={coordinatorOptions}
+                    placeholder={coordinators.length ? "Select coordinator" : "No coordinators found"}
+                    disabled={!form.division}
+                    emptyMessage={coordinators.length ? "No results" : "No coordinators found"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Coordinator Email</Label>
+                  <Input value={form.trainingCoordinatorEmail} disabled className="bg-gray-50" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Coordinator Phone</Label>
+                  <Input value={form.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Fees & Payment Information</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Current Default Course Fee</Label>
-                <div className="text-xl font-bold">{formatCurrency(form.currentDefaultCourseFee)}</div>
-              </div>
-              <div className="space-y-2">
-                <Label>Apply Discount</Label>
-                <SearchableSelect
-                  value={form.discountId ? form.discountId : "none"}
-                  onValueChange={handleDiscountChange}
-                  options={discountOptions}
-                  placeholder="No discount"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Total Fees</Label>
-                <div className="text-xl font-bold text-blue-600">{formatCurrency(form.totalFees)}</div>
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Fees Remarks</Label>
-                <Input value={form.feesRemarks} onChange={(e) => handleChange("feesRemarks", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Invoice Number</Label>
-                <Input value={form.invoiceNumber} onChange={(e) => handleChange("invoiceNumber", e.target.value)} />
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Fees & Payment Information</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Current Default Course Fee</Label>
+                  <div className="text-xl font-bold">{formatCurrency(form.currentDefaultCourseFee)}</div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Apply Discount</Label>
+                  <SearchableSelect
+                    value={form.discountId ? form.discountId : "none"}
+                    onValueChange={handleDiscountChange}
+                    options={discountOptions}
+                    placeholder="No discount"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Fees</Label>
+                  <div className="text-xl font-bold text-blue-600">{formatCurrency(form.totalFees)}</div>
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Fees Remarks</Label>
+                  <Input value={form.feesRemarks} onChange={(e) => handleChange("feesRemarks", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Invoice Number</Label>
+                  <Input value={form.invoiceNumber} onChange={(e) => handleChange("invoiceNumber", e.target.value)} />
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label>Remarks</Label>
-                <Textarea value={form.remarks} onChange={(e) => handleChange("remarks", e.target.value)} rows={3} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <Textarea value={form.remarks} onChange={(e) => handleChange("remarks", e.target.value)} rows={3} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4 px-6 pb-6 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

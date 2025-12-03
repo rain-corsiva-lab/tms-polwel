@@ -1563,16 +1563,16 @@ export const courseRunController = {
         data: {
           courseRunId,
           learnerId: learner.id,
-          paymentMode: data.paymentMode,
+          paymentMode: data.paymentMode && data.paymentMode.trim() ? data.paymentMode : null,
           currentDefaultCourseFee: data.currentDefaultCourseFee,
           discountId: data.discountId,
           discountPercentage: data.discountPercentage,
           discountAmount: data.currentDefaultCourseFee * (data.discountPercentage / 100),
           totalFees: data.totalFees,
-          feesRemarks: data.feesRemarks,
-          invoiceNumber: data.invoiceNumber,
-          remarks: data.remarks,
-          departmentName: data.departmentName || learner.departmentName || null,
+          feesRemarks: data.feesRemarks && data.feesRemarks.trim() ? data.feesRemarks : null,
+          invoiceNumber: data.invoiceNumber && data.invoiceNumber.trim() ? data.invoiceNumber : null,
+          remarks: data.remarks && data.remarks.trim() ? data.remarks : null,
+          departmentName: data.departmentName && data.departmentName.trim() ? data.departmentName : (learner.departmentName || null),
           enrollmentStatus: 'ENROLLED',
         },
       });
@@ -1663,16 +1663,16 @@ export const courseRunController = {
           data: {
             courseRunId,
             learnerId: learner.id,
-            paymentMode: learnerData.paymentMode || data.paymentMode,
+            paymentMode: (learnerData.paymentMode && learnerData.paymentMode.trim()) || (data.paymentMode && data.paymentMode.trim()) ? (learnerData.paymentMode && learnerData.paymentMode.trim()) ? learnerData.paymentMode : data.paymentMode : null,
             currentDefaultCourseFee: learnerData.currentDefaultCourseFee,
             discountId: learnerData.discountId,
             discountPercentage: learnerData.discountPercentage,
             discountAmount: learnerData.currentDefaultCourseFee * (learnerData.discountPercentage / 100),
             totalFees: learnerData.totalFees,
-            feesRemarks: learnerData.feesRemarks,
-            invoiceNumber: learnerData.invoiceNumber,
-            remarks: data.remarks,
-            departmentName: learnerData.departmentName || data.departmentName || learner.departmentName || null,
+            feesRemarks: learnerData.feesRemarks && learnerData.feesRemarks.trim() ? learnerData.feesRemarks : null,
+            invoiceNumber: learnerData.invoiceNumber && learnerData.invoiceNumber.trim() ? learnerData.invoiceNumber : null,
+            remarks: data.remarks && data.remarks.trim() ? data.remarks : null,
+            departmentName: learnerData.departmentName && learnerData.departmentName.trim() ? learnerData.departmentName : (data.departmentName && data.departmentName.trim() ? data.departmentName : (learner.departmentName || null)),
             enrollmentStatus: 'ENROLLED',
           },
         });
@@ -2142,13 +2142,13 @@ export const courseRunController = {
             discountPercentage: typeof enrollmentData.discountPercentage === 'number' ? enrollmentData.discountPercentage : existing.discountPercentage,
             currentDefaultCourseFee: typeof enrollmentData.currentDefaultCourseFee === 'number' ? enrollmentData.currentDefaultCourseFee : existing.currentDefaultCourseFee,
             totalFees: typeof enrollmentData.totalFees === 'number' ? enrollmentData.totalFees : existing.totalFees,
-            feesRemarks: enrollmentData.feesRemarks ?? existing.feesRemarks,
-            invoiceNumber: enrollmentData.invoiceNumber ?? existing.invoiceNumber,
-            remarks: enrollmentData.remarks ?? existing.remarks,
-            paymentMode: (enrollmentData as any)?.paymentMode ?? existing.paymentMode,
+            feesRemarks: enrollmentData.feesRemarks && enrollmentData.feesRemarks.trim() ? enrollmentData.feesRemarks : (enrollmentData.feesRemarks === "" ? null : existing.feesRemarks),
+            invoiceNumber: enrollmentData.invoiceNumber && enrollmentData.invoiceNumber.trim() ? enrollmentData.invoiceNumber : (enrollmentData.invoiceNumber === "" ? null : existing.invoiceNumber),
+            remarks: enrollmentData.remarks && enrollmentData.remarks.trim() ? enrollmentData.remarks : (enrollmentData.remarks === "" ? null : existing.remarks),
+            paymentMode: enrollmentData.paymentMode && enrollmentData.paymentMode.trim() ? enrollmentData.paymentMode : (enrollmentData.paymentMode === "" ? null : existing.paymentMode),
             departmentName:
-              (learnerData && learnerData.departmentName !== undefined ? learnerData.departmentName : undefined) ??
-              (enrollmentData && enrollmentData.departmentName !== undefined ? enrollmentData.departmentName : undefined) ??
+              (learnerData && learnerData.departmentName !== undefined ? (learnerData.departmentName && learnerData.departmentName.trim() ? learnerData.departmentName : null) : undefined) ??
+              (enrollmentData && enrollmentData.departmentName !== undefined ? (enrollmentData.departmentName && enrollmentData.departmentName.trim() ? enrollmentData.departmentName : null) : undefined) ??
               existing.departmentName,
           },
         });

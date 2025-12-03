@@ -1024,34 +1024,35 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>Add Learners</DialogTitle>
         </DialogHeader>
 
-        {/* Mode Selection */}
-        <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
-          <Card
-            className={`cursor-pointer transition-all ${mode === "single" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
-            onClick={() => setMode("single")}
-          >
-            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-              <Plus className="h-8 w-8 text-gray-400 mb-2" />
-              <h3 className="font-medium">Single Registration</h3>
-              <p className="text-sm text-gray-500">Add one learner at a time</p>
-            </CardContent>
-          </Card>
-          <Card
-            className={`cursor-pointer transition-all ${mode === "group" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
-            onClick={() => setMode("group")}
-          >
-            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-              <Users className="h-8 w-8 text-gray-400 mb-2" />
-              <h3 className="font-medium">Group Registration</h3>
-              <p className="text-sm text-gray-500">Add multiple learners at once</p>
-            </CardContent>
-          </Card>
-          {/* <Card
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+          {/* Mode Selection */}
+          <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
+            <Card
+              className={`cursor-pointer transition-all ${mode === "single" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
+              onClick={() => setMode("single")}
+            >
+              <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                <Plus className="h-8 w-8 text-gray-400 mb-2" />
+                <h3 className="font-medium">Single Registration</h3>
+                <p className="text-sm text-gray-500">Add one learner at a time</p>
+              </CardContent>
+            </Card>
+            <Card
+              className={`cursor-pointer transition-all ${mode === "group" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
+              onClick={() => setMode("group")}
+            >
+              <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                <Users className="h-8 w-8 text-gray-400 mb-2" />
+                <h3 className="font-medium">Group Registration</h3>
+                <p className="text-sm text-gray-500">Add multiple learners at once</p>
+              </CardContent>
+            </Card>
+            {/* <Card
             className={`cursor-pointer transition-all ${mode === "import" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
             onClick={() => setMode("import")}
           >
@@ -1061,70 +1062,71 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
               <p className="text-sm text-gray-500">Upload the learner template (CSV/XLSX)</p>
             </CardContent>
           </Card> */}
-        </div>
+          </div>
 
-        {mode === "single" ? (
-          <SingleRegistrationForm
-            data={singleData}
-            setData={setSingleData}
-            organizations={organizations}
-            learners={learners}
-            coordinators={coordinators}
-            courseRun={courseRun}
-            onOrganizationChange={handleOrganizationChange}
-            onCoordinatorChange={handleCoordinatorChange}
-            onLearnerSelection={handleLearnerSelection}
-            onDiscountChange={handleSingleDiscountChange}
-          />
-        ) : mode === "group" ? (
-          <GroupRegistrationForm
-            data={groupData}
-            setData={setGroupData}
-            organizations={organizations}
-            learners={learners}
-            coordinators={coordinators}
-            courseRun={courseRun}
-            onOrganizationChange={handleOrganizationChange}
-            onCoordinatorChange={handleCoordinatorChange}
-            onLearnerSelection={handleLearnerSelection}
-            onGroupDiscountChange={handleGroupDiscountChange}
-            onAddLearner={addGroupLearner}
-            onRemoveLearner={removeGroupLearner}
-          />
-        ) : (
-          <ImportLearnersForm
-            rows={importRows}
-            fileName={importFileName}
-            parseErrors={importParseErrors}
-            result={importResult}
-            isParsing={importProcessing}
-            isSubmitting={loading}
-            onFileSelected={handleImportFileUpload}
-            onDownloadTemplate={handleDownloadImportTemplate}
-            onClear={handleClearImport}
-            baseCourseFee={effectiveBaseFee}
-          />
-        )}
+          {mode === "single" ? (
+            <SingleRegistrationForm
+              data={singleData}
+              setData={setSingleData}
+              organizations={organizations}
+              learners={learners}
+              coordinators={coordinators}
+              courseRun={courseRun}
+              onOrganizationChange={handleOrganizationChange}
+              onCoordinatorChange={handleCoordinatorChange}
+              onLearnerSelection={handleLearnerSelection}
+              onDiscountChange={handleSingleDiscountChange}
+            />
+          ) : mode === "group" ? (
+            <GroupRegistrationForm
+              data={groupData}
+              setData={setGroupData}
+              organizations={organizations}
+              learners={learners}
+              coordinators={coordinators}
+              courseRun={courseRun}
+              onOrganizationChange={handleOrganizationChange}
+              onCoordinatorChange={handleCoordinatorChange}
+              onLearnerSelection={handleLearnerSelection}
+              onGroupDiscountChange={handleGroupDiscountChange}
+              onAddLearner={addGroupLearner}
+              onRemoveLearner={removeGroupLearner}
+            />
+          ) : (
+            <ImportLearnersForm
+              rows={importRows}
+              fileName={importFileName}
+              parseErrors={importParseErrors}
+              result={importResult}
+              isParsing={importProcessing}
+              isSubmitting={loading}
+              onFileSelected={handleImportFileUpload}
+              onDownloadTemplate={handleDownloadImportTemplate}
+              onClear={handleClearImport}
+              baseCourseFee={effectiveBaseFee}
+            />
+          )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-          <Button variant="outline" onClick={() => setDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading || (mode === "import" && (importProcessing || importRows.length === 0))}>
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {mode === "import" ? "Importing..." : "Adding..."}
-              </span>
-            ) : mode === "single" ? (
-              "Add Learner"
-            ) : mode === "group" ? (
-              `Add ${groupData.learners.length} Learners`
-            ) : (
-              "Import Now"
-            )}
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 pt-4 px-6 pb-6 border-t">
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading || (mode === "import" && (importProcessing || importRows.length === 0))}>
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {mode === "import" ? "Importing..." : "Adding..."}
+                </span>
+              ) : mode === "single" ? (
+                "Add Learner"
+              ) : mode === "group" ? (
+                `Add ${groupData.learners.length} Learners`
+              ) : (
+                "Import Now"
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
