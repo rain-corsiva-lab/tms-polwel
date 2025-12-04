@@ -148,7 +148,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
             <p className="text-xs text-gray-500">Optional: Add additional recipients</p>
           </div>
 
-          {/* Additional Body Content */}
+          {/* Additional Body Content of this */}
           <div className="space-y-2">
             <Label htmlFor="additionalBody">Additional Message</Label>
             <Textarea
