@@ -171,9 +171,9 @@ const CourseRunForm: React.FC = () => {
 
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
+    const year = date.getFullYear().toString().slice(-2);
 
-    return `${courseCode}${day}${month}${year}`;
+    return `${courseCode}-${day}${month}${year}`;
   };
 
   // Calculate venue final fee based on venue type, participants, and pricing
@@ -672,6 +672,7 @@ const CourseRunForm: React.FC = () => {
                     <Label htmlFor="serialNumber">Course Run Code *</Label>
                     <Input
                       id="serialNumber"
+                      disabled
                       value={formData.serialNumber}
                       onChange={(e) => handleFieldChange("serialNumber", e.target.value)}
                       placeholder="e.g., CR001/25"
