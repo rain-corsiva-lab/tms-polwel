@@ -1465,7 +1465,7 @@ const CourseRunDetail: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Trainer Assignment</h3>
                 <div className="flex items-center gap-2">
-                  <Button
+                  {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setSendEmailDialogOpen(true)}
@@ -1473,7 +1473,7 @@ const CourseRunDetail: React.FC = () => {
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Send Trainer Assignment Email
-                  </Button>
+                  </Button> */}
                   <Button variant="outline" size="sm" onClick={handleCancelTrainerEdit} disabled={!hasTrainerChanges}>
                     Reset
                   </Button>
