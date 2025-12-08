@@ -307,7 +307,7 @@ const CourseRuns: React.FC = () => {
           return {
             id: run.id,
             title: run.course?.title || "Untitled Course",
-            code: run.course?.courseCode || run.serialNumber || "-",
+            code:  run.serialNumber || run.course?.courseCode || "-",
             courseType: run.courseRunType || run.course?.category || "-",
             venueName: run.venue?.name || "—",
             venueLocation: run.venue?.address || run.specifiedLocation || "—",
@@ -1224,7 +1224,7 @@ const CourseRuns: React.FC = () => {
                       <TableCell>
                         <div>
                           <div className="font-medium text-gray-900">{courseRun.title}</div>
-                          <div className="text-sm text-gray-500">Code: {courseRun.code}</div>
+                          <div className="text-sm text-gray-500">Run Code: {courseRun.code}</div>
                         </div>
                       </TableCell>
                       <TableCell>
