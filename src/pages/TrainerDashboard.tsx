@@ -276,9 +276,9 @@ export default function TrainerDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Profile & Stats */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="flex-shrink-0 lg:max-w-[400px] space-y-6">
             {/* Profile Card */}
             <Card>
               <CardHeader className="text-center">
@@ -357,7 +357,7 @@ export default function TrainerDashboard() {
           </div>
 
           {/* Center Column - Calendar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="flex-shrink-0 space-y-6">
             <TrainerCalendar
               trainerId={profile?.id || "1"}
               trainerName={profile?.name || "David Chen"}
@@ -369,7 +369,7 @@ export default function TrainerDashboard() {
           </div>
 
           {/* Right Column - Today's Schedule */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="flex-1 space-y-6">
             {/* Statistics */}
             {/* <div className="grid grid-cols-2 gap-4">
               <Card>
