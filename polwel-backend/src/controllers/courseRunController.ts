@@ -288,7 +288,8 @@ const ALLOWED_COURSE_STATUSES: CourseStatus[] = [
   'IN_PROGRESS',
   'COMPLETED',
   'CANCELLED',
-  'INCOMPLETED'
+  'INCOMPLETED',
+  'PENDING_BILLING'
 ];
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -2760,6 +2761,15 @@ export const courseRunController = {
       });
 
       await Promise.all(emailTasks);
+
+      // Update course run status to CONFIRMED after all emails sent
+      await prisma.courseRun.update({
+        where: { id: id },
+        data: {
+          status: 'CONFIRMED',
+          statusLastEvaluatedAt: new Date(),
+        },
+      });
 
       res.json({
         success: true,
