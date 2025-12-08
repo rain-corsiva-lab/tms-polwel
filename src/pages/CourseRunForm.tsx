@@ -11,7 +11,7 @@ import { Switch } from "../components/ui/switch";
 import DateInput from "../components/ui/date-input";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, Users } from "lucide-react";
-import { coursesApi, venuesApi, trainersApi, courseRunsApi } from "../lib/api";
+import { coursesApi, venuesApi, trainersApi, courseRunsApi, organizationsApi } from "../lib/api";
 import { getErrorMessage } from "../lib/errorHandler";
 import Swal from "sweetalert2";
 import { toast } from "sonner";
@@ -49,6 +49,7 @@ interface CourseRunFormData {
   courseRunType: string;
   courseId: string;
   courseCode: string;
+  clientOrganizationId?: string;
 
   // Schedule
   startDate: string;
@@ -92,6 +93,7 @@ const CourseRunForm: React.FC = () => {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [availableTrainers, setAvailableTrainers] = useState<Trainer[]>([]); // Filtered trainers based on course
   const [availableVenues, setAvailableVenues] = useState<Venue[]>([]);
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; buNumber?: string }>>([]);
   const [trainerRemarks, setTrainerRemarks] = useState<{ [trainerId: string]: string }>({});
   const [trainerFees, setTrainerFees] = useState<{ [trainerId: string]: number }>({});
 
@@ -101,6 +103,7 @@ const CourseRunForm: React.FC = () => {
     courseRunType: "OPEN", // Set default to OPEN
     courseId: courseId || "",
     courseCode: "",
+    clientOrganizationId: "",
     startDate: "",
     endDate: "",
     venueType: "",
@@ -124,10 +127,11 @@ const CourseRunForm: React.FC = () => {
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        const [coursesResponse, venuesResponse, trainersResponse] = await Promise.all([
+        const [coursesResponse, venuesResponse, trainersResponse, organizationsResponse] = await Promise.all([
           coursesApi.getAll({ limit: 1000, status: "ACTIVE" }),
           venuesApi.getAll(),
           trainersApi.getAll({ limit: 1000 }),
+          organizationsApi.list(),
         ]);
 
         if (coursesResponse.success) {
@@ -142,6 +146,10 @@ const CourseRunForm: React.FC = () => {
 
         if (trainersResponse.trainers) {
           setTrainers(trainersResponse.trainers || []);
+        }
+
+        if (organizationsResponse.success && organizationsResponse.organizations) {
+          setOrganizations(organizationsResponse.organizations || []);
         }
 
         // Pre-select course if courseId is provided
@@ -463,6 +471,16 @@ const CourseRunForm: React.FC = () => {
       }
     }
 
+    // If courseRunType changed to OPEN, clear clientOrganizationId
+    if (field === "courseRunType" && value === "OPEN") {
+      setFormData({ ...formData, [field]: value, clientOrganizationId: "" });
+      // Clear error for clientOrganizationId if exists
+      if (errors.clientOrganizationId) {
+        setErrors({ ...errors, clientOrganizationId: "" });
+      }
+      return;
+    }
+
     setFormData({ ...formData, [field]: value });
 
     // Clear error for this field
@@ -483,6 +501,10 @@ const CourseRunForm: React.FC = () => {
       if (!formData.startDate) newErrors.startDate = "Start Date is required";
       if (!formData.endDate) newErrors.endDate = "End Date is required";
       if (!formData.venueType) newErrors.venueType = "Venue type is required";
+      // Require organiser for DEDICATED, TALKS, or CUSTOMIZED
+      if ((formData.courseRunType === "DEDICATED" || formData.courseRunType === "TALKS" || formData.courseRunType === "CUSTOMIZED") && !formData.clientOrganizationId) {
+        newErrors.clientOrganizationId = "Organiser is required";
+      }
       if (formData.minClassSize !== undefined && formData.minClassSize < 0) {
         newErrors.minClassSize = "Min Class Size must be 0 or greater";
       }
@@ -552,6 +574,7 @@ const CourseRunForm: React.FC = () => {
         otherFee: formData.additionalCosts ?? null,
         status: isDraft ? "DRAFT" : "PENDING", // Set to PENDING when all validation passes
         trainers: trainerAssignments, // Include trainer assignments
+        clientOrganizationId: formData.clientOrganizationId || null,
       };
 
       const response = await courseRunsApi.create(submissionData);
@@ -699,6 +722,33 @@ const CourseRunForm: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Organiser Field - Only show for DEDICATED, TALKS, or CUSTOMIZED */}
+              {(formData.courseRunType === "DEDICATED" || formData.courseRunType === "TALKS" || formData.courseRunType === "CUSTOMIZED") && (
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="clientOrganizationId">Organisation *</Label>
+                      <Select
+                        value={formData.clientOrganizationId || ""}
+                        onValueChange={(value) => handleFieldChange("clientOrganizationId", value)}
+                      >
+                        <SelectTrigger className={errors.clientOrganizationId ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select Organisation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizations.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              {org.name} {org.buNumber ? `- ${org.buNumber}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.clientOrganizationId && <p className="text-sm text-red-500 mt-1">{errors.clientOrganizationId}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <h3 className="text-lg font-medium mb-4">Venue & Settings</h3>

@@ -536,6 +536,7 @@ const createCourseRunSchema = z.object({
   contingencyFee: z.number().nullable().optional(),
   status: z.enum(['DRAFT', 'PENDING', 'CONFIRMED_PENDING_TA_APPROVAL', 'ACTIVE', 'CONFIRMED', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'PUBLISHED', 'ONGOING']).optional().nullable(),
   billingReportId: z.string().nullable().optional(),
+  clientOrganizationId: z.string().nullable().optional(),
   trainers: z
     .array(
       z.object({
@@ -818,6 +819,13 @@ export const courseRunController = {
         include: {
           course: true,
           venue: true,
+          clientOrganization: {
+            select: {
+              id: true,
+              name: true,
+              buNumber: true,
+            },
+          },
           courseRunTrainers: {
             include: {
               trainer: {
