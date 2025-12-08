@@ -415,7 +415,7 @@ const TrainerCalendar: React.FC<TrainerCalendarProps> = ({
             onMonthChange={(month) => setVisibleMonth(month)}
             modifiers={calendarModifiers}
             modifiersClassNames={calendarModifiersClassNames}
-            className="rounded-md border"
+            className="rounded-md border w-fit"
           />
           <div className="text-sm space-y-2">
             <p className="font-medium">Select date(s) to manage your availability</p>

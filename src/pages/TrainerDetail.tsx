@@ -461,111 +461,113 @@ const TrainerDetail = () => {
           <TrainerTrainingSummary mode="admin" trainerId={trainer.id} />
         </div>
         {/* Calendar and events */}
-        <Card>
-          {/* <CardHeader>
-            <CardTitle className="text-sm font-medium">{trainer.name} Calendar</CardTitle>
-          </CardHeader> */}
-          <CardContent className="mt-5">
-            <TrainerCalendar
-              key={calendarRefreshKey}
-              trainerId={trainer.id}
-              trainerName={trainer.name}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-              onEventsChange={setSelectedDateEvents}
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{formatDate(selectedDate)}</CardTitle>
-            <CardDescription>Events and blockouts for selected date</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedDateEvents.courseRuns.length > 0 || selectedDateEvents.blockouts.length > 0 ? (
-              <div className="space-y-3">
-                {selectedDateEvents.courseRuns.map((run: any) => (
-                  <div key={run.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{run.course?.title || run.courseName}</span>
-                      </div>
-                      <Badge variant={run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "outline" : "default"}>
-                        {run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "Tentative" : "Confirmed"}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          {formatDate(new Date(run.startDate.split("T")[0]))} - {formatDate(new Date(run.endDate.split("T")[0]))}
-                        </span>
-                      </div>
-                      {run.venue && (
-                        <div className="flex items-center space-x-1">
-                          <Mail className="h-3 w-3" />
-                          <span>{run.venue.name}</span>
+        <div className="flex gap-6 lg:col-span-2">
+          <Card>
+            {/* <CardHeader>
+              <CardTitle className="text-sm font-medium">{trainer.name} Calendar</CardTitle>
+            </CardHeader> */}
+            <CardContent className="mt-5">
+              <TrainerCalendar
+                key={calendarRefreshKey}
+                trainerId={trainer.id}
+                trainerName={trainer.name}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                onEventsChange={setSelectedDateEvents}
+              />
+            </CardContent>
+          </Card>
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle>{formatDate(selectedDate)}</CardTitle>
+              <CardDescription>Events and blockouts for selected date</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {selectedDateEvents.courseRuns.length > 0 || selectedDateEvents.blockouts.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedDateEvents.courseRuns.map((run: any) => (
+                    <div key={run.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{run.course?.title || run.courseName}</span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {selectedDateEvents.blockouts.map((blockout: any) => (
-                  <div key={blockout.id} className="p-3 border rounded-lg bg-red-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-red-500" />
-                        <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
+                        <Badge variant={run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "outline" : "default"}>
+                          {run.status === "CONFIRMED_PENDING_TA_APPROVAL" ? "Tentative" : "Confirmed"}
+                        </Badge>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            if (!id) return;
-                            const result = await Swal.fire({
-                              title: "Remove unavailable dates?",
-                              text: "This will make the selected dates available again.",
-                              icon: "warning",
-                              showCancelButton: true,
-                              confirmButtonColor: "#dc2626",
-                              cancelButtonColor: "#6b7280",
-                              confirmButtonText: "Yes, remove",
-                              cancelButtonText: "Cancel",
-                            });
-                            if (!result.isConfirmed) return;
-                            await trainersApi.deleteBlockout(id, blockout.id);
-                            toast({ title: "Blockout Removed", description: "Date range is now available." });
-                            setSelectedDateEvents((prev) => ({
-                              ...prev,
-                              blockouts: prev.blockouts.filter((b: any) => b.id !== blockout.id),
-                            }));
-                            setCalendarRefreshKey((k) => k + 1);
-                          } catch (e: any) {
-                            toast({ title: "Error", description: e?.message || "Failed to remove blockout", variant: "destructive" });
-                          }
-                        }}
-                      >
-                        Remove
-                      </Button>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {formatDate(new Date(run.startDate.split("T")[0]))} - {formatDate(new Date(run.endDate.split("T")[0]))}
+                          </span>
+                        </div>
+                        {run.venue && (
+                          <div className="flex items-center space-x-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{run.venue.name}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-sm text-red-600">
-                      <div>Unavailable</div>
-                      {blockout.description && <div className="mt-1">{blockout.description}</div>}
+                  ))}
+                  {selectedDateEvents.blockouts.map((blockout: any) => (
+                    <div key={blockout.id} className="p-3 border rounded-lg bg-red-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-red-500" />
+                          <span className="font-medium text-red-700">{blockout.remarks || "Unavailable"}</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              if (!id) return;
+                              const result = await Swal.fire({
+                                title: "Remove unavailable dates?",
+                                text: "This will make the selected dates available again.",
+                                icon: "warning",
+                                showCancelButton: true,
+                                confirmButtonColor: "#dc2626",
+                                cancelButtonColor: "#6b7280",
+                                confirmButtonText: "Yes, remove",
+                                cancelButtonText: "Cancel",
+                              });
+                              if (!result.isConfirmed) return;
+                              await trainersApi.deleteBlockout(id, blockout.id);
+                              toast({ title: "Blockout Removed", description: "Date range is now available." });
+                              setSelectedDateEvents((prev) => ({
+                                ...prev,
+                                blockouts: prev.blockouts.filter((b: any) => b.id !== blockout.id),
+                              }));
+                              setCalendarRefreshKey((k) => k + 1);
+                            } catch (e: any) {
+                              toast({ title: "Error", description: e?.message || "Failed to remove blockout", variant: "destructive" });
+                            }
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                      <div className="text-sm text-red-600">
+                        <div>Unavailable</div>
+                        {blockout.description && <div className="mt-1">{blockout.description}</div>}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No events scheduled for this date</p>
-                <p className="text-sm text-muted-foreground">Click "Add Blockout Date Range" to block this date</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No events scheduled for this date</p>
+                  <p className="text-sm text-muted-foreground">Click "Add Blockout Date Range" to block this date</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Edit Profile Dialog */}
