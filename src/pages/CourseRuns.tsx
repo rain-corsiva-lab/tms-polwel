@@ -1013,7 +1013,7 @@ const CourseRuns: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Course Details</TableHead>
-                  <TableHead>Schedule</TableHead>
+                  <TableHead>Course Run Date</TableHead>
                   <TableHead>
                     <Popover open={openFilter === "venue"} onOpenChange={(open) => setOpenFilter(open ? "venue" : null)}>
                       <PopoverTrigger asChild>
@@ -1053,7 +1053,7 @@ const CourseRuns: React.FC = () => {
                     </Popover>
                   </TableHead>
                   <TableHead>Participants</TableHead>
-                  <TableHead>
+                  <TableHead className="text-center">
                     <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
                       <PopoverTrigger asChild>
                         <Button variant="ghost" size="sm" className={cn("h-8 px-2 -ml-2", hasActiveFilter("status") && "text-primary")}>
@@ -1423,7 +1423,7 @@ const CourseRuns: React.FC = () => {
                   <span className="text-gray-600">Course:</span> <span className="font-semibold text-gray-900">{trainerApprovalDialog.courseRun.title}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-gray-600">Course Serial Number:</span>{" "}
+                  <span className="text-gray-600">Course Run Code:</span>{" "}
                   <span className="font-medium text-gray-700">{trainerApprovalDialog.courseRun.code}</span>
                 </div>
                 <div className="text-sm">

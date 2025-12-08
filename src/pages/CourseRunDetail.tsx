@@ -862,7 +862,7 @@ const CourseRunDetail: React.FC = () => {
 
       // Required fields list (excluding optional ones specified by user)
       const requiredFields: { key: string; label: string }[] = [
-        { key: "serialNumber", label: "Course Serial Number" },
+        { key: "serialNumber", label: "Course Run Code" },
         { key: "courseRunType", label: "Course Run Type" },
         { key: "courseId", label: "Course" },
         { key: "startDate", label: "Start Date" },
@@ -996,7 +996,7 @@ const CourseRunDetail: React.FC = () => {
                 disabled={!courseRun.individualRegistrationRequired}
                 className={!courseRun.individualRegistrationRequired ? "opacity-50 cursor-not-allowed" : ""}
               >
-                Learner Particulars ({courseRun.courseRunLearners?.length || 0})
+                Participants ({courseRun.courseRunLearners?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
               <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
@@ -1047,7 +1047,7 @@ const CourseRunDetail: React.FC = () => {
                       <Input value={isEditing ? editData?.courseCode : courseRun.course?.courseCode || ""} disabled className="bg-gray-50" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Course Serial Number</Label>
+                      <Label className="text-sm font-medium">Course Run Code</Label>
                       <Input value={isEditing ? editData?.serialNumber : courseRun.serialNumber || ""} disabled className="bg-gray-50" />
                       <p className="text-xs text-gray-500">Auto-generated from Course Code + Start Date</p>
                     </div>
@@ -1278,7 +1278,7 @@ const CourseRunDetail: React.FC = () => {
               </div>
             </TabsContent>
 
-            {/* Learner Particulars Tab */}
+            {/* Participants Tab */}
             <TabsContent value="learner-particulars" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Learner Management</h3>
@@ -1301,10 +1301,10 @@ const CourseRunDetail: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Enrolled Learners ({courseRun.courseRunLearners?.length || 0})</CardTitle>
-                  <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAddLearnersDialogOpen(true)}>
+                  {/* <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Learners
-                  </Button>
+                  </Button> */}
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -1696,7 +1696,7 @@ const CourseRunDetail: React.FC = () => {
                         onChange={(e) => handleEditField("baseCourseFee", e.target.value)}
                         className={isEditing ? "" : "bg-gray-50"}
                       />
-                      <p className="text-xs text-gray-500">Fee charged to learners/client per pax</p>
+                      <p className="text-xs text-gray-500">Fee charged to learners/client per pax or per run</p>
                     </div>
                   </CardContent>
                 </Card>

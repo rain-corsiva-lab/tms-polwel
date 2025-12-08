@@ -477,7 +477,7 @@ const CourseRunForm: React.FC = () => {
 
     if (!isDraft) {
       // Required field validations for full submission
-      if (!formData.serialNumber) newErrors.serialNumber = "Course Serial Number is required";
+      if (!formData.serialNumber) newErrors.serialNumber = "Course Run Code is required";
       if (!formData.courseRunType) newErrors.courseRunType = "Course Run Type is required";
       if (!formData.courseId) newErrors.courseId = "Course is required";
       if (!formData.startDate) newErrors.startDate = "Start Date is required";
@@ -601,7 +601,7 @@ const CourseRunForm: React.FC = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="course-info">Course Run Information</TabsTrigger>
-              <TabsTrigger value="learner-particulars">Learner Particulars</TabsTrigger>
+              <TabsTrigger value="learner-particulars">Participants</TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment</TabsTrigger>
             </TabsList>
 
@@ -667,9 +667,9 @@ const CourseRunForm: React.FC = () => {
 
               <div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                  {/* Course Serial Number */}
+                  {/* Course Run Code */}
                   <div>
-                    <Label htmlFor="serialNumber">Course Serial Number *</Label>
+                    <Label htmlFor="serialNumber">Course Run Code *</Label>
                     <Input
                       id="serialNumber"
                       value={formData.serialNumber}
@@ -845,7 +845,7 @@ const CourseRunForm: React.FC = () => {
               </div>
             </TabsContent>
 
-            {/* Learner Particulars Tab */}
+            {/* Participants Tab */}
             <TabsContent value="learner-particulars" className="space-y-6 mt-6">
               <div>
                 <h3 className="text-lg font-medium mb-4">Learner Management</h3>
