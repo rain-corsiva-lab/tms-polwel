@@ -32,7 +32,7 @@ import {
   Edit,
   MoreHorizontal,
 } from "lucide-react";
-import { courseRunsApi, coursesApi, venuesApi } from "../lib/api";
+import { courseRunsApi, coursesApi, venuesApi, organizationsApi } from "../lib/api";
 import { toast } from "sonner";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
@@ -89,6 +89,12 @@ interface CourseRunDetailData {
   adminFee: number | null;
   contingencyFee: number | null;
   feeType: string | null;
+  clientOrganizationId?: string | null;
+  clientOrganization?: {
+    id: string;
+    name: string;
+    buNumber?: string | null;
+  } | null;
   createdAt: string | null;
   updatedAt: string | null;
   courseRunTrainers: Array<{
@@ -143,6 +149,7 @@ const CourseRunDetail: React.FC = () => {
   const [courses, setCourses] = useState<any[]>([]);
   const [venues, setVenues] = useState<any[]>([]); // all venues
   const [filteredVenues, setFilteredVenues] = useState<any[]>([]); // by venueType
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; buNumber?: string }>>([]);
   const [addLearnersDialogOpen, setAddLearnersDialogOpen] = useState(false);
   const [importLearnersDialogOpen, setImportLearnersDialogOpen] = useState(false);
   const [editLearnerDialogOpen, setEditLearnerDialogOpen] = useState(false);
@@ -222,6 +229,7 @@ const CourseRunDetail: React.FC = () => {
       courseRunType: cr.courseRunType || "",
       courseId: cr.course?.id || "",
       courseCode: cr.course?.courseCode || "",
+      clientOrganizationId: (cr as any).clientOrganizationId || "",
       startDate: start ? start.toISOString().substring(0, 10) : "",
       startTime: start ? start.toISOString().substring(11, 16) : "",
       endDate: end ? end.toISOString().substring(0, 10) : "",
@@ -251,6 +259,18 @@ const CourseRunDetail: React.FC = () => {
     if (id) {
       loadCourseRunDetail();
     }
+    // Load organizations
+    const loadOrganizations = async () => {
+      try {
+        const response = await organizationsApi.list();
+        if (response.success && response.organizations) {
+          setOrganizations(response.organizations || []);
+        }
+      } catch (error) {
+        console.error("Error loading organizations:", error);
+      }
+    };
+    loadOrganizations();
   }, [id]);
 
   // Load trainers and partners automatically when course run is loaded
@@ -730,6 +750,12 @@ const CourseRunDetail: React.FC = () => {
   const handleEditField = async (field: string, value: any) => {
     setEditData((prev: any) => {
       const updated = { ...prev, [field]: value };
+      
+      // If courseRunType changed to OPEN, clear clientOrganizationId
+      if (field === "courseRunType" && value === "OPEN") {
+        updated.clientOrganizationId = "";
+      }
+      
       // Auto update serialNumber when course or startDate changes
       if ((field === "courseId" || field === "startDate") && (updated.courseCode || updated.courseId)) {
         const theCourse = courses.find((c) => c.id === updated.courseId);
@@ -875,6 +901,11 @@ const CourseRunDetail: React.FC = () => {
         { key: "feeType", label: "Fee Type" },
       ];
 
+      // Require organiser for DEDICATED, TALKS, or CUSTOMIZED
+      if (editData.courseRunType === "DEDICATED" || editData.courseRunType === "TALKS" || editData.courseRunType === "CUSTOMIZED") {
+        requiredFields.push({ key: "clientOrganizationId", label: "Organiser" });
+      }
+
       const missing = requiredFields.filter((f) => {
         const val = editData[f.key];
         return val === undefined || val === null || val === "";
@@ -930,6 +961,7 @@ const CourseRunDetail: React.FC = () => {
         adminFee: editData.adminFee === "" ? null : Number(editData.adminFee),
         contingencyFee: editData.contingencyFee === "" ? null : Number(editData.contingencyFee),
         feeType: editData.feeType || null,
+        clientOrganizationId: editData.clientOrganizationId || null,
       };
       const resp = await courseRunsApi.update(courseRun.id, payload);
       if (resp.success) {
@@ -1069,6 +1101,39 @@ const CourseRunDetail: React.FC = () => {
                         <Input value={courseRun.courseRunType || ""} disabled className="bg-gray-50" />
                       )}
                     </div>
+                    {/* Organiser Field - Only show for DEDICATED, TALKS, or CUSTOMIZED */}
+                    {(editData?.courseRunType === "DEDICATED" || editData?.courseRunType === "TALKS" || editData?.courseRunType === "CUSTOMIZED" || (!isEditing && (courseRun.courseRunType === "DEDICATED" || courseRun.courseRunType === "TALKS" || courseRun.courseRunType === "CUSTOMIZED"))) && (
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm font-medium">Organisation {isEditing && (editData?.courseRunType === "DEDICATED" || editData?.courseRunType === "TALKS" || editData?.courseRunType === "CUSTOMIZED") ? "*" : ""}</Label>
+                        {isEditing ? (
+                          <Select
+                            value={editData?.clientOrganizationId || ""}
+                            onValueChange={(v) => handleEditField("clientOrganizationId", v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Organisation" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {organizations.map((org) => (
+                                <SelectItem key={org.id} value={org.id}>
+                                  {org.name} {org.buNumber ? `- ${org.buNumber}` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            value={
+                              courseRun.clientOrganization?.name ||
+                              organizations.find((org) => org.id === courseRun.clientOrganizationId)?.name ||
+                              ""
+                            }
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

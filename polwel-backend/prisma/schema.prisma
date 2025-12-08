@@ -111,6 +111,7 @@ model Organization {
   bookings         Booking[]
   learners         Learner[]
   users            User[]
+  courseRuns       CourseRun[]
 
   @@map("organizations")
 }
@@ -237,10 +238,13 @@ model CourseRun {
   learnerEmailStatusUpdatedAt    DateTime?
   statusLastEvaluatedAt          DateTime?
   cancelledBy                    User?                           @relation("CourseRunCancelledBy", fields: [cancelledById], references: [id])
+  clientOrganizationId           String?
+  clientOrganization             Organization?                    @relation(fields: [clientOrganizationId], references: [id])
 
   @@index([courseId], map: "course_runs_courseId_fkey")
   @@index([venueId], map: "course_runs_venueId_fkey")
   @@index([cancelledById], map: "course_runs_cancelledById_fkey")
+  @@index([clientOrganizationId])
   @@map("course_runs")
 }
 
