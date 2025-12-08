@@ -20,7 +20,7 @@ interface Course {
   category: string;
   duration: string;
   durationType: string;
-  venue: string;
+  venueId: string;
   defaultCourseFee: number;
   minParticipants?: number;
   certificates: string;
@@ -718,7 +718,7 @@ const CourseArchive = () => {
                     <TableCell>
                       {course.duration} {course.durationType}
                     </TableCell>
-                    <TableCell>{(course.venue && venuesMap[course.venue]) || course.venue || "TBD"}</TableCell>
+                    <TableCell>{(course.venueId && venuesMap[course.venueId]) || course.venueId || "TBD"}</TableCell>
                     <TableCell>${course.defaultCourseFee?.toFixed(2) || "0.00"}</TableCell>
                     <TableCell>{course.minParticipants || 1}</TableCell>
                     <TableCell>
