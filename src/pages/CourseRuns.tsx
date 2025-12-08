@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
@@ -146,9 +146,50 @@ const CourseRuns: React.FC = () => {
   const [startDateFilter, setStartDateFilter] = useState<string>("");
   const [endDateFilter, setEndDateFilter] = useState<string>("");
 
-  // Sort options
-  const [sortBy, setSortBy] = useState<"startDatetime" | "updatedAt">("startDatetime");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Sort options - read from URL params (priority) or localStorage (fallback) or use defaults
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [sortBy, setSortBy] = useState<"startDatetime" | "updatedAt">(() => {
+    // Priority 1: URL params
+    const urlSortBy = searchParams.get("sortBy");
+    if (urlSortBy === "updatedAt" || urlSortBy === "startDatetime") {
+      return urlSortBy;
+    }
+    // Priority 2: localStorage (fallback)
+    const saved = localStorage.getItem("courseRuns_sortBy");
+    if (saved === "updatedAt" || saved === "startDatetime") {
+      return saved;
+    }
+    // Priority 3: default
+    return "startDatetime";
+  });
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => {
+    // Priority 1: URL params
+    const urlSortOrder = searchParams.get("sortOrder");
+    if (urlSortOrder === "asc" || urlSortOrder === "desc") {
+      return urlSortOrder;
+    }
+    // Priority 2: localStorage (fallback)
+    const saved = localStorage.getItem("courseRuns_sortOrder");
+    if (saved === "asc" || saved === "desc") {
+      return saved;
+    }
+    // Priority 3: default
+    return "asc";
+  });
+
+  // Sync localStorage when URL params are present (on mount)
+  useEffect(() => {
+    const urlSortBy = searchParams.get("sortBy");
+    const urlSortOrder = searchParams.get("sortOrder");
+    
+    // If URL has sort params, sync to localStorage
+    if (urlSortBy && (urlSortBy === "updatedAt" || urlSortBy === "startDatetime")) {
+      localStorage.setItem("courseRuns_sortBy", urlSortBy);
+    }
+    if (urlSortOrder && (urlSortOrder === "asc" || urlSortOrder === "desc")) {
+      localStorage.setItem("courseRuns_sortOrder", urlSortOrder);
+    }
+  }, []); // Only run on mount
 
   // Excel-style filters
   const [filters, setFilters] = useState<Record<string, string[]>>({
@@ -953,6 +994,36 @@ const CourseRuns: React.FC = () => {
                   setSortBy(newSortBy);
                   setSortOrder(newSortOrder);
                   setPagination((p) => ({ ...p, page: 1 }));
+                  
+                  const isDefault = newSortBy === "startDatetime" && newSortOrder === "asc";
+                  
+                  // Update localStorage (always save, except when default)
+                  if (isDefault) {
+                    // Remove from localStorage when default
+                    localStorage.removeItem("courseRuns_sortBy");
+                    localStorage.removeItem("courseRuns_sortOrder");
+                  } else {
+                    // Save to localStorage (for persistence across navigation)
+                    localStorage.setItem("courseRuns_sortBy", newSortBy);
+                    localStorage.setItem("courseRuns_sortOrder", newSortOrder);
+                  }
+                  
+                  // Update URL params - remove if default, otherwise set
+                  setSearchParams((prev) => {
+                    const newParams = new URLSearchParams(prev);
+                    
+                    if (isDefault) {
+                      // Remove params if default sort
+                      newParams.delete("sortBy");
+                      newParams.delete("sortOrder");
+                    } else {
+                      // Set params for non-default sort
+                      newParams.set("sortBy", newSortBy);
+                      newParams.set("sortOrder", newSortOrder);
+                    }
+                    
+                    return newParams;
+                  });
                 }}
               >
                 <SelectTrigger className="w-full sm:w-52">
