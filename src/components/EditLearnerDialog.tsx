@@ -331,6 +331,19 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     }
   };
 
+  const handleOrganizationTypeChange = (value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      organizationType: value,
+      division: "", // Reset division when type changes
+      buNumber: "",
+      trainingCoordinatorId: "",
+      trainingCoordinatorEmail: "",
+      trainingCoordinatorPhone: "",
+    }));
+    setCoordinators([]); // Clear coordinators
+  };
+
   const handleOrganizationChange = (orgId: string, options: { preserveCoordinator?: boolean; organizationOverride?: Organization | null } = {}) => {
     const { preserveCoordinator = false, organizationOverride = null } = options;
     const org = organizationOverride || organizations.find((o) => o.id === orgId);
@@ -359,11 +372,21 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     return form.organizationType === "SPF" ? "Division" : "Name";
   };
 
-  const organizationOptions: SearchableSelectOption[] = organizations.map((org) => ({
+  // Filter organizations by selected type
+  const filteredOrganizations = form.organizationType ? organizations.filter((org) => org.organizationType === form.organizationType) : [];
+
+  const organizationOptions: SearchableSelectOption[] = filteredOrganizations.map((org) => ({
     value: org.id,
     label: org.name,
     description: org.buNumber ? `BU: ${org.buNumber}` : undefined,
   }));
+
+  const organizationTypeOptions: SearchableSelectOption[] = [
+    { value: "SPF", label: "SPF" },
+    { value: "POLWEL", label: "POLWEL" },
+    { value: "PUBLIC_SECTOR", label: "Public Sector" },
+    { value: "PRIVATE_SECTOR", label: "Private Sector" },
+  ];
 
   const coordinatorOptions: SearchableSelectOption[] = coordinators.map((coord) => ({
     value: coord.id,
@@ -485,61 +508,74 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
               <CardHeader>
                 <CardTitle>Organization Information</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{getDivisionLabel()} *</Label>
-                  <SearchableSelect
-                    value={form.division}
-                    onValueChange={handleOrganizationChange}
-                    options={organizationOptions}
-                    placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
-                  />
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Organisation Type *</Label>
+                    <SearchableSelect
+                      value={form.organizationType}
+                      onValueChange={handleOrganizationTypeChange}
+                      options={organizationTypeOptions}
+                      placeholder="Select organisation type"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{getDivisionLabel()} *</Label>
+                    <SearchableSelect
+                      value={form.division}
+                      onValueChange={handleOrganizationChange}
+                      options={organizationOptions}
+                      placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
+                      disabled={!form.organizationType}
+                      emptyMessage={!form.organizationType ? "Select organisation type first" : `No ${getDivisionLabel().toLowerCase()}s found`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Department (Optional)</Label>
+                    <Input
+                      value={form.departmentName}
+                      onChange={(e) => handleChange("departmentName", e.target.value)}
+                      placeholder="Department name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      BU Number <span className="text-gray-400">(Optional)</span>
+                    </Label>
+                    <Input value={form.buNumber} disabled className="bg-gray-50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Payment Mode (Optional)</Label>
+                    <SearchableSelect
+                      value={form.paymentMode}
+                      onValueChange={(value) => handleChange("paymentMode", value)}
+                      options={paymentModeOptions}
+                      placeholder="Select payment mode (optional)"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  <Input value={form.departmentName} onChange={(e) => handleChange("departmentName", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>
-                    BU Number <span className="text-gray-400">(Optional)</span>
-                  </Label>
-                  <Input value={form.buNumber} disabled className="bg-gray-50" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Payment Mode *</Label>
-                  <SearchableSelect
-                    value={form.paymentMode}
-                    onValueChange={(value) => handleChange("paymentMode", value)}
-                    options={paymentModeOptions}
-                    placeholder="Select payment mode"
-                  />
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Training Coordinator</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Coordinator Name</Label>
-                  <SearchableSelect
-                    value={form.trainingCoordinatorId}
-                    onValueChange={handleCoordinatorChange}
-                    options={coordinatorOptions}
-                    placeholder={coordinators.length ? "Select coordinator" : "No coordinators found"}
-                    disabled={!form.division}
-                    emptyMessage={coordinators.length ? "No results" : "No coordinators found"}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Coordinator Email</Label>
-                  <Input value={form.trainingCoordinatorEmail} disabled className="bg-gray-50" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Coordinator Phone</Label>
-                  <Input value={form.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+                <div className="border-t pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Coordinator Name</Label>
+                      <SearchableSelect
+                        value={form.trainingCoordinatorId}
+                        onValueChange={handleCoordinatorChange}
+                        options={coordinatorOptions}
+                        placeholder="Select coordinator"
+                        emptyMessage={organizationOptions.length === 0 ? "Select a division first" : "No coordinators found"}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Coordinator Email</Label>
+                      <Input value={form.trainingCoordinatorEmail} disabled className="bg-gray-50" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Coordinator Phone</Label>
+                      <Input value={form.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
