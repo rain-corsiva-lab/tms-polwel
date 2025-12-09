@@ -125,7 +125,15 @@ const corsOptions: CorsOptions = {
 };
 
 // Middleware
-app.use(helmet());
+// Configure Helmet with lenient settings to avoid blocking legitimate requests
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP if causing issues, can be enabled later with proper policy
+  frameguard: { action: 'deny' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+  noSniff: true,
+  xssFilter: true,
+}));
 app.use(limiter);
 
 // CORS must be applied before other middleware

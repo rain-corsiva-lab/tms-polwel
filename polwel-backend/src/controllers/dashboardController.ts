@@ -238,6 +238,7 @@ export const getUpcomingCourseRuns = async (req: AuthenticatedRequest, res: Resp
       status: run.status,
       venueName: run.venue?.name || (run.venueType === 'CLIENT_FACILITY' ? 'Client Facility' : 'Virtual'),
       participantCount: run.courseRunLearners.length,
+      minParticipants: run.minClassSize || 0,
       maxParticipants: run.maxClassSize || 0,
     }));
 
