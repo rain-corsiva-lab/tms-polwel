@@ -365,7 +365,7 @@ function DashboardContent() {
                           <StatusBadge status={run.status} />
                         </TableCell>
                         <TableCell>
-                          <span className={run.participantCount >= run.minParticipants ? "text-orange-600 font-medium" : ""}>
+                          <span className={run.participantCount >= run.minParticipants ? "text-green-600 font-medium" : ""}>
                             {run.participantCount}/{run.minParticipants}
                           </span>
                         </TableCell>
