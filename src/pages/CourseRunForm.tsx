@@ -537,8 +537,8 @@ const CourseRunForm: React.FC = () => {
 
     try {
       // Prepare submission data (dates only, time set to 00:00:00)
-      const startDatetime = formData.startDate ? new Date(`${formData.startDate}T00:00:00`).toISOString() : null;
-      const endDatetime = formData.endDate ? new Date(`${formData.endDate}T00:00:00`).toISOString() : null;
+      const startDatetime = formData.startDate ? new Date(`${formData.startDate}T09:00:00`).toISOString() : null;
+      const endDatetime = formData.endDate ? new Date(`${formData.endDate}T17:00:00`).toISOString() : null;
 
       // Get venue fee and fee type from selected venue
       const selectedVenue = venues.find((v) => v.id === formData.venueId);
