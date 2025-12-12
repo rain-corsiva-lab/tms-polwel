@@ -523,7 +523,8 @@ export const courseRunWorkflowService = {
 
   async evaluateStatuses(prisma: PrismaClient) {
     const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    // Changed from 24 hours to 5 minutes for testing auto-status transitions
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
     // Transition CONFIRMED-like statuses to IN_PROGRESS when start datetime is reached
     const started = await prisma.courseRun.updateMany({
@@ -545,12 +546,12 @@ export const courseRunWorkflowService = {
       },
     });
 
-    // Transition IN_PROGRESS to PENDING_BILLING when end datetime + 1 day has passed
+    // Transition IN_PROGRESS to PENDING_BILLING when end datetime + 5 minutes has passed
     const pendingBilling = await prisma.courseRun.updateMany({
       where: {
         deletedAt: null,
         endDatetime: {
-          lt: oneDayAgo, // More than 1 day after end
+          lt: fiveMinutesAgo, // More than 5 minutes after end
         },
         status: 'IN_PROGRESS',
       },
@@ -565,7 +566,7 @@ export const courseRunWorkflowService = {
     //   where: {
     //     deletedAt: null,
     //     endDatetime: {
-    //       lt: oneDayAgo,
+    //       lt: fiveMinutesAgo,
     //     },
     //     status: {
     //       in: ['CONFIRMED', 'ACTIVE', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],

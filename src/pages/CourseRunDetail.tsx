@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { courseRunsApi, coursesApi, venuesApi, organizationsApi } from "../lib/api";
 import { toast } from "sonner";
+import { formatDate, formatDateTime } from "../lib/date";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { AddLearnersDialog } from "../components/AddLearnersDialog";
@@ -230,10 +231,10 @@ const CourseRunDetail: React.FC = () => {
       courseId: cr.course?.id || "",
       courseCode: cr.course?.courseCode || "",
       clientOrganizationId: (cr as any).clientOrganizationId || "",
-      startDate: start ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}` : "",
-      startTime: start ? `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}` : "",
-      endDate: end ? `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}` : "",
-      endTime: end ? `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}` : "",
+      startDate: start ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}` : "",
+      startTime: start ? `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}` : "",
+      endDate: end ? `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}` : "",
+      endTime: end ? `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}` : "",
       venueType: cr.venueType || "",
       venueId: cr.venue?.id || "",
       specifiedLocation: cr.specifiedLocation || "",
@@ -636,17 +637,9 @@ const CourseRunDetail: React.FC = () => {
       .reduce((sum, [_, data]) => sum + safeNumber(data.baseFee, 0) + safeNumber(data.additionalCost, 0), 0);
   };
 
-  const formatDateTime = (dateTime: string | null) => {
+  const formatDateTimeOld = (dateTime: string | null) => {
     if (!dateTime) return "—";
-    const date = new Date(dateTime);
-    return date.toLocaleString("en-SG", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+    return formatDateTime(dateTime);
   };
 
   const getStatusBadge = (status: string | null) => {
@@ -750,12 +743,12 @@ const CourseRunDetail: React.FC = () => {
   const handleEditField = async (field: string, value: any) => {
     setEditData((prev: any) => {
       const updated = { ...prev, [field]: value };
-      
+
       // If courseRunType changed to OPEN, clear clientOrganizationId
       if (field === "courseRunType" && value === "OPEN") {
         updated.clientOrganizationId = "";
       }
-      
+
       // Auto update serialNumber when course or startDate changes
       if ((field === "courseId" || field === "startDate") && (updated.courseCode || updated.courseId)) {
         const theCourse = courses.find((c) => c.id === updated.courseId);
@@ -1102,14 +1095,21 @@ const CourseRunDetail: React.FC = () => {
                       )}
                     </div>
                     {/* Organiser Field - Only show for DEDICATED, TALKS, or CUSTOMIZED */}
-                    {(editData?.courseRunType === "DEDICATED" || editData?.courseRunType === "TALKS" || editData?.courseRunType === "CUSTOMIZED" || (!isEditing && (courseRun.courseRunType === "DEDICATED" || courseRun.courseRunType === "TALKS" || courseRun.courseRunType === "CUSTOMIZED"))) && (
+                    {(editData?.courseRunType === "DEDICATED" ||
+                      editData?.courseRunType === "TALKS" ||
+                      editData?.courseRunType === "CUSTOMIZED" ||
+                      (!isEditing &&
+                        (courseRun.courseRunType === "DEDICATED" || courseRun.courseRunType === "TALKS" || courseRun.courseRunType === "CUSTOMIZED"))) && (
                       <div className="space-y-2 md:col-span-2">
-                        <Label className="text-sm font-medium">Organisation {isEditing && (editData?.courseRunType === "DEDICATED" || editData?.courseRunType === "TALKS" || editData?.courseRunType === "CUSTOMIZED") ? "*" : ""}</Label>
+                        <Label className="text-sm font-medium">
+                          Organisation{" "}
+                          {isEditing &&
+                          (editData?.courseRunType === "DEDICATED" || editData?.courseRunType === "TALKS" || editData?.courseRunType === "CUSTOMIZED")
+                            ? "*"
+                            : ""}
+                        </Label>
                         {isEditing ? (
-                          <Select
-                            value={editData?.clientOrganizationId || ""}
-                            onValueChange={(v) => handleEditField("clientOrganizationId", v)}
-                          >
+                          <Select value={editData?.clientOrganizationId || ""} onValueChange={(v) => handleEditField("clientOrganizationId", v)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select Organisation" />
                             </SelectTrigger>
@@ -1123,11 +1123,7 @@ const CourseRunDetail: React.FC = () => {
                           </Select>
                         ) : (
                           <Input
-                            value={
-                              courseRun.clientOrganization?.name ||
-                              organizations.find((org) => org.id === courseRun.clientOrganizationId)?.name ||
-                              ""
-                            }
+                            value={courseRun.clientOrganization?.name || organizations.find((org) => org.id === courseRun.clientOrganizationId)?.name || ""}
                             disabled
                             className="bg-gray-50"
                           />

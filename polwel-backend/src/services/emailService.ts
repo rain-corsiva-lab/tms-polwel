@@ -1002,6 +1002,17 @@ class EmailService {
                     </div>
                   </div>
 
+                  <div class="info-box">
+                    <div class="info-box-title">Withdrawal Policy</div>
+                    <div class="info-box-content">
+                      Please note our withdrawal policy:<br/><br/>
+                      • <strong>More than 7 working days before course start:</strong> Full refund available<br/>
+                      • <strong>3-7 working days before course start:</strong> 50% of course fee will be charged<br/>
+                      • <strong>Less than 3 working days or no-show:</strong> Full course fee will be charged<br/><br/>
+                      All withdrawal requests must be submitted in writing to <a href="mailto:pdcs@polwel.org" style="color: #854d0e; text-decoration: none;">pdcs@polwel.org</a>.
+                    </div>
+                  </div>
+
                   <div class="closing-text">
                     We hope that you will find this programme an enriching experience for your personal and professional development!
                   </div>

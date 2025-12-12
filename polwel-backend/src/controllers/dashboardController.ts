@@ -152,31 +152,62 @@ export const getUpcomingCourseRuns = async (req: AuthenticatedRequest, res: Resp
 
     const { date } = req.query;
     
-    // If date is provided, filter for course runs where the selected date falls within start-end range
+    // If date is provided, filter for course runs
     let dateFilter: any = {};
     if (date && typeof date === 'string') {
-      const targetDate = new Date(date);
-      targetDate.setHours(0, 0, 0, 0);
-      const nextDay = new Date(targetDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      
-      // Course run should include this date: startDatetime <= selectedDate < nextDay AND endDatetime >= selectedDate
-      dateFilter = {
-        AND: [
-          {
-            startDatetime: {
-              lt: nextDay, // Start date must be before or on the selected date
+      // Check if date contains comma (date range)
+      if (date.includes(',')) {
+        const parts = date.split(',').map(d => d.trim());
+        const startDateStr = parts[0];
+        const endDateStr = parts[1];
+        
+        if (startDateStr && endDateStr) {
+          const startDate = new Date(startDateStr);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(endDateStr);
+          endDate.setHours(23, 59, 59, 999);
+          
+          // Course run overlaps with the selected date range
+          dateFilter = {
+            AND: [
+              {
+                startDatetime: {
+                  lte: endDate, // Start date must be before or equal to range end
+                },
+              },
+              {
+                endDatetime: {
+                  gte: startDate, // End date must be on or after range start
+                },
+              },
+            ],
+          };
+        }
+      } else {
+        // Single date - filter for course runs where the selected date falls within start-end range
+        const targetDate = new Date(date);
+        targetDate.setHours(0, 0, 0, 0);
+        const nextDay = new Date(targetDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        
+        // Course run should include this date
+        dateFilter = {
+          AND: [
+            {
+              startDatetime: {
+                lt: nextDay,
+              },
             },
-          },
-          {
-            endDatetime: {
-              gte: targetDate, // End date must be on or after the selected date
+            {
+              endDatetime: {
+                gte: targetDate,
+              },
             },
-          },
-        ],
-      };
+          ],
+        };
+      }
     } else {
-      // Default: upcoming runs from today onwards (start date >= today OR end date >= today)
+      // Default: upcoming runs from today onwards
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       dateFilter = {

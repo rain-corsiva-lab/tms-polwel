@@ -464,8 +464,37 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       onSuccess?.();
       onOpenChange(false);
     } catch (e: any) {
-      console.error(e);
-      toast({ title: "Error", description: e.message || "Failed to update enrollment", variant: "destructive" });
+      console.error("Failed to update enrollment:", e);
+
+      // Parse error message for better user feedback
+      let errorMessage = "Failed to update enrollment";
+
+      if (e?.response?.data?.message) {
+        errorMessage = e.response.data.message;
+      } else if (e?.response?.data?.error) {
+        errorMessage = e.response.data.error;
+      } else if (e?.message) {
+        errorMessage = e.message;
+      }
+
+      // Handle specific error types
+      if (errorMessage.toLowerCase().includes("email")) {
+        errorMessage = "Email validation failed. Please check the email address.";
+      } else if (errorMessage.toLowerCase().includes("not found")) {
+        errorMessage = "Learner enrollment not found. It may have been deleted.";
+      } else if (errorMessage.toLowerCase().includes("coordinator")) {
+        errorMessage = "Invalid training coordinator selected.";
+      } else if (errorMessage.toLowerCase().includes("discount")) {
+        errorMessage = "Invalid discount code selected.";
+      } else if (errorMessage.toLowerCase().includes("fee")) {
+        errorMessage = "Course fee calculation error. Please check the fee amounts.";
+      }
+
+      toast({
+        title: "Update Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -532,11 +561,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
                   </div>
                   <div className="space-y-2">
                     <Label>Department (Optional)</Label>
-                    <Input
-                      value={form.departmentName}
-                      onChange={(e) => handleChange("departmentName", e.target.value)}
-                      placeholder="Department name"
-                    />
+                    <Input value={form.departmentName} onChange={(e) => handleChange("departmentName", e.target.value)} placeholder="Department name" />
                   </div>
                   <div className="space-y-2">
                     <Label>

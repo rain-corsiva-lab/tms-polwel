@@ -399,8 +399,11 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           learner.trainingCoordinatorPhone || learner.trainingCoordinator?.contactNumber || learner.trainingCoordinator?.phoneNumber || "",
       }));
 
-      setAllLearners(mappedLearners);
-      setLearners(mappedLearners);
+      // Remove duplicates based on learner ID
+      const uniqueLearners = Array.from(new Map(mappedLearners.map((learner) => [learner.id, learner])).values());
+
+      setAllLearners(uniqueLearners);
+      setLearners(uniqueLearners);
     } catch (error) {
       console.error("Failed to load learners:", error);
       setAllLearners([]);
@@ -711,6 +714,9 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     const learner = allLearners.find((l) => l.id === learnerId);
     if (learner) {
       if (mode === "single") {
+        // Find the organization to get its type
+        const org = organizations.find((o) => o.id === learner.clientOrganizationId);
+
         setSingleData((prev) => ({
           ...prev,
           selectedLearnerId: learnerId,
@@ -719,6 +725,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           email: learner.email || "",
           contactNumber: learner.contact || "",
           departmentName: learner.departmentName || "",
+          organizationType: org?.organizationType || prev.organizationType || "",
           division: learner.clientOrganizationId || prev.division,
           buNumber: learner.clientOrganizationBuNumber || prev.buNumber,
           trainingCoordinatorId: learner.trainingCoordinatorId || prev.trainingCoordinatorId || "",
@@ -726,9 +733,9 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           trainingCoordinatorPhone: learner.trainingCoordinatorPhone || prev.trainingCoordinatorPhone || "",
         }));
 
-        // Load organization data if learner has one
+        // Load coordinators if learner has an organization
         if (learner.clientOrganizationId) {
-          handleOrganizationChange(learner.clientOrganizationId, { preserveCoordinator: !!learner.trainingCoordinatorId });
+          loadCoordinators(learner.clientOrganizationId);
         }
       } else if (learnerIndex !== undefined) {
         setGroupData((prev) => ({
@@ -860,11 +867,32 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         if (importedCount > 0) {
           onSuccess?.();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to import learners:", error);
+
+        // Parse error message for better user feedback
+        let errorMessage = "We couldn't import learners. Please review your file and try again.";
+
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+
+        // Handle specific error types
+        if (errorMessage.toLowerCase().includes("format")) {
+          errorMessage = "File format is invalid. Please use the provided template.";
+        } else if (errorMessage.toLowerCase().includes("email")) {
+          errorMessage = "One or more email addresses are invalid. Please check your file.";
+        } else if (errorMessage.toLowerCase().includes("required")) {
+          errorMessage = "Missing required fields. Please ensure all columns are filled.";
+        }
+
         toast({
           title: "Import failed",
-          description: "We couldn't import learners. Please review your file and try again.",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {
@@ -947,9 +975,38 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       toast({ title: "Success", description: "Learners enrolled successfully" });
       setDialogOpen(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to enroll learners:", error);
-      toast({ title: "Error", description: "Failed to enroll learners", variant: "destructive" });
+
+      // Parse error message for better user feedback
+      let errorMessage = "Failed to enroll learners";
+
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      // Handle specific error types
+      if (errorMessage.toLowerCase().includes("email")) {
+        errorMessage = "Email validation failed. Please check email addresses.";
+      } else if (errorMessage.toLowerCase().includes("duplicate")) {
+        errorMessage = "One or more learners are already enrolled in this course run.";
+      } else if (errorMessage.toLowerCase().includes("capacity")) {
+        errorMessage = "Course run has reached maximum capacity.";
+      } else if (errorMessage.toLowerCase().includes("coordinator")) {
+        errorMessage = "Invalid training coordinator selected.";
+      } else if (errorMessage.toLowerCase().includes("organization")) {
+        errorMessage = "Invalid client organization selected.";
+      }
+
+      toast({
+        title: "Enrollment Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -961,6 +1018,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       designation: "",
       email: "",
       contactNumber: "",
+      organizationType: "",
       division: "",
       departmentName: "",
       buNumber: "",
@@ -978,6 +1036,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     });
 
     setGroupData({
+      organizationType: "",
       division: "",
       departmentName: "",
       buNumber: "",
@@ -1293,7 +1352,6 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
                     trainingCoordinatorEmail: "",
                     trainingCoordinatorPhone: "",
                   }));
-                  setCoordinators([]); // Clear coordinators
                 }}
                 options={organizationTypeOptions}
                 placeholder="Select organisation type"

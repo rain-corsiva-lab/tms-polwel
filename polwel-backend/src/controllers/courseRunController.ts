@@ -674,6 +674,15 @@ export const courseRunController = {
         };
       }
 
+      // When sorting by startDatetime ascending (Upcoming), only show future course runs
+      if (sortBy === 'startDatetime' && sortOrder === 'asc') {
+        const now = new Date();
+        where.startDatetime = {
+          ...where.startDatetime,
+          gte: now,
+        };
+      }
+
       // Get course runs with related data. Prisma's count() has trouble with some relation filters
       // that include case-insensitive `mode`, so derive the total by selecting matching IDs instead.
       const [courseRuns, matchingIds] = await Promise.all([

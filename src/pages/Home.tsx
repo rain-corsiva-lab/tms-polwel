@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, AlertCircle, CheckSquare, Mail, ArrowRight, Download, Calendar as CalendarIcon, MapPin } from "lucide-react";
 import { dashboardApi } from "@/lib/api";
+import { formatDate, formatDateTime } from "@/lib/date";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 // Action Item Card Component with hover animation
@@ -76,10 +77,19 @@ const StatusBadge = ({ status }: { status: string }) => {
 // Course Run Type Badge
 const CourseRunTypeBadge = ({ type }: { type: string | null }) => {
   if (!type) return null;
-  const isOpen = type === "OPEN";
+
+  const typeConfig = {
+    OPEN: { label: "Open", variant: "default" as const, className: "bg-blue-500" },
+    DEDICATED: { label: "Dedicated", variant: "secondary" as const, className: "bg-gray-200 text-gray-700" },
+    TALKS: { label: "Talks", variant: "default" as const, className: "bg-purple-500" },
+    CUSTOMIZED: { label: "Customized", variant: "default" as const, className: "bg-green-500" },
+  };
+
+  const config = typeConfig[type as keyof typeof typeConfig] || { label: type, variant: "secondary" as const, className: "bg-gray-200 text-gray-700" };
+
   return (
-    <Badge variant={isOpen ? "default" : "secondary"} className={isOpen ? "bg-blue-500" : "bg-gray-200 text-gray-700"}>
-      {isOpen ? "Open" : "Dedicated"}
+    <Badge variant={config.variant} className={config.className}>
+      {config.label}
     </Badge>
   );
 };
@@ -146,8 +156,8 @@ function DashboardContent() {
   const [loadingCharts, setLoadingCharts] = useState(true);
   const [loadingDrafts, setLoadingDrafts] = useState(true);
 
-  // Calendar state
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  // Calendar state - now supports date range
+  const [selectedDate, setSelectedDate] = useState<{ from: Date; to?: Date }>({ from: new Date() });
 
   // Fetch action items
   useEffect(() => {
@@ -165,18 +175,24 @@ function DashboardContent() {
     })();
   }, []);
 
-  // Fetch upcoming runs when date changes
-  const loadUpcomingRuns = useCallback(async (date?: Date) => {
+  // Fetch upcoming runs when date range changes
+  const loadUpcomingRuns = useCallback(async (dateRange?: { from: Date; to?: Date }) => {
     try {
       setLoadingUpcoming(true);
-      // Use local date format (YYYY-MM-DD) to avoid timezone issues
-      // toISOString() converts to UTC which can shift the date by a day
       let dateStr: string | undefined;
-      if (date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        dateStr = `${year}-${month}-${day}`;
+      if (dateRange?.from) {
+        const formatLocalDate = (d: Date) => {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        };
+
+        if (dateRange.to) {
+          dateStr = `${formatLocalDate(dateRange.from)},${formatLocalDate(dateRange.to)}`;
+        } else {
+          dateStr = formatLocalDate(dateRange.from);
+        }
       }
       const resp = await dashboardApi.getUpcomingRuns(dateStr);
       const data = resp?.data ?? resp;
@@ -236,17 +252,10 @@ function DashboardContent() {
     })();
   }, []);
 
-  // Date formatting helper
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
-
-  // Handle calendar date select
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
+  // Handle calendar date range select
+  const handleDateSelect = (range: { from: Date; to?: Date } | undefined) => {
+    if (range) {
+      setSelectedDate(range);
     }
   };
 
@@ -326,7 +335,7 @@ function DashboardContent() {
           <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
             {/* Calendar */}
             <div className="border rounded-lg p-4">
-              <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} className="rounded-md" />
+              <Calendar mode="range" selected={selectedDate} onSelect={handleDateSelect} className="rounded-md" />
             </div>
 
             {/* Table */}
@@ -344,7 +353,7 @@ function DashboardContent() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Course Run</TableHead>
-                      <TableHead>Open/Dedicated</TableHead>
+                      <TableHead>Types</TableHead>
                       <TableHead>Start Date</TableHead>
                       <TableHead>End Date</TableHead>
                       <TableHead>Status</TableHead>

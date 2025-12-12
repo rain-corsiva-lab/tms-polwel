@@ -22,6 +22,7 @@ import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
+import { formatDateTime } from "../lib/date";
 
 // Raw shape from backend
 interface BackendCourseRun {
@@ -181,7 +182,7 @@ const CourseRuns: React.FC = () => {
   useEffect(() => {
     const urlSortBy = searchParams.get("sortBy");
     const urlSortOrder = searchParams.get("sortOrder");
-    
+
     // If URL has sort params, sync to localStorage
     if (urlSortBy && (urlSortBy === "updatedAt" || urlSortBy === "startDatetime")) {
       localStorage.setItem("courseRuns_sortBy", urlSortBy);
@@ -307,7 +308,7 @@ const CourseRuns: React.FC = () => {
           return {
             id: run.id,
             title: run.course?.title || "Untitled Course",
-            code:  run.serialNumber || run.course?.courseCode || "-",
+            code: run.serialNumber || run.course?.courseCode || "-",
             courseType: run.courseRunType || run.course?.category || "-",
             venueName: run.venue?.name || "—",
             venueLocation: run.venue?.address || run.specifiedLocation || "—",
@@ -459,13 +460,13 @@ const CourseRuns: React.FC = () => {
     setPagination((p) => ({ ...p, page: 1 }));
   };
 
-  // Format date and time
+  // Format date only (without time)
   const formatRange = (start: Date | null, end: Date | null) => {
     if (!start) return "—";
-    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" };
-    const startStr = start.toLocaleString(undefined, opts);
+    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+    const startStr = start.toLocaleDateString(undefined, opts);
     if (!end) return startStr;
-    const endStr = end.toLocaleString(undefined, opts);
+    const endStr = end.toLocaleDateString(undefined, opts);
     return `${startStr} → ${endStr}`;
   };
 
@@ -868,13 +869,7 @@ const CourseRuns: React.FC = () => {
 
   const formatTimestamp = (date?: Date | null) => {
     if (!date) return null;
-    return date.toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatDateTime(date);
   };
 
   // Excel-style filter helper functions
@@ -994,9 +989,9 @@ const CourseRuns: React.FC = () => {
                   setSortBy(newSortBy);
                   setSortOrder(newSortOrder);
                   setPagination((p) => ({ ...p, page: 1 }));
-                  
+
                   const isDefault = newSortBy === "startDatetime" && newSortOrder === "asc";
-                  
+
                   // Update localStorage (always save, except when default)
                   if (isDefault) {
                     // Remove from localStorage when default
@@ -1007,11 +1002,11 @@ const CourseRuns: React.FC = () => {
                     localStorage.setItem("courseRuns_sortBy", newSortBy);
                     localStorage.setItem("courseRuns_sortOrder", newSortOrder);
                   }
-                  
+
                   // Update URL params - remove if default, otherwise set
                   setSearchParams((prev) => {
                     const newParams = new URLSearchParams(prev);
-                    
+
                     if (isDefault) {
                       // Remove params if default sort
                       newParams.delete("sortBy");
@@ -1021,7 +1016,7 @@ const CourseRuns: React.FC = () => {
                       newParams.set("sortBy", newSortBy);
                       newParams.set("sortOrder", newSortOrder);
                     }
-                    
+
                     return newParams;
                   });
                 }}
@@ -1030,10 +1025,10 @@ const CourseRuns: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="startDatetime-asc">Upcoming Start Date ↑</SelectItem>
-                  <SelectItem value="startDatetime-desc">Latest Start Date ↓</SelectItem>
-                  <SelectItem value="updatedAt-desc">Recently Modified ↓</SelectItem>
-                  <SelectItem value="updatedAt-asc">Oldest Modified ↑</SelectItem>
+                  <SelectItem value="startDatetime-asc">Upcoming (Ascending)</SelectItem>
+                  <SelectItem value="startDatetime-desc">Upcoming (Descending)</SelectItem>
+                  <SelectItem value="updatedAt-desc">Modified (Descending)</SelectItem>
+                  <SelectItem value="updatedAt-asc">Modified (Ascending)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1238,10 +1233,7 @@ const CourseRuns: React.FC = () => {
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <MapPin className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <div className="text-sm font-medium">{courseRun.venueName}</div>
-                            <div className="text-sm text-gray-500">{courseRun.venueLocation}</div>
-                          </div>
+                          <div className="text-sm font-medium">{courseRun.venueName}</div>
                         </div>
                       </TableCell>
                       <TableCell>
