@@ -135,8 +135,10 @@ const CourseRunForm: React.FC = () => {
         ]);
 
         if (coursesResponse.success) {
-          // Filter to only show ACTIVE courses
-          const activeCourses = (coursesResponse.courses || []).filter((c: Course) => c.status === "ACTIVE");
+          // Filter to only show ACTIVE courses and sort alphabetically by title
+          const activeCourses = (coursesResponse.courses || [])
+            .filter((c: Course) => c.status === "ACTIVE")
+            .sort((a: Course, b: Course) => a.title.localeCompare(b.title));
           setCourses(activeCourses);
         }
 
@@ -502,7 +504,10 @@ const CourseRunForm: React.FC = () => {
       if (!formData.endDate) newErrors.endDate = "End Date is required";
       if (!formData.venueType) newErrors.venueType = "Venue type is required";
       // Require organiser for DEDICATED, TALKS, or CUSTOMIZED
-      if ((formData.courseRunType === "DEDICATED" || formData.courseRunType === "TALKS" || formData.courseRunType === "CUSTOMIZED") && !formData.clientOrganizationId) {
+      if (
+        (formData.courseRunType === "DEDICATED" || formData.courseRunType === "TALKS" || formData.courseRunType === "CUSTOMIZED") &&
+        !formData.clientOrganizationId
+      ) {
         newErrors.clientOrganizationId = "Organiser is required";
       }
       if (formData.minClassSize !== undefined && formData.minClassSize < 0) {
@@ -729,10 +734,7 @@ const CourseRunForm: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="clientOrganizationId">Organisation *</Label>
-                      <Select
-                        value={formData.clientOrganizationId || ""}
-                        onValueChange={(value) => handleFieldChange("clientOrganizationId", value)}
-                      >
+                      <Select value={formData.clientOrganizationId || ""} onValueChange={(value) => handleFieldChange("clientOrganizationId", value)}>
                         <SelectTrigger className={errors.clientOrganizationId ? "border-red-500" : ""}>
                           <SelectValue placeholder="Select Organisation" />
                         </SelectTrigger>

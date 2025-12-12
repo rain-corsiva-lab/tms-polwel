@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import React, { useCallback, useEffect, useState, useMemo, useRef, type Dispatch, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -165,7 +165,7 @@ const mapCourseRun = (run: CourseRunApiRecord): CourseRunRow => {
   };
 };
 
-function useCourseRunBucket(status: string): CourseRunBucketState {
+function useCourseRunBucket(statuses: string | string[]): CourseRunBucketState {
   const { toast } = useToast();
   const [runs, setRuns] = useState<CourseRunRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,6 +177,11 @@ function useCourseRunBucket(status: string): CourseRunBucketState {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
 
+  // Store status filter in a ref to avoid dependency issues
+  const statusArrayRef = useRef<string[]>([]);
+  statusArrayRef.current = Array.isArray(statuses) ? statuses : [statuses];
+
+  // Debounce search input
   useEffect(() => {
     const handle = window.setTimeout(() => {
       setDebouncedSearch(search.trim());
@@ -184,63 +189,58 @@ function useCourseRunBucket(status: string): CourseRunBucketState {
     return () => window.clearTimeout(handle);
   }, [search]);
 
+  // Reset page when search changes
   useEffect(() => {
-    if (page !== 1) {
-      setPage(1);
-    }
-  }, [debouncedSearch, page]);
+    setPage(1);
+  }, [debouncedSearch]);
 
+  // Main data fetching effect
   useEffect(() => {
-    let isActive = true;
+    let cancelled = false;
 
-    const load = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const response = await courseRunsApi.getAll({
-          page,
-          limit: perPage,
+        // Use dedicated post-course-runs endpoint that bypasses caching
+        const statusParam = statusArrayRef.current.join(",");
+
+        console.log("[PostRunManagement] Fetching with statuses:", statusParam);
+
+        const response = await courseRunsApi.getPostCourseRuns({
+          statuses: statusParam,
           search: debouncedSearch || undefined,
-          status,
+          limit: 1000,
         });
+
+        if (cancelled) return;
+
+        console.log("[PostRunManagement] Response:", response);
 
         if (!response || response.success !== true) {
           throw new Error(response?.error || response?.message || "Failed to load course runs");
         }
 
-        const rawRuns: CourseRunApiRecord[] = Array.isArray(response.courseRuns)
-          ? response.courseRuns
-          : Array.isArray((response as any)?.data?.courseRuns)
-          ? (response as any).data.courseRuns
-          : [];
+        const rawRuns: CourseRunApiRecord[] = Array.isArray(response.courseRuns) ? response.courseRuns : [];
+
+        console.log("[PostRunManagement] Raw runs count:", rawRuns.length);
 
         const mapped = rawRuns.map(mapCourseRun);
-        const filtered = status ? mapped.filter((run) => run.status === status) : mapped;
-        const filteredOut = filtered.length !== mapped.length;
 
-        if (!isActive) return;
+        // Apply client-side pagination
+        const startIdx = (page - 1) * perPage;
+        const endIdx = startIdx + perPage;
+        const paginatedRuns = mapped.slice(startIdx, endIdx);
 
-        setRuns(filtered);
+        console.log("[PostRunManagement] Setting runs:", paginatedRuns.length, "total:", mapped.length);
 
-        const pagination = response.pagination;
-        if (pagination) {
-          const totalItems = typeof pagination.total === "number" ? pagination.total : filtered.length;
-          setTotal(filteredOut ? filtered.length : totalItems);
-
-          if (typeof pagination.limit === "number" && pagination.limit !== perPage) {
-            setPerPage(pagination.limit);
-          }
-
-          if (typeof pagination.page === "number" && pagination.page !== page) {
-            setPage(pagination.page);
-          }
-        } else {
-          setTotal(filtered.length);
-        }
+        setRuns(paginatedRuns);
+        setTotal(mapped.length);
       } catch (err: any) {
-        if (!isActive) return;
+        if (cancelled) return;
         const message = err?.message || "Failed to load course runs";
+        console.error("[PostRunManagement] Error:", message, err);
         setRuns([]);
         setTotal(0);
         setError(message);
@@ -250,18 +250,19 @@ function useCourseRunBucket(status: string): CourseRunBucketState {
           variant: "destructive",
         });
       } finally {
-        if (isActive) {
+        if (!cancelled) {
           setLoading(false);
         }
       }
     };
 
-    load();
+    fetchData();
 
     return () => {
-      isActive = false;
+      cancelled = true;
     };
-  }, [page, perPage, debouncedSearch, status, refreshToken, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, perPage, debouncedSearch, refreshToken]);
 
   const refetch = useCallback(() => {
     setRefreshToken((token) => token + 1);
@@ -286,8 +287,10 @@ const PostRunManagement: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const pendingBucket = useCourseRunBucket("PENDING_BILLING");
-  const completedBucket = useCourseRunBucket("COMPLETED");
+  // Pending Billing includes PENDING_BILLING and IN_PROGRESS statuses
+  const pendingBucket = useCourseRunBucket(["PENDING_BILLING", "IN_PROGRESS"]);
+  // Completed includes COMPLETED and CANCELLED statuses
+  const completedBucket = useCourseRunBucket(["COMPLETED", "CANCELLED"]);
 
   // Excel-style filters
   const [filters, setFilters] = useState<Record<string, string[]>>({

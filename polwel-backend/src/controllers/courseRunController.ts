@@ -650,8 +650,38 @@ export const courseRunController = {
 
       // Add status filter
       const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : undefined;
-      if (normalizedStatus && ALLOWED_COURSE_STATUSES.includes(normalizedStatus as CourseStatus)) {
-        where.status = normalizedStatus as CourseStatus;
+      
+      console.log('[CourseRuns] Received status param:', status);
+      console.log('[CourseRuns] Normalized status:', normalizedStatus);
+      
+      if (normalizedStatus) {
+        // Check if status is comma-separated (multiple statuses)
+        if (normalizedStatus.includes(',')) {
+          const statusArray = normalizedStatus.split(',').map(s => s.trim()).filter(s => 
+            ALLOWED_COURSE_STATUSES.includes(s as CourseStatus)
+          );
+          
+          console.log('[CourseRuns] Parsed status array:', statusArray);
+          
+          if (statusArray.length > 0) {
+            where.status = {
+              in: statusArray as CourseStatus[],
+            };
+          } else {
+            // Invalid statuses provided, default to exclude PENDING_BILLING and COMPLETED
+            where.status = {
+              notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED],
+            };
+          }
+        } else if (ALLOWED_COURSE_STATUSES.includes(normalizedStatus as CourseStatus)) {
+          // Single status filter
+          where.status = normalizedStatus as CourseStatus;
+        } else {
+          // Invalid single status, default to exclude PENDING_BILLING and COMPLETED
+          where.status = {
+            notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED],
+            };
+        }
       } else {
         // When no specific status filter is provided, exclude PENDING_BILLING and COMPLETED
         // These are shown in separate views, not in the main course runs list
@@ -659,6 +689,8 @@ export const courseRunController = {
           notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED],
         };
       }
+      
+      console.log('[CourseRuns] Final where.status:', JSON.stringify(where.status));
 
       // Add date range filters
       if (startDate) {
@@ -1536,6 +1568,22 @@ export const courseRunController = {
           where: { id: data.selectedLearnerId },
         });
       } else {
+        // Check if learner with same email already exists
+        const existingLearner = await prisma.learner.findFirst({
+          where: { 
+            email: data.email,
+            deletedAt: null
+          },
+        });
+
+        if (existingLearner) {
+          res.status(400).json({
+            success: false,
+            error: `A learner with email ${data.email} already exists. Please select the existing learner or use a different email.`,
+          });
+          return;
+        }
+
         // Create new learner
         learner = await prisma.learner.create({
           data: {
@@ -1634,6 +1682,7 @@ export const courseRunController = {
 
       const enrollments = [];
       const createdLearners = [];
+      const errors = [];
 
       for (const learnerData of data.learners) {
         // Create or find learner
@@ -1643,6 +1692,23 @@ export const courseRunController = {
             where: { id: learnerData.selectedLearnerId },
           });
         } else {
+          // Check if learner with same email already exists
+          const existingLearner = await prisma.learner.findFirst({
+            where: { 
+              email: learnerData.email,
+              deletedAt: null
+            },
+          });
+
+          if (existingLearner) {
+            errors.push({
+              email: learnerData.email,
+              name: learnerData.fullName,
+              reason: `A learner with this email already exists`
+            });
+            continue;
+          }
+
           // Create new learner
           learner = await prisma.learner.create({
             data: {
@@ -1700,9 +1766,12 @@ export const courseRunController = {
 
       res.json({
         success: true,
-        message: `${enrollments.length} learners enrolled successfully`,
+        message: errors.length > 0 
+          ? `${enrollments.length} learners enrolled successfully, ${errors.length} failed`
+          : `${enrollments.length} learners enrolled successfully`,
         enrollments,
         createdLearners,
+        errors: errors.length > 0 ? errors : undefined,
       });
 
       // Recalculate venue final fee after enrollments
@@ -4436,6 +4505,8 @@ export const courseRunController = {
 
       // Build CSV content
       const headers = [
+        'Serial Number',
+        'Course Run Type',
         'Course Code',
         'Course Title',
         'Category',
@@ -4448,7 +4519,6 @@ export const courseRunController = {
         'Enrolled',
         'Status',
         'Base Course Fee',
-        'Fee Type',
         'Venue Fee',
         'Other Fee',
         'Admin Fee',
@@ -4498,6 +4568,8 @@ export const courseRunController = {
           : '';
 
         return [
+          run.serialNumber || '',
+          run.courseRunType || '',
           run.course?.courseCode || '',
           run.course?.title || '',
           run.course?.category || '',
@@ -4510,7 +4582,6 @@ export const courseRunController = {
           run.courseRunLearners.length.toString(),
           run.status,
           run.baseCourseFee?.toString() || '',
-          
           run.venueFee?.toString() || '',
           run.otherFee?.toString() || '',
           run.adminFee?.toString() || '',
@@ -4539,8 +4610,128 @@ export const courseRunController = {
         data: csvContent,
       });
     } catch (error) {
-      console.error('Error exporting to CSV:', error);
-      res.status(500).json(buildErrorResponse('courseRunController.exportToCSV', 'Failed to export data', error));
+      console.error('Export learners attendance error:', error);
+      res.status(500).json(buildErrorResponse('exportLearnersAttendance', 'Failed to export learners attendance', error));
+    }
+  },
+
+  // NEW: Dedicated endpoint for Post Run Management page
+  // Returns PENDING_BILLING, IN_PROGRESS, COMPLETED, CANCELLED runs without caching
+  getPostCourseRuns: async (req: Request, res: Response) => {
+    try {
+      const { statuses, search, page = 1, limit = 1000 } = req.query;
+      
+      console.log('[PostCourseRuns] Request params:', { statuses, search, page, limit });
+      
+      // Parse statuses - expect comma-separated string
+      let statusArray: CourseStatus[] = [];
+      if (typeof statuses === 'string' && statuses.trim()) {
+        statusArray = statuses.split(',').map(s => s.trim().toUpperCase()) as CourseStatus[];
+      }
+      
+      console.log('[PostCourseRuns] Status array:', statusArray);
+      
+      // Build where clause
+      const where: any = {
+        deletedAt: null,
+      };
+      
+      if (statusArray.length > 0) {
+        where.status = {
+          in: statusArray,
+        };
+      }
+      
+      // Add search if provided
+      if (typeof search === 'string' && search.trim()) {
+        const searchTerm = search.trim();
+        where.OR = [
+          { serialNumber: { contains: searchTerm, mode: 'insensitive' } },
+          { course: { is: { title: { contains: searchTerm, mode: 'insensitive' } } } },
+          { course: { is: { courseCode: { contains: searchTerm, mode: 'insensitive' } } } },
+          { venue: { is: { name: { contains: searchTerm, mode: 'insensitive' } } } },
+        ];
+      }
+      
+      console.log('[PostCourseRuns] Where clause:', JSON.stringify(where, null, 2));
+      
+      // Get course runs with all necessary relations
+      const courseRuns = await prisma.courseRun.findMany({
+        where,
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              courseCode: true,
+              category: true,
+            },
+          },
+          venue: {
+            select: {
+              id: true,
+              name: true,
+              address: true,
+            },
+          },
+          _count: {
+            select: {
+              courseRunLearners: {
+                where: {
+                  enrollmentStatus: 'ENROLLED',
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: Number(limit),
+      });
+      
+      console.log('[PostCourseRuns] Found', courseRuns.length, 'runs');
+      
+      // Format response
+      const formattedRuns = courseRuns.map(run => ({
+        id: run.id,
+        serialNumber: run.serialNumber,
+        courseRunType: run.courseRunType,
+        course: run.course ? {
+          id: run.course.id,
+          title: run.course.title,
+          courseCode: run.course.courseCode,
+          category: run.course.category,
+        } : null,
+        startDatetime: run.startDatetime,
+        endDatetime: run.endDatetime,
+        venue: run.venue ? {
+          id: run.venue.id,
+          name: run.venue.name,
+          address: run.venue.address,
+        } : null,
+        specifiedLocation: run.specifiedLocation,
+        minClassSize: run.minClassSize,
+        maxClassSize: run.maxClassSize,
+        currentParticipants: (run as any)._count?.courseRunLearners || 0,
+        status: run.status,
+      }));
+      
+      // Set no-cache headers
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+      
+      res.status(200).json({
+        success: true,
+        courseRuns: formattedRuns,
+        total: formattedRuns.length,
+      });
+    } catch (error) {
+      console.error('[PostCourseRuns] Error:', error);
+      res.status(500).json(buildErrorResponse('getPostCourseRuns', 'Failed to get post course runs', error));
     }
   },
 };

@@ -19,7 +19,15 @@ interface ModulePermissions {
   approve?: boolean;
 }
 
-type ModuleKey = "polwel-users" | "trainers-partners" | "client-organizations" | "course-venue" | "course-run" | "post-course-run" | "billing-reports";
+type ModuleKey =
+  | "polwel-users"
+  | "trainers-partners"
+  | "client-organizations"
+  | "course-venue"
+  | "course-run"
+  | "post-course-run"
+  | "billing-reports"
+  | "waiver";
 
 type UserPermissions = Record<ModuleKey, ModulePermissions>;
 
@@ -31,6 +39,7 @@ const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean
   "course-run": { label: "Course Run", supportsApprove: true },
   "post-course-run": { label: "Post Course Run" },
   "billing-reports": { label: "Billing Reports" },
+  waiver: { label: "Waiver Requests" },
 };
 
 const createDefaultPermissions = (): UserPermissions => ({
@@ -41,6 +50,7 @@ const createDefaultPermissions = (): UserPermissions => ({
   "course-run": { view: false, create: false, edit: false, delete: false, approve: false },
   "post-course-run": { view: false, create: false, edit: false, delete: false },
   "billing-reports": { view: false, create: false, edit: false, delete: false },
+  waiver: { view: false, create: false, edit: false, delete: false },
 });
 
 interface PolwelUser {
@@ -101,6 +111,8 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       reports: "billing-reports", // Billing & Reports module uses reports.* permissions
       "post-course-run": "post-course-run", // Post Course Run module uses post-course-run.* permissions
       "billing-reports": "billing-reports", // Also support direct billing-reports key
+      waiver: "waiver", // Waiver module
+      waivers: "waiver", // Alternate naming
       // Handle malformed database entries:
       post: "post-course-run", // DB has "post.course.run.*" malformed entries
     };

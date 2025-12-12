@@ -49,15 +49,29 @@ import { apiLogger, errorLogger } from './middleware/logging';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Rate limiting
+// Rate limiting - disabled for localhost/development, enabled for production
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || (NODE_ENV === 'development' ? '10000' : '100')), // Very high limit in dev
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and localhost in development
+    if (req.path === '/health') return true;
+    
+    // Skip rate limiting for localhost requests in development
+    if (NODE_ENV === 'development') {
+      const ip = req.ip || req.socket.remoteAddress || '';
+      if (ip.includes('127.0.0.1') || ip.includes('::1') || ip.includes('localhost')) {
+        return true;
+      }
+    }
+    
+    return false;
+  },
 });
 
 // CORS configuration8081
@@ -120,8 +134,10 @@ const corsOptions: CorsOptions = {
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  optionsSuccessStatus: 200, // Changed from 204 to 200 for better compatibility
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'Pragma'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // Cache preflight requests for 24 hours
+  optionsSuccessStatus: 200,
 };
 
 // Middleware
@@ -139,8 +155,8 @@ app.use(limiter);
 // CORS must be applied before other middleware
 app.use(cors(corsOptions));
 
-// Note: OPTIONS * is handled by CORS middleware above
-// app.options('*', cors(corsOptions));
+// Handle preflight requests - don't use app.options('*') as it causes routing errors
+// The cors() middleware handles OPTIONS requests automatically
 
 app.use(apiLogger); // Add comprehensive API logging
 app.use(morgan('combined'));

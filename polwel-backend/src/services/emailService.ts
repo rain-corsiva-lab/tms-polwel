@@ -242,7 +242,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:pdcs@polwel.org.sg" style="color:#60a5fa !important; text-decoration:none;">pdcs@polwel.org.sg</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -761,10 +761,6 @@ class EmailService {
                 <div class="fee-row">
                   <div class="fee-label">Quoted Fee:</div>
                   <div class="fee-value">${formatCurrency(total)}</div>
-                </div>
-                <div class="fee-row">
-                  <div class="fee-label">Payment Terms:</div>
-                  <div class="fee-value" style="font-size: 13px; font-weight: 400;">Payment within 30 days upon course completion</div>
                 </div>
               </div>
 

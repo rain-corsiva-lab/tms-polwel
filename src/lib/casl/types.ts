@@ -23,6 +23,7 @@ export type Subject =
   | 'CourseRun'         // Course Runs
   | 'PostCourseRun'     // Post Course Run artefacts
   | 'Report'            // Billing & Reports
+  | 'Waiver'            // Waiver Requests
   | 'Calendar'          // Training calendar
   | 'all';              // special subject: applies to all resources
 
@@ -44,6 +45,7 @@ export const MODULE_TO_SUBJECT: Record<string, Subject> = {
   'course-run': 'CourseRun',
   'post-course-run': 'PostCourseRun',
   'reports': 'Report',
+  'waiver': 'Waiver',
   'calendar': 'Calendar',
 };
 
@@ -56,6 +58,7 @@ export const SUBJECT_TO_MODULE: Record<Subject, string> = {
   'CourseRun': 'course-run',
   'PostCourseRun': 'post-course-run',
   'Report': 'reports',
+  'Waiver': 'waiver',
   'Calendar': 'calendar',
   'all': 'all',
 };

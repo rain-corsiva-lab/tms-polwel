@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,9 +124,12 @@ const Home = () => {
   // Dashboard for POLWEL users
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your training management system</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Overview of your training management system</p>
+        </div>
+        <LiveClock />
       </div>
 
       {/* Only show dashboard content for POLWEL users */}
@@ -134,11 +138,50 @@ const Home = () => {
   );
 };
 
+// Live Clock Component
+function LiveClock() {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-SG", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString("en-SG", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  return (
+    <div className="flex flex-col items-end space-y-1">
+      <div className="text-2xl font-bold tabular-nums">{formatTime(currentTime)}</div>
+      <div className="text-sm text-muted-foreground">{formatDate(currentTime)}</div>
+    </div>
+  );
+}
+
 export default Home;
 
 // Main Dashboard Content Component
 function DashboardContent() {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // State for all data
   const [actionItems, setActionItems] = useState<any>(null);
@@ -261,8 +304,62 @@ function DashboardContent() {
 
   // Export to Excel handler
   const handleExportExcel = () => {
-    // Implementation for Excel export
-    console.log("Export to Excel clicked");
+    try {
+      if (!upcomingRuns || upcomingRuns.length === 0) {
+        toast({
+          title: "No data to export",
+          description: "There are no upcoming course runs to export.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Import XLSX dynamically
+      import("xlsx").then((XLSX) => {
+        // Prepare data for export
+        const exportData = upcomingRuns.map((run: any) => ({
+          "Serial Number": run.serialNumber || "",
+          "Course Run Type": run.courseRunType || "",
+          "Course Title": run.course?.title || "",
+          "Course Code": run.course?.courseCode || "",
+          Category: run.course?.category || "",
+          "Start Date": run.startDatetime ? new Date(run.startDatetime).toLocaleDateString("en-GB") : "",
+          "End Date": run.endDatetime ? new Date(run.endDatetime).toLocaleDateString("en-GB") : "",
+          Venue: run.venue?.name || "",
+          Location: run.venue?.address || run.specifiedLocation || "",
+          Status: run.status || "",
+          Enrolled: run.currentParticipants || 0,
+          "Min Size": run.minClassSize || "",
+          "Max Size": run.maxClassSize || "",
+        }));
+
+        // Create worksheet
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Upcoming Course Runs");
+
+        // Generate filename
+        const today = new Date().toISOString().split("T")[0];
+        const filename = `upcoming-course-runs-${today}.xlsx`;
+
+        // Save file
+        XLSX.writeFile(wb, filename);
+
+        toast({
+          title: "Export successful",
+          description: `Upcoming course runs exported to ${filename}`,
+        });
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export upcoming course runs to Excel",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

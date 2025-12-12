@@ -1320,6 +1320,32 @@ export const coursesApi = {
 
 // Course Runs API
 export const courseRunsApi = {
+  // Dedicated endpoint for Post Run Management - bypasses caching issues
+  getPostCourseRuns: async (params: {
+    statuses?: string;
+    search?: string;
+    limit?: number;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/course-runs/post-management?${queryString}` : '/course-runs/post-management';
+
+    return apiRequest(endpoint, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+    });
+  },
+
   getAll: async (params: {
     page?: number;
     limit?: number;
@@ -1341,7 +1367,9 @@ export const courseRunsApi = {
     const queryString = queryParams.toString();
     const endpoint = queryString ? `/course-runs?${queryString}` : '/course-runs';
 
-    return apiRequest(endpoint);
+    return apiRequest(endpoint, {
+      cache: 'no-store', // Prevent 304 Not Modified caching issues
+    });
   },
 
   getById: async (id: string) => {

@@ -7,6 +7,9 @@ const router = Router();
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
 
+// GET /api/course-runs/post-management - Dedicated endpoint for Post Run Management page
+router.get('/post-management', requirePermissions('course-run.view'), courseRunController.getPostCourseRuns);
+
 // GET /api/course-runs - Get all course runs with pagination and filters
 router.get('/', requirePermissions('course-run.view'), courseRunController.getAll);
 

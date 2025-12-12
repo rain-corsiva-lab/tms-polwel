@@ -54,6 +54,12 @@ const permissionNameMapping: Record<string, string> = {
   'billing-reports:create': 'reports.create',
   'billing-reports:edit': 'reports.edit',
   'billing-reports:delete': 'reports.delete',
+
+  // Waiver requests module
+  'waiver:view': 'waiver.view',
+  'waiver:create': 'waiver.create',
+  'waiver:edit': 'waiver.edit',
+  'waiver:delete': 'waiver.delete',
 };
 
 export function mapFrontendPermissions(frontendPerms: string[]) {

@@ -2,8 +2,8 @@ import cron from 'node-cron';
 import prisma from '../lib/prisma';
 import { courseRunWorkflowService } from '../services/courseRunWorkflowService';
 
-// Changed from '0 * * * *' (hourly) to '*/5 * * * *' (every 5 minutes) for testing
-const DEFAULT_CRON = process.env.COURSE_RUN_STATUS_CRON || '*/5 * * * *';
+// Run hourly to check for status changes (production setting)
+const DEFAULT_CRON = process.env.COURSE_RUN_STATUS_CRON || '0 * * * *';
 const DEFAULT_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Singapore';
 
 export const startCourseRunStatusJob = () => {
