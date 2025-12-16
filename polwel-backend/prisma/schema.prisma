@@ -206,6 +206,7 @@ model CourseRun {
   adminFee                       Decimal?                        @db.Decimal(10, 2)
   baseCourseFee                  Decimal?                        @db.Decimal(10, 2)
   contingencyFee                 Decimal?                        @db.Decimal(10, 2)
+  courseRunFeeType               CourseRunFeeType?               @default(PER_RUN)
   courseRunType                  CourseRunType?
   deletedAt                      DateTime?
   endDatetime                    DateTime?
@@ -576,19 +577,20 @@ model CourseRunLearnerAttendance {
 }
 
 model Media {
-  id                       String                     @id @default(cuid())
-  filename                 String
-  originalName             String?
-  mimeType                 String?
-  size                     Int?
-  path                     String
-  url                      String?
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime                   @updatedAt
-  deletedAt                DateTime?
-  confirmationEmailHistory ConfirmationEmailHistory[]
-  courseRunLearnersWithdrawn CourseRunLearner[]      @relation("WithdrawnDocument")
-  courseRunLearnersWaiver    CourseRunLearner[]      @relation("WaiverDocument")
+  id                           String                        @id @default(cuid())
+  filename                     String
+  originalName                 String?
+  mimeType                     String?
+  size                         Int?
+  path                         String
+  url                          String?
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  deletedAt                    DateTime?
+  confirmationEmailHistory     ConfirmationEmailHistory[]
+  trainerAssignmentEmailHistory TrainerAssignmentEmailHistory[]
+  courseRunLearnersWithdrawn   CourseRunLearner[]            @relation("WithdrawnDocument")
+  courseRunLearnersWaiver      CourseRunLearner[]            @relation("WaiverDocument")
 
   @@map("media")
 }
@@ -612,14 +614,17 @@ model TrainerAssignmentEmailHistory {
   courseRunId           String
   cc                    String?   @db.Text
   additionalBodyContent String?   @db.Text
+  attachmentId          String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   deletedAt             DateTime?
+  attachment            Media?    @relation(fields: [attachmentId], references: [id])
   courseRun             CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
   trainer               User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@index([trainerId])
   @@index([courseRunId])
+  @@index([attachmentId], map: "trainer_assignment_email_history_attachmentId_fkey")
   @@map("trainer_assignment_email_history")
 }
 
@@ -723,6 +728,11 @@ enum FeeType {
   PER_HEAD
   PER_VENUE
   FIXED
+}
+
+enum CourseRunFeeType {
+  PER_RUN
+  PER_HEAD
 }
 
 enum AuditActionType {

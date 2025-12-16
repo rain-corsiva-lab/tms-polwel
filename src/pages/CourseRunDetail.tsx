@@ -90,6 +90,7 @@ interface CourseRunDetailData {
   adminFee: number | null;
   contingencyFee: number | null;
   feeType: string | null;
+  courseRunFeeType?: string | null;
   clientOrganizationId?: string | null;
   clientOrganization?: {
     id: string;
@@ -954,6 +955,7 @@ const CourseRunDetail: React.FC = () => {
         adminFee: editData.adminFee === "" ? null : Number(editData.adminFee),
         contingencyFee: editData.contingencyFee === "" ? null : Number(editData.contingencyFee),
         feeType: editData.feeType || null,
+        courseRunFeeType: editData.courseRunFeeType || null,
         clientOrganizationId: editData.clientOrganizationId || null,
       };
       const resp = await courseRunsApi.update(courseRun.id, payload);
@@ -1758,6 +1760,46 @@ const CourseRunDetail: React.FC = () => {
                         className={isEditing ? "" : "bg-gray-50"}
                       />
                       <p className="text-xs text-gray-500">Fee charged to learners/client per pax or per run</p>
+                    </div>
+
+                    {/* Fee Type Radio Buttons */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Fee Type</Label>
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            id="fee-per-run"
+                            name="courseRunFeeType"
+                            value="PER_RUN"
+                            checked={
+                              (isEditing ? editData?.courseRunFeeType : courseRun.courseRunFeeType) === "PER_RUN" || (!courseRun.courseRunFeeType && !isEditing)
+                            }
+                            onChange={(e) => isEditing && handleEditField("courseRunFeeType", e.target.value)}
+                            disabled={!isEditing}
+                            className="cursor-pointer"
+                          />
+                          <Label htmlFor="fee-per-run" className="text-sm font-normal cursor-pointer">
+                            Per Run
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            id="fee-per-head"
+                            name="courseRunFeeType"
+                            value="PER_HEAD"
+                            checked={(isEditing ? editData?.courseRunFeeType : courseRun.courseRunFeeType) === "PER_HEAD"}
+                            onChange={(e) => isEditing && handleEditField("courseRunFeeType", e.target.value)}
+                            disabled={!isEditing}
+                            className="cursor-pointer"
+                          />
+                          <Label htmlFor="fee-per-head" className="text-sm font-normal cursor-pointer">
+                            Per Head
+                          </Label>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500">Determines if the fee applies to the entire run or per participant</p>
                     </div>
                   </CardContent>
                 </Card>

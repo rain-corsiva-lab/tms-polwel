@@ -249,6 +249,8 @@ const CourseRuns: React.FC = () => {
     type: "course_confirmation" | "training_assignment";
     cc: string;
     additionalBody: string;
+    attachmentFile: File | null;
+    attachmentId: string | null;
     submitting: boolean;
   }>({
     open: false,
@@ -256,6 +258,8 @@ const CourseRuns: React.FC = () => {
     type: "course_confirmation",
     cc: "",
     additionalBody: "",
+    attachmentFile: null,
+    attachmentId: null,
     submitting: false,
   });
 
@@ -588,6 +592,12 @@ const CourseRuns: React.FC = () => {
   };
 
   const openWorkflowDialog = (courseRun: CourseRunUI, action: WorkflowActionSummary) => {
+    // For SUBMIT action (Draft to Pending), skip dialog and directly submit
+    if (action.key === "SUBMIT") {
+      submitDirectWorkflowAction(courseRun, action);
+      return;
+    }
+
     setWorkflowDialog({
       open: true,
       courseRun,
@@ -600,6 +610,59 @@ const CourseRuns: React.FC = () => {
 
   const closeWorkflowDialog = () => {
     setWorkflowDialog(initialWorkflowDialogState);
+  };
+
+  // Direct submission without dialog for SUBMIT action
+  const submitDirectWorkflowAction = async (courseRun: CourseRunUI, action: WorkflowActionSummary) => {
+    // Validate required fields before transitioning from DRAFT to PENDING (Mark as Active)
+    if (action.key === "SUBMIT") {
+      const errors: string[] = [];
+
+      if (!courseRun.title) errors.push("Course is required");
+      if (!courseRun.start) errors.push("Start date and time are required");
+      if (!courseRun.end) errors.push("End date and time are required");
+      if (!courseRun.venueName && !courseRun.venueLocation) errors.push("Venue or location is required");
+      if (!courseRun.minSize || courseRun.minSize <= 0) errors.push("Minimum class size is required");
+      if (courseRun.minSize && courseRun.maxSize && courseRun.minSize > courseRun.maxSize) {
+        errors.push("Minimum class size cannot be greater than maximum class size");
+      }
+
+      if (errors.length > 0) {
+        toast({
+          title: "Validation Error",
+          description: (
+            <div>
+              <p>Please complete the following required fields:</p>
+              <ul className="list-disc list-inside mt-2">
+                {errors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          ),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    try {
+      // For SUBMIT action, don't send emails
+      await courseRunsApi.performWorkflowAction(courseRun.id, {
+        action: action.key,
+        sendEmails: false, // No emails for SUBMIT action
+      });
+
+      toast({
+        title: "Status updated",
+        description: `${action.label} completed for ${courseRun.title}.`,
+      });
+
+      await fetchCourseRuns();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to perform workflow action";
+      toast({ title: "Action failed", description: message, variant: "destructive" });
+    }
   };
 
   const submitWorkflowAction = async () => {
@@ -784,6 +847,8 @@ const CourseRuns: React.FC = () => {
       type: "course_confirmation",
       cc: "",
       additionalBody: "",
+      attachmentFile: null,
+      attachmentId: null,
       submitting: false,
     });
   };
@@ -795,9 +860,36 @@ const CourseRuns: React.FC = () => {
     setEmailDialog((prev) => ({ ...prev, submitting: true }));
 
     try {
+      // If there's an attachment, upload it first
+      let attachmentId: string | undefined;
+      if (emailDialog.attachmentFile) {
+        const formData = new FormData();
+        formData.append("file", emailDialog.attachmentFile);
+
+        try {
+          const uploadResponse = await fetch("/api/uploads/email-attachments", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error("Failed to upload attachment");
+          }
+
+          const uploadData = await uploadResponse.json();
+          attachmentId = uploadData.fileId || uploadData.id;
+        } catch (uploadErr) {
+          const message = uploadErr instanceof Error ? uploadErr.message : "Failed to upload attachment";
+          toast({ title: "Error", description: message, variant: "destructive" });
+          setEmailDialog((prev) => ({ ...prev, submitting: false }));
+          return;
+        }
+      }
+
       await courseRunsApi.sendCourseConfirmationEmail(emailDialog.courseRun.id, {
         cc: emailDialog.cc.trim() || undefined,
         additionalBodyContent: emailDialog.additionalBody.trim() || undefined,
+        ...(attachmentId ? { attachmentId } : {}),
       });
       toast({
         title: "Email Sent",
@@ -1646,6 +1738,36 @@ const CourseRuns: React.FC = () => {
                       onChange={(e) => setEmailDialog((prev) => ({ ...prev, additionalBody: e.target.value }))}
                       disabled={emailDialog.submitting}
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="attachment">Attach File (optional)</Label>
+                    <Input
+                      id="attachment"
+                      type="file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast({ title: "Error", description: "File size must be less than 10MB", variant: "destructive" });
+                            return;
+                          }
+                          setEmailDialog((prev) => ({ ...prev, attachmentFile: file }));
+                        }
+                      }}
+                      disabled={emailDialog.submitting}
+                    />
+                    {emailDialog.attachmentFile && (
+                      <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-200 mt-2">
+                        <span className="text-sm text-blue-900">{emailDialog.attachmentFile.name}</span>
+                        <button
+                          onClick={() => setEmailDialog((prev) => ({ ...prev, attachmentFile: null, attachmentId: null }))}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">Max file size: 10MB</p>
                   </div>
                 </>
               )}

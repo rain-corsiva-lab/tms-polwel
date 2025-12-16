@@ -1556,7 +1556,7 @@ export const courseRunsApi = {
   },
 
   // Send course confirmation email to learners
-  sendCourseConfirmationEmail: async (courseRunId: string, payload: { cc?: string; additionalBodyContent?: string }) => {
+  sendCourseConfirmationEmail: async (courseRunId: string, payload: { cc?: string; additionalBodyContent?: string; attachmentId?: string }) => {
     return apiRequest(`/course-runs/${courseRunId}/send-course-confirmation-email`, {
       method: 'POST',
       body: JSON.stringify(payload),

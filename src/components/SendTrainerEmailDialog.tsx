@@ -32,7 +32,21 @@ interface SendTrainerEmailDialogProps {
 export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ open, onOpenChange, courseRunId, trainers, courseRunDetails, onSuccess }) => {
   const [ccEmails, setCcEmails] = useState("");
   const [additionalBody, setAdditionalBody] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentId, setAttachmentId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Limit file size to 10MB
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size must be less than 10MB");
+        return;
+      }
+      setAttachmentFile(file);
+    }
+  };
 
   const handleSend = async () => {
     try {
@@ -46,6 +60,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
       const response = await courseRunsApi.sendTrainerAssignmentEmail(courseRunId, {
         ...(ccList.length ? { ccEmails: ccList } : {}),
         additionalBody: additionalBody.trim() ? additionalBody.trim() : undefined,
+        ...(attachmentId ? { attachmentId } : {}),
       });
 
       if (!response?.success) {
@@ -59,6 +74,8 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
       // Reset form
       setCcEmails("");
       setAdditionalBody("");
+      setAttachmentFile(null);
+      setAttachmentId(null);
     } catch (error: any) {
       console.error("Error sending emails:", error);
       toast.error(error?.message || "Failed to send trainer assignment emails");
@@ -148,7 +165,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
             <p className="text-xs text-gray-500">Optional: Add additional recipients</p>
           </div>
 
-          {/* Additional Body Content of this */}
+          {/* Additional Body Content */}
           <div className="space-y-2">
             <Label htmlFor="additionalBody">Additional Message</Label>
             <Textarea
@@ -159,6 +176,23 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
               onChange={(e) => setAdditionalBody(e.target.value)}
             />
             <p className="text-xs text-gray-500">Optional: This will be appended to the email body</p>
+          </div>
+
+          {/* Attachment Upload */}
+          <div className="space-y-2">
+            <Label htmlFor="attachment">Attach File (Optional)</Label>
+            <div className="flex items-center gap-2">
+              <Input id="attachment" type="file" onChange={handleFileSelect} disabled={sending} className="flex-1" />
+            </div>
+            {attachmentFile && (
+              <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-200">
+                <span className="text-sm text-blue-900">{attachmentFile.name}</span>
+                <button onClick={() => setAttachmentFile(null)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  Remove
+                </button>
+              </div>
+            )}
+            <p className="text-xs text-gray-500">Max file size: 10MB. Optional: Will be sent as attachment</p>
           </div>
         </div>
 

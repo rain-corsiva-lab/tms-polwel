@@ -636,7 +636,8 @@ class EmailService {
     baseFee: number,
     additionalCost: number,
     ccEmails?: string[] | null,
-    additionalBody?: string | null
+    additionalBody?: string | null,
+    attachment?: any | null
   ): Promise<{ success: boolean; info?: any; error?: string }> {
     const transporter = this.getTransporter();
 
@@ -789,6 +790,26 @@ class EmailService {
       mailOptions.cc = ccEmails.join(', ');
     }
 
+    // Add attachment if provided
+    if (attachment) {
+      const fs = require('fs');
+      const path = require('path');
+      
+      try {
+        // Check if file exists
+        if (fs.existsSync(attachment.path)) {
+          mailOptions.attachments = [{
+            filename: attachment.originalName || attachment.filename,
+            path: attachment.path,
+          }];
+        } else {
+          console.warn(`Attachment file not found: ${attachment.path}`);
+        }
+      } catch (fileErr) {
+        console.warn('Error adding attachment:', (fileErr as any)?.message);
+      }
+    }
+
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — trainer assignment email would be:');
@@ -820,6 +841,7 @@ class EmailService {
     venueName?: string;
     additionalNotes?: string;
     cc?: string[] | string | null;
+    attachment?: any | null;
   }): Promise<boolean> {
     const {
       email,
@@ -832,6 +854,7 @@ class EmailService {
       venueName,
       additionalNotes,
       cc,
+      attachment,
     } = params;
 
     const transporter = this.getTransporter();
@@ -894,7 +917,7 @@ class EmailService {
 
     const ccRecipients = normalizeCc();
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
       to: email,
       subject: `POLWEL Course Confirmation – ${courseTitle}`,
@@ -1024,6 +1047,25 @@ class EmailService {
         </html>
       `,
     };
+
+    // Add attachment if provided
+    if (attachment) {
+      const fs = require('fs');
+      
+      try {
+        // Check if file exists
+        if (fs.existsSync(attachment.path)) {
+          mailOptions.attachments = [{
+            filename: attachment.originalName || attachment.filename,
+            path: attachment.path,
+          }];
+        } else {
+          console.warn(`Attachment file not found: ${attachment.path}`);
+        }
+      } catch (fileErr) {
+        console.warn('Error adding attachment:', (fileErr as any)?.message);
+      }
+    }
 
     try {
       if (!transporter) {

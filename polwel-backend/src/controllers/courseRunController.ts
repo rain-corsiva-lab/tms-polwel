@@ -527,6 +527,7 @@ const createCourseRunSchema = z.object({
   individualRegistrationRequired: z.boolean().nullable().optional(),
   remarks: z.string().nullable().optional(),
   baseCourseFee: z.number().nullable().optional(),
+  courseRunFeeType: z.enum(['PER_RUN', 'PER_HEAD']).nullable().optional(),
   venueFee: z.number().nullable().optional(),
   venueMaxParticipant: z.number().int().min(1).nullable().optional(),
   perHeadFeeIfMaxExceed: z.number().nullable().optional(),
@@ -812,6 +813,8 @@ export const courseRunController = {
           statusLastEvaluatedAt: run.statusLastEvaluatedAt,
           createdAt: run.createdAt,
           updatedAt: run.updatedAt,
+          baseCourseFee: run.baseCourseFee,
+          courseRunFeeType: run.courseRunFeeType,
           workflow: {
             availableActions,
           },
@@ -2709,7 +2712,7 @@ export const courseRunController = {
   async sendTrainerAssignmentEmail(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { ccEmails, additionalBody } = req.body;
+      const { ccEmails, additionalBody, attachmentId } = req.body;
 
       if (!id) {
         res.status(400).json({
@@ -2717,6 +2720,25 @@ export const courseRunController = {
           error: 'Course run ID is required',
         });
         return;
+      }
+
+      // Validate attachment if provided
+      let attachment = null;
+      if (attachmentId) {
+        attachment = await prisma.media.findFirst({
+          where: {
+            id: attachmentId,
+            deletedAt: null,
+          },
+        });
+
+        if (!attachment) {
+          res.status(404).json({
+            success: false,
+            error: 'Attachment not found',
+          });
+          return;
+        }
       }
 
       // Fetch course run with all necessary details
@@ -2805,10 +2827,11 @@ export const courseRunController = {
           baseFee,
           additional,
           ccList.length > 0 ? ccList : null,
-          additionalBody || null
+          additionalBody || null,
+          attachment
         );
 
-        // create history record
+        // create history record with attachment
         try {
           await prisma.trainerAssignmentEmailHistory.create({
             data: {
@@ -2816,6 +2839,7 @@ export const courseRunController = {
               trainerId: assignment.trainer.id,
               cc: ccList.length > 0 ? ccList.join(', ') : null,
               additionalBodyContent: additionalBody || null,
+              attachmentId: attachmentId || null,
             },
           });
         } catch (histErr) {
@@ -3023,7 +3047,7 @@ export const courseRunController = {
   async sendCourseConfirmationEmail(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { cc, additionalBodyContent } = req.body;
+      const { cc, additionalBodyContent, attachmentId } = req.body;
 
       if (!id) {
         res.status(400).json({
@@ -3031,6 +3055,25 @@ export const courseRunController = {
           error: 'Course run ID is required',
         });
         return;
+      }
+
+      // Validate attachment if provided
+      let attachment = null;
+      if (attachmentId) {
+        attachment = await prisma.media.findFirst({
+          where: {
+            id: attachmentId,
+            deletedAt: null,
+          },
+        });
+
+        if (!attachment) {
+          res.status(404).json({
+            success: false,
+            error: 'Attachment not found',
+          });
+          return;
+        }
       }
 
       const courseRun = await prisma.courseRun.findFirst({
@@ -3092,6 +3135,7 @@ export const courseRunController = {
               courseRunLearnersId: enrollment.id,
               courseRunId: id,
               remarks: 'Skipped sending confirmation email. Reason: Missing learner email address.',
+              attachmentId: attachmentId || null,
             },
           });
           continue;
@@ -3133,6 +3177,10 @@ export const courseRunController = {
             emailPayload.cc = ccList;
           }
 
+          if (attachment) {
+            emailPayload.attachment = attachment;
+          }
+
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
           const status = didSend ? 'SENT' : 'FAILED';
@@ -3152,6 +3200,7 @@ export const courseRunController = {
               remarks: didSend
                 ? `Confirmation email sent successfully to ${learnerEmail}.`
                 : `Failed to send confirmation email to ${learnerEmail}.`,
+              attachmentId: attachmentId || null,
             },
           });
 
@@ -3178,6 +3227,7 @@ export const courseRunController = {
               remarks: `Failed to send confirmation email to ${learnerEmail}. Error: ${
                 sendError instanceof Error ? sendError.message : 'Unknown error'
               }`,
+              attachmentId: attachmentId || null,
             },
           });
         }
@@ -4088,7 +4138,9 @@ export const courseRunController = {
           (record) => record.attendAM || record.attendPM
         ).length;
 
-        const isPresent = presentCount > 0; // At least one day present
+        // Check BOTH the stored attendanceStatus AND calculated from attendance records
+        // If attendanceStatus is set to PRESENT, use that; otherwise calculate from records
+        const isPresent = enrollment.attendanceStatus === 'PRESENT' || presentCount > 0;
 
         return {
           id: enrollment.id,
@@ -4716,6 +4768,8 @@ export const courseRunController = {
         maxClassSize: run.maxClassSize,
         currentParticipants: (run as any)._count?.courseRunLearners || 0,
         status: run.status,
+        baseCourseFee: run.baseCourseFee,
+        courseRunFeeType: run.courseRunFeeType,
       }));
       
       // Set no-cache headers

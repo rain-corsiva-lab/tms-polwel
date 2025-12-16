@@ -37,6 +37,7 @@ import trainerDashboardRoutes from './routes/trainerDashboard';
 import profileRoutes from './routes/profile';
 import billingReportsRoutes from './routes/billingReports';
 import waiverRoutes from './routes/waivers';
+import uploadsRoutes from './routes/uploads';
 import { startCourseRunStatusJob, evaluateCourseRunStatusesNow } from './jobs/courseRunStatusJob';
 import dashboardRoutes from './routes/dashboard';
 
@@ -199,6 +200,7 @@ app.use('/api/trainer', trainerDashboardRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/billing-reports', billingReportsRoutes);
 app.use('/api/waivers', waiverRoutes);
+app.use('/api/uploads', uploadsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware
