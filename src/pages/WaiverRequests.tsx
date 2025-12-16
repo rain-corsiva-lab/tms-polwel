@@ -315,7 +315,7 @@ const WaiverRequests: React.FC = () => {
                     {/* Organization Filter */}
                     <Select value={organizationFilter} onValueChange={setOrganizationFilter}>
                       <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="All Organizations" />
+                        <SelectValue placeholder="All Organisations" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ALL">All Organizations</SelectItem>

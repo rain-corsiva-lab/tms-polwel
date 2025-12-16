@@ -1934,29 +1934,30 @@ export const courseRunController = {
       const normalizeString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
       for (let index = 0; index < rows.length; index += 1) {
-        const rawRow = rows[index] ?? {};
-        const name = normalizeString(rawRow.name ?? rawRow.Name);
-        const email = normalizeString(rawRow.email ?? rawRow.Email);
-        const contact = normalizeString(rawRow.contact ?? rawRow.Contact);
-        const designation = normalizeString(rawRow.designation ?? rawRow.Designation);
-        const organizationName = normalizeString(rawRow.clientOrganizationName ?? rawRow['Client Organization Name']);
-        const department = normalizeString(rawRow.department ?? rawRow.Department);
-        const paymentMethod = normalizeString(rawRow.paymentMethod ?? rawRow['Payment Method']);
-        const coordinatorEmail = normalizeString(rawRow.coordinatorEmail ?? rawRow['Coordinator email']);
-        const discountName = normalizeString(rawRow.discountName ?? rawRow['discount name'] ?? rawRow['Discount Name']);
-        const feesRemarks = normalizeString(rawRow.feesRemarks ?? rawRow['fees remarks'] ?? rawRow['Fees Remarks']);
-        const invoiceRemarks = normalizeString(rawRow.invoiceRemarks ?? rawRow['invoice remarks'] ?? rawRow['Invoice Remarks']);
-        const remarks = normalizeString(rawRow.remarks ?? rawRow.Remarks);
+        try {
+          const rawRow = rows[index] ?? {};
+          const name = normalizeString(rawRow.name ?? rawRow.Name);
+          const email = normalizeString(rawRow.email ?? rawRow.Email);
+          const contact = normalizeString(rawRow.contact ?? rawRow.Contact);
+          const designation = normalizeString(rawRow.designation ?? rawRow.Designation);
+          const organizationName = normalizeString(rawRow.clientOrganizationName ?? rawRow['Client Organization Name']);
+          const department = normalizeString(rawRow.department ?? rawRow.Department);
+          const paymentMethod = normalizeString(rawRow.paymentMethod ?? rawRow['Payment Method']);
+          const coordinatorEmail = normalizeString(rawRow.coordinatorEmail ?? rawRow['Coordinator email']);
+          const discountName = normalizeString(rawRow.discountName ?? rawRow['discount name'] ?? rawRow['Discount Name']);
+          const feesRemarks = normalizeString(rawRow.feesRemarks ?? rawRow['fees remarks'] ?? rawRow['Fees Remarks']);
+          const invoiceRemarks = normalizeString(rawRow.invoiceRemarks ?? rawRow['invoice remarks'] ?? rawRow['Invoice Remarks']);
+          const remarks = normalizeString(rawRow.remarks ?? rawRow.Remarks);
 
-        if (!name) {
-          errors.push({ row: index + 1, reason: 'Learner name is required' });
-          continue;
-        }
+          if (!name) {
+            errors.push({ row: index + 1, reason: 'Learner name is required' });
+            continue;
+          }
 
-        if (!email) {
-          errors.push({ row: index + 1, name, reason: 'Email is required' });
-          continue;
-        }
+          if (!email) {
+            errors.push({ row: index + 1, name, reason: 'Email is required' });
+            continue;
+          }
 
         if (!organizationName) {
           errors.push({ row: index + 1, name, email, reason: 'Client organization name is required' });
@@ -1971,10 +1972,39 @@ export const courseRunController = {
 
         let coordinatorId: string | null = null;
         if (coordinatorEmail) {
-          const coordinator = await getCoordinatorByEmail(coordinatorEmail);
+          let coordinator = await getCoordinatorByEmail(coordinatorEmail);
+          
+          // If coordinator doesn't exist, create one automatically
           if (!coordinator) {
-            errors.push({ row: index + 1, name, email, reason: `Training coordinator with email "${coordinatorEmail}" was not found` });
-            continue;
+            try {
+              // Extract name from email or use a default
+              const coordinatorName = normalizeString(rawRow.trainingCoordinatorName ?? rawRow['Training Coordinator Name']) 
+                || coordinatorEmail.split('@')[0] || 'Training Coordinator';
+              
+              coordinator = await prisma.user.create({
+                data: {
+                  email: coordinatorEmail,
+                  name: coordinatorName,
+                  role: UserRole.TRAINING_COORDINATOR,
+                  status: 'ACTIVE',
+                  password: '', // Will need to be set by the coordinator
+                  organizationId: organization.id,
+                  contactNumber: normalizeString(rawRow.trainingCoordinatorContact ?? rawRow['Training Coordinator Contact']) || null,
+                  designation: 'Training Coordinator',
+                },
+              });
+              coordinatorCache.set(coordinatorEmail.toLowerCase(), coordinator);
+            } catch (createError) {
+              // If creation fails, skip this row with error message
+              const createErrorMsg = createError instanceof Error ? createError.message : 'Failed to create coordinator';
+              errors.push({ 
+                row: index + 1, 
+                name, 
+                email, 
+                reason: `Unable to create or find training coordinator with email "${coordinatorEmail}": ${createErrorMsg}` 
+              });
+              continue;
+            }
           }
           coordinatorId = coordinator.id;
         }
@@ -2067,6 +2097,19 @@ export const courseRunController = {
 
         newlyEnrolledLearnerIds.add(learner.id);
         successes.push({ row: index + 1, learnerId: learner.id, learnerName: learner.fullname ?? name });
+        } catch (rowError) {
+          // Capture row-specific errors and continue processing remaining rows
+          const rowName = rows[index]?.name || rows[index]?.Name || '';
+          const rowEmail = rows[index]?.email || rows[index]?.Email || '';
+          const errorMessage = rowError instanceof Error ? rowError.message : 'Unknown error occurred';
+          console.error(`Error processing row ${index + 1}:`, errorMessage);
+          errors.push({
+            row: index + 1,
+            name: rowName,
+            email: rowEmail,
+            reason: errorMessage || 'Failed to process this row. Please check your data and try again.',
+          });
+        }
       }
 
       res.json({
@@ -4570,47 +4613,15 @@ export const courseRunController = {
         'Max Size',
         'Enrolled',
         'Status',
+        'Fee Type',
         'Base Course Fee',
         'Venue Fee',
         'Other Fee',
         'Admin Fee',
         'Contingency Fee',
-        'Trainers',
-        'Partners',
-        'Participants',
       ];
 
       const rows = courseRuns.map((run) => {
-        // Format trainers as JSON-like list (human-readable)
-        const trainersList = run.courseRunTrainers
-          .map((ct: any) => {
-            const name = ct.trainer?.name || 'N/A';
-            const email = ct.trainer?.email || 'N/A';
-            return `{ name: "${name}", email: "${email}" }`;
-          })
-          .join(', ');
-        const trainersJson = trainersList ? `[ ${trainersList} ]` : '[]';
-        
-        // Format partners as JSON-like list (human-readable)
-        const partnersList = run.courseRunPartners
-          .map((cp: any) => {
-            const name = cp.partner?.name || 'N/A';
-            const email = cp.partner?.email || 'N/A';
-            return `{ name: "${name}", email: "${email}" }`;
-          })
-          .join(', ');
-        const partnersJson = partnersList ? `[ ${partnersList} ]` : '[]';
-        
-        // Format participants as JSON-like list (human-readable)
-        const participantsList = run.courseRunLearners
-          .map((cl: any) => {
-            const name = cl.learner?.fullname || 'N/A';
-            const email = cl.learner?.email || 'N/A';
-            return `{ name: "${name}", email: "${email}" }`;
-          })
-          .join(', ');
-        const participantsJson = participantsList ? `[ ${participantsList} ]` : '[]';
-
         const startDate = run.startDatetime
           ? new Date(run.startDatetime).toLocaleDateString('en-GB')
           : '';
@@ -4618,6 +4629,9 @@ export const courseRunController = {
         const endDate = run.endDatetime
           ? new Date(run.endDatetime).toLocaleDateString('en-GB')
           : '';
+
+        // Determine fee type (Default/Standard/Premium or custom description)
+        const feeType = run.feeType || 'Standard';
 
         return [
           run.serialNumber || '',
@@ -4633,14 +4647,12 @@ export const courseRunController = {
           run.maxClassSize?.toString() || '',
           run.courseRunLearners.length.toString(),
           run.status,
+          feeType,
           run.baseCourseFee?.toString() || '',
           run.venueFee?.toString() || '',
           run.otherFee?.toString() || '',
           run.adminFee?.toString() || '',
           run.contingencyFee?.toString() || '',
-          trainersJson,
-          partnersJson,
-          participantsJson,
         ];
       });
 

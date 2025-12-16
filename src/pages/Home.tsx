@@ -477,9 +477,14 @@ function DashboardContent() {
                           <StatusBadge status={run.status} />
                         </TableCell>
                         <TableCell>
-                          <span className={run.participantCount >= run.minParticipants ? "text-green-600 font-medium" : ""}>
+                          <div
+                            className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${
+                              run.participantCount >= run.minParticipants ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                            }`}
+                            title={run.participantCount >= run.minParticipants ? "Minimum class size reached" : "Below minimum class size"}
+                          >
                             {run.participantCount}/{run.minParticipants}
-                          </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Button variant="outline" size="sm" onClick={() => navigate(`/course-runs/${run.id}`)}>

@@ -347,10 +347,16 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
   const handleOrganizationChange = (orgId: string, options: { preserveCoordinator?: boolean; organizationOverride?: Organization | null } = {}) => {
     const { preserveCoordinator = false, organizationOverride = null } = options;
     const org = organizationOverride || organizations.find((o) => o.id === orgId);
+    const buNum = org?.buNumber || "";
+
+    // Auto-fill ULTF payment mode when BU number is present
+    const paymentModeValue = buNum ? "ULTF" : f.paymentMode;
+
     setForm((f) => ({
       ...f,
       division: orgId,
-      buNumber: org?.buNumber || f.buNumber || "",
+      buNumber: buNum || f.buNumber || "",
+      paymentMode: paymentModeValue,
       ...(preserveCoordinator ? {} : { trainingCoordinatorId: "", trainingCoordinatorEmail: "", trainingCoordinatorPhone: "" }),
     }));
     loadCoordinators(orgId);

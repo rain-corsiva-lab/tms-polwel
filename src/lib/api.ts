@@ -117,8 +117,10 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
   return formattedError;
 };
 
-// API Configuration - Use environment variable or fallback to localhost for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// API Configuration - In dev mode, use relative path (Vite proxy); in prod, use environment variable
+const API_BASE_URL = import.meta.env.MODE === 'development' 
+  ? '/api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
 
 // Debug logging for environment
 console.log('🔧 Environment Debug:', {

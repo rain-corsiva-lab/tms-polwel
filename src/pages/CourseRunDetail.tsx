@@ -185,6 +185,9 @@ const CourseRunDetail: React.FC = () => {
   const [selectedLearnerForWithdrawal, setSelectedLearnerForWithdrawal] = useState<any>(null);
   const [courseTrainersRemarks, setCourseTrainersRemarks] = useState<any[]>([]); // Store course trainer remarks
 
+  // Participant Selection State for Bulk Actions
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
+
   const fileToBase64 = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -407,6 +410,118 @@ const CourseRunDetail: React.FC = () => {
     } finally {
       setWithdrawalSubmitting(false);
     }
+  };
+
+  // Handle participant selection (checkbox toggle)
+  const handleParticipantToggle = (participantId: string) => {
+    setSelectedParticipants((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(participantId)) {
+        newSet.delete(participantId);
+      } else {
+        newSet.add(participantId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle select all participants
+  const handleSelectAllParticipants = (checked: boolean) => {
+    if (checked && courseRun?.courseRunLearners) {
+      const activeParticipants = courseRun.courseRunLearners.filter((l) => l.enrollmentStatus !== "WITHDRAWN").map((l) => l.id);
+      setSelectedParticipants(new Set(activeParticipants));
+    } else {
+      setSelectedParticipants(new Set());
+    }
+  };
+
+  // Bulk action handlers
+  const handleBulkSendConfirmationEmail = async () => {
+    if (selectedParticipants.size === 0 || !courseRun || !id) return;
+
+    // Confirm before sending
+    const confirmed = window.confirm(`Send confirmation email to ${selectedParticipants.size} learner${selectedParticipants.size !== 1 ? "s" : ""}?`);
+    if (!confirmed) return;
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Send emails to all selected learners
+    for (const learnerId of selectedParticipants) {
+      try {
+        const learnerRecord = courseRun.courseRunLearners?.find((l) => l.id === learnerId);
+        if (learnerRecord) {
+          await courseRunsApi.resendLearnerConfirmation(id, learnerRecord.learner.id);
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Error sending email to learner ${learnerId}:`, error);
+        failureCount++;
+      }
+    }
+
+    toast.success(`Confirmation emails sent: ${successCount} succeeded${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
+    setSelectedParticipants(new Set());
+    loadCourseRunDetail();
+  };
+
+  const handleBulkChangeStatus = async () => {
+    if (selectedParticipants.size === 0 || !courseRun || !id) return;
+
+    const confirmed = window.confirm(`Mark ${selectedParticipants.size} learner${selectedParticipants.size !== 1 ? "s" : ""} as withdrawn?`);
+    if (!confirmed) return;
+
+    // For bulk status change, we'll mark all as withdrawn
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const learnerId of selectedParticipants) {
+      try {
+        const learnerRecord = courseRun.courseRunLearners?.find((l) => l.id === learnerId);
+        if (learnerRecord) {
+          await courseRunsApi.withdrawLearner(id, learnerRecord.learner.id, {
+            reason: "Bulk withdrawal",
+          });
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Error changing status for learner ${learnerId}:`, error);
+        failureCount++;
+      }
+    }
+
+    toast.success(`Status updated: ${successCount} learners withdrawn${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
+    setSelectedParticipants(new Set());
+    loadCourseRunDetail();
+  };
+
+  const handleBulkDeleteLearners = async () => {
+    if (selectedParticipants.size === 0 || !courseRun || !id) return;
+
+    const confirmed = window.confirm(
+      `Delete ${selectedParticipants.size} learner${selectedParticipants.size !== 1 ? "s" : ""} from this course? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const learnerId of selectedParticipants) {
+      try {
+        const learnerRecord = courseRun.courseRunLearners?.find((l) => l.id === learnerId);
+        if (learnerRecord) {
+          await courseRunsApi.removeLearner(id, learnerRecord.learner.id);
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Error deleting learner ${learnerId}:`, error);
+        failureCount++;
+      }
+    }
+
+    toast.success(`Learners deleted: ${successCount} removed${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
+    setSelectedParticipants(new Set());
+    loadCourseRunDetail();
   };
 
   // Handle remove learner from course run
@@ -1370,12 +1485,41 @@ const CourseRunDetail: React.FC = () => {
                   </Button> */}
                 </CardHeader>
                 <CardContent>
+                  {/* Bulk Actions Toolbar */}
+                  {selectedParticipants.size > 0 && (
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                      <span className="text-sm font-medium text-blue-900">
+                        {selectedParticipants.size} participant{selectedParticipants.size !== 1 ? "s" : ""} selected
+                      </span>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleBulkSendConfirmationEmail()} disabled={selectedParticipants.size === 0}>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Send Confirmation Email
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleBulkChangeStatus()} disabled={selectedParticipants.size === 0}>
+                          Change Status to Withdrawn
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleBulkDeleteLearners()} disabled={selectedParticipants.size === 0}>
+                          Delete from Course
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-12">
-                            <input type="checkbox" className="rounded" />
+                            <input
+                              type="checkbox"
+                              className="rounded"
+                              onChange={(e) => handleSelectAllParticipants(e.target.checked)}
+                              checked={
+                                selectedParticipants.size > 0 &&
+                                selectedParticipants.size === (courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus !== "WITHDRAWN").length || 0)
+                              }
+                            />
                           </TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
@@ -1395,7 +1539,12 @@ const CourseRunDetail: React.FC = () => {
                             .map((learnerRecord) => (
                               <TableRow key={learnerRecord.id}>
                                 <TableCell>
-                                  <input type="checkbox" className="rounded" />
+                                  <input
+                                    type="checkbox"
+                                    className="rounded"
+                                    checked={selectedParticipants.has(learnerRecord.id)}
+                                    onChange={() => handleParticipantToggle(learnerRecord.id)}
+                                  />
                                 </TableCell>
                                 <TableCell className="font-medium">{learnerRecord.learner.fullname}</TableCell>
                                 <TableCell>{learnerRecord.learner.email}</TableCell>

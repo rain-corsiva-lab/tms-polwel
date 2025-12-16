@@ -982,7 +982,7 @@ const TrainersAndPartners = () => {
                           <TableHead className="cursor-pointer hover:bg-muted transition-colors">
                             <div className="flex items-center gap-2">
                               <span onClick={() => handleTrainerSort("partnerOrganization")}>
-                                Partner Organization {renderTrainerSortIcon("partnerOrganization")}
+                                Partner Organisation {renderTrainerSortIcon("partnerOrganization")}
                               </span>
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -1001,7 +1001,7 @@ const TrainersAndPartners = () => {
                                       )}
                                     </div>
                                     <Command>
-                                      <CommandInput placeholder="Search organizations..." />
+                                      <CommandInput placeholder="Search organisations..." />
                                       <CommandList>
                                         <CommandEmpty>No results found.</CommandEmpty>
                                         <CommandGroup>

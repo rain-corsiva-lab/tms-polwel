@@ -37,6 +37,13 @@ export default defineConfig(({ mode }) => {
         host: 'localhost',
         port: 8080,
       },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, '/api'),
+        }
+      }
     },
     optimizeDeps: {
       exclude: ['@casl/ability'],

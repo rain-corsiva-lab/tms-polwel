@@ -14,6 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { courseRunsApi, clientOrganizationsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -153,6 +154,10 @@ interface ImportLearnerRow {
   feesRemarks?: string;
   invoiceRemarks?: string;
   remarks?: string;
+  buNumber?: string;
+  trainingCoordinatorName?: string;
+  trainingCoordinatorEmail?: string;
+  trainingCoordinatorContact?: string;
 }
 
 interface ImportLearnerResultSummary {
@@ -164,13 +169,16 @@ interface ImportLearnerResultSummary {
 
 const IMPORT_TEMPLATE_COLUMNS: Array<{ header: string; key: keyof ImportLearnerRow; required?: boolean; example?: string }> = [
   { header: "Name", key: "name", required: true, example: "Jane Doe" },
+  { header: "Department", key: "department", example: "Operations" },
+  { header: "Designation", key: "designation", example: "Training Officer" },
   { header: "Email", key: "email", required: true, example: "jane.doe@example.com" },
   { header: "Contact", key: "contact", example: "+65 6123 4567" },
-  { header: "Designation", key: "designation", example: "Training Officer" },
-  { header: "Client Organization Name", key: "clientOrganizationName", required: true, example: "Singapore Police Force" },
-  { header: "Department", key: "department", example: "Operations" },
+  { header: "Client Organisation Name", key: "clientOrganizationName", required: true, example: "Singapore Police Force" },
   { header: "Payment Method", key: "paymentMethod", example: "Company-Sponsored (Non-Home Team)" },
-  { header: "Coordinator Email", key: "coordinatorEmail", example: "coordinator@example.com" },
+  { header: "BU Number", key: "buNumber", example: "BU123456" },
+  { header: "Training Coordinator Name", key: "trainingCoordinatorName", example: "John Smith" },
+  { header: "Training Coordinator Email", key: "trainingCoordinatorEmail", example: "coordinator@example.com" },
+  { header: "Training Coordinator Contact", key: "trainingCoordinatorContact", example: "+65 6789 0123" },
   { header: "Discount Name", key: "discountName", example: "Home Team Subsidy" },
   { header: "Fees Remarks", key: "feesRemarks" },
   { header: "Invoice Remarks", key: "invoiceRemarks" },
@@ -480,18 +488,25 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
   const handleOrganizationChange = (organizationId: string, options: { preserveCoordinator?: boolean } = {}) => {
     const shouldResetCoordinator = !options.preserveCoordinator;
     const org = organizations.find((o) => o.id === organizationId);
+    const buNum = org?.buNumber || "";
+
+    // Auto-fill ULTF payment mode when BU number is present
+    const paymentModeValue = buNum ? "ULTF" : "";
+
     if (mode === "single") {
       setSingleData((prev) => ({
         ...prev,
         division: organizationId,
-        buNumber: org?.buNumber || "",
+        buNumber: buNum,
+        paymentMode: paymentModeValue,
         ...(shouldResetCoordinator ? { trainingCoordinatorId: "", trainingCoordinatorEmail: "", trainingCoordinatorPhone: "" } : {}),
       }));
     } else {
       setGroupData((prev) => ({
         ...prev,
         division: organizationId,
-        buNumber: org?.buNumber || "",
+        buNumber: buNum,
+        paymentMode: paymentModeValue,
         ...(shouldResetCoordinator ? { trainingCoordinatorId: "", trainingCoordinatorEmail: "", trainingCoordinatorPhone: "" } : {}),
       }));
     }
@@ -525,14 +540,80 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     }
   };
 
-  const handleDownloadImportTemplate = () => {
+  const handleDownloadImportTemplate = async () => {
     try {
+      const workbook = new ExcelJS.Workbook();
+
+      // Create Learners sheet with current columns
+      const learnersSheet = workbook.addWorksheet("Learners");
       const headers = IMPORT_TEMPLATE_COLUMNS.map((column) => column.header);
       const exampleRow = IMPORT_TEMPLATE_COLUMNS.map((column) => column.example ?? "");
-      const worksheet = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Learners");
-      XLSX.writeFile(workbook, "learner-import-template.xlsx");
+
+      // Add headers
+      learnersSheet.addRow(headers);
+      
+      // Add example row
+      learnersSheet.addRow(exampleRow);
+
+      // Style header row
+      learnersSheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      learnersSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF366092" } };
+      learnersSheet.getRow(1).alignment = { horizontal: "center", vertical: "middle" };
+
+      // Set column widths
+      const columnWidths = [20, 18, 20, 25, 18, 30, 30, 15, 25, 25, 20, 20, 15, 15, 15];
+      learnersSheet.columns.forEach((col, idx) => {
+        col.width = columnWidths[idx] || 15;
+      });
+
+      // Add data validation dropdown for Payment Method column (column G, index 6)
+      // Validation applies to rows 2-1000
+      const paymentMethods = PAYMENT_MODES.join(",");
+      for (let row = 2; row <= 1000; row++) {
+        const cell = learnersSheet.getCell(`G${row}`);
+        (cell.dataValidation as any) = {
+          type: "list",
+          formulae: [`"${paymentMethods}"`],
+        };
+      }
+
+      // Create Payment Method reference sheet
+      const refSheet = workbook.addWorksheet("Payment Method");
+      refSheet.addRow(["Payment Method", "Description", "Code"]);
+      refSheet.addRow(["Self-Payment", "Learner pays their own fees", "SELF_SPONSORED"]);
+      refSheet.addRow(["Transition Dollar (TS)", "Using Transition Dollar funding", "TRANSITION_DOLLARS"]);
+      refSheet.addRow(["Unit Local Training Fund (ULTF)", "Using Unit Local Training Fund", "ULTF"]);
+      refSheet.addRow(["Company-Sponsored (Non-Home Team)", "Company sponsored training", "COMPANY_BILLING"]);
+      refSheet.addRow(["Polwel Training Subsidy", "Government training subsidy", "GOVERNMENT_FUNDING"]);
+
+      // Style reference sheet header
+      refSheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      refSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF366092" } };
+      refSheet.getRow(1).alignment = { horizontal: "center", vertical: "middle" };
+
+      // Set column widths for reference sheet
+      refSheet.columns[0].width = 35;
+      refSheet.columns[1].width = 40;
+      refSheet.columns[2].width = 20;
+
+      // Generate file and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "learner-import-template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Template Downloaded",
+        description: "Your learner import template has been downloaded successfully.",
+      });
     } catch (error) {
       console.error("Failed to generate learner import template:", error);
       toast({
@@ -659,7 +740,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         const missingFields: string[] = [];
         if (!row.name) missingFields.push("Name");
         if (!row.email) missingFields.push("Email");
-        if (!row.clientOrganizationName) missingFields.push("Client Organization Name");
+        if (!row.clientOrganizationName) missingFields.push("Client Organisation Name");
         if (missingFields.length) {
           rowValidationIssues.push(`Row ${index + 2}: Missing ${missingFields.join(", ")}. These learners will fail to import until the details are provided.`);
         }
@@ -999,7 +1080,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       } else if (errorMessage.toLowerCase().includes("coordinator")) {
         errorMessage = "Invalid training coordinator selected.";
       } else if (errorMessage.toLowerCase().includes("organization")) {
-        errorMessage = "Invalid client organization selected.";
+        errorMessage = "Invalid client organisation selected.";
       }
 
       toast({

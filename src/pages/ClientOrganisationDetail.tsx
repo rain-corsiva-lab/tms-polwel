@@ -335,14 +335,14 @@ const ClientOrganisationDetail = () => {
 
       toast({
         title: "Success",
-        description: "Organization details have been updated successfully.",
+        description: "Organisation details have been updated successfully.",
       });
       setIsEditing(false);
     } catch (error: any) {
       console.error("Error updating organization:", error);
       toast({
         title: "Error",
-        description: getErrorMessage(error, "Failed to update organization. Please try again."),
+        description: getErrorMessage(error, "Failed to update organisation. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -470,7 +470,7 @@ const ClientOrganisationDetail = () => {
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="flex items-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading organization details...</span>
+          <span>Loading organisation details...</span>
         </div>
       </div>
     );
@@ -490,8 +490,8 @@ const ClientOrganisationDetail = () => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Organization</h3>
-              <p className="text-gray-600 mb-4">{error || "Organization not found"}</p>
+              <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Organisation</h3>
+              <p className="text-gray-600 mb-4">{error || "Organisation not found"}</p>
               <Button onClick={fetchOrganization}>Try Again</Button>
             </div>
           </CardContent>
@@ -537,7 +537,7 @@ const ClientOrganisationDetail = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="information">Organization Information</TabsTrigger>
+          <TabsTrigger value="information">Organisation Information</TabsTrigger>
           {(hasRole("POLWEL") || !isTCUser) && <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>}
           <TabsTrigger value="learners">Learners</TabsTrigger>
         </TabsList>
@@ -546,7 +546,7 @@ const ClientOrganisationDetail = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Organization Information</CardTitle>
+                <CardTitle>Organisation Information</CardTitle>
                 {/* <CardDescription>Manage organization details and settings</CardDescription> */}
               </div>
               <Button variant={isEditing ? "default" : "outline"} onClick={isEditing ? handleSaveChanges : () => setIsEditing(!isEditing)} disabled={saving}>
