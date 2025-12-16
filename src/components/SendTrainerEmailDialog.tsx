@@ -6,7 +6,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Mail, Send } from "lucide-react";
 import { toast } from "sonner";
-import { courseRunsApi } from "../lib/api";
+import { courseRunsApi, API_BASE_URL } from "../lib/api";
 
 interface SendTrainerEmailDialogProps {
   open: boolean;
@@ -57,10 +57,46 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
         .map((email) => email.trim())
         .filter(Boolean);
 
+      // If there's an attachment, upload it first
+      let uploadedAttachmentId: string | undefined;
+      if (attachmentFile) {
+        const formData = new FormData();
+        formData.append("file", attachmentFile);
+
+        try {
+          const token = localStorage.getItem("polwel_access_token");
+          const uploadResponse = await fetch(`${API_BASE_URL}/uploads/email-attachments`, {
+            method: "POST",
+            body: formData,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Upload failed with status ${uploadResponse.status}`);
+          }
+
+          const uploadData = await uploadResponse.json();
+          uploadedAttachmentId = uploadData.fileId || uploadData.id;
+
+          if (!uploadedAttachmentId) {
+            throw new Error("No file ID returned from upload");
+          }
+        } catch (uploadErr) {
+          const message = uploadErr instanceof Error ? uploadErr.message : "Failed to upload attachment";
+          console.error("Attachment upload error:", uploadErr);
+          toast.error(message);
+          setSending(false);
+          return;
+        }
+      }
+
       const response = await courseRunsApi.sendTrainerAssignmentEmail(courseRunId, {
         ...(ccList.length ? { ccEmails: ccList } : {}),
         additionalBody: additionalBody.trim() ? additionalBody.trim() : undefined,
-        ...(attachmentId ? { attachmentId } : {}),
+        ...(uploadedAttachmentId ? { attachmentId: uploadedAttachmentId } : {}),
       });
 
       if (!response?.success) {

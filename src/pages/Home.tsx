@@ -231,10 +231,16 @@ function DashboardContent() {
           return `${year}-${month}-${day}`;
         };
 
-        if (dateRange.to) {
-          dateStr = `${formatLocalDate(dateRange.from)},${formatLocalDate(dateRange.to)}`;
+        // If only "from" date is selected (no "to" date), show from +1 day to next 30 days
+        if (!dateRange.to) {
+          const startDate = new Date(dateRange.from);
+          startDate.setDate(startDate.getDate() + 1); // +1 day
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 29); // +29 more days for total 30-day range
+          dateStr = `${formatLocalDate(startDate)},${formatLocalDate(endDate)}`;
         } else {
-          dateStr = formatLocalDate(dateRange.from);
+          // If both dates are selected, use them as-is
+          dateStr = `${formatLocalDate(dateRange.from)},${formatLocalDate(dateRange.to)}`;
         }
       }
       const resp = await dashboardApi.getUpcomingRuns(dateStr);

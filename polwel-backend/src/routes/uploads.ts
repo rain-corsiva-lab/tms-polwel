@@ -86,7 +86,7 @@ router.post(
         data: {
           filename: req.file.filename,
           originalName: req.file.originalname,
-          path: `/uploads/email-attachments/${req.file.filename}`,
+          path: req.file.path, // Store absolute path for email attachment
           mimeType: req.file.mimetype,
           size: req.file.size,
         },

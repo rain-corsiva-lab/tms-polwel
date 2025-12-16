@@ -1897,6 +1897,10 @@ export const waiversApi = {
   },
 };
 
+export {
+  API_BASE_URL,
+};
+
 export default {
   polwelUsersApi,
   trainersApi,

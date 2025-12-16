@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
 import { formatDateTime } from "../lib/date";
+import { API_BASE_URL } from "../lib/api";
 
 // Raw shape from backend
 interface BackendCourseRun {
@@ -867,19 +868,29 @@ const CourseRuns: React.FC = () => {
         formData.append("file", emailDialog.attachmentFile);
 
         try {
-          const uploadResponse = await fetch("/api/uploads/email-attachments", {
+          const token = localStorage.getItem("polwel_access_token");
+          const uploadResponse = await fetch(`${API_BASE_URL}/uploads/email-attachments`, {
             method: "POST",
             body: formData,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
 
           if (!uploadResponse.ok) {
-            throw new Error("Failed to upload attachment");
+            const errorData = await uploadResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Upload failed with status ${uploadResponse.status}`);
           }
 
           const uploadData = await uploadResponse.json();
           attachmentId = uploadData.fileId || uploadData.id;
+
+          if (!attachmentId) {
+            throw new Error("No file ID returned from upload");
+          }
         } catch (uploadErr) {
           const message = uploadErr instanceof Error ? uploadErr.message : "Failed to upload attachment";
+          console.error("Attachment upload error:", uploadErr);
           toast({ title: "Error", description: message, variant: "destructive" });
           setEmailDialog((prev) => ({ ...prev, submitting: false }));
           return;
@@ -899,6 +910,7 @@ const CourseRuns: React.FC = () => {
       await fetchCourseRuns();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to send confirmation email";
+      console.error("Send confirmation email error:", err);
       toast({ title: "Error", description: message, variant: "destructive" });
       setEmailDialog((prev) => ({ ...prev, submitting: false }));
     }

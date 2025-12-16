@@ -64,7 +64,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
         className={({ isActive }) =>
           cn(
             "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]",
             isCollapsed && "justify-center"
           )
         }
@@ -147,15 +147,10 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
       <div className={cn("p-6 flex items-center", isCollapsed ? "justify-center" : "space-x-2")}>
         {!isCollapsed ? (
           <>
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">TMS</span>
-            </div>
-            <span className="font-semibold text-foreground">Training MS</span>
+            <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-8 w-auto" />
           </>
         ) : (
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">TMS</span>
-          </div>
+          <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-6 w-auto" />
         )}
       </div>
 
@@ -172,7 +167,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
             <div className="space-y-1">
               <button
                 onClick={() => setUserManagementOpen(!userManagementOpen)}
-                className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
               >
                 <Users className="mr-3 h-5 w-5" />
                 User Management
@@ -188,7 +183,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                         className={({ isActive }) =>
                           cn(
                             "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
                           )
                         }
                       >
@@ -233,7 +228,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
             <div className="space-y-1">
               <button
                 onClick={() => setCourseManagementOpen(!courseManagementOpen)}
-                className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
               >
                 <BookOpen className="mr-3 h-5 w-5" />
                 Course Management
@@ -249,7 +244,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                         className={({ isActive }) =>
                           cn(
                             "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
                           )
                         }
                       >
@@ -275,7 +270,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                         className={({ isActive }) =>
                           cn(
                             "flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
                           )
                         }
                       >
@@ -326,7 +321,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
             <TooltipTrigger asChild>
               <button
                 onClick={onToggle}
-                className="w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                className="w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
               >
                 {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
                 {!isCollapsed && <span className="ml-3">Collapse</span>}
