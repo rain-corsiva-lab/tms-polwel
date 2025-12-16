@@ -100,7 +100,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
 
       // Add headers
       learnersSheet.addRow(headers);
-      
+
       // Add example row
       learnersSheet.addRow(exampleRow);
 

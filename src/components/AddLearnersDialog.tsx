@@ -551,7 +551,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
       // Add headers
       learnersSheet.addRow(headers);
-      
+
       // Add example row
       learnersSheet.addRow(exampleRow);
 
