@@ -236,10 +236,10 @@
     @apply border-[#001A45] ring-[#001A45];
   }
 
-  /* Checkbox and radio buttons - Navy when checked */
+  /* Checkbox and radio buttons - Use primary orange when checked */
   input[type="checkbox"]:checked,
   input[type="radio"]:checked {
-    @apply accent-[#001A45];
+    @apply accent-[#F7941D];
   }
 
   /* Toggle switches - Navy when on */

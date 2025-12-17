@@ -1493,12 +1493,12 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
               <Input value={data.buNumber} disabled className="bg-gray-50" />
             </div>
             <div className="space-y-2">
-              <Label>Payment Mode (Optional)</Label>
+              <Label>Payment Mode</Label>
               <SearchableSelect
                 value={data.paymentMode}
                 onValueChange={(value) => setData((prev) => ({ ...prev, paymentMode: value }))}
                 options={paymentModeOptions}
-                placeholder="Select payment mode (optional)"
+                placeholder="Select payment mode"
               />
             </div>
           </div>
@@ -1723,12 +1723,12 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
             <Input value={data.buNumber} disabled className="bg-gray-50" />
           </div>
           <div className="space-y-2">
-            <Label>Payment Mode (Optional)</Label>
+            <Label>Payment Mode</Label>
             <SearchableSelect
               value={data.paymentMode}
               onValueChange={(value) => setData((prev) => ({ ...prev, paymentMode: value }))}
               options={paymentModeOptions}
-              placeholder="Select payment mode (optional)"
+              placeholder="Select payment mode"
             />
           </div>
         </CardContent>

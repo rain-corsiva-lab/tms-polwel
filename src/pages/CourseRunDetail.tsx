@@ -629,6 +629,43 @@ const CourseRunDetail: React.FC = () => {
 
       let currentRow = 1;
 
+      // Header section rows (metadata) - similar to attendance export
+      const headerMetadata = [
+        courseRun.course?.title || "Course",
+        `Course Code: ${courseRun.course?.courseCode || "N/A"}`,
+        `Duration: ${courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-SG") : "N/A"} - ${
+          courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-SG") : "N/A"
+        }`,
+        `Venue: ${courseRun.venue?.name || courseRun.specifiedLocation || "TBD"}`,
+      ];
+
+      headerMetadata.forEach((text) => {
+        const row = worksheet.getRow(currentRow);
+        row.getCell(1).value = text;
+        worksheet.mergeCells(currentRow, 1, currentRow, Math.ceil(participantHeaders.length / 2));
+        row.height = 22;
+
+        for (let c = 1; c <= participantHeaders.length; c++) {
+          const cell = row.getCell(c);
+          cell.font = { bold: true, size: 12, color: { argb: "FFFFFFFF" } };
+          cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: currentRow === 1 ? "FF1F4E78" : currentRow === 2 ? "FF2F5496" : currentRow === 3 ? "FF3D6EB3" : "FF4472C4" },
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FF1F4E78" } },
+            bottom: { style: "thin", color: { argb: "FF1F4E78" } },
+            left: { style: "thin", color: { argb: "FF1F4E78" } },
+            right: { style: "thin", color: { argb: "FF1F4E78" } },
+          };
+        }
+        currentRow++;
+      });
+
+      currentRow++; // Blank row
+
       // Add header row
       participantHeaders.forEach((header, idx) => {
         const cell = worksheet.getCell(currentRow, idx + 1);
@@ -641,7 +678,7 @@ const CourseRunDetail: React.FC = () => {
       for (let c = 1; c <= participantHeaders.length; c++) {
         const cell = worksheet.getCell(currentRow, c);
         cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
-        cell.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+        cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
         cell.fill = {
           type: "pattern",
           pattern: "solid",
@@ -700,7 +737,7 @@ const CourseRunDetail: React.FC = () => {
             right: { style: "thin", color: { argb: "FF7FA3D0" } },
           };
           cell.font = { size: 10, color: { argb: "FF000000" } };
-          cell.alignment = { horizontal: c === 1 ? "center" : "left", vertical: "center", wrapText: true };
+          cell.alignment = { horizontal: c === 1 ? "center" : "left", vertical: "middle", wrapText: true };
         }
 
         currentRow++;
@@ -709,9 +746,18 @@ const CourseRunDetail: React.FC = () => {
       // Add total row
       const totalRow = worksheet.getRow(currentRow);
       totalRow.height = 20;
+
+      // Calculate total fees from all enrolled learners
+      const totalFees = enrolledLearners.reduce((sum) => {
+        const feeAmount = courseRun.baseCourseFee ?? courseRun.contractFees ?? 0;
+        return sum + (typeof feeAmount === "number" ? feeAmount : 0);
+      }, 0);
+      const totalFeesFormatted = formatCurrency(totalFees);
+
       totalRow.getCell(1).value = "";
       totalRow.getCell(2).value = "Total";
       totalRow.getCell(3).value = enrolledLearners.length;
+      totalRow.getCell(9).value = totalFeesFormatted; // Column 9 is "Fees before GST"
 
       for (let c = 1; c <= participantHeaders.length; c++) {
         const cell = totalRow.getCell(c);
@@ -727,7 +773,7 @@ const CourseRunDetail: React.FC = () => {
           right: { style: "thin", color: { argb: "FF4472C4" } },
         };
         cell.font = { bold: true, size: 11, color: { argb: "FF1F4E78" } };
-        cell.alignment = { horizontal: "left", vertical: "center" };
+        cell.alignment = { horizontal: "left", vertical: "middle" };
       }
 
       currentRow += 2;
@@ -754,7 +800,7 @@ const CourseRunDetail: React.FC = () => {
             right: { style: "medium", color: { argb: "FFFF9800" } },
           };
           cell.font = { bold: true, size: 13, color: { argb: "FF000000" } };
-          cell.alignment = { horizontal: "center", vertical: "center" };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
         }
 
         currentRow++;
@@ -771,7 +817,7 @@ const CourseRunDetail: React.FC = () => {
         for (let c = 1; c <= participantHeaders.length; c++) {
           const cell = withdrawnHeaderRow.getCell(c);
           cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
-          cell.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+          cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
           cell.fill = {
             type: "pattern",
             pattern: "solid",
@@ -831,16 +877,43 @@ const CourseRunDetail: React.FC = () => {
               right: { style: "thin", color: { argb: "FFF0B455" } },
             };
             cell.font = { size: 10, color: { argb: "FF000000" } };
-            cell.alignment = { horizontal: c === 1 ? "center" : "left", vertical: "center", wrapText: true };
+            cell.alignment = { horizontal: c === 1 ? "center" : "left", vertical: "middle", wrapText: true };
           }
 
           currentRow++;
         });
       }
 
-      // Set column widths
-      const columnWidths = [5, 30, 22, 25, 30, 15, 15, 20, 16, 15, 20, 15, 15, 18, 20, 30, 20, 25];
-      worksheet.columns = columnWidths.map((width) => ({ width }));
+      // Set auto-fit column widths based on content
+      // Calculate widths that accommodate both headers and typical data
+      const columnDefinitions = [
+        { header: "No", minWidth: 6 },
+        { header: "Name", minWidth: 25 },
+        { header: "Department", minWidth: 20 },
+        { header: "Designation", minWidth: 22 },
+        { header: "SPF Email Address", minWidth: 32 },
+        { header: "Contact Number", minWidth: 18 },
+        { header: "Retiring Officer?", minWidth: 16 },
+        { header: "Payment Mode", minWidth: 20 },
+        { header: "Fees before GST", minWidth: 18 },
+        { header: "Fees Remarks", minWidth: 18 },
+        { header: "PO No. / Payment Advice", minWidth: 26 },
+        { header: "Invoice No.", minWidth: 18 },
+        { header: "Receipt No.", minWidth: 18 },
+        { header: "Business Unit Number", minWidth: 22 },
+        { header: "Training Officer's Name", minWidth: 24 },
+        { header: "Training Officer's Email", minWidth: 32 },
+        { header: "Training Officer's Phone", minWidth: 36 },
+        { header: "Remarks", minWidth: 28 },
+      ];
+
+      // Apply auto-fit widths to worksheet
+      worksheet.columns = columnDefinitions.map((col) => ({
+        width: col.minWidth,
+        style: {
+          alignment: { wrapText: true, vertical: "middle", horizontal: "left" },
+        },
+      }));
 
       // Generate file
       const buffer = await workbook.xlsx.writeBuffer();

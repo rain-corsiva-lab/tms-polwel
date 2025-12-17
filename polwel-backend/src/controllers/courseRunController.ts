@@ -2150,6 +2150,7 @@ export const courseRunController = {
   async getLearners(req: Request, res: Response): Promise<void> {
     try {
       const courseRunId = (req.params as any).courseRunId || (req.params as any).id;
+      const coordinatorId = (req.query as any).coordinatorId; // Optional filter by training coordinator
 
       if (!courseRunId) {
         res.status(400).json({
@@ -2159,11 +2160,21 @@ export const courseRunController = {
         return;
       }
 
+      const where: any = {
+        courseRunId,
+        deletedAt: null,
+      };
+
+      // If coordinatorId is provided, filter learners by that training coordinator
+      // Only show learners assigned to this specific coordinator
+      if (coordinatorId) {
+        where.learner = {
+          trainingCoordinatorId: coordinatorId,
+        };
+      }
+
       const enrollments = await prisma.courseRunLearner.findMany({
-        where: {
-          courseRunId,
-          deletedAt: null,
-        },
+        where,
         include: {
           learner: {
             select: {

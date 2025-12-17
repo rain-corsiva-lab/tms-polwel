@@ -1192,6 +1192,16 @@ export const clientOrganizationsApi = {
     
     return apiRequest(`/client-organizations/${organizationId}/coordinator/learners?${queryParams}`);
   },
+
+  // Get learners for a specific course run (optionally filtered by coordinator or organization)
+  getCourseRunLearners: async (courseRunId: string, filterById?: string) => {
+    const params = new URLSearchParams();
+    if (filterById) {
+      params.append('coordinatorId', filterById);
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return apiRequest(`/course-runs/${courseRunId}/learners${queryString}`);
+  },
 };
 
 // Organizations API (general)

@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import ViewLearnersDialog from "@/components/ViewLearnersDialog";
 
 interface OrganizationData {
   id: string;
@@ -73,6 +74,10 @@ const OrganizationDashboard = () => {
   // Date range filter for completed runs
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  // View learners dialog state
+  const [viewLearnersOpen, setViewLearnersOpen] = useState(false);
+  const [selectedCourseRun, setSelectedCourseRun] = useState<any>(null);
 
   const organizationId = user?.organizationId;
 
@@ -351,6 +356,7 @@ const OrganizationDashboard = () => {
                         <TableHead>End Date</TableHead>
                         <TableHead>Participants</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -361,6 +367,20 @@ const OrganizationDashboard = () => {
                           <TableCell>{formatDate(run.endDate)}</TableCell>
                           <TableCell>{run.participants}</TableCell>
                           <TableCell>{getStatusBadge(run.status)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              onClick={() => {
+                                setSelectedCourseRun(run);
+                                setViewLearnersOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                              View Learners
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -494,10 +514,9 @@ const OrganizationDashboard = () => {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Department</TableHead>
+                        <TableHead>Designation</TableHead>
                         <TableHead>Enrolled</TableHead>
                         <TableHead>Completed</TableHead>
-                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -508,7 +527,6 @@ const OrganizationDashboard = () => {
                           <TableCell>{learner.designation}</TableCell>
                           <TableCell>{learner.enrolledCourses}</TableCell>
                           <TableCell>{learner.completedCourses}</TableCell>
-                          <TableCell>{getStatusBadge(learner.status)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -529,6 +547,14 @@ const OrganizationDashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* View Learners Dialog */}
+      <ViewLearnersDialog
+        open={viewLearnersOpen}
+        onOpenChange={setViewLearnersOpen}
+        courseRunId={selectedCourseRun?.id || ""}
+        courseRunData={selectedCourseRun || {}}
+      />
     </div>
   );
 };
