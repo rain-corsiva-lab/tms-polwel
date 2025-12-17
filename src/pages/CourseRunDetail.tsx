@@ -42,6 +42,8 @@ import { ImportLearnersDialog } from "../components/ImportLearnersDialog";
 import { EditLearnerDialog } from "../components/EditLearnerDialog";
 import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
 import { AttendanceListDialog } from "../components/AttendanceListDialog";
+import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 interface CourseRunDetailData {
   id: string;
@@ -187,6 +189,7 @@ const CourseRunDetail: React.FC = () => {
 
   // Participant Selection State for Bulk Actions
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
+  const [exportingParticipants, setExportingParticipants] = useState(false);
 
   const fileToBase64 = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -559,6 +562,310 @@ const CourseRunDetail: React.FC = () => {
     const initialPartnerState = JSON.stringify(initialPartnerAssignments);
     return currentState !== initialState || currentPartnerState !== initialPartnerState;
   }, [trainerAssignments, initialTrainerAssignments, partnerAssignments, initialPartnerAssignments]);
+
+  type AttendanceDayRecord = {
+    day: number;
+    attendAM: boolean;
+    attendPM: boolean;
+  };
+
+  type AttendanceLearnerRecord = {
+    courseRunLearnerId: string;
+    learnerId: string;
+    fullName: string;
+    email: string | null;
+    contactNumber: string | null;
+    departmentName: string | null;
+    attendance: AttendanceDayRecord[];
+  };
+
+  type AttendanceSnapshot = {
+    courseRunId: string;
+    totalDays: number;
+    days: Array<{ day: number; label: string }>;
+    learners: AttendanceLearnerRecord[];
+  };
+
+  const formatCurrency = (value: number | null | undefined) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "";
+    return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD", minimumFractionDigits: 2 }).format(Number(value));
+  };
+
+  const handleExportParticipantList = async () => {
+    if (!courseRun) return;
+
+    const toastId = toast.loading("Preparing participant list...");
+    setExportingParticipants(true);
+
+    try {
+      // Create ExcelJS workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Participants");
+
+      // Define all columns
+      const participantHeaders = [
+        "No",
+        "Name",
+        "Department",
+        "Designation",
+        "SPF Email Address",
+        "Contact Number",
+        "Retiring Officer?",
+        "Payment Mode",
+        "Fees before GST",
+        "Fees Remarks",
+        "PO No. / Payment Advice",
+        "Invoice No.",
+        "Receipt No.",
+        "Business Unit Number",
+        "Training Officer's Name",
+        "Training Officer's Email",
+        "Training Officer's Phone Number",
+        "Remarks",
+      ];
+
+      const enrolledLearners = (courseRun.courseRunLearners || []).filter((learnerRecord) => learnerRecord.enrollmentStatus === "ENROLLED");
+      const withdrawnLearners = (courseRun.courseRunLearners || []).filter((learnerRecord) => learnerRecord.enrollmentStatus === "WITHDRAWN");
+
+      let currentRow = 1;
+
+      // Add header row
+      participantHeaders.forEach((header, idx) => {
+        const cell = worksheet.getCell(currentRow, idx + 1);
+        cell.value = header;
+      });
+
+      // Style header row
+      const headerRow = worksheet.getRow(currentRow);
+      headerRow.height = 22;
+      for (let c = 1; c <= participantHeaders.length; c++) {
+        const cell = worksheet.getCell(currentRow, c);
+        cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+        cell.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF4472C4" }, // Professional blue
+        };
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF2E5090" } },
+          bottom: { style: "thin", color: { argb: "FF2E5090" } },
+          left: { style: "thin", color: { argb: "FF2E5090" } },
+          right: { style: "thin", color: { argb: "FF2E5090" } },
+        };
+      }
+
+      // Add enrolled participants
+      currentRow++;
+      enrolledLearners.forEach((learnerRecord, idx) => {
+        const learner = learnerRecord.learner;
+        const paymentModeLabel = getPaymentModeLabel(learnerRecord.paymentMode);
+        const feeValue = formatCurrency(courseRun.baseCourseFee ?? courseRun.contractFees ?? null);
+
+        const row = worksheet.getRow(currentRow);
+        const bgColor = idx % 2 === 0 ? "FFE7EFF7" : "FFFFFFFF"; // Alternating blue and white
+
+        row.getCell(1).value = idx + 1;
+        row.getCell(2).value = learner.fullname || "";
+        row.getCell(3).value = "";
+        row.getCell(4).value = learner.designation || "";
+        row.getCell(5).value = learner.email || "";
+        row.getCell(6).value = learner.contactNumber || "";
+        row.getCell(7).value = "";
+        row.getCell(8).value = paymentModeLabel || "";
+        row.getCell(9).value = feeValue || "";
+        row.getCell(10).value = "";
+        row.getCell(11).value = "";
+        row.getCell(12).value = "";
+        row.getCell(13).value = "";
+        row.getCell(14).value = courseRun.clientOrganization?.buNumber || "";
+        row.getCell(15).value = courseRun.courseRunTrainers?.[0]?.trainer?.name || "";
+        row.getCell(16).value = courseRun.courseRunTrainers?.[0]?.trainer?.email || "";
+        row.getCell(17).value = "";
+        row.getCell(18).value = "";
+
+        // Style enrolled row
+        row.height = 18;
+        for (let c = 1; c <= participantHeaders.length; c++) {
+          const cell = row.getCell(c);
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: bgColor },
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FF7FA3D0" } },
+            bottom: { style: "thin", color: { argb: "FF7FA3D0" } },
+            left: { style: "thin", color: { argb: "FF7FA3D0" } },
+            right: { style: "thin", color: { argb: "FF7FA3D0" } },
+          };
+          cell.font = { size: 10, color: { argb: "FF000000" } };
+          cell.alignment = { horizontal: c === 1 ? "center" : "left", vertical: "center", wrapText: true };
+        }
+
+        currentRow++;
+      });
+
+      // Add total row
+      const totalRow = worksheet.getRow(currentRow);
+      totalRow.height = 20;
+      totalRow.getCell(1).value = "";
+      totalRow.getCell(2).value = "Total";
+      totalRow.getCell(3).value = enrolledLearners.length;
+
+      for (let c = 1; c <= participantHeaders.length; c++) {
+        const cell = totalRow.getCell(c);
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFD9E2F3" }, // Darker blue
+        };
+        cell.border = {
+          top: { style: "medium", color: { argb: "FF4472C4" } },
+          bottom: { style: "medium", color: { argb: "FF4472C4" } },
+          left: { style: "thin", color: { argb: "FF4472C4" } },
+          right: { style: "thin", color: { argb: "FF4472C4" } },
+        };
+        cell.font = { bold: true, size: 11, color: { argb: "FF1F4E78" } };
+        cell.alignment = { horizontal: "left", vertical: "center" };
+      }
+
+      currentRow += 2;
+
+      // Add withdrawn section if exists
+      if (withdrawnLearners.length > 0) {
+        // Withdrawn title row
+        const withdrawnTitleRow = worksheet.getRow(currentRow);
+        withdrawnTitleRow.height = 25;
+        withdrawnTitleRow.getCell(1).value = "WITHDRAWN";
+        worksheet.mergeCells(currentRow, 1, currentRow, participantHeaders.length);
+
+        for (let c = 1; c <= participantHeaders.length; c++) {
+          const cell = withdrawnTitleRow.getCell(c);
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFFC000" }, // Bright yellow
+          };
+          cell.border = {
+            top: { style: "medium", color: { argb: "FFFF9800" } },
+            bottom: { style: "medium", color: { argb: "FFFF9800" } },
+            left: { style: "medium", color: { argb: "FFFF9800" } },
+            right: { style: "medium", color: { argb: "FFFF9800" } },
+          };
+          cell.font = { bold: true, size: 13, color: { argb: "FF000000" } };
+          cell.alignment = { horizontal: "center", vertical: "center" };
+        }
+
+        currentRow++;
+        currentRow++;
+
+        // Withdrawn header row
+        const withdrawnHeaderRow = worksheet.getRow(currentRow);
+        withdrawnHeaderRow.height = 22;
+        participantHeaders.forEach((header, idx) => {
+          const cell = withdrawnHeaderRow.getCell(idx + 1);
+          cell.value = header;
+        });
+
+        for (let c = 1; c <= participantHeaders.length; c++) {
+          const cell = withdrawnHeaderRow.getCell(c);
+          cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+          cell.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FF4472C4" }, // Professional blue
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FF2E5090" } },
+            bottom: { style: "thin", color: { argb: "FF2E5090" } },
+            left: { style: "thin", color: { argb: "FF2E5090" } },
+            right: { style: "thin", color: { argb: "FF2E5090" } },
+          };
+        }
+
+        currentRow++;
+
+        // Withdrawn data rows
+        withdrawnLearners.forEach((learnerRecord, idx) => {
+          const learner = learnerRecord.learner;
+          const paymentModeLabel = getPaymentModeLabel(learnerRecord.paymentMode);
+          const feeValue = formatCurrency(courseRun.baseCourseFee ?? courseRun.contractFees ?? null);
+
+          const row = worksheet.getRow(currentRow);
+          const bgColor = idx % 2 === 0 ? "FFFEF5E7" : "FFFFFFFF"; // Alternating orange/yellow and white
+
+          row.getCell(1).value = idx + 1;
+          row.getCell(2).value = learner.fullname || "";
+          row.getCell(3).value = "";
+          row.getCell(4).value = learner.designation || "";
+          row.getCell(5).value = learner.email || "";
+          row.getCell(6).value = learner.contactNumber || "";
+          row.getCell(7).value = "";
+          row.getCell(8).value = paymentModeLabel || "";
+          row.getCell(9).value = feeValue || "";
+          row.getCell(10).value = "";
+          row.getCell(11).value = "";
+          row.getCell(12).value = "";
+          row.getCell(13).value = "";
+          row.getCell(14).value = courseRun.clientOrganization?.buNumber || "";
+          row.getCell(15).value = courseRun.courseRunTrainers?.[0]?.trainer?.name || "";
+          row.getCell(16).value = courseRun.courseRunTrainers?.[0]?.trainer?.email || "";
+          row.getCell(17).value = "";
+          row.getCell(18).value = "";
+
+          // Style withdrawn row
+          row.height = 18;
+          for (let c = 1; c <= participantHeaders.length; c++) {
+            const cell = row.getCell(c);
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: bgColor },
+            };
+            cell.border = {
+              top: { style: "thin", color: { argb: "FFF0B455" } },
+              bottom: { style: "thin", color: { argb: "FFF0B455" } },
+              left: { style: "thin", color: { argb: "FFF0B455" } },
+              right: { style: "thin", color: { argb: "FFF0B455" } },
+            };
+            cell.font = { size: 10, color: { argb: "FF000000" } };
+            cell.alignment = { horizontal: c === 1 ? "center" : "left", vertical: "center", wrapText: true };
+          }
+
+          currentRow++;
+        });
+      }
+
+      // Set column widths
+      const columnWidths = [5, 30, 22, 25, 30, 15, 15, 20, 16, 15, 20, 15, 15, 18, 20, 30, 20, 25];
+      worksheet.columns = columnWidths.map((width) => ({ width }));
+
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `participant-list-${courseRun.serialNumber || courseRun.id}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.dismiss(toastId);
+      toast.success(
+        `Exported ${enrolledLearners.length} participant${enrolledLearners.length === 1 ? "" : "s"}${
+          withdrawnLearners.length > 0 ? ` and ${withdrawnLearners.length} withdrawn` : ""
+        }`
+      );
+    } catch (error: any) {
+      console.error("Export participant list error", error);
+      toast.dismiss(toastId);
+      toast.error(error?.message || "Failed to export participant list");
+    } finally {
+      setExportingParticipants(false);
+    }
+  };
 
   // Trainer Assignment Functions - Load trainers automatically
   const loadTrainersAndPartners = async () => {
@@ -1461,13 +1768,17 @@ const CourseRunDetail: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Learner Management</h3>
                 <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={handleExportParticipantList} disabled={exportingParticipants}>
+                    <Download className="h-4 w-4 mr-2" />
+                    {exportingParticipants ? "Exporting participants..." : "Export participant list"}
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => setImportLearnersDialogOpen(true)}>
                     <Download className="h-4 w-4 mr-2" />
                     Import CSV
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setAttendanceDialogOpen(true)}>
                     <Upload className="h-4 w-4 mr-2" />
-                    Attendance List
+                    Attendance/Class List
                   </Button>
                   <Button size="sm" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -2282,7 +2593,13 @@ const CourseRunDetail: React.FC = () => {
         baseCourseFee={courseRun?.baseCourseFee || 0}
         onSuccess={handleImportSuccess}
       />
-      <AttendanceListDialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen} courseRunId={id!} onSaved={loadCourseRunDetail} />
+      <AttendanceListDialog
+        open={attendanceDialogOpen}
+        onOpenChange={setAttendanceDialogOpen}
+        courseRunId={id!}
+        onSaved={loadCourseRunDetail}
+        courseRunDetails={courseRun}
+      />
       <EditLearnerDialog
         open={editLearnerDialogOpen}
         onOpenChange={setEditLearnerDialogOpen}

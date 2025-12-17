@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Loader2 } from "lucide-react";
-import { utils as XLSXUtils, writeFileXLSX } from "xlsx";
+import { Loader2, Download } from "lucide-react";
+import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,17 +44,16 @@ interface AttendanceListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  courseRunDetails?: any; // Course run metadata for export
 }
 
-const DAY_EXPORT_HEADERS = ["No.", "Learner Name", "Email", "Contact", "Department", "AM", "PM"] as const;
-const SUMMARY_EXPORT_HEADERS = ["No.", "Learner Name", "Email", "Contact", "Department", "Attendance Status"] as const;
-
-export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved }: AttendanceListDialogProps) {
+export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved, courseRunDetails }: AttendanceListDialogProps) {
   const { toast } = useToast();
   const [snapshot, setSnapshot] = useState<AttendanceSnapshot | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadAttendance = useCallback(async () => {
     if (!courseRunId) return;
@@ -145,72 +145,6 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
     });
   }, []);
 
-  const handleExport = useCallback(() => {
-    if (!snapshot || snapshot.learners.length === 0) {
-      toast({
-        title: "No data to export",
-        description: "Add learners or attendance records before exporting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const workbook = XLSXUtils.book_new();
-
-    const safeText = (value: string | null | undefined) => (value ? String(value) : "");
-
-    const allDays =
-      snapshot.days.length > 0 ? snapshot.days : Array.from({ length: snapshot.totalDays }, (_, index) => ({ day: index + 1, label: `Day ${index + 1}` }));
-
-    allDays.forEach((dayInfo) => {
-      const rows: string[][] = [Array.from(DAY_EXPORT_HEADERS) as string[]];
-
-      snapshot.learners.forEach((learner, index) => {
-        const record = learner.attendance.find((entry) => entry.day === dayInfo.day);
-        const am = record?.attendAM ? "Present" : "Absent";
-        const pm = record?.attendPM ? "Present" : "Absent";
-
-        rows.push([
-          String(index + 1),
-          safeText(learner.fullName),
-          safeText(learner.email),
-          safeText(learner.contactNumber),
-          safeText(learner.departmentName),
-          am,
-          pm,
-        ]);
-      });
-
-      const worksheet = XLSXUtils.aoa_to_sheet(rows);
-      XLSXUtils.book_append_sheet(workbook, worksheet, `Day ${dayInfo.day}`);
-    });
-
-    const summaryRows: string[][] = [Array.from(SUMMARY_EXPORT_HEADERS) as string[]];
-
-    snapshot.learners.forEach((learner, index) => {
-      const statusValue = safeText(learner.attendanceStatus);
-      const status = statusValue ? statusValue.toUpperCase() : "PENDING";
-      summaryRows.push([
-        String(index + 1),
-        safeText(learner.fullName),
-        safeText(learner.email),
-        safeText(learner.contactNumber),
-        safeText(learner.departmentName),
-        status,
-      ]);
-    });
-
-    const summarySheet = XLSXUtils.aoa_to_sheet(summaryRows);
-    XLSXUtils.book_append_sheet(workbook, summarySheet, "Summary");
-
-    writeFileXLSX(workbook, `attendance-${snapshot.courseRunId}.xlsx`);
-
-    toast({
-      title: "Export ready",
-      description: "Attendance workbook downloaded.",
-    });
-  }, [snapshot, toast]);
-
   const handleSave = useCallback(async () => {
     if (!snapshot) {
       toast({
@@ -292,6 +226,254 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
     }
   }, [courseRunId, onOpenChange, onSaved, snapshot, toast]);
 
+  const handleExport = useCallback(async () => {
+    if (!snapshot || snapshot.learners.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "Add learners or attendance records before exporting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExporting(true);
+    const loadingToast = toast({
+      title: "Preparing attendance export...",
+      description: "Generating Excel file with attendance data",
+    });
+
+    try {
+      const days =
+        snapshot.days?.length > 0 ? snapshot.days : Array.from({ length: snapshot.totalDays }, (_, idx) => ({ day: idx + 1, label: `Day ${idx + 1}` }));
+
+      // Create ExcelJS workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Attendance");
+
+      // Format functions
+      const formatDateRange = (d: Date) => {
+        const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        const dd = d.getDate();
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const mm = monthNames[d.getMonth()];
+        const yyyy = d.getFullYear();
+        const dayName = dayNames[d.getDay()];
+        return `${dayName}, ${dd} ${mm} ${yyyy}`;
+      };
+
+      const formatDateHeader = (d: Date) => {
+        const dd = String(d.getDate()).padStart(2, "0");
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const mm = monthNames[d.getMonth()];
+        const yy = String(d.getFullYear()).slice(2);
+        return `${dd}-${mm}-${yy}`;
+      };
+
+      const start = courseRunDetails?.startDatetime ? new Date(courseRunDetails.startDatetime) : null;
+      const end = courseRunDetails?.endDatetime ? new Date(courseRunDetails.endDatetime) : null;
+      const courseTitle = courseRunDetails?.course?.title || "Course";
+
+      const trainerNames =
+        courseRunDetails?.courseRunTrainers
+          ?.map((t: any) => t.trainer?.name)
+          .filter(Boolean)
+          .join(", ") || "TBD";
+
+      const venueLine = courseRunDetails?.venue?.name
+        ? `${courseRunDetails.venue.name}${courseRunDetails.venue.address ? ", " + courseRunDetails.venue.address : ""}`
+        : courseRunDetails?.specifiedLocation || "TBD";
+
+      // Row 1: Title
+      let currentRow = 1;
+      worksheet.getCell(currentRow, 1).value = courseTitle;
+      worksheet.mergeCells(currentRow, 1, currentRow, 4 + days.length * 2);
+
+      // Row 2: Date range
+      currentRow++;
+      if (start && end) {
+        worksheet.getCell(currentRow, 1).value = `${formatDateRange(start)} - ${formatDateRange(end)}`;
+        worksheet.mergeCells(currentRow, 1, currentRow, 4 + days.length * 2);
+      }
+
+      // Row 3: Trainer
+      currentRow++;
+      worksheet.getCell(currentRow, 1).value = `Trainer: ${trainerNames}`;
+      worksheet.mergeCells(currentRow, 1, currentRow, 4 + days.length * 2);
+
+      // Row 4: Time
+      currentRow++;
+      if (start && end) {
+        const startHour = start.getHours();
+        const startMin = String(start.getMinutes()).padStart(2, "0");
+        const endHour = end.getHours();
+        const endMin = String(end.getMinutes()).padStart(2, "0");
+        const startAMPM = startHour >= 12 ? "pm" : "am";
+        const endAMPM = endHour >= 12 ? "pm" : "am";
+        const timeSlot = `${startHour === 0 ? 12 : startHour > 12 ? startHour - 12 : startHour}.${startMin}${startAMPM} - ${
+          endHour === 0 ? 12 : endHour > 12 ? endHour - 12 : endHour
+        }.${endMin}${endAMPM}`;
+        worksheet.getCell(currentRow, 1).value = timeSlot;
+        worksheet.mergeCells(currentRow, 1, currentRow, 4 + days.length * 2);
+      }
+
+      // Row 5: Venue
+      currentRow++;
+      worksheet.getCell(currentRow, 1).value = `Venue: ${venueLine}`;
+      worksheet.mergeCells(currentRow, 1, currentRow, 4 + days.length * 2);
+
+      currentRow++;
+
+      // Row 7: Date headers
+      currentRow++;
+      worksheet.getCell(currentRow, 1).value = "";
+      worksheet.getCell(currentRow, 2).value = "";
+      worksheet.getCell(currentRow, 3).value = "";
+      worksheet.getCell(currentRow, 4).value = "";
+      let colIdx = 5;
+      days.forEach((day) => {
+        const dayDate = start ? new Date(start.getTime() + (day.day - 1) * 24 * 60 * 60 * 1000) : null;
+        const formatted = dayDate ? formatDateHeader(dayDate) : `Day ${day.day}`;
+        worksheet.getCell(currentRow, colIdx).value = formatted;
+        worksheet.mergeCells(currentRow, colIdx, currentRow, colIdx + 1);
+        colIdx += 2;
+      });
+
+      // Style header info rows
+      for (let r = 1; r <= 5; r++) {
+        const row = worksheet.getRow(r);
+        row.height = 25;
+        row.eachCell((cell) => {
+          cell.font = { bold: true, size: 12, color: { argb: "FFFFFFFF" } };
+          cell.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: r === 1 ? "FF1F3A1F" : r === 2 ? "FF2F5233" : r === 3 ? "FF3D6B47" : r === 4 ? "FF4A7D53" : "FF5A8D63" },
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FF000000" } },
+            bottom: { style: "thin", color: { argb: "FF000000" } },
+            left: { style: "thin", color: { argb: "FF000000" } },
+            right: { style: "thin", color: { argb: "FF000000" } },
+          };
+        });
+      }
+
+      // Row 8: Column headers (No, Name, Department, Sub BU, AM/PM dates, Designation, Contact)
+      currentRow++;
+      const headerRow = worksheet.getRow(currentRow);
+      headerRow.height = 20;
+      headerRow.getCell(1).value = "No";
+      headerRow.getCell(2).value = "Name";
+      headerRow.getCell(3).value = "Department";
+      headerRow.getCell(4).value = "Sub BU";
+      colIdx = 5;
+      days.forEach(() => {
+        worksheet.getCell(currentRow, colIdx).value = "AM";
+        worksheet.getCell(currentRow, colIdx + 1).value = "PM";
+        colIdx += 2;
+      });
+      worksheet.getCell(currentRow, colIdx).value = "Designation";
+      worksheet.getCell(currentRow, colIdx + 1).value = "Contact No.";
+
+      // Style column headers
+      for (let c = 1; c <= 4 + days.length * 2 + 2; c++) {
+        const cell = worksheet.getCell(currentRow, c);
+        cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+        cell.alignment = { horizontal: "center", vertical: "center" };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF70AD47" },
+        };
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF000000" } },
+          bottom: { style: "thin", color: { argb: "FF000000" } },
+          left: { style: "thin", color: { argb: "FF000000" } },
+          right: { style: "thin", color: { argb: "FF000000" } },
+        };
+      }
+
+      // Data rows
+      currentRow++;
+      snapshot.learners.forEach((learner, idx) => {
+        const row = worksheet.getRow(currentRow);
+        const bgColor = idx % 2 === 0 ? "FFF5F9F5" : "FFFFFFFF";
+        row.getCell(1).value = idx + 1;
+        row.getCell(2).value = learner.fullName;
+        row.getCell(3).value = learner.departmentName || "";
+        row.getCell(4).value = "";
+
+        colIdx = 5;
+        days.forEach((day) => {
+          const record = learner.attendance.find((a) => a.day === day.day);
+          row.getCell(colIdx).value = record?.attendAM ? "✓" : "";
+          row.getCell(colIdx + 1).value = record?.attendPM ? "✓" : "";
+          colIdx += 2;
+        });
+        row.getCell(colIdx).value = learner.designation || "";
+        row.getCell(colIdx + 1).value = learner.contactNumber || "";
+
+        // Style data row
+        row.height = 18;
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: bgColor },
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFB8D8B8" } },
+            bottom: { style: "thin", color: { argb: "FFB8D8B8" } },
+            left: { style: "thin", color: { argb: "FFB8D8B8" } },
+            right: { style: "thin", color: { argb: "FFB8D8B8" } },
+          };
+          cell.font = { size: 10, color: { argb: "FF000000" } };
+          cell.alignment = { horizontal: "center", vertical: "center" };
+        });
+
+        currentRow++;
+      });
+
+      // Set column widths
+      worksheet.columns = [
+        { width: 5 },
+        { width: 30 },
+        { width: 20 },
+        { width: 10 },
+        ...days.flatMap(() => [{ width: 10 }, { width: 10 }]),
+        { width: 20 },
+        { width: 15 },
+      ];
+
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance-${courseRunDetails?.serialNumber || courseRunId}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      loadingToast.dismiss();
+      toast({
+        title: "Export successful",
+        description: "Attendance data exported successfully",
+      });
+    } catch (error: any) {
+      console.error("Export attendance error", error);
+      loadingToast.dismiss();
+      toast({
+        title: "Export failed",
+        description: error?.message || "Failed to export attendance data",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  }, [snapshot, courseRunDetails, courseRunId, toast]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl w-full max-h-[90vh]">
@@ -324,9 +506,9 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved 
                 </Select>
               </div>
 
-              <Button variant="outline" size="sm" onClick={handleExport} disabled={snapshot.learners.length === 0}>
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting || snapshot.learners.length === 0}>
                 <Download className="mr-2 h-4 w-4" />
-                Export
+                {exporting ? "Exporting..." : "Export"}
               </Button>
             </div>
 

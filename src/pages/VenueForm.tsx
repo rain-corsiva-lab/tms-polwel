@@ -37,7 +37,7 @@ const VenueForm = () => {
     contacts: [{ id: "temp-1", name: "", number: "", email: "" }],
     remarks: "",
     status: "ACTIVE",
-    venueType: "HOTEL",
+    venueType: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -64,7 +64,7 @@ const VenueForm = () => {
           contacts: venue.contacts && venue.contacts.length > 0 ? venue.contacts : [{ id: "temp-1", name: "", number: "", email: "" }],
           remarks: venue.remarks || "",
           status: venue.status || "ACTIVE",
-          venueType: venue.venueType || "HOTEL",
+          venueType: venue.venueType || "",
         });
       } else {
         toast({
@@ -288,7 +288,7 @@ const VenueForm = () => {
                 <Label htmlFor="venueType">Venue Type *</Label>
                 <Select value={formData.venueType} onValueChange={(value) => handleInputChange("venueType", value)}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select venue type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="HOTEL">Hotel</SelectItem>

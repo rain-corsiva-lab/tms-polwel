@@ -363,6 +363,17 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
   };
 
   const handleCoordinatorChange = (coordId: string) => {
+    // Handle "Not Applicable" option
+    if (coordId === "NOT_APPLICABLE") {
+      setForm((f) => ({
+        ...f,
+        trainingCoordinatorId: "",
+        trainingCoordinatorEmail: "",
+        trainingCoordinatorPhone: "",
+      }));
+      return;
+    }
+
     const coord = coordinators.find((c) => c.id === coordId);
     if (!coord) return;
     setForm((f) => ({
@@ -394,11 +405,14 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     { value: "PRIVATE_SECTOR", label: "Private Sector" },
   ];
 
-  const coordinatorOptions: SearchableSelectOption[] = coordinators.map((coord) => ({
-    value: coord.id,
-    label: coord.name,
-    description: coord.email,
-  }));
+  const coordinatorOptions: SearchableSelectOption[] = [
+    { value: "NOT_APPLICABLE", label: "Not Applicable" },
+    ...coordinators.map((coord) => ({
+      value: coord.id,
+      label: coord.name,
+      description: coord.email,
+    })),
+  ];
 
   const paymentModeOptions: SearchableSelectOption[] = PAYMENT_MODES.map((mode) => ({
     value: PAYMENT_MODES_MAP[mode],

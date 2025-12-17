@@ -1933,6 +1933,15 @@ export const courseRunController = {
 
       const normalizeString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
+      // Payment mode mapping from display labels to enum values
+      const paymentModeMapping: Record<string, string> = {
+        'Self-Payment': 'SELF_SPONSORED',
+        'Transition Dollar (TS)': 'TRANSITION_DOLLARS',
+        'Unit Local Training Fund (ULTF)': 'ULTF',
+        'Company-Sponsored (Non-Home Team)': 'COMPANY_BILLING',
+        'Polwel Training Subsidy': 'GOVERNMENT_FUNDING',
+      };
+
       for (let index = 0; index < rows.length; index += 1) {
         try {
           const rawRow = rows[index] ?? {};
@@ -1942,7 +1951,9 @@ export const courseRunController = {
           const designation = normalizeString(rawRow.designation ?? rawRow.Designation);
           const organizationName = normalizeString(rawRow.clientOrganizationName ?? rawRow['Client Organization Name']);
           const department = normalizeString(rawRow.department ?? rawRow.Department);
-          const paymentMethod = normalizeString(rawRow.paymentMethod ?? rawRow['Payment Method']);
+          const paymentMethodLabel = normalizeString(rawRow.paymentMethod ?? rawRow['Payment Method']);
+          // Map display label to enum value
+          const paymentMethod = paymentMethodLabel ? paymentModeMapping[paymentMethodLabel] || paymentMethodLabel : null;
           const coordinatorEmail = normalizeString(rawRow.coordinatorEmail ?? rawRow['Coordinator email']);
           const discountName = normalizeString(rawRow.discountName ?? rawRow['discount name'] ?? rawRow['Discount Name']);
           const feesRemarks = normalizeString(rawRow.feesRemarks ?? rawRow['fees remarks'] ?? rawRow['Fees Remarks']);
@@ -3125,9 +3136,13 @@ export const courseRunController = {
           course: true,
           venue: true,
           courseRunLearners: {
-            where: { deletedAt: null },
+            where: { deletedAt: null, enrollmentStatus: 'ENROLLED' },
             include: {
-              learner: true,
+              learner: {
+                include: {
+                  trainingCoordinator: true,
+                },
+              },
             },
           },
         },
@@ -3157,11 +3172,13 @@ export const courseRunController = {
 
       let successCount = 0;
       let failedCount = 0;
+      const trainingCoordinatorsEmailed = new Set<string>();
 
       for (const enrollment of courseRun.courseRunLearners) {
         const now = new Date();
         const learnerEmail = enrollment.learner?.email?.trim();
         const learnerName = enrollment.learner?.fullname || 'Learner';
+        const trainingCoordinator = enrollment.learner?.trainingCoordinator;
 
         if (!learnerEmail) {
           failedCount += 1;
@@ -3216,8 +3233,18 @@ export const courseRunController = {
             emailPayload.additionalNotes = additionalNotes;
           }
 
-          if (ccList.length > 0) {
-            emailPayload.cc = ccList;
+          // Build CC list: include custom CC + training coordinator if they exist
+          const emailCcList = [...ccList];
+          if (trainingCoordinator?.email?.trim()) {
+            const tcEmail = trainingCoordinator.email.trim();
+            if (!trainingCoordinatorsEmailed.has(tcEmail) && !emailCcList.includes(tcEmail) && tcEmail !== learnerEmail) {
+              emailCcList.push(tcEmail);
+              trainingCoordinatorsEmailed.add(tcEmail);
+            }
+          }
+
+          if (emailCcList.length > 0) {
+            emailPayload.cc = emailCcList;
           }
 
           if (attachment) {
@@ -4116,6 +4143,116 @@ export const courseRunController = {
     }
   },
 
+  // Export participants with attendance data to XLSX
+  exportParticipantsXLSX: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        res.status(400).json({ success: false, error: 'Course run ID is required' });
+        return;
+      }
+
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id },
+        include: {
+          course: { select: { title: true } },
+          venue: { select: { name: true } },
+          courseRunTrainers: {
+            where: { deletedAt: null },
+            include: { trainer: { select: { name: true } } },
+          },
+          courseRunLearners: {
+            where: { enrollmentStatus: 'ENROLLED', deletedAt: null },
+            include: {
+              learner: { select: { fullname: true, departmentName: true, email: true, contact: true, clientOrganization: { select: { buNumber: true } }, designation: true } },
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      // Fetch attendance data separately
+      const attendanceRecords = await prisma.courseRunLearnerAttendance.findMany({
+        where: { courseRunId: id },
+        select: { learnerId: true, day: true, attendAM: true, attendPM: true },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      // Create workbook
+      const workbook = new (require('exceljs')).Workbook();
+      const sheet = workbook.addWorksheet('Participants');
+
+      // Add course run header info
+      const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+      const endDate = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+      const startTime = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+      const endTime = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+      const trainers = courseRun.courseRunTrainers.map((t: any) => t.trainer?.name || '').filter(Boolean).join(', ') || '-';
+
+      sheet.addRow([`Course: ${courseRun.course?.title || ''}`]);
+      sheet.addRow([`Start Date: ${startDate}`]);
+      sheet.addRow([`End Date: ${endDate}`]);
+      sheet.addRow([`Time: ${startTime} - ${endTime}`]);
+      sheet.addRow([`Venue: ${courseRun.venue?.name || ''}`]);
+      sheet.addRow([`Trainer: ${trainers}`]);
+      sheet.addRow([]); // Blank row
+
+      // Add participant table headers
+      const headers = ['Name', 'Department', 'BU Number', 'Designation', 'Contact Number', 'Attendance Status'];
+      
+      headers.push();
+      sheet.addRow(headers);
+
+      // Style header row
+      const headerRow = sheet.getRow(8);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF366092' } };
+      headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Add participant rows
+      courseRun.courseRunLearners.forEach((enrollment: any) => {
+        // Calculate attendance status for this learner
+        const learnerAttendance = attendanceRecords.filter((att: any) => att.learnerId === enrollment.learnerId);
+        const attendanceStatus = learnerAttendance.length > 0 ? 'Attended' : 'Not Attended';
+
+        const row: any[] = [
+          enrollment.learner?.fullname || '',
+          enrollment.learner?.departmentName || '',
+          enrollment.learner?.clientOrganization?.buNumber || '-',
+          enrollment.learner?.designation || '',
+          enrollment.learner?.contact || '',
+          attendanceStatus,
+        ];
+
+        sheet.addRow(row);
+      });
+
+      // Set column widths
+      const colWidths = [25, 20, 15, 20, 18, 18];
+      sheet.columns.forEach((col: any, i: number) => {
+        col.width = colWidths[i] || 15;
+      });
+
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="participants-${courseRun.id}.xlsx"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error exporting participants:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.exportParticipantsXLSX', 'Failed to export participants', error));
+    }
+  },
+
   // Generate certificates for learners
   generateCertificates: async (req: Request, res: Response) => {
     try {
@@ -4531,7 +4668,7 @@ export const courseRunController = {
     }
   },
 
-  async exportToCSV(req: Request, res: Response) {
+  exportToCSV: async (req: Request, res: Response) => {
     try {
       // Fetch all course runs with related data
       const courseRuns = await prisma.courseRun.findMany({

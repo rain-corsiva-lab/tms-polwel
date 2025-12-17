@@ -147,10 +147,10 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
       <div className={cn("p-6 flex items-center", isCollapsed ? "justify-center" : "space-x-2")}>
         {!isCollapsed ? (
           <>
-            <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-8 w-auto" />
+            <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-12 w-auto" />
           </>
         ) : (
-          <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-6 w-auto" />
+          <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-10 w-auto" />
         )}
       </div>
 

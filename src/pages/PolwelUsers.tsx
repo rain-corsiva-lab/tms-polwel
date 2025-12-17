@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PaginationControls from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "../lib/date";
@@ -28,6 +29,7 @@ import {
   Loader2,
   Lock,
   Unlock,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
@@ -72,10 +74,12 @@ export default function PolwelUsers() {
   const [perPage, setPerPage] = useState(10);
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Excel-style filter state
   const [filters, setFilters] = useState<Record<string, string[]>>({
@@ -152,7 +156,7 @@ export default function PolwelUsers() {
       const response = await polwelUsersApi.getAll({
         page: pagination.page,
         limit: perPage,
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter || undefined,
       });
 
@@ -190,10 +194,30 @@ export default function PolwelUsers() {
     }
   };
 
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Reset page when search or filters change
+  useEffect(() => {
+    setPagination((p) => ({ ...p, page: 1 }));
+  }, [debouncedSearch, statusFilter]);
+
   // Fetch users on component mount and when filters change
   useEffect(() => {
     fetchUsers();
-  }, [pagination.page, searchQuery, statusFilter]);
+  }, [pagination.page, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     // refetch when perPage changes; reset to page 1
@@ -283,32 +307,50 @@ export default function PolwelUsers() {
   const handleExport = async () => {
     try {
       setExporting(true);
+      toast({
+        title: "Exporting...",
+        description: "Generating POLWEL users export...",
+      });
+
       const response = await polwelUsersApi.getAll({
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter || undefined,
-        all: true,
+        limit: "all",
       });
 
       const dataset: PolwelUser[] = response.users || [];
+      if (dataset.length === 0) {
+        toast({
+          title: "No data",
+          description: "No users to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const rows = dataset.map((u) => ({
         Name: u.name,
         Email: u.email,
         Status: u.status,
-        LastLogin: u.lastLogin ? formatDate(u.lastLogin) : "Never",
-        CreatedAt: formatDate(u.createdAt),
-        UpdatedAt: formatDate(u.updatedAt),
+        LastLogin: u.lastLogin ? formatDate(new Date(u.lastLogin)) : "Never",
+        CreatedAt: formatDate(new Date(u.createdAt)),
+        UpdatedAt: formatDate(new Date(u.updatedAt)),
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "POLWEL_Users");
-      XLSX.writeFile(wb, "polwel_users.xlsx");
-      toast({ title: "Exported", description: `Exported ${rows.length} POLWEL user${rows.length === 1 ? "" : "s"}.` });
+      XLSX.writeFile(wb, `polwel-users-${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast({
+        title: "Export successful",
+        description: `Exported ${rows.length} POLWEL user${rows.length === 1 ? "" : "s"}`,
+      });
     } catch (error) {
       console.error("Error exporting POLWEL users:", error);
+      const message = error instanceof Error ? error.message : "We couldn't export the POLWEL users. Please try again.";
       toast({
         title: "Export failed",
-        description: "We couldn't export the POLWEL users. Please try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -384,6 +426,20 @@ export default function PolwelUsers() {
           <AddPolwelUserDialog />
         </div>
       </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name or email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1" />
+            {searchQuery && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {filterOpen && (
         <Card className="border-dashed">
           <CardContent className="pt-6">
@@ -620,7 +676,7 @@ export default function PolwelUsers() {
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">No users found</h3>
               <p className="text-muted-foreground">
-                {searchQuery || statusFilter ? "Try adjusting your search filters" : "No POLWEL users have been added yet"}
+                {debouncedSearch || statusFilter ? "Try adjusting your search filters" : "No POLWEL users have been added yet"}
               </p>
             </div>
           )}

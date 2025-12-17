@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,11 +8,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Eye, Loader2, Filter, X } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Loader2, Filter, X, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { coursesApi, referencesApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/errorHandler";
+import * as XLSX from "xlsx";
 
 interface Course {
   id: string;
@@ -34,6 +35,10 @@ const CourseArchive = () => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCertificate, setSelectedCertificate] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const [exporting, setExporting] = useState(false);
 
   // Sorting state
   const [sortField, setSortField] = useState<keyof Course | null>(null);
@@ -144,6 +149,21 @@ const CourseArchive = () => {
     loadData();
   }, []);
 
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
   const allCategories = () => {
     const cats: string[] = [];
     for (const group of categories) {
@@ -215,9 +235,48 @@ const CourseArchive = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      toast.loading("Exporting courses...");
+
+      const dataToExport = filteredCourses.map((course) => ({
+        Title: course.title,
+        Category: course.category,
+        Duration: `${course.duration} ${course.durationType}`,
+        DefaultFee: course.defaultCourseFee,
+        MinParticipants: course.minParticipants || "N/A",
+        Certificates: course.certificates,
+        Status: course.status || "ACTIVE",
+        CreatedDate: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "N/A",
+      }));
+
+      if (dataToExport.length === 0) {
+        toast.error("No courses to export");
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Courses");
+      XLSX.writeFile(wb, `courses-${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success(`Exported ${dataToExport.length} course${dataToExport.length === 1 ? "" : "s"} successfully`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export courses");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Filter courses based on selected filters
   const filteredCourses = Array.isArray(courses)
     ? courses.filter((course) => {
+        const searchMatch =
+          !debouncedSearch ||
+          course.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          (course.category && course.category.toLowerCase().includes(debouncedSearch.toLowerCase()));
+
         const categoryMatch =
           selectedCategory === "all" ||
           (() => {
@@ -243,6 +302,7 @@ const CourseArchive = () => {
         const statusFilterMatch = filters.status.length === 0 || filters.status.includes(course.status || "ACTIVE");
 
         return (
+          searchMatch &&
           categoryMatch &&
           certificateMatch &&
           categoryFilterMatch &&
@@ -355,11 +415,24 @@ const CourseArchive = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">List of Courses</h1>
         </div>
-        <Button onClick={() => navigate("/courses/new")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Course
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleExport} disabled={exporting || filteredCourses.length === 0} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+          <Button onClick={() => navigate("/courses/new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add New Course
+          </Button>
+        </div>
       </div>
+
+      {/* Search Bar */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <Input placeholder="Search courses by title or category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full" />
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       {/* <Card className="mb-6">

@@ -100,6 +100,9 @@ router.post('/billing', requirePermissions('post.course.run.edit'), courseRunCon
 // GET /api/course-runs/:id/billing-export - Generate billing XLSX export
 router.get('/:id/billing-export', requirePermissions('post.course.run.view'), courseRunController.generateBillingExport);
 
+// GET /api/course-runs/:id/participants-export - Export participants with attendance data to XLSX
+router.get('/:id/participants-export', requirePermissions('post.course.run.view'), courseRunController.exportParticipantsXLSX);
+
 // GET /api/course-runs/:id/certificates - Get certificate data for learners
 router.get('/:id/certificates', requirePermissions('post.course.run.view'), courseRunController.generateCertificates);
 

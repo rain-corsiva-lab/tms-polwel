@@ -33,35 +33,69 @@ export const venuesController = {
   // Get all venues
   getVenues: async (req: Request, res: Response) => {
     try {
-      const { venueType } = req.query;
+      const { venueType, search, status, page, limit } = req.query;
+      
+      // Pagination
+      const rawPage = typeof page === 'string' ? page : undefined;
+      const parsedPage = rawPage ? Number(rawPage) : undefined;
+      const pageNum = parsedPage && Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+
+      const rawLimit = typeof limit === 'string' ? limit : undefined;
+      const exportAll = req.query.export === 'true' || rawLimit === 'all';
+      let limitNum = 10;
+      if (!exportAll && rawLimit !== undefined) {
+        const parsedLimit = Number(rawLimit);
+        if (Number.isFinite(parsedLimit) && parsedLimit > 0) {
+          limitNum = Math.floor(parsedLimit);
+        }
+      }
+      
+      const skip = exportAll ? undefined : (pageNum - 1) * limitNum;
+      const take = exportAll ? undefined : limitNum;
       
       // Build where clause for filtering
       const where: any = {};
       if (venueType && typeof venueType === 'string') {
         where.venueType = venueType.toUpperCase();
       }
+
+      if (status && typeof status === 'string') {
+        where.status = status.toUpperCase();
+      }
+
+      if (search && typeof search === 'string') {
+        where.OR = [
+          { name: { contains: search } },
+          { address: { contains: search } }
+        ];
+      }
       
-      const venues = await prisma.venue.findMany({
-        where,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
+      const [venues, total] = await Promise.all([
+        prisma.venue.findMany({
+          where,
+          include: {
+            creator: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            _count: {
+              select: {
+                bookings: true,
+                courseRuns: true
+              }
             }
           },
-          _count: {
-            select: {
-              bookings: true,
-              courseRuns: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      });
+          orderBy: {
+            createdAt: 'desc'
+          },
+          ...(skip !== undefined ? { skip } : {}),
+          ...(take !== undefined ? { take } : {})
+        }),
+        prisma.venue.count({ where })
+      ]);
 
       // Transform venues to match frontend expectations
       const transformedVenues = venues.map(venue => ({
@@ -73,7 +107,13 @@ export const venuesController = {
 
       res.json({
         success: true,
-        venues: transformedVenues
+        venues: transformedVenues,
+        pagination: {
+          page: exportAll ? 1 : pageNum,
+          limit: exportAll ? total : limitNum,
+          total,
+          totalPages: exportAll ? 1 : Math.ceil(total / limitNum)
+        }
       });
     } catch (error) {
       console.error('Error fetching venues:', error);

@@ -520,6 +520,26 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
   // Handle coordinator change
   const handleCoordinatorChange = (coordinatorId: string) => {
+    // Handle "Not Applicable" option
+    if (coordinatorId === "NOT_APPLICABLE") {
+      if (mode === "single") {
+        setSingleData((prev) => ({
+          ...prev,
+          trainingCoordinatorId: "",
+          trainingCoordinatorEmail: "",
+          trainingCoordinatorPhone: "",
+        }));
+      } else {
+        setGroupData((prev) => ({
+          ...prev,
+          trainingCoordinatorId: "",
+          trainingCoordinatorEmail: "",
+          trainingCoordinatorPhone: "",
+        }));
+      }
+      return;
+    }
+
     const coordinator = coordinators.find((c) => c.id === coordinatorId);
     if (coordinator) {
       if (mode === "single") {
@@ -798,21 +818,27 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         // Find the organization to get its type
         const org = organizations.find((o) => o.id === learner.clientOrganizationId);
 
-        setSingleData((prev) => ({
-          ...prev,
-          selectedLearnerId: learnerId,
-          fullName: learner.fullname,
-          designation: learner.designation || "",
-          email: learner.email || "",
-          contactNumber: learner.contact || "",
-          departmentName: learner.departmentName || "",
-          organizationType: org?.organizationType || prev.organizationType || "",
-          division: learner.clientOrganizationId || prev.division,
-          buNumber: learner.clientOrganizationBuNumber || prev.buNumber,
-          trainingCoordinatorId: learner.trainingCoordinatorId || prev.trainingCoordinatorId || "",
-          trainingCoordinatorEmail: learner.trainingCoordinatorEmail || prev.trainingCoordinatorEmail || "",
-          trainingCoordinatorPhone: learner.trainingCoordinatorPhone || prev.trainingCoordinatorPhone || "",
-        }));
+        setSingleData((prev) => {
+          // Auto-fill ULTF payment mode when BU number is present
+          const paymentModeValue = learner.clientOrganizationBuNumber ? "ULTF" : prev.paymentMode;
+
+          return {
+            ...prev,
+            selectedLearnerId: learnerId,
+            fullName: learner.fullname,
+            designation: learner.designation || "",
+            email: learner.email || "",
+            contactNumber: learner.contact || "",
+            departmentName: learner.departmentName || "",
+            organizationType: org?.organizationType || prev.organizationType || "",
+            division: learner.clientOrganizationId || prev.division,
+            buNumber: learner.clientOrganizationBuNumber || prev.buNumber,
+            paymentMode: paymentModeValue,
+            trainingCoordinatorId: learner.trainingCoordinatorId || prev.trainingCoordinatorId || "",
+            trainingCoordinatorEmail: learner.trainingCoordinatorEmail || prev.trainingCoordinatorEmail || "",
+            trainingCoordinatorPhone: learner.trainingCoordinatorPhone || prev.trainingCoordinatorPhone || "",
+          };
+        });
 
         // Load coordinators if learner has an organization
         if (learner.clientOrganizationId) {
@@ -1331,11 +1357,14 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
     { value: "PRIVATE_SECTOR", label: "Private Sector" },
   ];
 
-  const coordinatorOptions: SearchableSelectOption[] = (coordinators || []).map((coord) => ({
-    value: coord.id,
-    label: coord.name,
-    description: coord.email,
-  }));
+  const coordinatorOptions: SearchableSelectOption[] = [
+    { value: "NOT_APPLICABLE", label: "Not Applicable" },
+    ...(coordinators || []).map((coord) => ({
+      value: coord.id,
+      label: coord.name,
+      description: coord.email,
+    })),
+  ];
 
   const discountOptions: SearchableSelectOption[] = (courseRun.course.discounts || []).map((discount) => ({
     value: discount.id,
@@ -1610,11 +1639,14 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
     { value: "PRIVATE_SECTOR", label: "Private Sector" },
   ];
 
-  const coordinatorOptions: SearchableSelectOption[] = (coordinators || []).map((coord) => ({
-    value: coord.id,
-    label: coord.name,
-    description: coord.email,
-  }));
+  const coordinatorOptions: SearchableSelectOption[] = [
+    { value: "NOT_APPLICABLE", label: "Not Applicable" },
+    ...(coordinators || []).map((coord) => ({
+      value: coord.id,
+      label: coord.name,
+      description: coord.email,
+    })),
+  ];
 
   const learnerOptions: SearchableSelectOption[] = (learners || []).map((learner) => ({
     value: learner.id,

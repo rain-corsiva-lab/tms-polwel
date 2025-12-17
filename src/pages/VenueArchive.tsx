@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Download, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { venuesApi, type Venue } from "@/lib/api";
 import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
+import { Input } from "@/components/ui/input";
+import * as XLSX from "xlsx";
 
 const VenueArchive = () => {
   const navigate = useNavigate();
@@ -15,15 +17,37 @@ const VenueArchive = () => {
 
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const [exporting, setExporting] = useState(false);
+
+  // Debounce search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   useEffect(() => {
     loadVenues();
-  }, []);
+  }, [debouncedSearch]);
 
   const loadVenues = async () => {
     try {
       setLoading(true);
-      const response = await venuesApi.getAll();
+      const response = await venuesApi.getAll({
+        search: debouncedSearch || undefined,
+      });
 
       if (response.success) {
         setVenues(response.venues || []);
@@ -39,6 +63,53 @@ const VenueArchive = () => {
       errorHandlers.venueLoad(error, toast);
     } finally {
       setLoading(false);
+      setInitialLoadComplete(true);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      toast({
+        title: "Exporting...",
+        description: "Generating venues export...",
+      });
+
+      const dataToExport = venues.map((venue: any) => ({
+        Name: venue.name,
+        Address: venue.address || "N/A",
+        Capacity: venue.capacity || "N/A",
+        Fee: venue.fee || "N/A",
+        Status: venue.status || "ACTIVE",
+        CreatedDate: venue.createdAt ? new Date(venue.createdAt).toLocaleDateString() : "N/A",
+      }));
+
+      if (dataToExport.length === 0) {
+        toast({
+          title: "No data",
+          description: "No venues to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Venues");
+      XLSX.writeFile(wb, `venues-${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast({
+        title: "Export successful",
+        description: `Exported ${dataToExport.length} venue${dataToExport.length === 1 ? "" : "s"}`,
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't export venues. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -82,7 +153,7 @@ const VenueArchive = () => {
     }
   };
 
-  if (loading) {
+  if (!initialLoadComplete && loading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -101,13 +172,39 @@ const VenueArchive = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Venue Management</h1>
         </div>
-        <Button onClick={() => navigate("/venue-setup/new")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Venue
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleExport} disabled={exporting || venues.length === 0} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+          <Button onClick={() => navigate("/venue-setup/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Venue
+          </Button>
+        </div>
       </div>
 
       <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search venues by name or address..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1" />
+            {searchQuery && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="relative">
+        {loading && initialLoadComplete && (
+          <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="text-sm text-muted-foreground">Refreshing venues…</p>
+          </div>
+        )}
         <CardHeader>
           <CardTitle>All Training Venues</CardTitle>
         </CardHeader>
@@ -116,8 +213,8 @@ const VenueArchive = () => {
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No venues found</p>
               <Button onClick={() => navigate("/venue-setup/new")}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Venue
+                \
+                <Plus className="h-4 w-4 mr-2" />\ Add First Venue
               </Button>
             </div>
           ) : (
@@ -125,6 +222,7 @@ const VenueArchive = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Venue Name</TableHead>
+                  <TableHead>Venue Type</TableHead>
                   <TableHead>Capacity</TableHead>
                   <TableHead>Fee Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -135,6 +233,7 @@ const VenueArchive = () => {
                 {venues.map((venue) => (
                   <TableRow key={venue.id}>
                     <TableCell className="font-medium">{venue.name}</TableCell>
+                    <TableCell>{venue.venueType ? venue.venueType.replace(/_/g, " ") : "N/A"}</TableCell>
                     <TableCell>{venue.capacity || "Not specified"}</TableCell>
                     <TableCell>${venue.fee}</TableCell>
                     <TableCell>{getStatusBadge(venue.status || "ACTIVE")}</TableCell>

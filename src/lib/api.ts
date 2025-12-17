@@ -1661,8 +1661,17 @@ export interface VenueCreateRequest {
 // Venues API
 export const venuesApi = {
   // Get all venues
-  getAll: async () => {
-    return apiRequest('/venues');
+  getAll: async (params?: { search?: string; status?: string; venueType?: string; page?: number; limit?: number | 'all'; export?: boolean }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.venueType) queryParams.append('venueType', params.venueType);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.export) queryParams.append('export', 'true');
+    
+    const queryString = queryParams.toString();
+    return apiRequest(`/venues${queryString ? `?${queryString}` : ''}`);
   },
 
   // Get venue by ID
