@@ -129,7 +129,7 @@ const ClientOrganisations = () => {
             : org.organizationType ?? "",
         Status: org.status ?? "",
         Coordinators: org.coordinatorsCount ?? 0,
-        Learners: org.learnersCount ?? 0,
+        Participants: org.learnersCount ?? 0,
         ContactEmail: org.contactEmail ?? "",
         ContactPhone: org.contactPhone ?? "",
         BUNumber: org.buNumber ?? "",
@@ -308,7 +308,7 @@ const ClientOrganisations = () => {
                 </div>
               </TableHead>
               <TableHead>Coordinators</TableHead>
-              <TableHead>Learners</TableHead>
+              <TableHead>Participants</TableHead>
               <TableHead>
                 <div className="flex items-center justify-between gap-2">
                   <span>Status</span>

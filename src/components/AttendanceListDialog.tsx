@@ -230,7 +230,7 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved,
     if (!snapshot || snapshot.learners.length === 0) {
       toast({
         title: "No data to export",
-        description: "Add learners or attendance records before exporting.",
+        description: "Add participants or attendance records before exporting.",
         variant: "destructive",
       });
       return;
@@ -478,7 +478,7 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl w-full max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Attendance List &mdash; Enrolled Learners</DialogTitle>
+          <DialogTitle>Attendance List &mdash; Enrolled Participants</DialogTitle>
           <DialogDescription>Track attendance across multiple days and keep learner records up to date.</DialogDescription>
         </DialogHeader>
 
@@ -516,8 +516,8 @@ export function AttendanceListDialog({ courseRunId, open, onOpenChange, onSaved,
               <div className="space-y-3">
                 {snapshot.learners.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2 rounded border border-dashed border-muted-foreground/40 bg-muted/30 py-10 text-center text-muted-foreground">
-                    <p className="font-medium">No learners enrolled yet</p>
-                    <p className="text-sm">Add learners to this course run to start tracking attendance.</p>
+                    <p className="font-medium">No participants enrolled yet</p>
+                    <p className="text-sm">Add participants to this course run to start tracking attendance.</p>
                   </div>
                 ) : (
                   learnersForSelectedDay.map(({ learner, record, index }) => {

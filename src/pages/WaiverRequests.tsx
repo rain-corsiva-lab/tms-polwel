@@ -255,7 +255,7 @@ const WaiverRequests: React.FC = () => {
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Waiver Requests</h1>
-              {/* <p className="text-muted-foreground mt-1">Review and manage waiver requests for absent or withdrawn learners</p> */}
+              {/* <p className="text-muted-foreground mt-1">Review and manage waiver requests for absent or withdrawn participants</p> */}
             </div>
 
             {/* Counter Boxes */}
@@ -399,7 +399,7 @@ const WaiverRequests: React.FC = () => {
                           <TableHeader>
                             <TableRow>
                               <TableHead className="w-[100px]">Course Run ID</TableHead>
-                              <TableHead className="min-w-[150px]">Learner Name</TableHead>
+                              <TableHead className="min-w-[150px]"> Participant Name</TableHead>
                               <TableHead className="min-w-[150px]">Organization</TableHead>
                               <TableHead className="min-w-[180px]">Course Name</TableHead>
                               <TableHead className="min-w-[150px]">Submitted By</TableHead>

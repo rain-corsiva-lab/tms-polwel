@@ -287,8 +287,8 @@ const PostRunManagement: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Pending Billing includes PENDING_BILLING and IN_PROGRESS statuses
-  const pendingBucket = useCourseRunBucket(["PENDING_BILLING", "IN_PROGRESS"]);
+  // Pending Billing shows only PENDING_BILLING status (IN_PROGRESS is shown in active course runs)
+  const pendingBucket = useCourseRunBucket(["PENDING_BILLING"]);
   // Completed includes COMPLETED and CANCELLED statuses
   const completedBucket = useCourseRunBucket(["COMPLETED", "CANCELLED"]);
 

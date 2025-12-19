@@ -145,8 +145,8 @@ const OrganizationDashboard = () => {
       setLearnersPagination(response.pagination || learnersPagination);
     } catch (error: any) {
       toast({
-        title: "Error loading learners",
-        description: getErrorMessage(error, "Failed to load learners"),
+        title: "Error loading participants",
+        description: getErrorMessage(error, "Failed to load participants"),
         variant: "destructive",
       });
     }
@@ -247,7 +247,7 @@ const OrganizationDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Learners</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Participants</p>
                 <p className="text-3xl font-bold">{totalLearners}</p>
                 <p className="text-xs text-muted-foreground mt-1">{activeLearners} currently active</p>
               </div>
@@ -278,7 +278,7 @@ const OrganizationDashboard = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="details">Organisation Details</TabsTrigger>
           <TabsTrigger value="courses">List of Course Runs</TabsTrigger>
-          <TabsTrigger value="learners">Learners</TabsTrigger>
+          <TabsTrigger value="learners">Participants</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
@@ -378,7 +378,7 @@ const OrganizationDashboard = () => {
                               }}
                             >
                               <Eye className="h-4 w-4" />
-                              View Learners
+                              View Participants
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -408,7 +408,7 @@ const OrganizationDashboard = () => {
                     <BookOpen className="h-5 w-5" />
                     <CardTitle>Completed Course Runs ({filteredCompletedRuns.length})</CardTitle>
                   </div>
-                  <CardDescription>Finished training programs with learner details</CardDescription>
+                  <CardDescription>Finished training programs with participant details</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Popover>
@@ -500,13 +500,13 @@ const OrganizationDashboard = () => {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                <CardTitle>Learners ({totalLearners})</CardTitle>
+                <CardTitle>Participants ({totalLearners})</CardTitle>
               </div>
               <CardDescription>Employees enrolled in training programs</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {learners.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No learners found</div>
+                <div className="text-center py-8 text-muted-foreground">No participants found</div>
               ) : (
                 <>
                   <Table>
@@ -548,7 +548,7 @@ const OrganizationDashboard = () => {
         </TabsContent>
       </Tabs>
 
-      {/* View Learners Dialog */}
+      {/* View Participants Dialog */}
       <ViewLearnersDialog
         open={viewLearnersOpen}
         onOpenChange={setViewLearnersOpen}

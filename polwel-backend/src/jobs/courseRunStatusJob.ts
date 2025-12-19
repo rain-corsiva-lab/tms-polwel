@@ -2,8 +2,9 @@ import cron from 'node-cron';
 import prisma from '../lib/prisma';
 import { courseRunWorkflowService } from '../services/courseRunWorkflowService';
 
-// Run hourly to check for status changes (production setting)
-const DEFAULT_CRON = process.env.COURSE_RUN_STATUS_CRON || '0 * * * *';
+// Run daily at midnight (00:00) to transition IN_PROGRESS → PENDING_BILLING
+// This ensures courses transition at midnight the day after they end
+const DEFAULT_CRON = process.env.COURSE_RUN_STATUS_CRON || '0 0 * * *'; // Midnight daily
 const DEFAULT_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Singapore';
 
 export const startCourseRunStatusJob = () => {

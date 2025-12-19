@@ -275,7 +275,7 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
     if (!courseRun || selectedLearners.length === 0) {
       toast({
         title: "No Selection",
-        description: "Please select at least one learner to export certificates.",
+        description: "Please select at least one participant to export certificates.",
         variant: "destructive",
       });
       return;

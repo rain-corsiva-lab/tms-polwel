@@ -171,7 +171,7 @@ export function AddUserDialog() {
                 checked={formData.buNumberRequired}
                 onChange={(e) => setFormData((prev) => ({ ...prev, buNumberRequired: e.target.checked }))}
               />
-              <Label htmlFor="buNumberRequired">Require BU Number for learner enrollment</Label>
+              <Label htmlFor="buNumberRequired">Require BU Number for participant enrollment</Label>
             </div>
             <div>
               <Label htmlFor="paymentMode">Payment Mode</Label>
@@ -314,7 +314,7 @@ export function AddUserDialog() {
                 <SelectItem value="POLWEL">POLWEL User</SelectItem>
                 <SelectItem value="TrainingCoordinator">Training Coordinator</SelectItem>
                 <SelectItem value="Trainer">Trainer & Partner</SelectItem>
-                <SelectItem value="Learner">Learner</SelectItem>
+                <SelectItem value="Learner"> Participant</SelectItem>
               </SelectContent>
             </Select>
           </div>

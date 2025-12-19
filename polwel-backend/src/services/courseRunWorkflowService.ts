@@ -523,8 +523,12 @@ export const courseRunWorkflowService = {
 
   async evaluateStatuses(prisma: PrismaClient) {
     const now = new Date();
-    // Production setting: Course runs become PENDING_BILLING 1 day after end
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    // Calculate midnight (00:00) of today
+    // This is used to transition IN_PROGRESS to PENDING_BILLING
+    // If end date is Dec 19 19:00, it should change to PENDING_BILLING at Dec 20 00:00
+    const todayMidnight = new Date(now);
+    todayMidnight.setHours(0, 0, 0, 0);
 
     // Transition CONFIRMED-like statuses to IN_PROGRESS when start datetime is reached
     const started = await prisma.courseRun.updateMany({
@@ -546,12 +550,14 @@ export const courseRunWorkflowService = {
       },
     });
 
-    // Transition IN_PROGRESS to PENDING_BILLING when end datetime + 1 day has passed
+    // Transition IN_PROGRESS to PENDING_BILLING at midnight the day after end date
+    // This runs at midnight (00:00) each day, so any course that ended before today's midnight
+    // should be transitioned to PENDING_BILLING
     const pendingBilling = await prisma.courseRun.updateMany({
       where: {
         deletedAt: null,
         endDatetime: {
-          lt: oneDayAgo, // More than 1 day after end
+          lt: todayMidnight, // End date is before today's midnight (ended yesterday or earlier)
         },
         status: 'IN_PROGRESS',
       },

@@ -381575,7 +381575,7 @@ const saveAttendanceSchema = z.object({
         attendPM: z.boolean().optional(),
       })
     )
-    .min(1, 'At least one learner attendance record is required'),
+    .min(1, 'At least one participant attendance record is required'),
 });
 
 export const courseRunController = {
@@ -382975,7 +382975,7 @@ const saveAttendanceSchema = z.object({
         attendPM: z.boolean().optional(),
       })
     )
-    .min(1, 'At least one learner attendance record is required'),
+    .min(1, 'At least one participant attendance record is required'),
 });
 
 export const courseRunController = {

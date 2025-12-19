@@ -335,7 +335,7 @@ const UserManagement = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Learners</CardTitle>
+            <CardTitle className="text-lg">Participants</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -344,7 +344,7 @@ const UserManagement = () => {
                 <span className="font-medium">1,234</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Active Learners</span>
+                <span className="text-muted-foreground">Active Participants</span>
                 <span className="font-medium text-success">1,156</span>
               </div>
               <div className="flex justify-between">

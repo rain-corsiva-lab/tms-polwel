@@ -281,7 +281,7 @@ export const WaiverDetailsDialog: React.FC<WaiverDetailsDialogProps> = ({ open, 
             {/* Learner Info Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Learner Name</p>
+                <p className="text-sm font-medium text-muted-foreground"> Participant Name</p>
                 <p className="font-medium">{waiver.learner.fullname}</p>
               </div>
               <div>

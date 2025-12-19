@@ -16,20 +16,29 @@ interface EmailConfig {
 
 class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
+  private static isInitialized: boolean = false;
 
   private static getTransporter() {
-    if (!this.transporter) {
+    if (!this.isInitialized) {
       // Use SMTP configuration from environment variables
+      const encryption = process.env.MAIL_ENCRYPTION || 'TLS';
+      const isSSL = encryption === 'SSL';
+      const isSTARTTLS = encryption === 'STARTTLS';
+      
       const config: EmailConfig = {
         host: process.env.MAIL_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.MAIL_PORT || '587'),
-        secure: process.env.MAIL_ENCRYPTION === 'SSL',
+        secure: isSSL, // true for SSL (port 465), false for STARTTLS (port 587)
         auth: {
           user: process.env.MAIL_USERNAME || '',
           pass: process.env.MAIL_PASSWORD || ''
         },
         tls: {
-          rejectUnauthorized: false
+          rejectUnauthorized: false,
+          // For STARTTLS, we need to explicitly set ciphers if using older OpenSSL
+          ...(isSTARTTLS && {
+            minVersion: 'TLSv1.2'
+          })
         }
       };
 
@@ -37,6 +46,7 @@ class EmailService {
       if (!config.auth.user || !config.auth.pass) {
         console.log('⚠️  SMTP not configured, emails will be logged to console only');
         console.log('📧 To enable emails, set MAIL_USERNAME and MAIL_PASSWORD in .env file');
+        this.isInitialized = true;
         return null;
       }
 
@@ -44,10 +54,23 @@ class EmailService {
         host: config.host,
         port: config.port,
         secure: config.secure,
+        encryption: encryption,
         user: config.auth.user?.substring(0, 3) + '***' // Only show first 3 chars for security
       });
 
       this.transporter = nodemailer.createTransport(config as any);
+      this.isInitialized = true;
+      
+      // Verify connection
+      this.transporter.verify((error, success) => {
+        if (error) {
+          console.error('❌ SMTP connection verification failed:', error.message);
+          console.error('   Code:', (error as any).code);
+          console.error('   Details:', (error as any).response);
+        } else {
+          console.log('✅ SMTP connection verified successfully');
+        }
+      });
     }
     return this.transporter;
   }
@@ -76,22 +99,22 @@ class EmailService {
             <title>POLWEL Trainer Setup</title>
             <style>
               body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%); padding: 32px 16px; }
+              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
               .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1e3a8a, #0f172a); color: #ffffff; text-align: left; }
+              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
               .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #dbeafe; }
+              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
               .content { padding: 32px 28px; }
               .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #bfdbfe; color: #1e3a8a; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #93c5fd; }
+              .button-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+              .button { display: inline-block; background-color: #e5e7eb; color: #1f2937; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
+              .button:hover { background-color: #d1d5db; }
               .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
               .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
               .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
               .checklist ul { padding: 0; margin: 0; list-style: none; }
               .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #1d4ed8; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
+              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
               .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
               .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
               @media (max-width: 600px) {
@@ -108,7 +131,7 @@ class EmailService {
                     <tr>
                       <td class="header">
                         <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">&#127919; Welcome to POLWEL!</h1>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #dbeafe !important;">Complete Your Trainer Account Setup</p>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #f3f4f6 !important;">Complete Your Trainer Account Setup</p>
                       </td>
                     </tr>
                     <tr>
@@ -131,7 +154,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -183,23 +206,23 @@ class EmailService {
             <title>POLWEL Coordinator Setup</title>
             <style>
               body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%); padding: 32px 16px; }
+              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
               .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1e3a8a, #0f172a); color: #ffffff; text-align: left; }
+              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
               .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #dbeafe; }
+              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
               .content { padding: 32px 28px; }
               .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #bfdbfe; color: #1e3a8a; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #93c5fd; }
+              .button-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+              .button { display: inline-block; background-color: #e5e7eb; color: #1f2937; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
+              .button:hover { background-color: #d1d5db; }
               .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
-              .org-badge { display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin: 12px 0; }
+              .org-badge { display: inline-block; background: #f8fafc; border: 1px solid #e5e7eb; color: #374151; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin: 12px 0; }
               .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
               .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
               .checklist ul { padding: 0; margin: 0; list-style: none; }
               .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #1d4ed8; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
+              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
               .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
               .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
               @media (max-width: 600px) {
@@ -216,7 +239,7 @@ class EmailService {
                     <tr>
                       <td class="header">
                         <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">&#128203; Welcome to POLWEL!</h1>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #dbeafe !important;">Complete Your Training Coordinator Setup</p>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #f3f4f6 !important;">Complete Your Training Coordinator Setup</p>
                       </td>
                     </tr>
                     <tr>
@@ -242,7 +265,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:pdcs@polwel.org.sg" style="color:#60a5fa !important; text-decoration:none;">pdcs@polwel.org.sg</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:pdcs@polwel.org.sg" style="color:#9ca3af !important; text-decoration:none;">pdcs@polwel.org.sg</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -294,23 +317,23 @@ class EmailService {
             <title>POLWEL Password Reset</title>
             <style>
               body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#dc2626 100%); padding: 32px 16px; }
+              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#374151 100%); padding: 32px 16px; }
               .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #991b1b, #7f1d1d); color: #fef2f2; text-align: left; }
+              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #111827); color: #f8fafc; text-align: left; }
               .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; }
               .header p { margin: 4px 0 0; font-size: 14px; color: rgba(254,242,242,0.85); }
               .content { padding: 32px 28px; }
               .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #fee2e2; border: 1px solid #fecaca; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #bfdbfe; color: #dc2626; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #93c5fd; }
+              .button-card { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+              .button { display: inline-block; background-color: #e5e7eb; color: #374151; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
+              .button:hover { background-color: #d1d5db; }
               .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
               .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
               .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; font-weight: 600; }
               .checklist ul { padding: 0; margin: 0; list-style: none; }
               .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #dc2626; color: #fef2f2; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
-              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #fef3c7; border: 1px solid #fbbf24; font-size: 13px; color: #92400e; line-height: 1.6; }
+              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #374151; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
+              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #f3f4f6; border: 1px solid #9ca3af; font-size: 13px; color: #6b7280; line-height: 1.6; }
               .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
               .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
               @media (max-width: 600px) {
@@ -351,7 +374,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -365,8 +388,8 @@ class EmailService {
 
     try {
       if (transporter) {
-        await transporter.sendMail(mailOptions);
-        console.log(`Password reset email sent to ${email}`);
+        const result = await transporter.sendMail(mailOptions);
+        console.log(`✅ Password reset email sent to ${email}. Message ID: ${result.messageId}`);
         return true;
       } else {
         console.log('=== PASSWORD RESET EMAIL (Development Mode) ===');
@@ -377,7 +400,10 @@ class EmailService {
         return true;
       }
     } catch (error) {
-      console.error('Error sending password reset email:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Error sending password reset email to', email);
+      console.error('Error details:', errorMessage);
+      console.error('Full error:', error);
       return false;
     }
   }
@@ -417,23 +443,23 @@ class EmailService {
             <title>POLWEL Security Code</title>
             <style>
               body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%); padding: 32px 16px; }
+              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
               .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1e3a8a, #0f172a); color: #ffffff; text-align: left; }
+              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
               .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #dbeafe; }
+              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
               .content { padding: 32px 28px; }
               .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .code-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .code-label { text-transform: uppercase; font-size: 13px; letter-spacing: 2.2px; color: #2563eb; font-weight: 600; margin-bottom: 12px; }
-              .code { font-size: 38px; letter-spacing: 12px; font-weight: 700; color: #1e40af; }
+              .code-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+              .code-label { text-transform: uppercase; font-size: 13px; letter-spacing: 2.2px; color: #4b5563; font-weight: 600; margin-bottom: 12px; }
+              .code { font-size: 38px; letter-spacing: 12px; font-weight: 700; color: #374151; }
               .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
               .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
               .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
               .checklist ul { padding: 0; margin: 0; list-style: none; }
               .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #1d4ed8; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
-              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #fef3c7; border: 1px solid #fbbf24; font-size: 13px; color: #9a3412; line-height: 1.6; }
+              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
+              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #f3f4f6; border: 1px solid #9ca3af; font-size: 13px; color: #6b7280; line-height: 1.6; }
               .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
               .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
               @media (max-width: 600px) {
@@ -476,7 +502,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -537,22 +563,22 @@ class EmailService {
             <title>POLWEL Account Setup</title>
             <style>
               body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%); padding: 32px 16px; }
+              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
               .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1e3a8a, #0f172a); color: #ffffff; text-align: left; }
+              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
               .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #dbeafe; }
+              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
               .content { padding: 32px 28px; }
               .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #bfdbfe; color: #1e3a8a; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #93c5fd; }
+              .button-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+              .button { display: inline-block; background-color: #e5e7eb; color: #1f2937; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
+              .button:hover { background-color: #d1d5db; }
               .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
               .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
               .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
               .checklist ul { padding: 0; margin: 0; list-style: none; }
               .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #1d4ed8; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
+              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
               .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
               .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
               @media (max-width: 600px) {
@@ -569,7 +595,7 @@ class EmailService {
                     <tr>
                       <td class="header">
                         <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">👤 Welcome to POLWEL!</h1>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #dbeafe !important;">Complete Your Account Setup</p>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #f3f4f6 !important;">Complete Your Account Setup</p>
                       </td>
                     </tr>
                     <tr>
@@ -592,7 +618,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#60a5fa !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -675,7 +701,7 @@ class EmailService {
           body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
           .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
           .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
+          .header { background: linear-gradient(135deg, #4b5563 0%, #374151 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
           .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
           .an1 {
             vertical-align: middle;
@@ -695,12 +721,12 @@ class EmailService {
           .info-row:first-child { padding-top: 0; }
           .info-label { display: table-cell; font-size: 13px; color: #6b7280; font-weight: 500; width: 35%; vertical-align: top; padding-right: 12px; }
           .info-value { display: table-cell; font-size: 14px; color: #1f2937; font-weight: 400; vertical-align: top; }
-          .fee-box { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+          .fee-box { background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
           .fee-row { display: table; width: 100%; padding: 8px 0; }
-          .fee-row.total { border-top: 2px solid #2563eb; padding-top: 12px; margin-top: 8px; }
-          .fee-label { display: table-cell; font-size: 14px; color: #1e40af; font-weight: 500; }
-          .fee-value { display: table-cell; font-size: 16px; color: #1e40af; font-weight: 600; text-align: right; }
-          .fee-row.total .fee-value { font-size: 20px; color: #2563eb; }
+          .fee-row.total { border-top: 2px solid #4b5563; padding-top: 12px; margin-top: 8px; }
+          .fee-label { display: table-cell; font-size: 14px; color: #374151; font-weight: 500; }
+          .fee-value { display: table-cell; font-size: 16px; color: #374151; font-weight: 600; text-align: right; }
+          .fee-row.total .fee-value { font-size: 20px; color: #4b5563; }
           .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
           .signature { margin-top: 24px; font-size: 14px; color: #1f2937; }
           .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
@@ -764,6 +790,13 @@ class EmailService {
                   <div class="fee-value">${formatCurrency(total)}</div>
                 </div>
               </div>
+
+              ${additionalBody ? `
+              <div class="section-title">Additional Information</div>
+              <div class="info-box">
+                <div class="info-box-content">${additionalBody.replace(/\n/g, '<br/>')}</div>
+              </div>
+              ` : ''}
 
               <div class="closing-text">
                 Best regards,<br/>
@@ -934,7 +967,7 @@ class EmailService {
               body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
               .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
               .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
+              .header { background: linear-gradient(135deg, #4b5563 0%, #374151 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
               .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
               .an1 {
                 vertical-align: middle;
@@ -959,14 +992,14 @@ class EmailService {
               .details-table td:first-child { background-color: #f9fafb; font-weight: 500; color: #6b7280; width: 30%; }
               .details-table td:last-child { color: #1f2937; }
               .details-table tr:last-child td { border-bottom: none; }
-              .info-box { background-color: #fef9c3; border-left: 4px solid #facc15; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .info-box-title { font-weight: 600; color: #854d0e; margin-bottom: 8px; font-size: 14px; }
-              .info-box-content { color: #713f12; font-size: 13px; line-height: 1.6; }
-              .info-box-blue { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .info-box-blue-title { font-weight: 600; color: #1e40af; margin-bottom: 8px; font-size: 14px; }
-              .info-box-blue-content { color: #1e3a8a; font-size: 13px; line-height: 1.6; }
+              .info-box { background-color: #f3f4f6; border-left: 4px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 4px; }
+              .info-box-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
+              .info-box-content { color: #6b7280; font-size: 13px; line-height: 1.6; }
+              .info-box-blue { background-color: #f8fafc; border-left: 4px solid #6b7280; padding: 16px; margin: 20px 0; border-radius: 4px; }
+              .info-box-blue-title { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
+              .info-box-blue-content { color: #1f2937; font-size: 13px; line-height: 1.6; }
               .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
-              .signature { margin-top: 16px; font-size: 14px; color: #2563eb; font-weight: 500; }
+              .signature { margin-top: 16px; font-size: 14px; color: #4b5563; font-weight: 500; }
               .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
               .footer-text { margin: 4px 0; }
               @media only screen and (max-width: 600px) {
@@ -1016,7 +1049,7 @@ class EmailService {
                   <div class="info-box-blue">
                     <div class="info-box-blue-title">Note</div>
                     <div class="info-box-blue-content">
-                      For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #2563eb; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #2563eb; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #2563eb; text-decoration: none;">6431 9973</a>.<br/><br/>
+                      For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563; text-decoration: none;">6431 9973</a>.<br/><br/>
                       In the event that you are unable to attend, we kindly ask that you inform the PDCS team at your earliest opportunity.
                     </div>
                   </div>
@@ -1024,11 +1057,16 @@ class EmailService {
                   <div class="info-box">
                     <div class="info-box-title">Withdrawal Policy</div>
                     <div class="info-box-content">
-                      Please note our withdrawal policy:<br/><br/>
-                      • <strong>More than 7 working days before course start:</strong> Full refund available<br/>
-                      • <strong>3-7 working days before course start:</strong> 50% of course fee will be charged<br/>
-                      • <strong>Less than 3 working days or no-show:</strong> Full course fee will be charged<br/><br/>
-                      All withdrawal requests must be submitted in writing to <a href="mailto:pdcs@polwel.org" style="color: #854d0e; text-decoration: none;">pdcs@polwel.org</a>.
+                      • <strong>More than 10 working days before the course commencement date:</strong> 0% of the total course fees will be chargeable (i.e. 100% refundable)<br/><br/>
+                      • <strong>Within 10 working days before the course commencement date:</strong> 50% of the total course fees will be chargeable (i.e. 50% refundable)<br/><br/>
+                      • <strong>Absence on the day of the confirmed course:</strong> Will be deemed as no-show in which 100% of the total course fees will be chargeable (i.e. non-refundable).
+                    </div>
+                  </div>
+
+                  <div class="info-box">
+                    <div class="info-box-title">Photos & Videography</div>
+                    <div class="info-box-content">
+                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org/privacy-policy" style="color: #4b5563; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
                     </div>
                   </div>
 
@@ -1149,7 +1187,7 @@ class EmailService {
               body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
               .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
               .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
+              .header { background: linear-gradient(135deg, #374151 0%, #374151 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
               .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
               .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
               .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
@@ -1162,14 +1200,14 @@ class EmailService {
               .details-table td:first-child { font-weight: 500; color: #6b7280; width: 30%; }
               .details-table td:last-child { color: #1f2937; }
               .details-table tr:last-child td { border-bottom: none; }
-              .alert-box { background-color: #fef3c3; border-left: 4px solid #facc15; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .alert-box-title { font-weight: 600; color: #854d0e; margin-bottom: 8px; font-size: 14px; }
-              .alert-box-content { color: #713f12; font-size: 13px; line-height: 1.6; }
+              .alert-box { background-color: #f3f4f6; border-left: 4px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 4px; }
+              .alert-box-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
+              .alert-box-content { color: #6b7280; font-size: 13px; line-height: 1.6; }
               .alert-box-content ul { margin: 8px 0 0 0; padding-left: 20px; }
               .alert-box-content li { margin: 4px 0; }
-              .alternative-section { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; margin: 20px 0; border-radius: 8px; }
-              .alternative-title { font-weight: 600; color: #166534; margin-bottom: 8px; font-size: 14px; }
-              .alternative-content { color: #15803d; font-size: 13px; line-height: 1.6; }
+              .alternative-section { background-color: #f8fafc; border: 1px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 8px; }
+              .alternative-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
+              .alternative-content { color: #4b5563; font-size: 13px; line-height: 1.6; }
               .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
               .signature { margin-top: 16px; font-size: 14px; color: #1f2937; font-weight: 500; }
               .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
@@ -1231,7 +1269,7 @@ class EmailService {
                     <div class="alternative-title">Alternative Options</div>
                     <div class="alternative-content">
                       We will notify you once a new course run has been scheduled. In the meantime, you may wish to explore other available courses on our training calendar.<br/><br/>
-                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #15803d; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #15803d; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #15803d; text-decoration: none;">6431 9973</a>.
+                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563; text-decoration: none;">6431 9973</a>.
                     </div>
                   </div>
 
@@ -1325,7 +1363,7 @@ class EmailService {
               body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
               .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
               .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
+              .header { background: linear-gradient(135deg, #6b7280 0%, #525252 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
               .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
               .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
               .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
@@ -1338,15 +1376,15 @@ class EmailService {
               .details-table td:first-child { font-weight: 500; color: #6b7280; width: 35%; }
               .details-table td:last-child { color: #1f2937; }
               .details-table tr:last-child td { border-bottom: none; }
-              .certificate-box { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 2px solid #10b981; padding: 24px; margin: 24px 0; border-radius: 12px; text-align: center; }
+              .certificate-box { background: linear-gradient(135deg, #f3f4f6 0%, #d1d5db 100%); border: 2px solid #6b7280; padding: 24px; margin: 24px 0; border-radius: 12px; text-align: center; }
               .certificate-icon { width: 80px; height: 80px; background-color: #ffffff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-              .certificate-title { font-size: 16px; font-weight: 600; color: #065f46; margin-bottom: 8px; }
-              .certificate-subtitle { font-size: 13px; color: #047857; margin-bottom: 16px; }
-              .download-button { display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; margin-top: 8px; transition: background-color 0.3s; }
-              .download-button:hover { background-color: #059669; }
-              .info-box { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .info-box-title { font-weight: 600; color: #1e40af; margin-bottom: 8px; font-size: 14px; }
-              .info-box-content { color: #1e3a8a; font-size: 13px; line-height: 1.6; }
+              .certificate-title { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 8px; }
+              .certificate-subtitle { font-size: 13px; color: #525252; margin-bottom: 16px; }
+              .download-button { display: inline-block; background-color: #6b7280; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; margin-top: 8px; transition: background-color 0.3s; }
+              .download-button:hover { background-color: #525252; }
+              .info-box { background-color: #f8fafc; border-left: 4px solid #6b7280; padding: 16px; margin: 20px 0; border-radius: 4px; }
+              .info-box-title { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
+              .info-box-content { color: #1f2937; font-size: 13px; line-height: 1.6; }
               .info-box-content ul { margin: 8px 0 0 0; padding-left: 20px; }
               .info-box-content li { margin: 4px 0; }
               .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
@@ -1420,7 +1458,7 @@ class EmailService {
                     We look forward to welcoming you to future training programmes!
                   </div>
                   <div class="closing-text" style="margin-top: 16px;">
-                    For any queries regarding your certificate, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #2563eb; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #2563eb; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #2563eb; text-decoration: none;">6431 9973</a>.
+                    For any queries regarding your certificate, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563; text-decoration: none;">6431 9973</a>.
                   </div>
                   <div class="closing-text" style="margin-top: 16px;">
                     Best regards,<br/>

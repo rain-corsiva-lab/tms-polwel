@@ -349,16 +349,18 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     const org = organizationOverride || organizations.find((o) => o.id === orgId);
     const buNum = org?.buNumber || "";
 
-    // Auto-fill ULTF payment mode when BU number is present
-    const paymentModeValue = buNum ? "ULTF" : f.paymentMode;
+    setForm((prev) => {
+      // Auto-fill ULTF payment mode when BU number is present
+      const paymentModeValue = buNum ? "ULTF" : prev.paymentMode;
 
-    setForm((f) => ({
-      ...f,
-      division: orgId,
-      buNumber: buNum || f.buNumber || "",
-      paymentMode: paymentModeValue,
-      ...(preserveCoordinator ? {} : { trainingCoordinatorId: "", trainingCoordinatorEmail: "", trainingCoordinatorPhone: "" }),
-    }));
+      return {
+        ...prev,
+        division: orgId,
+        buNumber: buNum || prev.buNumber || "",
+        paymentMode: paymentModeValue,
+        ...(preserveCoordinator ? {} : { trainingCoordinatorId: "", trainingCoordinatorEmail: "", trainingCoordinatorPhone: "" }),
+      };
+    });
     loadCoordinators(orgId);
   };
 
@@ -480,7 +482,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
           remarks: form.remarks,
         },
       });
-      toast({ title: "Updated", description: "Learner enrollment updated successfully" });
+      toast({ title: "Updated", description: "Participant enrollment updated successfully" });
       onSuccess?.();
       onOpenChange(false);
     } catch (e: any) {
@@ -501,7 +503,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       if (errorMessage.toLowerCase().includes("email")) {
         errorMessage = "Email validation failed. Please check the email address.";
       } else if (errorMessage.toLowerCase().includes("not found")) {
-        errorMessage = "Learner enrollment not found. It may have been deleted.";
+        errorMessage = "Participant enrollment not found. It may have been deleted.";
       } else if (errorMessage.toLowerCase().includes("coordinator")) {
         errorMessage = "Invalid training coordinator selected.";
       } else if (errorMessage.toLowerCase().includes("discount")) {
@@ -524,7 +526,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Edit Learner</DialogTitle>
+          <DialogTitle>Edit Participant</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6">

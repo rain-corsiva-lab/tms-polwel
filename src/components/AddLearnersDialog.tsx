@@ -416,10 +416,10 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       console.error("Failed to load learners:", error);
       setAllLearners([]);
       setLearners([]);
-      const message = error instanceof Error ? error.message : "Unable to load learners. Please try again.";
+      const message = error instanceof Error ? error.message : "Unable to load participants. Please try again.";
       toast({
         variant: "destructive",
-        title: "Learners unavailable",
+        title: "Participants unavailable",
         description: message,
       });
     }
@@ -600,7 +600,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       // Create Payment Method reference sheet
       const refSheet = workbook.addWorksheet("Payment Method");
       refSheet.addRow(["Payment Method", "Description", "Code"]);
-      refSheet.addRow(["Self-Payment", "Learner pays their own fees", "SELF_SPONSORED"]);
+      refSheet.addRow(["Self-Payment", "Participant pays their own fees", "SELF_SPONSORED"]);
       refSheet.addRow(["Transition Dollar (TS)", "Using Transition Dollar funding", "TRANSITION_DOLLARS"]);
       refSheet.addRow(["Unit Local Training Fund (ULTF)", "Using Unit Local Training Fund", "ULTF"]);
       refSheet.addRow(["Company-Sponsored (Non-Home Team)", "Company sponsored training", "COMPANY_BILLING"]);
@@ -632,10 +632,10 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
       toast({
         title: "Template Downloaded",
-        description: "Your learner import template has been downloaded successfully.",
+        description: "Your participant import template has been downloaded successfully.",
       });
     } catch (error) {
-      console.error("Failed to generate learner import template:", error);
+      console.error("Failed to generate participant import template:", error);
       toast({
         title: "Unable to download template",
         description: "Please try again or contact support if the issue persists.",
@@ -933,7 +933,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
       if (!importRows.length) {
         toast({
-          title: "No learners detected",
+          title: "No participants detected",
           description: "Upload a CSV or Excel file that follows the template before importing.",
           variant: "destructive",
         });
@@ -960,7 +960,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         setImportResult(summary);
 
         const descriptionParts: string[] = [];
-        descriptionParts.push(`${importedCount} learner${importedCount === 1 ? "" : "s"} imported`);
+        descriptionParts.push(`${importedCount} participant${importedCount === 1 ? "" : "s"} imported`);
         if (failedCount > 0) {
           descriptionParts.push(`${failedCount} failed`);
         }
@@ -978,7 +978,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         console.error("Failed to import learners:", error);
 
         // Parse error message for better user feedback
-        let errorMessage = "We couldn't import learners. Please review your file and try again.";
+        let errorMessage = "We couldn't import participants. Please review your file and try again.";
 
         if (error?.response?.data?.message) {
           errorMessage = error.response.data.message;
@@ -1035,12 +1035,16 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       } else {
         // Validate group registration
         if (!groupData.division || groupData.learners.some((l) => !l.fullName || !l.email)) {
-          toast({ title: "Error", description: "Please fill in all required fields for all learners", variant: "destructive" });
+          toast({ title: "Error", description: "Please fill in all required fields for all participants", variant: "destructive" });
           return;
         }
 
         if (groupData.learners.some((l) => !isValidEmail(l.email))) {
-          toast({ title: "Validation Error", description: "One or more learners have invalid email addresses. Please correct them.", variant: "destructive" });
+          toast({
+            title: "Validation Error",
+            description: "One or more participants have invalid email addresses. Please correct them.",
+            variant: "destructive",
+          });
           return;
         }
 
@@ -1079,14 +1083,14 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         });
       }
 
-      toast({ title: "Success", description: "Learners enrolled successfully" });
+      toast({ title: "Success", description: "Participants enrolled successfully" });
       setDialogOpen(false);
       onSuccess?.();
     } catch (error: any) {
-      console.error("Failed to enroll learners:", error);
+      console.error("Failed to enroll participants:", error);
 
       // Parse error message for better user feedback
-      let errorMessage = "Failed to enroll learners";
+      let errorMessage = "Failed to enroll participants";
 
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -1100,7 +1104,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       if (errorMessage.toLowerCase().includes("email")) {
         errorMessage = "Email validation failed. Please check email addresses.";
       } else if (errorMessage.toLowerCase().includes("duplicate")) {
-        errorMessage = "One or more learners are already enrolled in this course run.";
+        errorMessage = "One or more participants are already enrolled in this course run.";
       } else if (errorMessage.toLowerCase().includes("capacity")) {
         errorMessage = "Course run has reached maximum capacity.";
       } else if (errorMessage.toLowerCase().includes("coordinator")) {
@@ -1186,13 +1190,13 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         <DialogTrigger asChild>
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="h-4 w-4 mr-2" />
-            {triggerLabel || "Add Learners"}
+            {triggerLabel || "Add Participants"}
           </Button>
         </DialogTrigger>
       )}
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Add Learners</DialogTitle>
+          <DialogTitle>Add Participants</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6">
@@ -1205,7 +1209,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                 <Plus className="h-8 w-8 text-gray-400 mb-2" />
                 <h3 className="font-medium">Single Registration</h3>
-                <p className="text-sm text-gray-500">Add one learner at a time</p>
+                <p className="text-sm text-gray-500">Add one participant at a time</p>
               </CardContent>
             </Card>
             <Card
@@ -1215,7 +1219,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                 <Users className="h-8 w-8 text-gray-400 mb-2" />
                 <h3 className="font-medium">Group Registration</h3>
-                <p className="text-sm text-gray-500">Add multiple learners at once</p>
+                <p className="text-sm text-gray-500">Add multiple participants at once</p>
               </CardContent>
             </Card>
             {/* <Card
@@ -1285,9 +1289,9 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
                   {mode === "import" ? "Importing..." : "Adding..."}
                 </span>
               ) : mode === "single" ? (
-                "Add Learner"
+                "Add Participant"
               ) : mode === "group" ? (
-                `Add ${groupData.learners.length} Learners`
+                `Add ${groupData.learners.length} Participants`
               ) : (
                 "Import Now"
               )}
@@ -1786,14 +1790,14 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Learners</CardTitle>
+              <CardTitle>Participants</CardTitle>
               <p className="text-sm text-gray-500">
-                Add individual learner details ({data.learners.length} learner{data.learners.length !== 1 ? "s" : ""})
+                Add individual participant details ({data.learners.length} participant{data.learners.length !== 1 ? "s" : ""})
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={onAddLearner}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Learner
+              Add Participant
             </Button>
           </div>
         </CardHeader>
@@ -1822,7 +1826,7 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
       <Card>
         <CardHeader>
           <CardTitle>Fees & Payment Information</CardTitle>
-          <p className="text-sm text-gray-500">Applied uniformly to all learners in this group</p>
+          <p className="text-sm text-gray-500">Applied uniformly to all participants in this group</p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
@@ -1844,7 +1848,7 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
             <div className="text-2xl font-semibold text-blue-600">${data.totalFees}</div>
           </div>
           <div className="space-y-2">
-            <Label>Group Total ({data.learners.length} learners)</Label>
+            <Label>Group Total ({data.learners.length} participants)</Label>
             <div className="text-xl font-semibold text-blue-600">${groupTotal}</div>
           </div>
           <div className="space-y-2">
@@ -1955,7 +1959,7 @@ const GroupLearnerCard: React.FC<GroupLearnerCardProps> = ({ learner, index, lea
               onChange={(e) => onUpdate({ ...learner, email: e.target.value })}
               disabled={isFieldDisabled("email")}
               className={isFieldDisabled("email") ? "bg-gray-50" : ""}
-              placeholder="learner@company.com"
+              placeholder="participant@company.com"
             />
           </div>
           <div className="space-y-2">
@@ -2017,7 +2021,7 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Learner import template</CardTitle>
+          <CardTitle> Participant import template</CardTitle>
           <CardDescription>
             Required columns: {requiredColumns.join(", ")}. Optional columns: {optionalColumns.join(", ") || "None"}.
           </CardDescription>
@@ -2036,8 +2040,8 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
           <ul className="list-disc pl-6 space-y-1">
             <li>Supports CSV and Excel (.xlsx) files.</li>
             <li>Leave optional columns blank if not applicable.</li>
-            <li>Ensure learner emails are unique per row.</li>
-            <li>One learner per row; duplicate rows will be flagged during import.</li>
+            <li>Ensure participant emails are unique per row.</li>
+            <li>one participant per row; duplicate rows will be flagged during import.</li>
           </ul>
         </CardContent>
       </Card>
@@ -2135,7 +2139,9 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
                 ))}
               </TableBody>
             </Table>
-            {hasMoreRows && <p className="mt-3 text-xs text-muted-foreground">Showing a partial preview. Import will include all {rows.length} learners.</p>}
+            {hasMoreRows && (
+              <p className="mt-3 text-xs text-muted-foreground">Showing a partial preview. Import will include all {rows.length} participants.</p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -2152,7 +2158,7 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
             </div>
             {result.successes.length > 0 && (
               <div>
-                <h4 className="font-medium text-foreground">Imported learners</h4>
+                <h4 className="font-medium text-foreground">Imported participants</h4>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
                   {result.successes.slice(0, 5).map((item) => (
                     <li key={item.learnerId}>

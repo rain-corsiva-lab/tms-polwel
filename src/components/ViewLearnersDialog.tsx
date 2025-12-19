@@ -119,7 +119,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Course Run Learners</DialogTitle>
+          <DialogTitle className="text-2xl">Course Run Participants</DialogTitle>
           <DialogDescription>Overview and participant list for this course run</DialogDescription>
         </DialogHeader>
 
@@ -127,7 +127,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData }: 
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-6 w-6 animate-spin" />
-              <span>Loading learners...</span>
+              <span>Loading participants...</span>
             </div>
           </div>
         ) : (
@@ -208,16 +208,16 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData }: 
               </CardContent>
             </Card>
 
-            {/* Enrolled Learners */}
+            {/* Enrolled Participants */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Enrolled Learners ({enrolledLearners.length})</h3>
+                <h3 className="text-lg font-semibold">Enrolled Participants ({enrolledLearners.length})</h3>
                 <Badge className="bg-green-100 text-green-800">{enrolledLearners.length}</Badge>
               </div>
 
               {enrolledLearners.length === 0 ? (
                 <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">No enrolled learners</CardContent>
+                  <CardContent className="p-8 text-center text-muted-foreground">No enrolled participants</CardContent>
                 </Card>
               ) : (
                 <Card>
@@ -249,11 +249,11 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData }: 
               )}
             </div>
 
-            {/* Withdrawn Learners */}
+            {/* Withdrawn Participants */}
             {withdrawnLearners.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Withdrawn Learners ({withdrawnLearners.length})</h3>
+                  <h3 className="text-lg font-semibold">Withdrawn Participants ({withdrawnLearners.length})</h3>
                   <Badge className="bg-red-100 text-red-800">{withdrawnLearners.length}</Badge>
                 </div>
 

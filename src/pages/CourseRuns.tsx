@@ -904,7 +904,7 @@ const CourseRuns: React.FC = () => {
       });
       toast({
         title: "Email Sent",
-        description: "Course confirmation email has been sent to learners.",
+        description: "Course confirmation email has been sent to participants.",
       });
       closeEmailDialog();
       await fetchCourseRuns();
@@ -1484,7 +1484,7 @@ const CourseRuns: React.FC = () => {
             <DialogTitle>Cancel course run</DialogTitle>
             <DialogDescription>
               {cancelDialog.courseRun
-                ? `Provide an optional reason for cancelling ${cancelDialog.courseRun.title}. Learners will be notified based on backend workflow settings.`
+                ? `Provide an optional reason for cancelling ${cancelDialog.courseRun.title}. Participants will be notified based on backend workflow settings.`
                 : ""}
             </DialogDescription>
           </DialogHeader>
@@ -1502,7 +1502,7 @@ const CourseRuns: React.FC = () => {
                 <Label htmlFor="cancelReason">Cancellation reason</Label>
                 <Textarea
                   id="cancelReason"
-                  placeholder="Let learners and stakeholders know why this run is cancelled (optional)."
+                  placeholder="Let participants and stakeholders know why this run is cancelled (optional)."
                   value={cancelDialog.reason}
                   onChange={(e) => setCancelDialog((prev) => ({ ...prev, reason: e.target.value.slice(0, 1000) }))}
                   rows={4}
@@ -1543,11 +1543,11 @@ const CourseRuns: React.FC = () => {
               <div className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div>
                   <Label htmlFor="sendEmailsSwitch" className="text-sm">
-                    Send learner emails
+                    Send participant emails
                   </Label>
-                  <p className="text-xs text-gray-500">Notify enrolled learners about this transition.</p>
+                  <p className="text-xs text-gray-500">Notify enrolled participants about this transition.</p>
                   {workflowDialog.action.requiresLearnerEmails && (
-                    <p className="text-xs text-orange-600 mt-1">This action typically requires learner notifications.</p>
+                    <p className="text-xs text-orange-600 mt-1">This action typically requires participant notifications.</p>
                   )}
                 </div>
                 <Switch
@@ -1712,8 +1712,8 @@ const CourseRuns: React.FC = () => {
             <DialogTitle>{emailDialog.type === "course_confirmation" ? "Send Course Confirmation Email" : "Send Training Assignment Email"}</DialogTitle>
             <DialogDescription>
               {emailDialog.type === "course_confirmation"
-                ? "Send a confirmation email to all enrolled learners."
-                : "Send training assignment emails to learners and trainers."}
+                ? "Send a confirmation email to all enrolled participants."
+                : "Send training assignment emails to participants and trainers."}
             </DialogDescription>
           </DialogHeader>
           {emailDialog.courseRun && (
@@ -1723,7 +1723,7 @@ const CourseRuns: React.FC = () => {
                   Course: <span className="font-medium text-gray-900">{emailDialog.courseRun.title}</span>
                 </p>
                 <p className="text-sm text-gray-600">
-                  Enrolled: <span className="font-medium text-gray-900">{emailDialog.courseRun.enrolled} learners</span>
+                  Enrolled: <span className="font-medium text-gray-900">{emailDialog.courseRun.enrolled} participants</span>
                 </p>
               </div>
 

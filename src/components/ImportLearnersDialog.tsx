@@ -129,7 +129,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       // Create Payment Method reference sheet
       const refSheet = workbook.addWorksheet("Payment Method");
       refSheet.addRow(["Payment Method", "Description", "Code"]);
-      refSheet.addRow(["Self-Payment", "Learner pays their own fees", "SELF_SPONSORED"]);
+      refSheet.addRow(["Self-Payment", "Participant pays their own fees", "SELF_SPONSORED"]);
       refSheet.addRow(["Transition Dollar (TS)", "Using Transition Dollar funding", "TRANSITION_DOLLARS"]);
       refSheet.addRow(["Unit Local Training Fund (ULTF)", "Using Unit Local Training Fund", "ULTF"]);
       refSheet.addRow(["Company-Sponsored (Non-Home Team)", "Company sponsored training", "COMPANY_BILLING"]);
@@ -161,10 +161,10 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
 
       toast({
         title: "Template Downloaded",
-        description: "Your learner import template has been downloaded successfully.",
+        description: "Your participant import template has been downloaded successfully.",
       });
     } catch (error) {
-      console.error("Failed to generate learner import template:", error);
+      console.error("Failed to generate participant import template:", error);
       toast({
         title: "Unable to download template",
         description: "Please try again or contact support if the issue persists.",
@@ -320,7 +320,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
 
     if (!rows.length) {
       toast({
-        title: "No learners detected",
+        title: "No participants detected",
         description: "Upload a CSV or Excel file that follows the template before importing.",
         variant: "destructive",
       });
@@ -385,7 +385,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
     >
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Import learners from CSV/XLSX</DialogTitle>
+          <DialogTitle>Import participants from CSV/XLSX</DialogTitle>
         </DialogHeader>
 
         <ImportLearnersForm
@@ -462,7 +462,7 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Learner import template</CardTitle>
+          <CardTitle> Participant import template</CardTitle>
           <CardDescription>
             Required columns: {requiredColumns.join(", ")}. Optional columns: {optionalColumns.join(", ") || "None"}.
           </CardDescription>
@@ -481,8 +481,8 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
           <ul className="list-disc pl-6 space-y-1">
             <li>Supports CSV and Excel (.xlsx) files.</li>
             <li>Leave optional columns blank if not applicable.</li>
-            <li>Ensure learner emails are unique per row.</li>
-            <li>One learner per row; duplicate rows will be flagged during import.</li>
+            <li>Ensure participant emails are unique per row.</li>
+            <li>one participant per row; duplicate rows will be flagged during import.</li>
           </ul>
         </CardContent>
       </Card>
@@ -580,7 +580,9 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
                 ))}
               </TableBody>
             </Table>
-            {hasMoreRows && <p className="mt-3 text-xs text-muted-foreground">Showing a partial preview. Import will include all {rows.length} learners.</p>}
+            {hasMoreRows && (
+              <p className="mt-3 text-xs text-muted-foreground">Showing a partial preview. Import will include all {rows.length} participants.</p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -597,7 +599,7 @@ const ImportLearnersForm: React.FC<ImportLearnersFormProps> = ({
             </div>
             {result.successes.length > 0 && (
               <div>
-                <h4 className="font-medium text-foreground">Imported learners</h4>
+                <h4 className="font-medium text-foreground">Imported participants</h4>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
                   {result.successes.slice(0, 5).map((item) => (
                     <li key={item.learnerId}>

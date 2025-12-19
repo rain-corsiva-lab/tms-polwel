@@ -322,10 +322,10 @@ const CourseRunDetail: React.FC = () => {
   };
 
   const handleEnrollmentSuccess = () => {
-    // Refresh the course run data to show newly enrolled learners
+    // Refresh the course run data to show newly enrolled participants
     loadCourseRunDetail();
     setAddLearnersDialogOpen(false);
-    toast.success("Learners enrolled successfully!");
+    toast.success("Participants enrolled successfully!");
   };
 
   const handleImportSuccess = () => {
@@ -401,7 +401,7 @@ const CourseRunDetail: React.FC = () => {
         ...(supportingDocumentPayload ? { supportingDocument: supportingDocumentPayload } : {}),
       });
 
-      toast.success(response?.message || "Learner marked as withdrawn successfully");
+      toast.success(response?.message || "Participant marked as withdrawn successfully");
       setWithdrawalDialogOpen(false);
       setWithdrawalReason("");
       setWithdrawalDocument(null);
@@ -443,13 +443,13 @@ const CourseRunDetail: React.FC = () => {
     if (selectedParticipants.size === 0 || !courseRun || !id) return;
 
     // Confirm before sending
-    const confirmed = window.confirm(`Send confirmation email to ${selectedParticipants.size} learner${selectedParticipants.size !== 1 ? "s" : ""}?`);
+    const confirmed = window.confirm(`Send confirmation email to ${selectedParticipants.size} participant${selectedParticipants.size !== 1 ? "s" : ""}?`);
     if (!confirmed) return;
 
     let successCount = 0;
     let failureCount = 0;
 
-    // Send emails to all selected learners
+    // Send emails to all selected participants
     for (const learnerId of selectedParticipants) {
       try {
         const learnerRecord = courseRun.courseRunLearners?.find((l) => l.id === learnerId);
@@ -458,7 +458,7 @@ const CourseRunDetail: React.FC = () => {
           successCount++;
         }
       } catch (error) {
-        console.error(`Error sending email to learner ${learnerId}:`, error);
+        console.error(`Error sending email to participant ${learnerId}:`, error);
         failureCount++;
       }
     }
@@ -493,7 +493,7 @@ const CourseRunDetail: React.FC = () => {
       }
     }
 
-    toast.success(`Status updated: ${successCount} learners withdrawn${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
+    toast.success(`Status updated: ${successCount} participants withdrawn${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
     setSelectedParticipants(new Set());
     loadCourseRunDetail();
   };
@@ -502,7 +502,7 @@ const CourseRunDetail: React.FC = () => {
     if (selectedParticipants.size === 0 || !courseRun || !id) return;
 
     const confirmed = window.confirm(
-      `Delete ${selectedParticipants.size} learner${selectedParticipants.size !== 1 ? "s" : ""} from this course? This action cannot be undone.`
+      `Delete ${selectedParticipants.size} participant${selectedParticipants.size !== 1 ? "s" : ""} from this course? This action cannot be undone.`
     );
     if (!confirmed) return;
 
@@ -517,25 +517,25 @@ const CourseRunDetail: React.FC = () => {
           successCount++;
         }
       } catch (error) {
-        console.error(`Error deleting learner ${learnerId}:`, error);
+        console.error(`Error deleting participant ${learnerId}:`, error);
         failureCount++;
       }
     }
 
-    toast.success(`Learners deleted: ${successCount} removed${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
+    toast.success(`Participants deleted: ${successCount} removed${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
     setSelectedParticipants(new Set());
     loadCourseRunDetail();
   };
 
-  // Handle remove learner from course run
+  // Handle remove participant from course run
   const handleRemoveLearner = async (learnerRecord: any) => {
     if (!courseRun || !id) return;
 
     const learnerIdentifier = learnerRecord?.learner?.id || learnerRecord?.learnerId || learnerRecord?.id;
-    const learnerName = learnerRecord?.learner?.fullname || learnerRecord?.fullname || "this learner";
+    const learnerName = learnerRecord?.learner?.fullname || learnerRecord?.fullname || "this participant";
 
     if (!learnerIdentifier) {
-      toast.error("Unable to determine learner identifier for removal");
+      toast.error("Unable to determine participant identifier for removal");
       return;
     }
 
@@ -546,11 +546,11 @@ const CourseRunDetail: React.FC = () => {
 
     try {
       const response = await courseRunsApi.removeLearner(id, learnerIdentifier);
-      toast.success(response?.message || "Learner removed successfully");
+      toast.success(response?.message || "Participant removed successfully");
       loadCourseRunDetail();
     } catch (error: any) {
-      console.error("Error removing learner:", error);
-      toast.error(error?.message || "Failed to remove learner");
+      console.error("Error removing participant:", error);
+      toast.error(error?.message || "Failed to remove participant");
     }
   };
 
@@ -1855,14 +1855,14 @@ const CourseRunDetail: React.FC = () => {
                   </Button>
                   <Button size="sm" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Learners
+                    Add Participants
                   </Button>
                 </div>
               </div>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Enrolled Learners ({courseRun.courseRunLearners?.length || 0})</CardTitle>
+                  <CardTitle>Enrolled Participants ({courseRun.courseRunLearners?.length || 0})</CardTitle>
                   {/* <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Learners
@@ -2000,8 +2000,8 @@ const CourseRunDetail: React.FC = () => {
                             <TableCell colSpan={10} className="text-center py-8">
                               <div className="text-gray-500">
                                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-medium mb-2">No learners enrolled</p>
-                                <p className="text-sm">Add learners to get started.</p>
+                                <p className="text-lg font-medium mb-2">No participants enrolled</p>
+                                <p className="text-sm">Add participants to get started.</p>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -2012,11 +2012,11 @@ const CourseRunDetail: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Withdrawn Learners Section */}
+              {/* Withdrawn Participants Section */}
               {courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length > 0 && (
                 <Card className="mt-6">
                   <CardHeader>
-                    <CardTitle>Withdrawn Learners ({courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length || 0})</CardTitle>
+                    <CardTitle>Withdrawn Participants ({courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length || 0})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
@@ -2292,7 +2292,7 @@ const CourseRunDetail: React.FC = () => {
                         onChange={(e) => handleEditField("baseCourseFee", e.target.value)}
                         className={isEditing ? "" : "bg-gray-50"}
                       />
-                      <p className="text-xs text-gray-500">Fee charged to learners/client per pax or per run</p>
+                      <p className="text-xs text-gray-500">Fee charged to participants/client per pax or per run</p>
                     </div>
 
                     {/* Fee Type Radio Buttons */}

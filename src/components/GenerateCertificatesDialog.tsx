@@ -177,7 +177,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
     if (selectedLearners.length === 0) {
       toast({
         title: "No Learners Selected",
-        description: "Please select at least one learner to export certificates",
+        description: "Please select at least one participant to export certificates",
         variant: "destructive",
       });
       return;

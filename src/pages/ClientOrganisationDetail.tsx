@@ -539,7 +539,7 @@ const ClientOrganisationDetail = () => {
         <TabsList>
           <TabsTrigger value="information">Organisation Information</TabsTrigger>
           {(hasRole("POLWEL") || !isTCUser) && <TabsTrigger value="coordinators">Training Coordinators</TabsTrigger>}
-          <TabsTrigger value="learners">Learners</TabsTrigger>
+          <TabsTrigger value="learners">Participants</TabsTrigger>
         </TabsList>
 
         <TabsContent value="information" className="space-y-6">
@@ -793,8 +793,8 @@ const ClientOrganisationDetail = () => {
         <TabsContent value="learners" className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold">Learners</h2>
-              <p className="text-muted-foreground">Manage learners for this organization</p>
+              <h2 className="text-2xl font-bold">Participants</h2>
+              <p className="text-muted-foreground">Manage participants for this organization</p>
             </div>
           </div>
 
@@ -818,14 +818,14 @@ const ClientOrganisationDetail = () => {
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="flex items-center justify-center space-x-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Loading learners...</span>
+                          <span>Loading participants...</span>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : learners.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        No learners found.
+                        No participants found.
                       </TableCell>
                     </TableRow>
                   ) : (

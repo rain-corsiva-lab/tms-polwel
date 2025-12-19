@@ -282,7 +282,7 @@ const PostRunDetail = () => {
         setAttendeesCount(flattened.length);
         console.log("Fetched learners(flattened):", flattened);
       } else {
-        console.warn("No learners found or API call failed");
+        console.warn("No participants found or API call failed");
       }
     } catch (error: any) {
       console.error("Error fetching course run:", error);
@@ -687,7 +687,7 @@ const PostRunDetail = () => {
                       </div>
 
                       <div className="mb-4">
-                        <Label>Learners</Label>
+                        <Label>Participants</Label>
                         <Popover
                           open={!isCompleted && (learnerSearchOpen[index] || false)}
                           onOpenChange={(open) => !isCompleted && setLearnerSearchOpen({ ...learnerSearchOpen, [index]: open })}
