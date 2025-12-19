@@ -678,7 +678,7 @@ const PostRunDetail = () => {
                           <Label htmlFor={`invoiceAmount-${index}`}>Invoice Amount (Auto-calculated)</Label>
                           <Input
                             id={`invoiceAmount-${index}`}
-                            placeholder="Calculated from selected learners"
+                            placeholder="Calculated from selected participants"
                             value={entry.invoiceAmount}
                             disabled
                             className="mt-2"
@@ -701,7 +701,7 @@ const PostRunDetail = () => {
                               disabled={isCompleted}
                             >
                               <span className="truncate">
-                                {entry.learnerIds.length > 0 ? `${entry.learnerIds.length} learner(s) selected` : "Select learners"}
+                                {entry.learnerIds.length > 0 ? `${entry.learnerIds.length} participant(s) selected` : "Select participants"}
                               </span>
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -709,7 +709,7 @@ const PostRunDetail = () => {
                           <PopoverContent className="w-[400px] p-0" align="start">
                             <div className="p-2 border-b">
                               <Input
-                                placeholder="Search learners..."
+                                placeholder="Search participants..."
                                 value={learnerSearch[index] || ""}
                                 onChange={(e) => {
                                   setLearnerSearch({ ...learnerSearch, [index]: e.target.value });
@@ -719,7 +719,7 @@ const PostRunDetail = () => {
                             </div>
                             <div className="max-h-[300px] overflow-y-auto p-2">
                               {availableLearners.length === 0 ? (
-                                <div className="text-center py-6 text-sm text-muted-foreground">No learners available</div>
+                                <div className="text-center py-6 text-sm text-muted-foreground">No participants available</div>
                               ) : (
                                 <div className="space-y-1">
                                   {availableLearners
@@ -810,7 +810,7 @@ const PostRunDetail = () => {
                       </div>
 
                       <div className="mb-4">
-                        <Label>Discounts Allocated (Applied to Selected Learners)</Label>
+                        <Label>Discounts Allocated (Applied to Selected Participants)</Label>
                         <div className="mt-2 p-4 border rounded-md bg-muted/50">
                           <div className="grid grid-cols-4 gap-2 text-sm font-medium text-muted-foreground mb-2">
                             <div>Learner</div>
@@ -819,7 +819,7 @@ const PostRunDetail = () => {
                             <div>Amount</div>
                           </div>
                           {entry.learnerIds.length === 0 ? (
-                            <div className="text-sm text-muted-foreground text-center py-4">No discounts applied to selected learners</div>
+                            <div className="text-sm text-muted-foreground text-center py-4">No discounts applied to selected participants</div>
                           ) : (
                             <div className="space-y-2">
                               {entry.learnerIds.map((learnerId) => {

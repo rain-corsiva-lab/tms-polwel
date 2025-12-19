@@ -413,7 +413,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       setAllLearners(uniqueLearners);
       setLearners(uniqueLearners);
     } catch (error) {
-      console.error("Failed to load learners:", error);
+      console.error("Failed to load participants:", error);
       setAllLearners([]);
       setLearners([]);
       const message = error instanceof Error ? error.message : "Unable to load participants. Please try again.";
@@ -564,7 +564,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     try {
       const workbook = new ExcelJS.Workbook();
 
-      // Create Learners sheet with current columns
+      // Create Participants sheet with current columns
       const learnersSheet = workbook.addWorksheet("Learners");
       const headers = IMPORT_TEMPLATE_COLUMNS.map((column) => column.header);
       const exampleRow = IMPORT_TEMPLATE_COLUMNS.map((column) => column.example ?? "");
@@ -624,7 +624,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "learner-import-template.xlsx";
+      link.download = "participant-import-template.xlsx";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -749,7 +749,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         .filter((row) => Object.values(row).some((value) => typeof value === "string" && value.trim().length));
 
       if (!processedRows.length) {
-        setImportParseErrors(["No learner rows were detected. Please ensure your file contains learner information starting from the second row."]);
+        setImportParseErrors(["No participant rows were detected. Please ensure your file contains participant information starting from the second row."]);
         setImportRows([]);
         setImportFileName(file.name);
         return;
@@ -762,7 +762,9 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         if (!row.email) missingFields.push("Email");
         if (!row.clientOrganizationName) missingFields.push("Client Organisation Name");
         if (missingFields.length) {
-          rowValidationIssues.push(`Row ${index + 2}: Missing ${missingFields.join(", ")}. These learners will fail to import until the details are provided.`);
+          rowValidationIssues.push(
+            `Row ${index + 2}: Missing ${missingFields.join(", ")}. These participants will fail to import until the details are provided.`
+          );
         }
       });
 
@@ -770,7 +772,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       setImportFileName(file.name);
       setImportParseErrors(rowValidationIssues);
     } catch (error) {
-      console.error("Failed to parse learner import file:", error);
+      console.error("Failed to parse participant import file:", error);
       setImportParseErrors(["We couldn't read this file. Please ensure it's a CSV or Excel file that follows the latest template."]);
       setImportRows([]);
       setImportFileName("");
@@ -779,7 +781,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     }
   };
 
-  // Handle learner selection (pre-fill data)
+  // Handle participant selection (pre-fill data)
   const handleLearnerSelection = (learnerId: string, learnerIndex?: number) => {
     if (learnerId === "__none__") {
       if (mode === "single") {
@@ -893,7 +895,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     }));
   };
 
-  // Add new learner to group
+  // Add new participant to group
   const addGroupLearner = () => {
     setGroupData((prev) => ({
       ...prev,
@@ -909,7 +911,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     }));
   };
 
-  // Remove learner from group
+  // Remove participant from group
   const removeGroupLearner = (index: number) => {
     if (groupData.learners.length > 1) {
       setGroupData((prev) => ({
@@ -975,7 +977,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           onSuccess?.();
         }
       } catch (error: any) {
-        console.error("Failed to import learners:", error);
+        console.error("Failed to import participants:", error);
 
         // Parse error message for better user feedback
         let errorMessage = "We couldn't import participants. Please review your file and try again.";
@@ -1229,7 +1231,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
             <CardContent className="flex flex-col items-center justify-center p-6 text-center">
               <FileSpreadsheet className="h-8 w-8 text-gray-400 mb-2" />
               <h3 className="font-medium">Import from File</h3>
-              <p className="text-sm text-gray-500">Upload the learner template (CSV/XLSX)</p>
+              <p className="text-sm text-gray-500">Upload the participant template (CSV/XLSX)</p>
             </CardContent>
           </Card> */}
           </div>
@@ -1385,15 +1387,15 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
       {/* Learner Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Select Existing Learner (Optional)</CardTitle>
+          <CardTitle className="text-sm">Select Existing Participant (Optional)</CardTitle>
         </CardHeader>
         <CardContent>
           <SearchableSelect
             value={data.selectedLearnerId || "__none__"}
             onValueChange={onLearnerSelection}
             options={learnerOptions}
-            placeholder="Select existing learner or leave blank to add new"
-            clearOption={{ value: "__none__", label: "Add new learner" }}
+            placeholder="Select existing participant or leave blank to add new"
+            clearOption={{ value: "__none__", label: "Add new participant" }}
           />
         </CardContent>
       </Card>
@@ -1919,13 +1921,13 @@ const GroupLearnerCard: React.FC<GroupLearnerCardProps> = ({ learner, index, lea
       <CardContent className="space-y-4">
         {/* Learner Selection */}
         <div className="space-y-2">
-          <Label className="text-sm">Select Existing Learner (Optional)</Label>
+          <Label className="text-sm">Select Existing Participant (Optional)</Label>
           <SearchableSelect
             value={learner.selectedLearnerId || "__none__"}
             onValueChange={onLearnerSelection}
             options={learnerOptions}
-            placeholder="Select existing learner or leave blank to add new"
-            clearOption={{ value: "__none__", label: "Add new learner" }}
+            placeholder="Select existing participant or leave blank to add new"
+            clearOption={{ value: "__none__", label: "Add new participant" }}
           />
         </div>
 

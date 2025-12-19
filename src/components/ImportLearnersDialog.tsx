@@ -93,7 +93,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
     try {
       const workbook = new ExcelJS.Workbook();
 
-      // Create Learners sheet with current columns
+      // Create Participants sheet with current columns
       const learnersSheet = workbook.addWorksheet("Learners");
       const headers = IMPORT_TEMPLATE_COLUMNS.map((column) => column.header);
       const exampleRow = IMPORT_TEMPLATE_COLUMNS.map((column) => column.example ?? "");
@@ -153,7 +153,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "learner-import-template.xlsx";
+      link.download = "participant-import-template.xlsx";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -278,7 +278,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
         .filter((row) => Object.values(row).some((value) => typeof value === "string" && value.trim().length));
 
       if (!processedRows.length) {
-        setParseErrors(["No learner rows were detected. Please ensure your file contains learner information starting from the second row."]);
+        setParseErrors(["No participant rows were detected. Please ensure your file contains participant information starting from the second row."]);
         setRows([]);
         setFileName(file.name);
         return;
@@ -291,7 +291,9 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
         if (!row.email) missingFields.push("Email");
         if (!row.clientOrganizationName) missingFields.push("Client Organization Name");
         if (missingFields.length) {
-          rowValidationIssues.push(`Row ${index + 2}: Missing ${missingFields.join(", ")}. These learners will fail to import until the details are provided.`);
+          rowValidationIssues.push(
+            `Row ${index + 2}: Missing ${missingFields.join(", ")}. These participants will fail to import until the details are provided.`
+          );
         }
       });
 
@@ -299,7 +301,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       setFileName(file.name);
       setParseErrors(rowValidationIssues);
     } catch (error) {
-      console.error("Failed to parse learner import file:", error);
+      console.error("Failed to parse participant import file:", error);
       setParseErrors(["We couldn't read this file. Please ensure it's a CSV or Excel file that follows the latest template."]);
       setRows([]);
       setFileName("");
@@ -360,7 +362,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
         onSuccess?.();
       }
     } catch (error) {
-      console.error("Failed to import learners:", error);
+      console.error("Failed to import participants:", error);
       toast({
         title: "Import failed",
         description: "We couldn't import learners. Please review your file and try again.",

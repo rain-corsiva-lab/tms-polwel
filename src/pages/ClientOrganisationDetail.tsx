@@ -271,7 +271,7 @@ const ClientOrganisationDetail = () => {
       console.error("Error fetching learners:", error);
       toast({
         title: "Error",
-        description: getErrorMessage(error, "Failed to load learners. Please try again."),
+        description: getErrorMessage(error, "Failed to load participants. Please try again."),
         variant: "destructive",
       });
     } finally {
