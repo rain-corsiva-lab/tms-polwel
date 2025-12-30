@@ -587,8 +587,8 @@ model Media {
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
   deletedAt                    DateTime?
-  confirmationEmailHistory     ConfirmationEmailHistory[]
-  trainerAssignmentEmailHistory TrainerAssignmentEmailHistory[]
+  confirmationEmailAttachments ConfirmationEmailAttachment[]
+  trainerEmailAttachments      TrainerEmailAttachment[]
   courseRunLearnersWithdrawn   CourseRunLearner[]            @relation("WithdrawnDocument")
   courseRunLearnersWaiver      CourseRunLearner[]            @relation("WaiverDocument")
 
@@ -609,42 +609,64 @@ model BillingReport {
 }
 
 model TrainerAssignmentEmailHistory {
-  id                    String    @id @default(cuid())
+  id                    String                      @id @default(cuid())
   trainerId             String
   courseRunId           String
-  cc                    String?   @db.Text
-  additionalBodyContent String?   @db.Text
-  attachmentId          String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  cc                    String?                     @db.Text
+  additionalBodyContent String?                     @db.Text
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
   deletedAt             DateTime?
-  attachment            Media?    @relation(fields: [attachmentId], references: [id])
-  courseRun             CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
-  trainer               User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  courseRun             CourseRun                   @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  trainer               User                        @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  attachments           TrainerEmailAttachment[]
 
   @@index([trainerId])
   @@index([courseRunId])
-  @@index([attachmentId], map: "trainer_assignment_email_history_attachmentId_fkey")
   @@map("trainer_assignment_email_history")
 }
 
+model TrainerEmailAttachment {
+  id                  String                            @id @default(cuid())
+  emailHistoryId      String
+  mediaId             String
+  createdAt           DateTime                          @default(now())
+  emailHistory        TrainerAssignmentEmailHistory     @relation(fields: [emailHistoryId], references: [id], onDelete: Cascade)
+  media               Media                             @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([emailHistoryId])
+  @@index([mediaId])
+  @@map("trainer_email_attachments")
+}
+
 model ConfirmationEmailHistory {
-  id                  String           @id @default(cuid())
+  id                  String                        @id @default(cuid())
   courseRunLearnersId String
   courseRunId         String
-  remarks             String?          @db.Text
-  attachmentId        String?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  remarks             String?                       @db.Text
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
   deletedAt           DateTime?
-  attachment          Media?           @relation(fields: [attachmentId], references: [id])
-  courseRun           CourseRun        @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
-  courseRunLearner    CourseRunLearner @relation(fields: [courseRunLearnersId], references: [id], onDelete: Cascade)
+  courseRun           CourseRun                     @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  courseRunLearner    CourseRunLearner              @relation(fields: [courseRunLearnersId], references: [id], onDelete: Cascade)
+  attachments         ConfirmationEmailAttachment[]
 
   @@index([courseRunLearnersId])
   @@index([courseRunId])
-  @@index([attachmentId], map: "confirmation_email_history_attachmentId_fkey")
   @@map("confirmation_email_history")
+}
+
+model ConfirmationEmailAttachment {
+  id                  String                    @id @default(cuid())
+  emailHistoryId      String
+  mediaId             String
+  createdAt           DateTime                  @default(now())
+  emailHistory        ConfirmationEmailHistory  @relation(fields: [emailHistoryId], references: [id], onDelete: Cascade)
+  media               Media                     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([emailHistoryId])
+  @@index([mediaId])
+  @@map("confirmation_email_attachments")
 }
 
 enum UserRole {

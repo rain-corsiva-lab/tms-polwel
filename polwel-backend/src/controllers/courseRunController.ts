@@ -1596,7 +1596,7 @@ export const courseRunController = {
             contact: data.contactNumber,
             clientOrganizationId: data.division,
             departmentName: data.departmentName,
-            trainingCoordinatorId: data.trainingCoordinatorId,
+            trainingCoordinatorId: data.trainingCoordinatorId && data.trainingCoordinatorId.trim() ? data.trainingCoordinatorId : null,
           },
         });
       }
@@ -1721,7 +1721,7 @@ export const courseRunController = {
               contact: learnerData.contactNumber,
               clientOrganizationId: data.division,
               departmentName: data.departmentName,
-              trainingCoordinatorId: data.trainingCoordinatorId,
+              trainingCoordinatorId: data.trainingCoordinatorId && data.trainingCoordinatorId.trim() ? data.trainingCoordinatorId : null,
             },
           });
           createdLearners.push(learner);
@@ -2283,7 +2283,9 @@ export const courseRunController = {
             contact: learnerData.contactNumber ?? existing.learner.contact,
             departmentName: learnerData.departmentName ?? existing.learner.departmentName,
             clientOrganizationId: learnerData.division || existing.learner.clientOrganizationId,
-            trainingCoordinatorId: learnerData.trainingCoordinatorId ?? existing.learner.trainingCoordinatorId,
+            trainingCoordinatorId: learnerData.trainingCoordinatorId !== undefined 
+              ? (learnerData.trainingCoordinatorId && learnerData.trainingCoordinatorId.trim() ? learnerData.trainingCoordinatorId : null) 
+              : existing.learner.trainingCoordinatorId,
           },
         });
       }
@@ -2777,7 +2779,7 @@ export const courseRunController = {
   async sendTrainerAssignmentEmail(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { ccEmails, additionalBody, attachmentId } = req.body;
+      const { ccEmails, additionalBody, attachmentIds } = req.body;
 
       if (!id) {
         res.status(400).json({
@@ -2787,23 +2789,25 @@ export const courseRunController = {
         return;
       }
 
-      // Validate attachment if provided
-      let attachment = null;
-      if (attachmentId) {
-        attachment = await prisma.media.findFirst({
+      // Validate attachments if provided
+      const attachments: any[] = [];
+      if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+        const fetchedAttachments = await prisma.media.findMany({
           where: {
-            id: attachmentId,
+            id: { in: attachmentIds },
             deletedAt: null,
           },
         });
 
-        if (!attachment) {
+        if (fetchedAttachments.length !== attachmentIds.length) {
           res.status(404).json({
             success: false,
-            error: 'Attachment not found',
+            error: 'One or more attachments not found',
           });
           return;
         }
+
+        attachments.push(...fetchedAttachments);
       }
 
       // Fetch course run with all necessary details
@@ -2884,6 +2888,7 @@ export const courseRunController = {
         courseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
         courseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
         courseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+        courseDetails.venueAddress = courseRun.venue?.address || null;
 
         const result = await EmailService.sendTrainerAssignmentEmail(
           trainerEmail,
@@ -2893,20 +2898,29 @@ export const courseRunController = {
           additional,
           ccList.length > 0 ? ccList : null,
           additionalBody || null,
-          attachment
+          attachments.length > 0 ? attachments : null
         );
 
-        // create history record with attachment
+        // create history record with attachments
         try {
-          await prisma.trainerAssignmentEmailHistory.create({
+          const emailHistory = await prisma.trainerAssignmentEmailHistory.create({
             data: {
               courseRunId: id,
               trainerId: assignment.trainer.id,
               cc: ccList.length > 0 ? ccList.join(', ') : null,
               additionalBodyContent: additionalBody || null,
-              attachmentId: attachmentId || null,
             },
           });
+
+          // Create attachment relationships if attachments provided
+          if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+            await prisma.trainerEmailAttachment.createMany({
+              data: attachmentIds.map((mediaId: string) => ({
+                emailHistoryId: emailHistory.id,
+                mediaId: mediaId,
+              })),
+            });
+          }
         } catch (histErr) {
           console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
         }
@@ -2929,14 +2943,38 @@ export const courseRunController = {
 
       await Promise.all(emailTasks);
 
-      // Update course run status to CONFIRMED after all emails sent
-      await prisma.courseRun.update({
-        where: { id: id },
-        data: {
-          status: 'CONFIRMED',
-          statusLastEvaluatedAt: new Date(),
+      // Check if confirmation emails have already been sent
+      // If yes and we just sent trainer emails, update status to CONFIRMED
+      const confirmationEmailsSent = await prisma.confirmationEmailHistory.count({
+        where: {
+          courseRunId: id,
+          deletedAt: null,
         },
       });
+
+      const hasLearners = await prisma.courseRunLearner.count({
+        where: {
+          courseRunId: id,
+          deletedAt: null,
+          enrollmentStatus: 'ENROLLED',
+        },
+      });
+
+      // If we have learners and confirmation emails have been sent
+      // AND trainer emails have been sent (we just sent them)
+      // Then update status to CONFIRMED
+      if (hasLearners > 0 && confirmationEmailsSent >= hasLearners) {
+        await prisma.courseRun.update({
+          where: { id },
+          data: {
+            status: 'CONFIRMED',
+            statusLastEvaluatedAt: new Date(),
+          },
+        });
+        console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
+      } else {
+        console.log(`Trainer assignment emails sent for course run ${id}. Waiting for confirmation emails before moving to CONFIRMED status.`);
+      }
 
       res.json({
         success: true,
@@ -3112,7 +3150,7 @@ export const courseRunController = {
   async sendCourseConfirmationEmail(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { cc, additionalBodyContent, attachmentId } = req.body;
+      const { ccEmails, additionalBody, attachmentIds } = req.body;
 
       if (!id) {
         res.status(400).json({
@@ -3122,20 +3160,20 @@ export const courseRunController = {
         return;
       }
 
-      // Validate attachment if provided
-      let attachment = null;
-      if (attachmentId) {
-        attachment = await prisma.media.findFirst({
+      // Validate attachments if provided
+      let attachments: any[] = [];
+      if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+        attachments = await prisma.media.findMany({
           where: {
-            id: attachmentId,
+            id: { in: attachmentIds },
             deletedAt: null,
           },
         });
 
-        if (!attachment) {
+        if (attachments.length !== attachmentIds.length) {
           res.status(404).json({
             success: false,
-            error: 'Attachment not found',
+            error: 'One or more attachments not found',
           });
           return;
         }
@@ -3175,10 +3213,10 @@ export const courseRunController = {
         return;
       }
 
-      const ccList = normalizeEmailList(cc);
+      const ccList = normalizeEmailList(ccEmails);
       const additionalNotes =
-        typeof additionalBodyContent === 'string' && additionalBodyContent.trim().length > 0
-          ? additionalBodyContent.trim()
+        typeof additionalBody === 'string' && additionalBody.trim().length > 0
+          ? additionalBody.trim()
           : undefined;
 
       let successCount = 0;
@@ -3201,14 +3239,25 @@ export const courseRunController = {
             },
           });
 
-          await prisma.confirmationEmailHistory.create({
+          const emailHistory = await prisma.confirmationEmailHistory.create({
             data: {
               courseRunLearnersId: enrollment.id,
               courseRunId: id,
               remarks: 'Skipped sending confirmation email. Reason: Missing learner email address.',
-              attachmentId: attachmentId || null,
             },
           });
+
+          // Create attachment records for all attachments
+          if (attachmentIds && Array.isArray(attachmentIds)) {
+            for (const attId of attachmentIds) {
+              await prisma.confirmationEmailAttachment.create({
+                data: {
+                  emailHistoryId: emailHistory.id,
+                  mediaId: attId,
+                },
+              });
+            }
+          }
           continue;
         }
 
@@ -3240,6 +3289,10 @@ export const courseRunController = {
             emailPayload.venueName = venueName;
           }
 
+          if (courseRun.venue?.address) {
+            emailPayload.venueAddress = courseRun.venue.address;
+          }
+
           if (additionalNotes) {
             emailPayload.additionalNotes = additionalNotes;
           }
@@ -3258,8 +3311,8 @@ export const courseRunController = {
             emailPayload.cc = emailCcList;
           }
 
-          if (attachment) {
-            emailPayload.attachment = attachment;
+          if (attachments && attachments.length > 0) {
+            emailPayload.attachments = attachments;
           }
 
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -3274,16 +3327,27 @@ export const courseRunController = {
             },
           });
 
-          await prisma.confirmationEmailHistory.create({
+          const emailHistory2 = await prisma.confirmationEmailHistory.create({
             data: {
               courseRunLearnersId: enrollment.id,
               courseRunId: id,
               remarks: didSend
                 ? `Confirmation email sent successfully to ${learnerEmail}.`
                 : `Failed to send confirmation email to ${learnerEmail}.`,
-              attachmentId: attachmentId || null,
             },
           });
+
+          // Create attachment records for all attachments
+          if (attachmentIds && Array.isArray(attachmentIds)) {
+            for (const attId of attachmentIds) {
+              await prisma.confirmationEmailAttachment.create({
+                data: {
+                  emailHistoryId: emailHistory2.id,
+                  mediaId: attId,
+                },
+              });
+            }
+          }
 
           if (didSend) {
             successCount += 1;
@@ -3301,17 +3365,58 @@ export const courseRunController = {
             },
           });
 
-          await prisma.confirmationEmailHistory.create({
+          const emailHistory3 = await prisma.confirmationEmailHistory.create({
             data: {
               courseRunLearnersId: enrollment.id,
               courseRunId: id,
               remarks: `Failed to send confirmation email to ${learnerEmail}. Error: ${
                 sendError instanceof Error ? sendError.message : 'Unknown error'
               }`,
-              attachmentId: attachmentId || null,
             },
           });
+
+          // Create attachment records for all attachments
+          if (attachmentIds && Array.isArray(attachmentIds)) {
+            for (const attId of attachmentIds) {
+              await prisma.confirmationEmailAttachment.create({
+                data: {
+                  emailHistoryId: emailHistory3.id,
+                  mediaId: attId,
+                },
+              });
+            }
+          }
         }
+      }
+
+      // Check if BOTH trainer and confirmation emails have been sent
+      // If yes, update status to CONFIRMED
+      const trainerEmailsSent = await prisma.trainerAssignmentEmailHistory.count({
+        where: {
+          courseRunId: id,
+          deletedAt: null,
+        },
+      });
+
+      const hasTrainers = await prisma.courseRunTrainer.count({
+        where: {
+          courseRunId: id,
+          deletedAt: null,
+        },
+      });
+
+      // If we have trainers and trainer emails have been sent (at least one history record per trainer)
+      // AND confirmation emails have been sent (we just sent them)
+      // Then update status to CONFIRMED
+      if (hasTrainers > 0 && trainerEmailsSent >= hasTrainers) {
+        await prisma.courseRun.update({
+          where: { id },
+          data: {
+            status: 'CONFIRMED',
+            statusLastEvaluatedAt: new Date(),
+          },
+        });
+        console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
       }
 
       res.json({
@@ -3432,6 +3537,10 @@ export const courseRunController = {
           const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
           if (venueName) {
             emailPayload.venueName = venueName;
+          }
+
+          if (courseRun.venue?.address) {
+            emailPayload.venueAddress = courseRun.venue.address;
           }
 
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -3795,6 +3904,10 @@ export const courseRunController = {
         const venueName = enrollment.courseRun?.venue?.name || enrollment.courseRun?.specifiedLocation;
         if (venueName) {
           emailPayload.venueName = venueName;
+        }
+
+        if (enrollment.courseRun?.venue?.address) {
+          emailPayload.venueAddress = enrollment.courseRun.venue.address;
         }
 
         const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -4176,7 +4289,18 @@ export const courseRunController = {
           courseRunLearners: {
             where: { enrollmentStatus: 'ENROLLED', deletedAt: null },
             include: {
-              learner: { select: { fullname: true, departmentName: true, email: true, contact: true, clientOrganization: { select: { buNumber: true } }, designation: true } },
+              learner: { 
+                select: { 
+                  fullname: true, 
+                  departmentName: true, 
+                  email: true, 
+                  contact: true, 
+                  designation: true,
+                  clientOrganization: { 
+                    select: { buNumber: true } 
+                  } 
+                } 
+              },
             },
           },
         },

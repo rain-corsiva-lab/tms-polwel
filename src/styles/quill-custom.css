@@ -1,0 +1,109 @@
+/* Custom styling for ReactQuill editor to improve toolbar appearance */
+
+/* Reset toolbar button backgrounds to white */
+.ql-toolbar.ql-snow {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+
+/* Toolbar button styling */
+.ql-toolbar.ql-snow .ql-formats {
+  margin-right: 15px;
+}
+
+.ql-toolbar.ql-snow button {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 3px 5px;
+  margin: 2px;
+  transition: all 0.2s ease;
+}
+
+.ql-toolbar.ql-snow button:hover {
+  background-color: #f9fafb !important;
+  border-color: #d1d5db;
+}
+
+.ql-toolbar.ql-snow button:active,
+.ql-toolbar.ql-snow button.ql-active {
+  background-color: #e5e7eb !important;
+  border-color: #9ca3af;
+  color: #111827 !important;
+}
+
+/* Icon color fix */
+.ql-toolbar.ql-snow .ql-stroke {
+  stroke: #374151 !important;
+}
+
+.ql-toolbar.ql-snow .ql-fill {
+  fill: #374151 !important;
+}
+
+.ql-toolbar.ql-snow button:hover .ql-stroke {
+  stroke: #111827 !important;
+}
+
+.ql-toolbar.ql-snow button:hover .ql-fill {
+  fill: #111827 !important;
+}
+
+.ql-toolbar.ql-snow button.ql-active .ql-stroke {
+  stroke: #111827 !important;
+}
+
+.ql-toolbar.ql-snow button.ql-active .ql-fill {
+  fill: #111827 !important;
+}
+
+/* Dropdown styling */
+.ql-toolbar.ql-snow .ql-picker {
+  color: #374151;
+}
+
+.ql-toolbar.ql-snow .ql-picker-label {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 3px 5px;
+}
+
+.ql-toolbar.ql-snow .ql-picker-label:hover {
+  background-color: #f9fafb !important;
+  border-color: #d1d5db;
+}
+
+.ql-toolbar.ql-snow .ql-picker-label.ql-active {
+  background-color: #e5e7eb !important;
+  border-color: #9ca3af;
+}
+
+/* Editor container styling */
+.ql-container.ql-snow {
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0 0.375rem 0.375rem;
+  background-color: #ffffff;
+}
+
+/* Editor content area */
+.ql-editor {
+  min-height: 150px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.ql-editor.ql-blank::before {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Fix for image alignment in editor */
+.ql-editor img {
+  max-width: 100%;
+  height: auto;
+}

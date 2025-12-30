@@ -41,6 +41,7 @@ import { AddLearnersDialog } from "../components/AddLearnersDialog";
 import { ImportLearnersDialog } from "../components/ImportLearnersDialog";
 import { EditLearnerDialog } from "../components/EditLearnerDialog";
 import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
+import { SendCourseConfirmationEmailDialog } from "../components/SendCourseConfirmationEmailDialog";
 import { AttendanceListDialog } from "../components/AttendanceListDialog";
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
@@ -190,6 +191,7 @@ const CourseRunDetail: React.FC = () => {
   // Participant Selection State for Bulk Actions
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
   const [exportingParticipants, setExportingParticipants] = useState(false);
+  const [sendConfirmationEmailDialogOpen, setSendConfirmationEmailDialogOpen] = useState(false);
 
   const fileToBase64 = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -439,33 +441,9 @@ const CourseRunDetail: React.FC = () => {
   };
 
   // Bulk action handlers
-  const handleBulkSendConfirmationEmail = async () => {
+  const handleBulkSendConfirmationEmail = () => {
     if (selectedParticipants.size === 0 || !courseRun || !id) return;
-
-    // Confirm before sending
-    const confirmed = window.confirm(`Send confirmation email to ${selectedParticipants.size} participant${selectedParticipants.size !== 1 ? "s" : ""}?`);
-    if (!confirmed) return;
-
-    let successCount = 0;
-    let failureCount = 0;
-
-    // Send emails to all selected participants
-    for (const learnerId of selectedParticipants) {
-      try {
-        const learnerRecord = courseRun.courseRunLearners?.find((l) => l.id === learnerId);
-        if (learnerRecord) {
-          await courseRunsApi.resendLearnerConfirmation(id, learnerRecord.learner.id);
-          successCount++;
-        }
-      } catch (error) {
-        console.error(`Error sending email to participant ${learnerId}:`, error);
-        failureCount++;
-      }
-    }
-
-    toast.success(`Confirmation emails sent: ${successCount} succeeded${failureCount > 0 ? `, ${failureCount} failed` : ""}`);
-    setSelectedParticipants(new Set());
-    loadCourseRunDetail();
+    setSendConfirmationEmailDialogOpen(true);
   };
 
   const handleBulkChangeStatus = async () => {
@@ -1876,7 +1854,7 @@ const CourseRunDetail: React.FC = () => {
                         {selectedParticipants.size} participant{selectedParticipants.size !== 1 ? "s" : ""} selected
                       </span>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleBulkSendConfirmationEmail()} disabled={selectedParticipants.size === 0}>
+                        <Button size="sm" variant="outline" onClick={handleBulkSendConfirmationEmail} disabled={selectedParticipants.size === 0}>
                           <Mail className="h-4 w-4 mr-2" />
                           Send Confirmation Email
                         </Button>
@@ -2766,6 +2744,36 @@ const CourseRunDetail: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Course Confirmation Email Dialog */}
+      {courseRun && (
+        <SendCourseConfirmationEmailDialog
+          open={sendConfirmationEmailDialogOpen}
+          onOpenChange={setSendConfirmationEmailDialogOpen}
+          courseRunId={id!}
+          learners={
+            courseRun.courseRunLearners
+              ?.filter((l) => selectedParticipants.has(l.id) && l.enrollmentStatus !== "WITHDRAWN")
+              .map((l) => ({
+                id: l.id,
+                name: l.learner.fullname,
+                email: l.learner.email,
+                organizationName: l.learner.organization?.name || "N/A",
+              })) || []
+          }
+          courseRunDetails={{
+            serialNumber: courseRun.serialNumber || "",
+            courseName: courseRun.course?.title || "",
+            startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB") : "",
+            endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB") : "",
+            venue: courseRun.venue?.name || courseRun.specifiedLocation || "TBA",
+          }}
+          onSuccess={() => {
+            setSelectedParticipants(new Set());
+            loadCourseRunDetail();
+          }}
+        />
+      )}
     </div>
   );
 };

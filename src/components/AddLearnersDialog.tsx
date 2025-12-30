@@ -1029,6 +1029,11 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           ...singleData,
           discountId: singleData.discountId === "none" ? null : singleData.discountId,
           selectedLearnerId: singleData.selectedLearnerId === "__none__" ? null : singleData.selectedLearnerId,
+          trainingCoordinatorId: singleData.trainingCoordinatorId && singleData.trainingCoordinatorId.trim() ? singleData.trainingCoordinatorId : null,
+          trainingCoordinatorEmail:
+            singleData.trainingCoordinatorEmail && singleData.trainingCoordinatorEmail.trim() ? singleData.trainingCoordinatorEmail : null,
+          trainingCoordinatorPhone:
+            singleData.trainingCoordinatorPhone && singleData.trainingCoordinatorPhone.trim() ? singleData.trainingCoordinatorPhone : null,
         };
         await courseRunsApi.enrollLearner(resolvedCourseRunId, {
           mode: "single",
@@ -1067,9 +1072,9 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           departmentName: groupData.departmentName,
           buNumber: groupData.buNumber,
           paymentMode: groupData.paymentMode,
-          trainingCoordinatorId: groupData.trainingCoordinatorId,
-          trainingCoordinatorEmail: groupData.trainingCoordinatorEmail,
-          trainingCoordinatorPhone: groupData.trainingCoordinatorPhone,
+          trainingCoordinatorId: groupData.trainingCoordinatorId && groupData.trainingCoordinatorId.trim() ? groupData.trainingCoordinatorId : null,
+          trainingCoordinatorEmail: groupData.trainingCoordinatorEmail && groupData.trainingCoordinatorEmail.trim() ? groupData.trainingCoordinatorEmail : null,
+          trainingCoordinatorPhone: groupData.trainingCoordinatorPhone && groupData.trainingCoordinatorPhone.trim() ? groupData.trainingCoordinatorPhone : null,
           remarks: groupData.remarks,
           currentDefaultCourseFee: groupData.currentDefaultCourseFee,
           discountId: groupData.discountId,

@@ -658,12 +658,13 @@ class EmailService {
       startDate?: string | null;
       endDate?: string | null;
       venue?: string | null;
+      venueAddress?: string | null;
     },
     baseFee: number,
     additionalCost: number,
     ccEmails?: string[] | null,
     additionalBody?: string | null,
-    attachment?: any | null
+    attachments?: any[] | null
   ): Promise<{ success: boolean; info?: any; error?: string }> {
     const transporter = this.getTransporter();
 
@@ -674,28 +675,41 @@ class EmailService {
       if (!d) return 'TBD';
       try {
         const dt = new Date(d);
+        // Format as: Friday, 19 December 2025
         return new Intl.DateTimeFormat('en-SG', {
-          day: '2-digit',
-          month: '2-digit',
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
           year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
         }).format(dt);
       } catch {
         return String(d);
       }
     };
 
-    const total = baseFee + (additionalCost || 0);
+    const formatTime = (start?: string | null, end?: string | null) => {
+      if (!start || !end) return '0900 to 1700 hrs';
+      try {
+        const startDt = new Date(start);
+        const endDt = new Date(end);
+        const startTime = startDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+        const endTime = endDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+        return `${startTime} to ${endTime} hrs`;
+      } catch {
+        return '0900 to 1700 hrs';
+      }
+    };
 
-    const textBody = `Dear ${name},\n\nYou have been assigned as a trainer for the following course run:\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Course Run Code: ${courseRunDetails.serialNumber || ''}\n- Start Date: ${formatDate(courseRunDetails.startDate)}\n- End Date: ${formatDate(courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}\n\nYour Compensation:\n- Base Fee: ${formatCurrency(baseFee)}\n${additionalCost > 0 ? `- Additional Cost: ${formatCurrency(additionalCost)}\n` : ''}- Total: ${formatCurrency(total)}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Please confirm your availability for this course run.\n\nBest regards,\nPolwel Training Team`;
+    const professionalFees = baseFee + (additionalCost || 0);
+
+    const textBody = `Dear ${name},\n\nPlease refer to the attached documents and details below for the upcoming course:\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Day & Date: ${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}\n- Time: ${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}${courseRunDetails.venueAddress ? '\n  ' + courseRunDetails.venueAddress : ''}\n\nYour Professional Fees: ${formatCurrency(professionalFees)}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Thank you.\n\nRegards,\n\nProfessional Development & Career Services Division\nPOLWEL Co-operative Society Limited\nMain: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares\nStay connected with POLWEL on and view our professional development courses on HRP!`;
 
     const html = `<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Trainer Assignment Notification</title>
+        <title>Training Assignment & Course Confirmation</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
@@ -712,32 +726,33 @@ class EmailService {
           .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
           .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
           .content { padding: 32px 24px; color: #333333; }
-          .greeting { font-size: 16px; color: #1f2937; margin-bottom: 16px; font-weight: 500; }
-          .intro-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-bottom: 24px; }
-          .section-title { font-size: 16px; font-weight: 600; color: #1f2937; margin: 24px 0 16px 0; display: flex; align-items: center; }
-          .info-box { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-          .info-row { display: table; width: 100%; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
-          .info-row:last-child { border-bottom: none; padding-bottom: 0; }
-          .info-row:first-child { padding-top: 0; }
-          .info-label { display: table-cell; font-size: 13px; color: #6b7280; font-weight: 500; width: 35%; vertical-align: top; padding-right: 12px; }
-          .info-value { display: table-cell; font-size: 14px; color: #1f2937; font-weight: 400; vertical-align: top; }
-          .fee-box { background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-          .fee-row { display: table; width: 100%; padding: 8px 0; }
-          .fee-row.total { border-top: 2px solid #4b5563; padding-top: 12px; margin-top: 8px; }
-          .fee-label { display: table-cell; font-size: 14px; color: #374151; font-weight: 500; }
-          .fee-value { display: table-cell; font-size: 16px; color: #374151; font-weight: 600; text-align: right; }
-          .fee-row.total .fee-value { font-size: 20px; color: #4b5563; }
+          .greeting { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
+          .intro-text { font-size: 14px; color: #1f2937; line-height: 1.6; margin-bottom: 24px; }
+          .section-title { font-size: 15px; font-weight: 600; color: #1f2937; margin: 20px 0 12px 0; }
+          .course-table { width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; margin-bottom: 20px; }
+          .course-table td { padding: 12px 16px; border: 1px solid #d1d5db; font-size: 14px; vertical-align: top; }
+          .course-table td:first-child { background-color: #f9fafb; font-weight: 500; color: #374151; width: 30%; }
+          .course-table td:last-child { color: #1f2937; }
+          .venue-address { display: block; margin-top: 4px; font-size: 13px; color: #6b7280; line-height: 1.5; }
+          .fee-box { background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
+          .fee-label { font-size: 14px; color: #374151; font-weight: 500; margin-bottom: 8px; }
+          .fee-value { font-size: 18px; color: #1f2937; font-weight: 600; }
+          .additional-section { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
+          .additional-content { font-size: 14px; color: #1f2937; line-height: 1.6; }
+          .additional-content img { max-width: 100%; height: auto; display: block; margin: 12px 0; border-radius: 4px; }
+          .additional-content p { margin: 8px 0; }
+          .additional-content strong { font-weight: 600; }
+          .additional-content ul, .additional-content ol { margin: 8px 0; padding-left: 24px; }
+          .additional-content li { margin: 4px 0; }
           .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
-          .signature { margin-top: 24px; font-size: 14px; color: #1f2937; }
+          .signature { margin-top: 16px; font-size: 14px; color: #4b5563; line-height: 1.8; }
           .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
           .footer-text { margin: 4px 0; }
           @media only screen and (max-width: 600px) {
             .email-container { padding: 20px 10px; }
             .content { padding: 24px 16px; }
             .header { padding: 24px 16px; }
-            .info-row { display: block; padding: 8px 0; }
-            .info-label { display: block; width: 100%; margin-bottom: 4px; }
-            .info-value { display: block; }
+            .course-table td:first-child { width: 40%; }
           }
         </style>
       </head>
@@ -745,62 +760,58 @@ class EmailService {
         <div class="email-container">
           <div class="email-wrapper">
               <div class="header">
-              <div class="header-icon an1">✉️</div>
-              <div class="header-title">Trainer Assignment Notification</div>
-              <div class="header-subtitle">Your Course Assignment Details</div>
+              <div class="header-icon an1">📧</div>
+              <div class="header-title">Training Assignment & Course Confirmation</div>
+              <div class="header-subtitle">${courseRunDetails.course || 'Training Course'}</div>
             </div>
             <div class="content">
-              <div class="greeting">Hello ${name},</div>
+              <div class="greeting">Hi ${name},</div>
               <div class="intro-text">
-                You have been assigned as a trainer for an upcoming course run. Please find the details below:
+                Please refer to the attached documents and details below for the upcoming course <strong>${courseRunDetails.course || 'N/A'}</strong>:
               </div>
               
-              <div class="section-title">Trainer Information</div>
-              <div class="info-box">
-                <div class="info-row">
-                  <div class="info-label">Trainer Name:</div>
-                  <div class="info-value">${name}</div>
-                </div>
-              </div>
+              <div class="section-title">Course details – The course details are as follows:</div>
+              <table class="course-table">
+                <tr>
+                  <td>Day & Date</td>
+                  <td>${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}</td>
+                </tr>
+                <tr>
+                  <td>Time</td>
+                  <td>${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}</td>
+                </tr>
+                <tr>
+                  <td>Venue</td>
+                  <td>
+                    ${courseRunDetails.venue || 'TBD'}
+                    ${courseRunDetails.venueAddress ? `<span class="venue-address">${courseRunDetails.venueAddress}</span>` : ''}
+                  </td>
+                </tr>
+              </table>
 
-              <div class="section-title">Course Run Details</div>
-              <div class="info-box">
-                <div class="info-row">
-                  <div class="info-label">Course Name:</div>
-                  <div class="info-value">${courseRunDetails.course || 'N/A'}</div>
-                </div>
-                <div class="info-row">
-                  <div class="info-label">Date:</div>
-                  <div class="info-value">${formatDate(courseRunDetails.startDate)} - ${formatDate(courseRunDetails.endDate)}</div>
-                </div>
-                <div class="info-row">
-                  <div class="info-label">Time:</div>
-                  <div class="info-value">9:00 AM - 5:00 PM</div>
-                </div>
-                <div class="info-row">
-                  <div class="info-label">Venue:</div>
-                  <div class="info-value">${courseRunDetails.venue || 'TBD'}</div>
-                </div>
-              </div>
-
-              <div class="section-title">Trainer Fees</div>
               <div class="fee-box">
-                <div class="fee-row">
-                  <div class="fee-label">Quoted Fee:</div>
-                  <div class="fee-value">${formatCurrency(total)}</div>
-                </div>
+                <div class="fee-label">Professional Fees:</div>
+                <div class="fee-value">${formatCurrency(professionalFees)}</div>
               </div>
 
               ${additionalBody ? `
               <div class="section-title">Additional Information</div>
-              <div class="info-box">
-                <div class="info-box-content">${additionalBody.replace(/\n/g, '<br/>')}</div>
+              <div class="additional-section">
+                <div class="additional-content">${additionalBody}</div>
               </div>
               ` : ''}
 
               <div class="closing-text">
-                Best regards,<br/>
-                <strong>POLWEL Training System Team</strong>
+                Thank you.
+              </div>
+              <div class="closing-text" style="margin-top: 12px;">
+                Regards,
+              </div>
+              <div class="signature">
+                <strong>Professional Development & Career Services Division</strong><br/>
+                POLWEL Co-operative Society Limited<br/>
+                Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
+                Stay connected with POLWEL on and view our professional development courses on HRP!
               </div>
             </div>
             <div class="footer">
@@ -823,23 +834,27 @@ class EmailService {
       mailOptions.cc = ccEmails.join(', ');
     }
 
-    // Add attachment if provided
-    if (attachment) {
+    // Add attachments if provided
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
       const fs = require('fs');
       const path = require('path');
       
-      try {
-        // Check if file exists
-        if (fs.existsSync(attachment.path)) {
-          mailOptions.attachments = [{
-            filename: attachment.originalName || attachment.filename,
-            path: attachment.path,
-          }];
-        } else {
-          console.warn(`Attachment file not found: ${attachment.path}`);
+      mailOptions.attachments = [];
+      
+      for (const attachment of attachments) {
+        try {
+          // Check if file exists
+          if (fs.existsSync(attachment.path)) {
+            mailOptions.attachments.push({
+              filename: attachment.originalName || attachment.filename,
+              path: attachment.path,
+            });
+          } else {
+            console.warn(`Attachment file not found: ${attachment.path}`);
+          }
+        } catch (fileErr) {
+          console.warn('Error adding attachment:', (fileErr as any)?.message);
         }
-      } catch (fileErr) {
-        console.warn('Error adding attachment:', (fileErr as any)?.message);
       }
     }
 
@@ -872,9 +887,10 @@ class EmailService {
     startDate?: Date;
     endDate?: Date;
     venueName?: string;
+    venueAddress?: string;
     additionalNotes?: string;
     cc?: string[] | string | null;
-    attachment?: any | null;
+    attachments?: any[] | null;
   }): Promise<boolean> {
     const {
       email,
@@ -885,22 +901,23 @@ class EmailService {
       startDate,
       endDate,
       venueName,
+      venueAddress,
       additionalNotes,
       cc,
-      attachment,
+      attachments,
     } = params;
 
     const transporter = this.getTransporter();
 
-    const formatDate = (date?: Date) => {
+    const formatDateWithDay = (date?: Date) => {
       if (!date) return 'To be confirmed';
       try {
+        // Format as: Friday, 19 December 2025
         return new Intl.DateTimeFormat('en-SG', {
-          day: '2-digit',
-          month: '2-digit',
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
           year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
         }).format(date);
       } catch (error) {
         console.warn('Failed to format date for learner confirmation email:', error);
@@ -908,28 +925,29 @@ class EmailService {
       }
     };
 
-    const formatTime = (date?: Date) => {
-      if (!date) return null;
+    const formatDateForSubject = (date?: Date) => {
+      if (!date) return '';
       try {
+        // Format as: 25 December 2025
         return new Intl.DateTimeFormat('en-SG', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        }).format(date).replace(':', '.');
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }).format(date);
       } catch (error) {
-        return null;
+        return '';
       }
     };
 
-    const getTimeDisplay = () => {
-      const startTime = formatTime(startDate);
-      const endTime = formatTime(endDate);
-      if (startTime && endTime) {
-        const registrationTime = startDate ? formatTime(new Date(startDate.getTime() - 15 * 60000)) : null;
-        const regText = registrationTime ? ` (Registration starts at ${registrationTime})` : '';
-        return `${startTime} to ${endTime}${regText}<br/><span style="font-size: 12px; color: #6b7280;">15 minutes before start time</span>`;
+    const formatTime = (start?: Date, end?: Date) => {
+      if (!start || !end) return '0900 to 1700 hrs';
+      try {
+        const startTime = start.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+        const endTime = end.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+        return `${startTime} to ${endTime} hrs`;
+      } catch (error) {
+        return '0900 to 1700 hrs';
       }
-      return '09.00 to 17.00 (Registration starts at 08.45)<br/><span style="font-size: 12px; color: #6b7280;">15 minutes before start time</span>';
     };
 
     const normalizeCc = () => {
@@ -950,10 +968,11 @@ class EmailService {
 
     const ccRecipients = normalizeCc();
 
+    const subjectDate = formatDateForSubject(startDate);
     const mailOptions: any = {
       from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
       to: email,
-      subject: `POLWEL Course Confirmation – ${courseTitle}`,
+      subject: `Course Confirmation — ${courseTitle}${subjectDate ? ` (${subjectDate})` : ''}`,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
       html: `
         <!DOCTYPE html>
@@ -975,38 +994,37 @@ class EmailService {
                 position: relative;
                 left: 10px;
               }
-              .an1 {
-                vertical-align: middle;
-                place-self: center;
-                position: relative;
-                left: 10px;
-              }
               .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
               .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
               .content { padding: 32px 24px; color: #333333; }
               .greeting { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
               .intro-text { font-size: 14px; color: #1f2937; line-height: 1.6; margin-bottom: 24px; }
-              .course-title { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 16px; }
-              .details-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              .details-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-              .details-table td:first-child { background-color: #f9fafb; font-weight: 500; color: #6b7280; width: 30%; }
-              .details-table td:last-child { color: #1f2937; }
-              .details-table tr:last-child td { border-bottom: none; }
+              .section-title { font-size: 15px; font-weight: 600; color: #1f2937; margin: 20px 0 12px 0; }
+              .course-table { width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; margin-bottom: 20px; }
+              .course-table td { padding: 12px 16px; border: 1px solid #d1d5db; font-size: 14px; vertical-align: top; }
+              .course-table td:first-child { background-color: #f9fafb; font-weight: 500; color: #374151; width: 30%; }
+              .course-table td:last-child { color: #1f2937; }
+              .venue-address { display: block; margin-top: 4px; font-size: 13px; color: #6b7280; line-height: 1.5; }
               .info-box { background-color: #f3f4f6; border-left: 4px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 4px; }
               .info-box-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
               .info-box-content { color: #6b7280; font-size: 13px; line-height: 1.6; }
+              .info-box-content img { max-width: 100%; height: auto; display: block; margin: 12px 0; border-radius: 4px; }
+              .info-box-content p { margin: 8px 0; }
+              .info-box-content strong { font-weight: 600; color: #374151; }
+              .info-box-content ul, .info-box-content ol { margin: 8px 0; padding-left: 24px; }
+              .info-box-content li { margin: 4px 0; }
               .info-box-blue { background-color: #f8fafc; border-left: 4px solid #6b7280; padding: 16px; margin: 20px 0; border-radius: 4px; }
               .info-box-blue-title { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
               .info-box-blue-content { color: #1f2937; font-size: 13px; line-height: 1.6; }
               .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
-              .signature { margin-top: 16px; font-size: 14px; color: #4b5563; font-weight: 500; }
+              .signature { margin-top: 16px; font-size: 14px; color: #4b5563; line-height: 1.8; }
               .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
               .footer-text { margin: 4px 0; }
               @media only screen and (max-width: 600px) {
                 .email-container { padding: 20px 10px; }
                 .content { padding: 24px 16px; }
                 .header { padding: 24px 16px; }
-                .details-table td:first-child { width: 40%; }
+                .course-table td:first-child { width: 40%; }
               }
             </style>
           </head>
@@ -1021,22 +1039,31 @@ class EmailService {
                 <div class="content">
                   <div class="greeting">Dear Participants,</div>
                   <div class="intro-text">
-                    Thank you for registering for <strong>${courseTitle}</strong>.
+                    Please refer to the attached documents and details below for the upcoming course <strong>${courseTitle}</strong>:
                   </div>
-                  <div class="intro-text">The course details are as follows:</div>
                   
-                  <table class="details-table">
+                  <div class="section-title">Course details – The course details are as follows:</div>
+                  <table class="course-table">
                     <tr>
                       <td>Day & Date</td>
-                      <td>${formatDate(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' - ' + formatDate(endDate) : ''}</td>
+                      <td>${formatDateWithDay(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' to ' + formatDateWithDay(endDate) : ''}</td>
                     </tr>
                     <tr>
                       <td>Time</td>
-                      <td>${getTimeDisplay()}</td>
+                      <td>${formatTime(startDate, endDate)}</td>
                     </tr>
                     <tr>
                       <td>Venue</td>
-                      <td>${venueName || 'To be confirmed'}</td>
+                      <td>
+                        ${venueName || 'To be confirmed'}
+                        ${venueAddress ? `<span class="venue-address">${venueAddress}</span>` : ''}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Note</td>
+                      <td>
+                        For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
+                      </td>
                     </tr>
                   </table>
 
@@ -1046,35 +1073,18 @@ class EmailService {
                   </div>
                   ` : ''}
 
-                  <div class="info-box-blue">
-                    <div class="info-box-blue-title">Note</div>
-                    <div class="info-box-blue-content">
-                      For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563; text-decoration: none;">6431 9973</a>.<br/><br/>
-                      In the event that you are unable to attend, we kindly ask that you inform the PDCS team at your earliest opportunity.
-                    </div>
-                  </div>
-
-                  <div class="info-box">
-                    <div class="info-box-title">Withdrawal Policy</div>
-                    <div class="info-box-content">
-                      • <strong>More than 10 working days before the course commencement date:</strong> 0% of the total course fees will be chargeable (i.e. 100% refundable)<br/><br/>
-                      • <strong>Within 10 working days before the course commencement date:</strong> 50% of the total course fees will be chargeable (i.e. 50% refundable)<br/><br/>
-                      • <strong>Absence on the day of the confirmed course:</strong> Will be deemed as no-show in which 100% of the total course fees will be chargeable (i.e. non-refundable).
-                    </div>
-                  </div>
-
-                  <div class="info-box">
-                    <div class="info-box-title">Photos & Videography</div>
-                    <div class="info-box-content">
-                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org/privacy-policy" style="color: #4b5563; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
-                    </div>
-                  </div>
-
                   <div class="closing-text">
-                    We hope that you will find this programme an enriching experience for your personal and professional development!
+                    Thank you.
                   </div>
-                  <div class="closing-text">Thank you.</div>
-                  <div class="signature">Sylrain Binte Saifi</div>
+                  <div class="closing-text" style="margin-top: 12px;">
+                    Regards,
+                  </div>
+                  <div class="signature">
+                    <strong>Professional Development & Career Services Division</strong><br/>
+                    POLWEL Co-operative Society Limited<br/>
+                    Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
+                    Stay connected with POLWEL on and view our professional development courses on HRP!
+                  </div>
                 </div>
                 <div class="footer">
                   <div class="footer-text">© ${new Date().getFullYear()} POLWEL. All rights reserved.</div>
@@ -1086,22 +1096,25 @@ class EmailService {
       `,
     };
 
-    // Add attachment if provided
-    if (attachment) {
+    // Add attachments if provided
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
       const fs = require('fs');
-      
-      try {
-        // Check if file exists
-        if (fs.existsSync(attachment.path)) {
-          mailOptions.attachments = [{
-            filename: attachment.originalName || attachment.filename,
-            path: attachment.path,
-          }];
-        } else {
-          console.warn(`Attachment file not found: ${attachment.path}`);
+      mailOptions.attachments = [];
+
+      for (const attachment of attachments) {
+        try {
+          // Check if file exists
+          if (fs.existsSync(attachment.path)) {
+            mailOptions.attachments.push({
+              filename: attachment.originalName || attachment.filename,
+              path: attachment.path,
+            });
+          } else {
+            console.warn(`Attachment file not found: ${attachment.path}`);
+          }
+        } catch (fileErr) {
+          console.warn('Error adding attachment:', (fileErr as any)?.message);
         }
-      } catch (fileErr) {
-        console.warn('Error adding attachment:', (fileErr as any)?.message);
       }
     }
 
@@ -1111,8 +1124,8 @@ class EmailService {
           console.log('To:', email);
         console.log('Course:', courseTitle);
         console.log('Serial:', serialNumber);
-        console.log('Start:', formatDate(startDate));
-        console.log('End:', formatDate(endDate));
+        console.log('Start:', formatDateWithDay(startDate));
+        console.log('End:', formatDateWithDay(endDate));
         console.log('Venue:', venueName);
         if (ccRecipients) {
           console.log('CC:', ccRecipients);
@@ -1457,12 +1470,19 @@ class EmailService {
                   <div class="closing-text">
                     We look forward to welcoming you to future training programmes!
                   </div>
-                  <div class="closing-text" style="margin-top: 16px;">
-                    For any queries regarding your certificate, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563; text-decoration: none;">6431 9973</a>.
+                  
+                  <div class="closing-text" style="margin-top: 20px;">
+                    Thank you.
                   </div>
                   <div class="closing-text" style="margin-top: 16px;">
-                    Best regards,<br/>
-                    <strong>POLWEL Training System Team</strong>
+                    Regards,
+                  </div>
+                  
+                  <div class="signature">
+                    <strong>Professional Development & Career Services Division</strong><br/>
+                    POLWEL Co-operative Society Limited<br/>
+                    Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
+                    Stay connected with POLWEL on <a href="https://www.facebook.com/polwelsg" style="color: #4b5563; text-decoration: none;">Facebook</a> and view our professional development courses on <a href="https://hrp.gov.sg/" style="color: #4b5563; text-decoration: none;">HRP</a>!
                   </div>
                 </div>
                 <div class="footer">

@@ -469,7 +469,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
           contactNumber: form.contactNumber,
           division: form.division,
           departmentName: form.departmentName,
-          trainingCoordinatorId: form.trainingCoordinatorId,
+          trainingCoordinatorId: form.trainingCoordinatorId && form.trainingCoordinatorId.trim() ? form.trainingCoordinatorId : null,
         },
         enrollmentData: {
           paymentMode: form.paymentMode,

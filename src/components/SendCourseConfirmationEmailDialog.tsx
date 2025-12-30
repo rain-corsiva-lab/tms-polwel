@@ -10,16 +10,15 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import "../styles/quill-custom.css";
 
-interface SendTrainerEmailDialogProps {
+interface SendCourseConfirmationEmailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   courseRunId: string;
-  trainers: Array<{
+  learners: Array<{
     id: string;
     name: string;
     email: string;
-    baseFee: number;
-    additionalCost: number;
+    organizationName: string;
   }>;
   courseRunDetails: {
     serialNumber: string;
@@ -31,7 +30,14 @@ interface SendTrainerEmailDialogProps {
   onSuccess: () => void;
 }
 
-export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ open, onOpenChange, courseRunId, trainers, courseRunDetails, onSuccess }) => {
+export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationEmailDialogProps> = ({
+  open,
+  onOpenChange,
+  courseRunId,
+  learners,
+  courseRunDetails,
+  onSuccess,
+}) => {
   const [ccEmails, setCcEmails] = useState("");
   const [additionalBody, setAdditionalBody] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
@@ -103,17 +109,17 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
         }
       }
 
-      const response = await courseRunsApi.sendTrainerAssignmentEmail(courseRunId, {
+      const response = await courseRunsApi.sendCourseConfirmationEmail(courseRunId, {
         ...(ccList.length ? { ccEmails: ccList } : {}),
         additionalBody: additionalBody.trim() ? additionalBody.trim() : undefined,
         ...(uploadedAttachmentIds.length ? { attachmentIds: uploadedAttachmentIds } : {}),
       });
 
       if (!response?.success) {
-        throw new Error(response?.message || "Failed to send trainer assignment emails");
+        throw new Error(response?.message || "Failed to send course confirmation emails");
       }
 
-      toast.success(response?.message || "Trainer assignment emails sent successfully!");
+      toast.success(response?.message || "Course confirmation emails sent successfully!");
       onSuccess();
       onOpenChange(false);
 
@@ -123,17 +129,11 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
       setAttachmentFiles([]);
     } catch (error: any) {
       console.error("Error sending emails:", error);
-      toast.error(error?.message || "Failed to send trainer assignment emails");
+      toast.error(error?.message || "Failed to send course confirmation emails");
     } finally {
       setSending(false);
     }
   };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(amount);
-  };
-
-  const totalFees = trainers.reduce((sum, t) => sum + t.baseFee + t.additionalCost, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,7 +141,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Send Trainer Assignment Email
+            Send Course Confirmation Email
           </DialogTitle>
         </DialogHeader>
 
@@ -169,20 +169,17 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
                 <span className="font-medium">{courseRunDetails.venue}</span>
               </div>
               <div className="mt-3 pt-3 border-t">
-                <div className="font-semibold mb-2">Trainers ({trainers.length}):</div>
-                <div className="space-y-1">
-                  {trainers.map((t) => (
-                    <div key={t.id} className="flex justify-between items-center text-xs">
-                      <span>{t.name}</span>
-                      <span className="text-gray-600">
-                        Base: {formatCurrency(t.baseFee)} + Additional: {formatCurrency(t.additionalCost)} = {formatCurrency(t.baseFee + t.additionalCost)}
-                      </span>
+                <div className="font-semibold mb-2">Participants ({learners.length}):</div>
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {learners.map((learner) => (
+                    <div key={learner.id} className="flex justify-between items-center text-xs py-1 border-b last:border-b-0">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{learner.name}</span>
+                        <span className="text-gray-500">{learner.email}</span>
+                      </div>
+                      <span className="text-gray-600 text-right">{learner.organizationName}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between items-center font-semibold pt-2 border-t">
-                    <span>Total:</span>
-                    <span>{formatCurrency(totalFees)}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -209,7 +206,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
                 theme="snow"
                 value={additionalBody}
                 onChange={setAdditionalBody}
-                placeholder="Add any additional notes or instructions for the trainers..."
+                placeholder="Add any additional notes or instructions for the participants..."
                 modules={{
                   toolbar: [
                     [{ header: [1, 2, 3, false] }],
@@ -282,4 +279,4 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
   );
 };
 
-export default SendTrainerEmailDialog;
+export default SendCourseConfirmationEmailDialog;
