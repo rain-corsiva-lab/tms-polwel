@@ -738,12 +738,18 @@ class EmailService {
           .fee-label { font-size: 14px; color: #374151; font-weight: 500; margin-bottom: 8px; }
           .fee-value { font-size: 18px; color: #1f2937; font-weight: 600; }
           .additional-section { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
-          .additional-content { font-size: 14px; color: #1f2937; line-height: 1.6; }
-          .additional-content img { max-width: 100%; height: auto; display: block; margin: 12px 0; border-radius: 4px; }
-          .additional-content p { margin: 8px 0; }
-          .additional-content strong { font-weight: 600; }
+          .additional-content { font-size: 14px; color: #1f2937; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word; }
+          .additional-content img { max-width: 100% !important; height: auto !important; display: block; margin: 12px 0; border-radius: 4px; border: 1px solid #e5e7eb; }
+          .additional-content p { margin: 8px 0; line-height: 1.6; }
+          .additional-content strong { font-weight: 600; color: #1f2937; }
+          .additional-content em { font-style: italic; }
+          .additional-content u { text-decoration: underline; }
           .additional-content ul, .additional-content ol { margin: 8px 0; padding-left: 24px; }
-          .additional-content li { margin: 4px 0; }
+          .additional-content li { margin: 4px 0; line-height: 1.5; }
+          .additional-content a { color: #3b82f6; text-decoration: underline; }
+          .additional-content blockquote { border-left: 4px solid #d1d5db; padding-left: 16px; margin: 12px 0; color: #6b7280; font-style: italic; }
+          .additional-content pre { background-color: #f3f4f6; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px; }
+          .additional-content code { background-color: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 13px; }
           .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
           .signature { margin-top: 16px; font-size: 14px; color: #4b5563; line-height: 1.8; }
           .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
@@ -1007,12 +1013,18 @@ class EmailService {
               .venue-address { display: block; margin-top: 4px; font-size: 13px; color: #6b7280; line-height: 1.5; }
               .info-box { background-color: #f3f4f6; border-left: 4px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 4px; }
               .info-box-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
-              .info-box-content { color: #6b7280; font-size: 13px; line-height: 1.6; }
-              .info-box-content img { max-width: 100%; height: auto; display: block; margin: 12px 0; border-radius: 4px; }
-              .info-box-content p { margin: 8px 0; }
+              .info-box-content { color: #6b7280; font-size: 13px; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word; }
+              .info-box-content img { max-width: 100% !important; height: auto !important; display: block; margin: 12px 0; border-radius: 4px; border: 1px solid #e5e7eb; }
+              .info-box-content p { margin: 8px 0; line-height: 1.6; }
               .info-box-content strong { font-weight: 600; color: #374151; }
+              .info-box-content em { font-style: italic; }
+              .info-box-content u { text-decoration: underline; }
               .info-box-content ul, .info-box-content ol { margin: 8px 0; padding-left: 24px; }
-              .info-box-content li { margin: 4px 0; }
+              .info-box-content li { margin: 4px 0; line-height: 1.5; }
+              .info-box-content a { color: #3b82f6; text-decoration: underline; }
+              .info-box-content blockquote { border-left: 4px solid #d1d5db; padding-left: 16px; margin: 12px 0; color: #6b7280; font-style: italic; }
+              .info-box-content pre { background-color: #f9fafb; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px; }
+              .info-box-content code { background-color: #f9fafb; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; }
               .info-box-blue { background-color: #f8fafc; border-left: 4px solid #6b7280; padding: 16px; margin: 20px 0; border-radius: 4px; }
               .info-box-blue-title { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
               .info-box-blue-content { color: #1f2937; font-size: 13px; line-height: 1.6; }

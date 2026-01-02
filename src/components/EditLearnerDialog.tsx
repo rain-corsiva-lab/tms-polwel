@@ -365,13 +365,14 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
   };
 
   const handleCoordinatorChange = (coordId: string) => {
-    // Handle "Not Applicable" option
-    if (coordId === "NOT_APPLICABLE") {
+    // Handle "Not Applicable" option - set to null explicitly
+    if (coordId === "NOT_APPLICABLE" || !coordId) {
+      console.log("EditLearnerDialog: Clearing coordinator - setting to null");
       setForm((f) => ({
         ...f,
-        trainingCoordinatorId: "",
-        trainingCoordinatorEmail: "",
-        trainingCoordinatorPhone: "",
+        trainingCoordinatorId: null,
+        trainingCoordinatorEmail: null,
+        trainingCoordinatorPhone: null,
       }));
       return;
     }
@@ -461,6 +462,17 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
 
     setSaving(true);
     try {
+      // Explicitly determine coordinator value - null means remove coordinator
+      const coordinatorValue =
+        form.trainingCoordinatorId &&
+        typeof form.trainingCoordinatorId === "string" &&
+        form.trainingCoordinatorId.trim() &&
+        form.trainingCoordinatorId !== "NOT_APPLICABLE"
+          ? form.trainingCoordinatorId
+          : null;
+
+      console.log("EditLearnerDialog save: coordinator value =", coordinatorValue);
+
       await courseRunsApi.updateEnrollment(courseRunId, learner.id, {
         learnerData: {
           fullName: form.fullName,
@@ -469,7 +481,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
           contactNumber: form.contactNumber,
           division: form.division,
           departmentName: form.departmentName,
-          trainingCoordinatorId: form.trainingCoordinatorId && form.trainingCoordinatorId.trim() ? form.trainingCoordinatorId : null,
+          trainingCoordinatorId: coordinatorValue, // Always send this field
         },
         enrollmentData: {
           paymentMode: form.paymentMode,
@@ -607,7 +619,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
                     <div className="space-y-2">
                       <Label>Coordinator Name</Label>
                       <SearchableSelect
-                        value={form.trainingCoordinatorId}
+                        value={form.trainingCoordinatorId ?? "NOT_APPLICABLE"}
                         onValueChange={handleCoordinatorChange}
                         options={coordinatorOptions}
                         placeholder="Select coordinator"
@@ -616,11 +628,11 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
                     </div>
                     <div className="space-y-2">
                       <Label>Coordinator Email</Label>
-                      <Input value={form.trainingCoordinatorEmail} disabled className="bg-gray-50" />
+                      <Input value={form.trainingCoordinatorEmail || ""} disabled className="bg-gray-50" />
                     </div>
                     <div className="space-y-2">
                       <Label>Coordinator Phone</Label>
-                      <Input value={form.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+                      <Input value={form.trainingCoordinatorPhone || ""} disabled className="bg-gray-50" />
                     </div>
                   </div>
                 </div>

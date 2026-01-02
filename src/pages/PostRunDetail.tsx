@@ -83,6 +83,7 @@ interface Learner {
   status?: string;
   attendanceStatus?: string;
   enrollmentStatus?: string;
+  waiverStatus?: string;
 }
 
 interface BillingEntry {
@@ -262,6 +263,7 @@ const PostRunDetail = () => {
             const status = en?.status ?? l?.status ?? undefined;
             const attendanceStatus = en?.attendanceStatus ?? undefined;
             const enrollmentStatus = en?.enrollmentStatus ?? undefined;
+            const waiverStatus = en?.waiverStatus ?? undefined;
 
             return {
               id: l.id, // use learner id consistently for selection
@@ -274,6 +276,7 @@ const PostRunDetail = () => {
               status,
               attendanceStatus,
               enrollmentStatus,
+              waiverStatus,
             } as Learner;
           })
           .filter(Boolean) as Learner[];
@@ -731,19 +734,20 @@ const PostRunDetail = () => {
                                     .map((learner) => {
                                       const isSelected = entry.learnerIds.includes(learner.id);
                                       // Disable learners who are:
-                                      // 1. Absent (attendanceStatus === "ABSENT")
+                                      // 1. Absent with APPROVED waiver (attendanceStatus === "ABSENT" AND waiverStatus === "APPROVED")
                                       // 2. Withdrawn (enrollmentStatus === "WITHDRAWN")
                                       // 3. Self-sponsored payment (paymentMode === "SELF_SPONSORED")
                                       // 4. Transition Dollars payment (paymentMode === "TRANSITION_DOLLARS")
                                       const isAbsent = learner.attendanceStatus === "ABSENT";
+                                      const isAbsentWithApprovedWaiver = isAbsent && learner.waiverStatus === "APPROVED";
                                       const isWithdrawn = learner.enrollmentStatus === "WITHDRAWN";
                                       const isSelfPayment = learner.paymentMode === "SELF_SPONSORED";
                                       const isTransitionDollar = learner.paymentMode === "TRANSITION_DOLLARS";
-                                      const isDisabled = isAbsent || isWithdrawn || isSelfPayment || isTransitionDollar;
+                                      const isDisabled = isAbsentWithApprovedWaiver || isWithdrawn || isSelfPayment || isTransitionDollar;
 
                                       // Determine reason for being disabled
                                       let disabledReason = "";
-                                      if (isAbsent) disabledReason = "Absent";
+                                      if (isAbsentWithApprovedWaiver) disabledReason = "Absent (Waiver Approved)";
                                       else if (isWithdrawn) disabledReason = "Withdrawn";
                                       else if (isSelfPayment || isTransitionDollar) disabledReason = "Already Paid";
 

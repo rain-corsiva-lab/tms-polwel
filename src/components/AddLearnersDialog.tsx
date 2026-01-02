@@ -520,21 +520,22 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
   // Handle coordinator change
   const handleCoordinatorChange = (coordinatorId: string) => {
-    // Handle "Not Applicable" option
-    if (coordinatorId === "NOT_APPLICABLE") {
+    // Handle "Not Applicable" option - set to null explicitly
+    if (coordinatorId === "NOT_APPLICABLE" || !coordinatorId) {
+      console.log("Clearing coordinator - setting to null");
       if (mode === "single") {
         setSingleData((prev) => ({
           ...prev,
-          trainingCoordinatorId: "",
-          trainingCoordinatorEmail: "",
-          trainingCoordinatorPhone: "",
+          trainingCoordinatorId: null,
+          trainingCoordinatorEmail: null,
+          trainingCoordinatorPhone: null,
         }));
       } else {
         setGroupData((prev) => ({
           ...prev,
-          trainingCoordinatorId: "",
-          trainingCoordinatorEmail: "",
-          trainingCoordinatorPhone: "",
+          trainingCoordinatorId: null,
+          trainingCoordinatorEmail: null,
+          trainingCoordinatorPhone: null,
         }));
       }
       return;
@@ -562,6 +563,12 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
   const handleDownloadImportTemplate = async () => {
     try {
+      // Fetch all organizations first
+      const orgsResponse = await clientOrganizationsApi.getAll({ limit: 1000 });
+      const organizations = orgsResponse.organizations || [];
+
+      console.log("Fetched organizations for import template:", organizations.length);
+
       const workbook = new ExcelJS.Workbook();
 
       // Create Participants sheet with current columns
@@ -597,6 +604,19 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         };
       }
 
+      // Add data validation dropdown for Client Organisation Name column (column F, index 5)
+      // Reference the organization names from the "Name of Organisation" sheet
+      const orgCount = organizations.length;
+      if (orgCount > 0) {
+        for (let row = 2; row <= 1000; row++) {
+          const cell = learnersSheet.getCell(`F${row}`);
+          (cell.dataValidation as any) = {
+            type: "list",
+            formulae: [`='Name of Organisation'!$A$2:$A$${orgCount + 1}`],
+          };
+        }
+      }
+
       // Create Payment Method reference sheet
       const refSheet = workbook.addWorksheet("Payment Method");
       refSheet.addRow(["Payment Method", "Description", "Code"]);
@@ -615,6 +635,22 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       refSheet.columns[0].width = 35;
       refSheet.columns[1].width = 40;
       refSheet.columns[2].width = 20;
+
+      // Create Name of Organisation reference sheet
+      const orgSheet = workbook.addWorksheet("Name of Organisation");
+      orgSheet.addRow(["Organization Name", "Organization Type"]);
+      organizations.forEach((org) => {
+        orgSheet.addRow([org.name, org.organizationType || ""]);
+      });
+
+      // Style organization sheet header
+      orgSheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      orgSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF366092" } };
+      orgSheet.getRow(1).alignment = { horizontal: "center", vertical: "middle" };
+
+      // Set column widths for organization sheet
+      orgSheet.columns[0].width = 40;
+      orgSheet.columns[1].width = 25;
 
       // Generate file and download
       const buffer = await workbook.xlsx.writeBuffer();
@@ -1029,12 +1065,29 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           ...singleData,
           discountId: singleData.discountId === "none" ? null : singleData.discountId,
           selectedLearnerId: singleData.selectedLearnerId === "__none__" ? null : singleData.selectedLearnerId,
-          trainingCoordinatorId: singleData.trainingCoordinatorId && singleData.trainingCoordinatorId.trim() ? singleData.trainingCoordinatorId : null,
+          trainingCoordinatorId:
+            singleData.trainingCoordinatorId &&
+            typeof singleData.trainingCoordinatorId === "string" &&
+            singleData.trainingCoordinatorId.trim() &&
+            singleData.trainingCoordinatorId !== "NOT_APPLICABLE"
+              ? singleData.trainingCoordinatorId
+              : null,
           trainingCoordinatorEmail:
-            singleData.trainingCoordinatorEmail && singleData.trainingCoordinatorEmail.trim() ? singleData.trainingCoordinatorEmail : null,
+            singleData.trainingCoordinatorEmail && typeof singleData.trainingCoordinatorEmail === "string" && singleData.trainingCoordinatorEmail.trim()
+              ? singleData.trainingCoordinatorEmail
+              : null,
           trainingCoordinatorPhone:
-            singleData.trainingCoordinatorPhone && singleData.trainingCoordinatorPhone.trim() ? singleData.trainingCoordinatorPhone : null,
+            singleData.trainingCoordinatorPhone && typeof singleData.trainingCoordinatorPhone === "string" && singleData.trainingCoordinatorPhone.trim()
+              ? singleData.trainingCoordinatorPhone
+              : null,
         };
+
+        console.log("AddLearnersDialog save (single):", {
+          trainingCoordinatorId: cleanSingleData.trainingCoordinatorId,
+          trainingCoordinatorEmail: cleanSingleData.trainingCoordinatorEmail,
+          trainingCoordinatorPhone: cleanSingleData.trainingCoordinatorPhone,
+        });
+
         await courseRunsApi.enrollLearner(resolvedCourseRunId, {
           mode: "single",
           data: cleanSingleData,
@@ -1072,9 +1125,21 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           departmentName: groupData.departmentName,
           buNumber: groupData.buNumber,
           paymentMode: groupData.paymentMode,
-          trainingCoordinatorId: groupData.trainingCoordinatorId && groupData.trainingCoordinatorId.trim() ? groupData.trainingCoordinatorId : null,
-          trainingCoordinatorEmail: groupData.trainingCoordinatorEmail && groupData.trainingCoordinatorEmail.trim() ? groupData.trainingCoordinatorEmail : null,
-          trainingCoordinatorPhone: groupData.trainingCoordinatorPhone && groupData.trainingCoordinatorPhone.trim() ? groupData.trainingCoordinatorPhone : null,
+          trainingCoordinatorId:
+            groupData.trainingCoordinatorId &&
+            typeof groupData.trainingCoordinatorId === "string" &&
+            groupData.trainingCoordinatorId.trim() &&
+            groupData.trainingCoordinatorId !== "NOT_APPLICABLE"
+              ? groupData.trainingCoordinatorId
+              : null,
+          trainingCoordinatorEmail:
+            groupData.trainingCoordinatorEmail && typeof groupData.trainingCoordinatorEmail === "string" && groupData.trainingCoordinatorEmail.trim()
+              ? groupData.trainingCoordinatorEmail
+              : null,
+          trainingCoordinatorPhone:
+            groupData.trainingCoordinatorPhone && typeof groupData.trainingCoordinatorPhone === "string" && groupData.trainingCoordinatorPhone.trim()
+              ? groupData.trainingCoordinatorPhone
+              : null,
           remarks: groupData.remarks,
           currentDefaultCourseFee: groupData.currentDefaultCourseFee,
           discountId: groupData.discountId,
@@ -1519,7 +1584,7 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
               <div className="space-y-2">
                 <Label>Coordinator Name</Label>
                 <SearchableSelect
-                  value={data.trainingCoordinatorId}
+                  value={data.trainingCoordinatorId ?? "NOT_APPLICABLE"}
                   onValueChange={onCoordinatorChange}
                   options={coordinatorOptions}
                   placeholder="Select coordinator"
@@ -1528,11 +1593,11 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
               </div>
               <div className="space-y-2">
                 <Label>Coordinator Email</Label>
-                <Input value={data.trainingCoordinatorEmail} disabled className="bg-gray-50" />
+                <Input value={data.trainingCoordinatorEmail || ""} disabled className="bg-gray-50" />
               </div>
               <div className="space-y-2">
                 <Label>Coordinator Phone</Label>
-                <Input value={data.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+                <Input value={data.trainingCoordinatorPhone || ""} disabled className="bg-gray-50" />
               </div>
             </div>
           </div>
@@ -1747,7 +1812,7 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
           <div className="space-y-2">
             <Label>Coordinator Name</Label>
             <SearchableSelect
-              value={data.trainingCoordinatorId}
+              value={data.trainingCoordinatorId ?? "NOT_APPLICABLE"}
               onValueChange={onCoordinatorChange}
               options={coordinatorOptions}
               placeholder="Select coordinator"
@@ -1756,11 +1821,11 @@ const GroupRegistrationForm: React.FC<GroupRegistrationFormProps> = ({
           </div>
           <div className="space-y-2">
             <Label>Coordinator Email</Label>
-            <Input value={data.trainingCoordinatorEmail} disabled className="bg-gray-50" />
+            <Input value={data.trainingCoordinatorEmail || ""} disabled className="bg-gray-50" />
           </div>
           <div className="space-y-2">
             <Label>Coordinator Phone</Label>
-            <Input value={data.trainingCoordinatorPhone} disabled className="bg-gray-50" />
+            <Input value={data.trainingCoordinatorPhone || ""} disabled className="bg-gray-50" />
           </div>
         </CardContent>
       </Card>

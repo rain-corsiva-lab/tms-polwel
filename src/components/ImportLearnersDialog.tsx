@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { courseRunsApi } from "@/lib/api";
+import { courseRunsApi, clientOrganizationsApi } from "@/lib/api";
 import { Download, Loader2, UploadCloud } from "lucide-react";
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
@@ -91,6 +91,12 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
 
   const handleDownloadTemplate = async () => {
     try {
+      // Fetch all organizations first
+      const orgsResponse = await clientOrganizationsApi.getAll({ limit: 1000 });
+      const organizations = orgsResponse.organizations || [];
+
+      console.log("Fetched organizations for import template:", organizations.length);
+
       const workbook = new ExcelJS.Workbook();
 
       // Create Participants sheet with current columns
@@ -126,6 +132,19 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
         };
       }
 
+      // Add data validation dropdown for Client Organisation Name column (column F, index 5)
+      // Reference the organization names from the "Name of Organisation" sheet
+      const orgCount = organizations.length;
+      if (orgCount > 0) {
+        for (let row = 2; row <= 1000; row++) {
+          const cell = learnersSheet.getCell(`F${row}`);
+          (cell.dataValidation as any) = {
+            type: "list",
+            formulae: [`='Name of Organisation'!$A$2:$A$${orgCount + 1}`],
+          };
+        }
+      }
+
       // Create Payment Method reference sheet
       const refSheet = workbook.addWorksheet("Payment Method");
       refSheet.addRow(["Payment Method", "Description", "Code"]);
@@ -144,6 +163,22 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       refSheet.columns[0].width = 35;
       refSheet.columns[1].width = 40;
       refSheet.columns[2].width = 20;
+
+      // Create Name of Organisation reference sheet
+      const orgSheet = workbook.addWorksheet("Name of Organisation");
+      orgSheet.addRow(["Organization Name", "Organization Type"]);
+      organizations.forEach((org) => {
+        orgSheet.addRow([org.name, org.organizationType || ""]);
+      });
+
+      // Style organization sheet header
+      orgSheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      orgSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF366092" } };
+      orgSheet.getRow(1).alignment = { horizontal: "center", vertical: "middle" };
+
+      // Set column widths for organization sheet
+      orgSheet.columns[0].width = 40;
+      orgSheet.columns[1].width = 25;
 
       // Generate file and download
       const buffer = await workbook.xlsx.writeBuffer();

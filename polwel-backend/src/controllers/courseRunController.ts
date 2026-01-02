@@ -1588,6 +1588,12 @@ export const courseRunController = {
         }
 
         // Create new learner
+        const coordinatorId = data.trainingCoordinatorId && typeof data.trainingCoordinatorId === 'string' && data.trainingCoordinatorId.trim() 
+          ? data.trainingCoordinatorId 
+          : null;
+        
+        console.log(`[enrollLearner] Creating learner with trainingCoordinatorId: ${coordinatorId === null ? 'NULL' : coordinatorId}`);
+        
         learner = await prisma.learner.create({
           data: {
             fullname: data.fullName,
@@ -1596,9 +1602,11 @@ export const courseRunController = {
             contact: data.contactNumber,
             clientOrganizationId: data.division,
             departmentName: data.departmentName,
-            trainingCoordinatorId: data.trainingCoordinatorId && data.trainingCoordinatorId.trim() ? data.trainingCoordinatorId : null,
+            trainingCoordinatorId: coordinatorId,
           },
         });
+        
+        console.log(`[enrollLearner] Learner created with ID: ${learner.id}`);
       }
 
       if (!learner) {
@@ -1713,6 +1721,12 @@ export const courseRunController = {
           }
 
           // Create new learner
+          const coordinatorId = data.trainingCoordinatorId && typeof data.trainingCoordinatorId === 'string' && data.trainingCoordinatorId.trim() 
+            ? data.trainingCoordinatorId 
+            : null;
+          
+          console.log(`[enrollLearners] Creating learner ${learnerData.email} with trainingCoordinatorId: ${coordinatorId === null ? 'NULL' : coordinatorId}`);
+          
           learner = await prisma.learner.create({
             data: {
               fullname: learnerData.fullName,
@@ -1721,7 +1735,7 @@ export const courseRunController = {
               contact: learnerData.contactNumber,
               clientOrganizationId: data.division,
               departmentName: data.departmentName,
-              trainingCoordinatorId: data.trainingCoordinatorId && data.trainingCoordinatorId.trim() ? data.trainingCoordinatorId : null,
+              trainingCoordinatorId: coordinatorId,
             },
           });
           createdLearners.push(learner);
@@ -2274,20 +2288,32 @@ export const courseRunController = {
 
       // Update learner (partial)
       if (learnerData && Object.keys(learnerData).length) {
+        const updateData: any = {
+          fullname: learnerData.fullName ?? existing.learner.fullname,
+          designation: learnerData.designation ?? existing.learner.designation,
+          email: learnerData.email ?? existing.learner.email,
+          contact: learnerData.contactNumber ?? existing.learner.contact,
+          departmentName: learnerData.departmentName ?? existing.learner.departmentName,
+          clientOrganizationId: learnerData.division || existing.learner.clientOrganizationId,
+        };
+        
+        // Handle training coordinator explicitly - if it's in the payload (even as null), update it
+        if ('trainingCoordinatorId' in learnerData) {
+          const coordinatorId = learnerData.trainingCoordinatorId && typeof learnerData.trainingCoordinatorId === 'string' && learnerData.trainingCoordinatorId.trim() 
+            ? learnerData.trainingCoordinatorId 
+            : null;
+          updateData.trainingCoordinatorId = coordinatorId;
+          console.log(`[updateEnrollment] Setting trainingCoordinatorId to: ${coordinatorId === null ? 'NULL' : coordinatorId}`);
+        }
+        
+        console.log(`[updateEnrollment] Updating learner ${learnerId} with data:`, JSON.stringify(updateData, null, 2));
+        
         await prisma.learner.update({
           where: { id: learnerId },
-          data: {
-            fullname: learnerData.fullName ?? existing.learner.fullname,
-            designation: learnerData.designation ?? existing.learner.designation,
-            email: learnerData.email ?? existing.learner.email,
-            contact: learnerData.contactNumber ?? existing.learner.contact,
-            departmentName: learnerData.departmentName ?? existing.learner.departmentName,
-            clientOrganizationId: learnerData.division || existing.learner.clientOrganizationId,
-            trainingCoordinatorId: learnerData.trainingCoordinatorId !== undefined 
-              ? (learnerData.trainingCoordinatorId && learnerData.trainingCoordinatorId.trim() ? learnerData.trainingCoordinatorId : null) 
-              : existing.learner.trainingCoordinatorId,
-          },
+          data: updateData,
         });
+        
+        console.log(`[updateEnrollment] Learner ${learnerId} updated successfully`);
       }
 
       // Update enrollment (partial)
