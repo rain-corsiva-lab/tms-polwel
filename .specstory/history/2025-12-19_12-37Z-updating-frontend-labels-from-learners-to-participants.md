@@ -17814,7 +17814,7 @@ All changes are **carefully implemented** following best practices, with **no br
 
 ---
 
-_**User (2026-01-02 07:36Z)**_
+_**User (2026-01-02 07:41Z)**_
 
 on the not applicable still not working , the data is come from learners table , theres trainingCoordinatorId there, so we need to remove it iif it not applicable , plesae fix it correctly
 
@@ -17858,6 +17858,394 @@ Read [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/cou
 
 ---
 
+<tool-use data-tool-type="unknown" data-tool-name="copilot_replaceString">
+<details>
+<summary>Tool use: **copilot_replaceString**</summary>
+
+Additional data:
+
+```json
+{
+  "vscodeToolId": "copilot_replaceString",
+  "isHidden": true
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Replace String in File\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "&#96;&#96;&#96;typescript\nconst coordinatorId = learnerData.trainingCoordinatorId &amp;&amp; typeof learnerData.trainingCoordinatorId === 'string' &amp;&amp; learnerData.trainingCoordinatorId.trim() \n            ? learnerData.trainingCoordinatorId \n            : null;\n          updateData.trainingCoordinatorId = coordinatorId;\n          console.log(&#96;[updateEnrollment] Setting trainingCoordinatorId to: ${coordinatorId === null ? 'NULL' : coordinatorId}&#96;);\n        }\n        \n        console.log(&#96;[updateEnrollment] Updating learner ${learnerId} with data:&#96;, JSON.stringify(updateData, null, 2));\n        \n        await prisma.learner.update({\n          where: { id: learnerId },\n          data: updateData,\n        });\n        \n        console.log(&#96;[updateEnrollment] Learner ${learnerId} updated successfully&#96;\n&#96;&#96;&#96;\n\n",
+  "textEditContent": "const coordinatorId = learnerData.trainingCoordinatorId &amp;&amp; typeof learnerData.trainingCoordinatorId === 'string' &amp;&amp; learnerData.trainingCoordinatorId.trim() \n            ? learnerData.trainingCoordinatorId \n            : null;\n          updateData.trainingCoordinatorId = coordinatorId;\n          console.log(&#96;[updateEnrollment] Setting trainingCoordinatorId to: ${coordinatorId === null ? 'NULL' : coordinatorId}&#96;);\n        }\n        \n        console.log(&#96;[updateEnrollment] Updating learner ${learnerId} with data:&#96;, JSON.stringify(updateData, null, 2));\n        \n        await prisma.learner.update({\n          where: { id: learnerId },\n          data: updateData,\n        });\n        \n        console.log(&#96;[updateEnrollment] Learner ${learnerId} updated successfully&#96;",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="copilot_readFile">
+<details>
+<summary>Tool use: **copilot_readFile** • Reading [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/courseRunController.ts#1590-1590), lines 1590 to 1610</summary>
+
+
+Read [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/courseRunController.ts#1590-1590), lines 1590 to 1610
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="copilot_replaceString">
+<details>
+<summary>Tool use: **copilot_replaceString**</summary>
+
+Additional data:
+
+```json
+{
+  "vscodeToolId": "copilot_replaceString",
+  "isHidden": true
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Replace String in File\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "&#96;&#96;&#96;typescript\nconst coordinatorId = data.trainingCoordinatorId &amp;&amp; typeof data.trainingCoordinatorId === 'string' &amp;&amp; data.trainingCoordinatorId.trim() \n          ? data.trainingCoordinatorId \n          : null;\n        \n        console.log(&#96;[enrollLearner] Creating learner with trainingCoordinatorId: ${coordinatorId === null ? 'NULL' : coordinatorId}&#96;);\n        \n        learner = await prisma.learner.create({\n          data: {\n            fullname: data.fullName,\n            designation: data.designation,\n            email: data.email,\n            contact: data.contactNumber,\n            clientOrganizationId: data.division,\n            departmentName: data.departmentName,\n            trainingCoordinatorId: coordinatorId,\n          },\n        });\n        \n        console.log(&#96;[enrollLearner] Learner created with ID: ${learner.id}&#96;\n&#96;&#96;&#96;\n\n",
+  "textEditContent": "const coordinatorId = data.trainingCoordinatorId &amp;&amp; typeof data.trainingCoordinatorId === 'string' &amp;&amp; data.trainingCoordinatorId.trim() \n          ? data.trainingCoordinatorId \n          : null;\n        \n        console.log(&#96;[enrollLearner] Creating learner with trainingCoordinatorId: ${coordinatorId === null ? 'NULL' : coordinatorId}&#96;);\n        \n        learner = await prisma.learner.create({\n          data: {\n            fullname: data.fullName,\n            designation: data.designation,\n            email: data.email,\n            contact: data.contactNumber,\n            clientOrganizationId: data.division,\n            departmentName: data.departmentName,\n            trainingCoordinatorId: coordinatorId,\n          },\n        });\n        \n        console.log(&#96;[enrollLearner] Learner created with ID: ${learner.id}&#96;",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="copilot_findTextInFiles">
+<details>
+<summary>Tool use: **copilot_findTextInFiles** • Searching for text `async enrollLearners` (`**/polwel-backend/src/controllers/courseRunController.ts`)</summary>
+
+
+Searched for text `async enrollLearners` (`**/polwel-backend/src/controllers/courseRunController.ts`), 1 result
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="copilot_readFile">
+<details>
+<summary>Tool use: **copilot_readFile** • Reading [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/courseRunController.ts#1665-1665), lines 1665 to 1750</summary>
+
+
+Read [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/courseRunController.ts#1665-1665), lines 1665 to 1750
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="copilot_replaceString">
+<details>
+<summary>Tool use: **copilot_replaceString**</summary>
+
+Additional data:
+
+```json
+{
+  "vscodeToolId": "copilot_replaceString",
+  "isHidden": true
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Replace String in File\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "&#96;&#96;&#96;typescript\nconst coordinatorId = data.trainingCoordinatorId &amp;&amp; typeof data.trainingCoordinatorId === 'string' &amp;&amp; data.trainingCoordinatorId.trim() \n            ? data.trainingCoordinatorId \n            : null;\n          \n          console.log(&#96;[enrollLearners] Creating learner ${learnerData.email} with trainingCoordinatorId: ${coordinatorId === null ? 'NULL' : coordinatorId}&#96;);\n          \n          learner = await prisma.learner.create({\n            data: {\n              fullname: learnerData.fullName,\n              designation: learnerData.designation,\n              email: learnerData.email,\n              contact: learnerData.contactNumber,\n              clientOrganizationId: data.division,\n              departmentName: data.departmentName,\n              trainingCoordinatorId: coordinatorId\n&#96;&#96;&#96;\n\n",
+  "textEditContent": "const coordinatorId = data.trainingCoordinatorId &amp;&amp; typeof data.trainingCoordinatorId === 'string' &amp;&amp; data.trainingCoordinatorId.trim() \n            ? data.trainingCoordinatorId \n            : null;\n          \n          console.log(&#96;[enrollLearners] Creating learner ${learnerData.email} with trainingCoordinatorId: ${coordinatorId === null ? 'NULL' : coordinatorId}&#96;);\n          \n          learner = await prisma.learner.create({\n            data: {\n              fullname: learnerData.fullName,\n              designation: learnerData.designation,\n              email: learnerData.email,\n              contact: learnerData.contactNumber,\n              clientOrganizationId: data.division,\n              departmentName: data.departmentName,\n              trainingCoordinatorId: coordinatorId",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="run_in_terminal">
+<details>
+<summary>Tool use: **run_in_terminal**</summary>
+
+
+Parameters:
+
+```json
+{
+  "kind": "terminal",
+  "terminalToolSessionId": "ee464251-b7bb-406c-b8f2-b5e8f87c41be",
+  "terminalCommandId": "tool-1cc66bbf-3f8a-4326-96a8-584fc6521a11",
+  "commandLine": {
+    "original": "cd /home/kukuh/webprojects/polwel/polwel-backend &amp;&amp; npm run build 2&gt;&amp;1 | tail -30",
+    "toolEdited": "npm run build 2&gt;&amp;1 | tail -30"
+  },
+  "language": "sh",
+  "autoApproveInfo": {
+    "value": "Auto approved by rules [&#96;npm run build&#96;](command:workbench.action.terminal.chat.openTerminalSettingsLink?%255B3%255D \"View rule in settings\"), [&#96;tail&#96;](command:workbench.action.terminal.chat.openTerminalSettingsLink?%255B7%255D \"View rule in settings\")",
+    "isTrusted": {
+      "enabledCommands": [
+        "workbench.action.terminal.chat.openTerminalSettingsLink"
+      ]
+    },
+    "supportThemeIcons": false,
+    "supportHtml": false,
+    "supportAlertSyntax": false
+  },
+  "terminalCommandState": {
+    "exitCode": 0,
+    "timestamp": 1767339566424,
+    "duration": 4273
+  },
+  "terminalCommandUri": {
+    "$mid": 1,
+    "path": "/1c9be1ab538c89691cf01db25c3bbe5c/7",
+    "scheme": "vscode-terminal",
+    "query": "command=tool-1cc66bbf-3f8a-4326-96a8-584fc6521a11"
+  },
+  "terminalCommandOutput": {
+    "text": "\r\n&gt; polwel-backend@1.0.0 build\r\n&gt; tsc\r\n\r\nsrc/controllers/courseRunController.ts(3390,48): error TS2353: Object literal may only specify known properties, and '6' does not exist in type '(Without&lt;CourseRunLearnerUpdateInput, CourseRunLearnerUncheckedUpdateInput&gt; &amp; CourseRunLearnerUncheckedUpdateInput) | (Without&lt;...&gt; &amp; CourseRunLearnerUpdateInput)'.\r\nsrc/controllers/courseRunController.ts(3391,13): error TS1005: ':' expected.\u001b[?2004h",
+    "lineCount": 9
+  },
+  "terminalTheme": {
+    "background": "#181818",
+    "foreground": "#cccccc"
+  }
+}
+```
+Additional data:
+
+```json
+{
+  "vscodeToolId": "run_in_terminal",
+  "isHidden": false
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Run in Terminal\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "",
+  "textEditContent": "",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="copilot_readFile">
+<details>
+<summary>Tool use: **copilot_readFile** • Reading [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/courseRunController.ts#3385-3385), lines 3385 to 3395</summary>
+
+
+Read [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/courseRunController.ts#3385-3385), lines 3385 to 3395
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="copilot_replaceString">
+<details>
+<summary>Tool use: **copilot_replaceString**</summary>
+
+
+Parameters:
+
+```json
+{
+  "relativeWorkspacePath": "courseRunController.ts",
+  "file_path": "/home/kukuh/webprojects/polwel/polwel-backend/src/controllers/courseRunController.ts"
+}
+```
+Additional data:
+
+```json
+{
+  "vscodeToolId": "copilot_replaceString",
+  "isHidden": true
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Replace String in File\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "Now let me rebuild: ",
+  "textEditContent": "",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="run_in_terminal">
+<details>
+<summary>Tool use: **run_in_terminal**</summary>
+
+
+Parameters:
+
+```json
+{
+  "kind": "terminal",
+  "terminalToolSessionId": "1e467a69-4ba9-415c-9893-a0b43d2d9916",
+  "terminalCommandId": "tool-99d82998-ea19-4da5-8307-3eb872102a4d",
+  "commandLine": {
+    "original": "cd /home/kukuh/webprojects/polwel/polwel-backend &amp;&amp; npm run build 2&gt;&amp;1 | tail -30",
+    "toolEdited": "npm run build 2&gt;&amp;1 | tail -30"
+  },
+  "language": "sh",
+  "autoApproveInfo": {
+    "value": "Auto approved by rules [&#96;npm run build&#96;](command:workbench.action.terminal.chat.openTerminalSettingsLink?%255B3%255D \"View rule in settings\"), [&#96;tail&#96;](command:workbench.action.terminal.chat.openTerminalSettingsLink?%255B7%255D \"View rule in settings\")",
+    "isTrusted": {
+      "enabledCommands": [
+        "workbench.action.terminal.chat.openTerminalSettingsLink"
+      ]
+    },
+    "supportThemeIcons": false,
+    "supportHtml": false,
+    "supportAlertSyntax": false
+  },
+  "terminalCommandState": {
+    "exitCode": 0,
+    "timestamp": 1767339608497,
+    "duration": 4032
+  },
+  "terminalCommandUri": {
+    "$mid": 1,
+    "path": "/1c9be1ab538c89691cf01db25c3bbe5c/7",
+    "scheme": "vscode-terminal",
+    "query": "command=tool-99d82998-ea19-4da5-8307-3eb872102a4d"
+  },
+  "terminalCommandOutput": {
+    "text": "\r\n&gt; polwel-backend@1.0.0 build\r\n&gt; tsc\u001b[?2004h",
+    "lineCount": 4
+  },
+  "terminalTheme": {
+    "background": "#181818",
+    "foreground": "#cccccc"
+  }
+}
+```
+Additional data:
+
+```json
+{
+  "vscodeToolId": "run_in_terminal",
+  "isHidden": false
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Run in Terminal\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "",
+  "textEditContent": "",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="copilot_createFile">
+<details>
+<summary>Tool use: **copilot_createFile**</summary>
+
+
+Parameters:
+
+```json
+{
+  "file_path": "/home/kukuh/webprojects/polwel/COORDINATOR_FIX_WITH_LOGGING.md",
+  "relativeWorkspacePath": "COORDINATOR_FIX_WITH_LOGGING.md"
+}
+```
+Additional data:
+
+```json
+{
+  "vscodeToolId": "copilot_createFile",
+  "isHidden": false
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Creating [](file:///home/kukuh/webprojects/polwel/COORDINATOR_FIX_WITH_LOGGING.md)",
+  "pastTenseMessage": "Created [](file:///home/kukuh/webprojects/polwel/COORDINATOR_FIX_WITH_LOGGING.md)",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "",
+  "textEditContent": "# Training Coordinator \"Not Applicable\" Fix - Enhanced Logging\n\n## Issue\nThe \"Not Applicable\" option for training coordinator is still not removing the &#96;trainingCoordinatorId&#96; from the &#96;learners&#96; table in the database.\n\n## Enhanced Backend Logging\n\nI've added comprehensive logging to the backend to track exactly what's happening when updating the coordinator field.\n\n### Modified Backend Functions\n\n1. **updateEnrollment** (courseRunController.ts lines 2287-2304)\n   - Added log when setting trainingCoordinatorId\n   - Added log showing the complete updateData object\n   - Added log confirming successful update\n\n2. **enrollLearner** (courseRunController.ts lines 1590-1608)\n   - Added log showing coordinator value when creating new learner\n   - Added log confirming learner creation\n\n3. **enrollLearners** (courseRunController.ts lines 1732-1749)\n   - Added log for each learner created in bulk enrollment\n   - Shows coordinator value for group registrations\n\n## Testing Steps\n\n### Step 1: Check Frontend Console\n1. Open browser DevTools (F12)\n2. Go to Console tab\n3. Edit a learner and select \"Not Applicable\" for coordinator\n4. **Expected logs**:\n   &#96;&#96;&#96;\n   EditLearnerDialog: Clearing coordinator - setting to null\n   EditLearnerDialog save: coordinator value = null\n   &#96;&#96;&#96;\n\n### Step 2: Check Backend Console\n1. Open terminal with backend running\n2. After clicking Save in the frontend\n3. **Expected logs**:\n   &#96;&#96;&#96;\n   [updateEnrollment] Setting trainingCoordinatorId to: NULL\n   [updateEnrollment] Updating learner {learnerId} with data: {\n     \"fullname\": \"John Doe\",\n     ...\n     \"trainingCoordinatorId\": null\n   }\n   [updateEnrollment] Learner {learnerId} updated successfully\n   &#96;&#96;&#96;\n\n### Step 3: Verify Database\nOpen MySQL/database console and run:\n\n&#96;&#96;&#96;sql\n-- Check a specific learner by email\nSELECT \n  id, \n  fullname, \n  email, \n  trainingCoordinatorId,\n  createdAt,\n  updatedAt\nFROM learners \nWHERE email = 'test@example.com';\n\n-- The trainingCoordinatorId should be NULL\n&#96;&#96;&#96;\n\nOr check by learner ID:\n&#96;&#96;&#96;sql\nSELECT \n  id, \n  fullname, \n  email, \n  trainingCoordinatorId\nFROM learners \nWHERE id = '{learner-id-here}';\n&#96;&#96;&#96;\n\n### Step 4: Full Test Flow\n\n1. **Find a learner with a coordinator**:\n   - Go to Course Run detail\n   - Find a participant who HAS a training coordinator\n   - Note their email address\n\n2. **Edit and clear coordinator**:\n   - Click Edit for that participant\n   - Verify coordinator dropdown shows their current coordinator\n   - Select \"Not Applicable\"\n   - Verify email and phone fields clear immediately\n   - Click Save\n   - **Check frontend console** for logs\n   - **Check backend console** for logs\n\n3. **Verify the change**:\n   - Close and reopen the edit dialog\n   - Coordinator should show \"Not Applicable\"\n   - **Check database** using SQL query above\n\n4. **Check backend terminal** should show:\n   &#96;&#96;&#96;\n   [updateEnrollment] Setting trainingCoordinatorId to: NULL\n   [updateEnrollment] Updating learner abc123 with data: {\n     \"fullname\": \"...\",\n     \"trainingCoordinatorId\": null\n   }\n   [updateEnrollment] Learner abc123 updated successfully\n   &#96;&#96;&#96;\n\n## If It Still Doesn't Work\n\n### Debug Checklist\n\n1. **Frontend not sending null?**\n   - Check frontend console\n   - Should see: &#96;coordinator value = null&#96;\n   - If not null, there's a frontend issue\n\n2. **Backend not receiving request?**\n   - Check backend console for the &#96;[updateEnrollment]&#96; logs\n   - If no logs appear, API request isn't reaching the backend\n\n3. **Backend receiving but not updating?**\n   - Check if logs show &#96;Setting trainingCoordinatorId to: NULL&#96;\n   - Check if &#96;Learner updated successfully&#96; appears\n   - If logs appear but database unchanged, check Prisma connection\n\n4. **Database permissions?**\n   - Verify database user has UPDATE permissions\n   - Check if there are any database triggers preventing NULL values\n\n5. **Cache issue?**\n   - Try hard refresh (Ctrl+Shift+R)\n   - Clear browser cache\n   - Restart backend server\n\n## Backend Code Changes\n\n### File: polwel-backend/src/controllers/courseRunController.ts\n\n**updateEnrollment function** (lines ~2275-2304):\n&#96;&#96;&#96;typescript\nif ('trainingCoordinatorId' in learnerData) {\n  const coordinatorId = learnerData.trainingCoordinatorId &amp;&amp; \n    typeof learnerData.trainingCoordinatorId === 'string' &amp;&amp; \n    learnerData.trainingCoordinatorId.trim() \n      ? learnerData.trainingCoordinatorId \n      : null;\n  updateData.trainingCoordinatorId = coordinatorId;\n  console.log(&#96;[updateEnrollment] Setting trainingCoordinatorId to: ${coordinatorId === null ? 'NULL' : coordinatorId}&#96;);\n}\n\nconsole.log(&#96;[updateEnrollment] Updating learner ${learnerId} with data:&#96;, JSON.stringify(updateData, null, 2));\n\nawait prisma.learner.update({\n  where: { id: learnerId },\n  data: updateData,\n});\n\nconsole.log(&#96;[updateEnrollment] Learner ${learnerId} updated successfully&#96;);\n&#96;&#96;&#96;\n\n## Expected Behavior\n\n### When selecting \"Not Applicable\":\n\n1. **Immediate UI Update**:\n   - Coordinator dropdown shows \"Not Applicable\"\n   - Email field clears (shows empty)\n   - Phone field clears (shows empty)\n\n2. **Frontend logs**:\n   &#96;&#96;&#96;\n   Clearing coordinator - setting to null\n   EditLearnerDialog save: coordinator value = null\n   &#96;&#96;&#96;\n\n3. **Backend logs**:\n   &#96;&#96;&#96;\n   [updateEnrollment] Setting trainingCoordinatorId to: NULL\n   [updateEnrollment] Updating learner abc123 with data: {..., \"trainingCoordinatorId\": null}\n   [updateEnrollment] Learner abc123 updated successfully\n   &#96;&#96;&#96;\n\n4. **Database state**:\n   &#96;&#96;&#96;sql\n   SELECT trainingCoordinatorId FROM learners WHERE id = 'abc123';\n   -- Result: NULL\n   &#96;&#96;&#96;\n\n5. **Verification**:\n   - Close edit dialog\n   - Reopen edit dialog for same participant\n   - Coordinator should still show \"Not Applicable\"\n   - Fields should remain empty\n\n## Next Steps\n\n1. **Test with logging** - Follow the test steps above\n2. **Share logs** - If still not working, share:\n   - Frontend console logs\n   - Backend console logs\n   - Database query results\n3. **Additional debugging** - Based on where it fails, we can add more specific fixes\n\n## Build Status\n✅ Backend built successfully with enhanced logging\n✅ Frontend already has logging in place\n\n",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
 The user is saying that the "Not Applicable" still isn't working. The issue is that the training coordinator data comes from the `learners` table, and when we select "Not Applicable", we need to actually update the `learners` table to remove the `trainingCoordinatorId`.
 
 Let me check the current state of the files and understand the flow:
@@ -17866,7 +18254,77 @@ Let me check the current state of the files and understand the flow:
 2. When we select "Not Applicable", we need to ensure the backend actually updates the `learners.trainingCoordinatorId` to NULL
 3. The issue might be that the update isn't actually happening in the database
 
-Let me check the current files to see what's happening.Let me check the current state of the files and the backend update logic: I can see the backend logic looks correct. The issue might be that the console log shows it's being sent, but let me 
+Let me check the current files to see what's happening.Let me check the current state of the files and the backend update logic: I can see the backend logic looks correct. The issue might be that the console log shows it's being sent, but let me verify the database update is actually happening. Let me also check if there's a console log showing what's being sent: Now let me also check the enrollLearner function to ensure it handles null properly when adding new learners: Good, the enrollLearner also handles null. Now let me add more robust logging and also check the enrollLearners (bulk) function: Now let me check the enrollLearners (bulk/group) function: Let me add logging to the enrollLearners function as well: Now let me rebuild the backend: There's a TypeScript error. Let me check what's on line 3390: I see there's a stray "6" character. This must have been an accidental edit. Let me fix it: Perfect! Backend builds successfully. Now let me create a test document to help verify the fix: Perfect! Now let me provide you with a summary:
+
+## ✅ Enhanced Coordinator Clearing with Comprehensive Logging
+
+I've added **extensive logging** to track exactly what's happening when you select "Not Applicable" for the training coordinator.
+
+### Backend Logging Added
+
+**Three functions enhanced** in `courseRunController.ts`:
+
+1. **updateEnrollment** - When editing existing learners
+2. **enrollLearner** - When adding single new learner  
+3. **enrollLearners** - When adding multiple learners (group)
+
+### How to Test & Debug
+
+**Step 1 - Frontend Console (F12)**:
+```
+Expected logs:
+✓ Clearing coordinator - setting to null
+✓ EditLearnerDialog save: coordinator value = null
+```
+
+**Step 2 - Backend Console** (terminal running the backend):
+```
+Expected logs:
+✓ [updateEnrollment] Setting trainingCoordinatorId to: NULL
+✓ [updateEnrollment] Updating learner {id} with data: {..., "trainingCoordinatorId": null}
+✓ [updateEnrollment] Learner {id} updated successfully
+```
+
+**Step 3 - Database Verification**:
+```sql
+SELECT id, fullname, email, trainingCoordinatorId 
+FROM learners 
+WHERE email = 'test@example.com';
+-- trainingCoordinatorId should be NULL
+```
+
+### Testing Instructions
+
+1. Edit a participant who HAS a coordinator
+2. Select "Not Applicable"
+3. Click Save
+4. **Check all three places**: Frontend console, Backend terminal, Database
+5. The logs will show exactly where the issue is (if any remains)
+
+### What the Logs Will Tell Us
+
+- **Frontend logs missing** → Frontend not sending null correctly
+- **Backend logs missing** → Request not reaching backend API
+- **Backend logs appear but DB unchanged** → Database update issue
+- **All logs correct but UI shows old data** → Cache/refresh issue
+
+See `COORDINATOR_FIX_WITH_LOGGING.md` for detailed testing guide.
+
+**Build Status**: ✅ Backend compiled successfully with all logging in place
+
+Please test again and share the console logs from both frontend and backend if it still doesn't work!
+
+---
+
+_**User (2026-01-02 11:00Z)**_
+
+ohh okay the database already null , but when i open the popup again on #file:EditLearnerDialog.tsx its showing like we have cordinator here . please check and fix it , probably we have pre fill or default value or something
+
+---
+
+_**Agent (model copilot/claude-sonnet-4.5)**_
+
+
 
 ---
 

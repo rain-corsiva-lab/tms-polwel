@@ -196,6 +196,19 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     const discountPct = Number(enrollment?.discountPercentage ?? 0);
     const initialTotal = typeof enrollment?.totalFees === "number" ? Number(enrollment.totalFees) : computeDiscountedTotal(baseFeeValue, discountPct);
 
+    // Explicitly get coordinator value - respect NULL from database
+    const coordinatorIdFromDb = learner?.trainingCoordinatorId;
+    const coordinatorEmailFromDb = learner?.trainingCoordinator?.email || enrollment?.trainingCoordinator?.email || enrollment?.trainingCoordinatorEmail;
+    const coordinatorPhoneFromDb =
+      learner?.trainingCoordinator?.contactNumber || enrollment?.trainingCoordinator?.contactNumber || enrollment?.trainingCoordinatorPhone;
+
+    console.log("[EditLearnerDialog] Loading learner data:", {
+      learnerId: learner.id,
+      coordinatorIdFromDb,
+      coordinatorEmailFromDb,
+      coordinatorPhoneFromDb,
+    });
+
     setForm((prev) => ({
       ...prev,
       fullName: learner.fullname || "",
@@ -206,20 +219,10 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       departmentName: learner.departmentName || "",
       buNumber: learner.clientOrganization?.buNumber || prev.buNumber || "",
       paymentMode: enrollment?.paymentMode || learner.paymentMode || prev.paymentMode || "",
-      trainingCoordinatorId:
-        enrollment?.trainingCoordinatorId || enrollment?.trainingCoordinator?.id || learner?.trainingCoordinatorId || prev.trainingCoordinatorId || "",
-      trainingCoordinatorEmail:
-        enrollment?.trainingCoordinator?.email ||
-        enrollment?.trainingCoordinatorEmail ||
-        learner?.trainingCoordinator?.email ||
-        prev.trainingCoordinatorEmail ||
-        "",
-      trainingCoordinatorPhone:
-        enrollment?.trainingCoordinator?.contactNumber ||
-        enrollment?.trainingCoordinatorPhone ||
-        learner?.trainingCoordinator?.contactNumber ||
-        prev.trainingCoordinatorPhone ||
-        "",
+      // Use the value from database directly - don't fall back to previous state
+      trainingCoordinatorId: coordinatorIdFromDb || null,
+      trainingCoordinatorEmail: coordinatorIdFromDb ? coordinatorEmailFromDb || "" : null,
+      trainingCoordinatorPhone: coordinatorIdFromDb ? coordinatorPhoneFromDb || "" : null,
       discountId: enrollment?.discountId ?? null,
       discountPercentage: discountPct,
       currentDefaultCourseFee: baseFeeValue,
@@ -305,24 +308,32 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       }));
       setCoordinators(mapped);
 
-      const primary = mapped.find((c) => c.isPrimaryCoordinator);
+      // Only update coordinator email/phone if a coordinator is already selected
+      // DO NOT auto-assign primary coordinator - respect NULL from database
       setForm((f) => {
-        const existing = mapped.find((c) => c.id === f.trainingCoordinatorId);
-        if (existing) {
-          return {
-            ...f,
-            trainingCoordinatorEmail: existing.email || "",
-            trainingCoordinatorPhone: existing.contactNumber || "",
-          };
+        // If we have a coordinator ID, verify it exists and update contact info
+        if (f.trainingCoordinatorId) {
+          const existing = mapped.find((c) => c.id === f.trainingCoordinatorId);
+          if (existing) {
+            console.log("[EditLearnerDialog] Coordinator exists, updating contact info:", existing.name);
+            return {
+              ...f,
+              trainingCoordinatorEmail: existing.email || "",
+              trainingCoordinatorPhone: existing.contactNumber || "",
+            };
+          } else {
+            // Coordinator ID is set but doesn't exist in list - clear it
+            console.log("[EditLearnerDialog] Coordinator not found in list, clearing");
+            return {
+              ...f,
+              trainingCoordinatorId: null,
+              trainingCoordinatorEmail: null,
+              trainingCoordinatorPhone: null,
+            };
+          }
         }
-        if (primary) {
-          return {
-            ...f,
-            trainingCoordinatorId: primary.id,
-            trainingCoordinatorEmail: primary.email || "",
-            trainingCoordinatorPhone: primary.contactNumber || "",
-          };
-        }
+        // No coordinator set - leave it as null (don't auto-assign primary)
+        console.log("[EditLearnerDialog] No coordinator set, respecting NULL from database");
         return f;
       });
     } catch (e) {
