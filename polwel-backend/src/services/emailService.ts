@@ -154,7 +154,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -374,7 +374,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -502,7 +502,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -618,7 +618,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>

@@ -115,6 +115,9 @@ router.get('/:id/certificates/:learnerId/pdf', requirePermissions('post.course.r
 // POST /api/course-runs/:id/certificates/bulk-zip - Generate bulk certificates ZIP
 router.post('/:id/certificates/bulk-zip', requirePermissions('post.course.run.view'), courseRunController.generateCertificatesZIP);
 
+// POST /api/course-runs/:id/certificates/send - Send certificates via email to selected learners
+router.post('/:id/certificates/send', requirePermissions('post.course.run.edit'), courseRunController.sendCertificatesToLearners);
+
 // GET /api/course-runs/certificates/download/:learnerId/:courseRunId - Public certificate download (no auth required)
 router.get('/certificates/download/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
 

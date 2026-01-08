@@ -33,41 +33,41 @@ function writeCertificateContent(doc: PDFKit.PDFDocument, data: CertificateData)
   
   const logoPath = possibleLogoPaths.find(p => fs.existsSync(p));
   if (logoPath) {
-    doc.image(logoPath, centerX - 40, 70, { width: 80 });
+    doc.image(logoPath, centerX - 45, 65, { width: 90 });
   }
 
   doc
-    .fontSize(36)
+    .fontSize(38)
     .font('Helvetica-Bold')
     .fillColor('#1e3a8a')
-    .text('CERTIFICATE OF PARTICIPATION', 50, 160, { align: 'center', width: PAGE_WIDTH - 100 });
+    .text('CERTIFICATE OF PARTICIPATION', 50, 165, { align: 'center', width: PAGE_WIDTH - 100 });
 
   doc
-    .fontSize(16)
+    .fontSize(17)
     .font('Helvetica')
-    .fillColor('#000000')
-    .text('Awarded to', 50, 230, { align: 'center', width: PAGE_WIDTH - 100 });
+    .fillColor('#333333')
+    .text('Awarded to', 50, 235, { align: 'center', width: PAGE_WIDTH - 100 });
 
   doc
-    .fontSize(32)
+    .fontSize(34)
     .font('Helvetica-Bold')
     .fillColor('#1e3a8a')
-    .text(data.learnerName, 50, 270, { align: 'center', width: PAGE_WIDTH - 100 });
+    .text(data.learnerName, 50, 275, { align: 'center', width: PAGE_WIDTH - 100 });
 
   doc
-    .fontSize(14)
+    .fontSize(15)
     .font('Helvetica')
-    .fillColor('#000000')
-    .text(`Having successfully completed the ${durationText} course`, 50, 330, {
+    .fillColor('#333333')
+    .text(`Having successfully completed the ${durationText} course`, 50, 335, {
       align: 'center',
       width: PAGE_WIDTH - 100,
     });
 
   doc
-    .fontSize(24)
+    .fontSize(26)
     .font('Helvetica-Bold')
     .fillColor('#1e3a8a')
-    .text(data.courseName, 50, 360, { align: 'center', width: PAGE_WIDTH - 100 });
+    .text(data.courseName, 50, 365, { align: 'center', width: PAGE_WIDTH - 100 });
 
   const formattedEndDate = data.endDate.toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -76,23 +76,24 @@ function writeCertificateContent(doc: PDFKit.PDFDocument, data: CertificateData)
   });
 
   doc
-    .fontSize(14)
+    .fontSize(15)
     .font('Helvetica')
-    .fillColor('#000000')
-    .text('Completed on', 50, 405, {
+    .fillColor('#333333')
+    .text('Completed on', 50, 410, {
       align: 'center',
       width: PAGE_WIDTH - 100,
     });
 
   doc
-    .fontSize(12)
+    .fontSize(13)
+    .font('Helvetica')
     .fillColor('#666666')
-    .text(formattedEndDate, 50, 425, {
+    .text(formattedEndDate, 50, 430, {
       align: 'center',
       width: PAGE_WIDTH - 100,
     });
 
-  const signatureY = 460;
+  const signatureY = 465;
   
   // Try multiple possible paths for the signature
   const possibleSignaturePaths = [
@@ -103,35 +104,38 @@ function writeCertificateContent(doc: PDFKit.PDFDocument, data: CertificateData)
   
   const signaturePath = possibleSignaturePaths.find(p => fs.existsSync(p));
   if (signaturePath) {
-    doc.image(signaturePath, centerX - 60, signatureY - 10, { width: 120, height: 40 });
+    doc.image(signaturePath, centerX - 65, signatureY - 10, { width: 130, height: 45 });
   } else {
-    doc.moveTo(centerX - 80, signatureY + 20).lineTo(centerX + 80, signatureY + 20).strokeColor('#000000').lineWidth(1).stroke();
+    doc.moveTo(centerX - 80, signatureY + 20).lineTo(centerX + 80, signatureY + 20).strokeColor('#333333').lineWidth(1.5).stroke();
     doc
       .fontSize(20)
-      .font('Courier')
-      .fillColor('#000000')
+      .font('Helvetica-Bold')
+      .fillColor('#333333')
       .text('Keeve Chan', centerX - 80, signatureY - 5, {
         align: 'center',
         width: 160,
       });
   }
 
-  doc.moveTo(centerX - 100, signatureY + 35).lineTo(centerX + 100, signatureY + 35).stroke();
+  doc.moveTo(centerX - 100, signatureY + 35).lineTo(centerX + 100, signatureY + 35).strokeColor('#333333').lineWidth(1).stroke();
 
   doc
-    .fontSize(12)
+    .fontSize(13)
     .font('Helvetica-Bold')
-    .fillColor('#000000')
-    .text('Keeve Chan', 50, signatureY + 40, { align: 'center', width: PAGE_WIDTH - 100 });
+    .fillColor('#1f2937')
+    .text('Keeve Chan', 50, signatureY + 42, { align: 'center', width: PAGE_WIDTH - 100 });
 
   doc
-    .fontSize(10)
+    .fontSize(11)
     .font('Helvetica')
-    .text('Chief Executive Officer', 50, signatureY + 58, { align: 'center', width: PAGE_WIDTH - 100 });
+    .fillColor('#4b5563')
+    .text('Chief Executive Officer', 50, signatureY + 60, { align: 'center', width: PAGE_WIDTH - 100 });
 
   doc
-    .fontSize(10)
-    .text('POLWEL Co-operative Society Limited', 50, signatureY + 73, {
+    .fontSize(11)
+    .font('Helvetica')
+    .fillColor('#4b5563')
+    .text('POLWEL Co-operative Society Limited', 50, signatureY + 75, {
       align: 'center',
       width: PAGE_WIDTH - 100,
     });
