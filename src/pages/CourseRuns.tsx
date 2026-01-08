@@ -19,6 +19,7 @@ import { courseRunsApi } from "../lib/api";
 import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen, Filter } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
+import { SendCourseConfirmationEmailDialog } from "../components/SendCourseConfirmationEmailDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
@@ -244,6 +245,20 @@ const CourseRuns: React.FC = () => {
     submitting: false,
   });
 
+  // State for Send Course Confirmation Email Dialog
+  const [confirmationEmailDialog, setConfirmationEmailDialog] = useState<{
+    open: boolean;
+    courseRunId: string | null;
+    courseRunDetails: any | null;
+    loading: boolean;
+  }>({
+    open: false,
+    courseRunId: null,
+    courseRunDetails: null,
+    loading: false,
+  });
+
+  // Keep old emailDialog for training_assignment type (will be removed later if not needed)
   const [emailDialog, setEmailDialog] = useState<{
     open: boolean;
     courseRun: CourseRunUI | null;
@@ -830,15 +845,59 @@ const CourseRuns: React.FC = () => {
   };
 
   // Handler for opening email dialog
-  const openEmailDialog = (courseRun: CourseRunUI, type: "course_confirmation" | "training_assignment") => {
-    setEmailDialog({
-      open: true,
-      courseRun,
-      type,
-      cc: "",
-      additionalBody: "",
-      submitting: false,
-    });
+  const openEmailDialog = async (courseRun: CourseRunUI, type: "course_confirmation" | "training_assignment") => {
+    if (type === "course_confirmation") {
+      // Fetch full course run details with learners
+      setConfirmationEmailDialog({
+        open: true,
+        courseRunId: courseRun.id,
+        courseRunDetails: null,
+        loading: true,
+      });
+
+      try {
+        const response = await courseRunsApi.getById(courseRun.id);
+        if (response.success && response.courseRun) {
+          setConfirmationEmailDialog({
+            open: true,
+            courseRunId: courseRun.id,
+            courseRunDetails: response.courseRun,
+            loading: false,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to load course run details",
+            variant: "destructive",
+          });
+          setConfirmationEmailDialog({
+            open: false,
+            courseRunId: null,
+            courseRunDetails: null,
+            loading: false,
+          });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to load course run details";
+        toast({ title: "Error", description: message, variant: "destructive" });
+        setConfirmationEmailDialog({
+          open: false,
+          courseRunId: null,
+          courseRunDetails: null,
+          loading: false,
+        });
+      }
+    } else {
+      // For training_assignment, keep using old dialog
+      setEmailDialog({
+        open: true,
+        courseRun,
+        type,
+        cc: "",
+        additionalBody: "",
+        submitting: false,
+      });
+    }
   };
 
   const closeEmailDialog = () => {
@@ -854,67 +913,7 @@ const CourseRuns: React.FC = () => {
     });
   };
 
-  // Handler for sending course confirmation email
-  const handleSendCourseConfirmationEmail = async () => {
-    if (!emailDialog.courseRun) return;
-
-    setEmailDialog((prev) => ({ ...prev, submitting: true }));
-
-    try {
-      // If there's an attachment, upload it first
-      let attachmentId: string | undefined;
-      if (emailDialog.attachmentFile) {
-        const formData = new FormData();
-        formData.append("file", emailDialog.attachmentFile);
-
-        try {
-          const token = localStorage.getItem("polwel_access_token");
-          const uploadResponse = await fetch(`${API_BASE_URL}/uploads/email-attachments`, {
-            method: "POST",
-            body: formData,
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || `Upload failed with status ${uploadResponse.status}`);
-          }
-
-          const uploadData = await uploadResponse.json();
-          attachmentId = uploadData.fileId || uploadData.id;
-
-          if (!attachmentId) {
-            throw new Error("No file ID returned from upload");
-          }
-        } catch (uploadErr) {
-          const message = uploadErr instanceof Error ? uploadErr.message : "Failed to upload attachment";
-          console.error("Attachment upload error:", uploadErr);
-          toast({ title: "Error", description: message, variant: "destructive" });
-          setEmailDialog((prev) => ({ ...prev, submitting: false }));
-          return;
-        }
-      }
-
-      await courseRunsApi.sendCourseConfirmationEmail(emailDialog.courseRun.id, {
-        cc: emailDialog.cc.trim() || undefined,
-        additionalBodyContent: emailDialog.additionalBody.trim() || undefined,
-        ...(attachmentId ? { attachmentId } : {}),
-      });
-      toast({
-        title: "Email Sent",
-        description: "Course confirmation email has been sent to participants.",
-      });
-      closeEmailDialog();
-      await fetchCourseRuns();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to send confirmation email";
-      console.error("Send confirmation email error:", err);
-      toast({ title: "Error", description: message, variant: "destructive" });
-      setEmailDialog((prev) => ({ ...prev, submitting: false }));
-    }
-  };
+  // Old handler removed - now handled by SendCourseConfirmationEmailDialog component
 
   // Handler for opening trainer assignment email dialog
   const handleSendTrainingAssignmentEmail = async (courseRun: CourseRunUI) => {
@@ -1705,96 +1704,94 @@ const CourseRuns: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Email Dialog */}
-      <Dialog open={emailDialog.open} onOpenChange={(open) => !open && closeEmailDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{emailDialog.type === "course_confirmation" ? "Send Course Confirmation Email" : "Send Training Assignment Email"}</DialogTitle>
-            <DialogDescription>
-              {emailDialog.type === "course_confirmation"
-                ? "Send a confirmation email to all enrolled participants."
-                : "Send training assignment emails to participants and trainers."}
-            </DialogDescription>
-          </DialogHeader>
-          {emailDialog.courseRun && (
-            <div className="space-y-4">
-              <div className="rounded-md border p-3">
-                <p className="text-sm text-gray-600">
-                  Course: <span className="font-medium text-gray-900">{emailDialog.courseRun.title}</span>
-                </p>
-                <p className="text-sm text-gray-600">
-                  Enrolled: <span className="font-medium text-gray-900">{emailDialog.courseRun.enrolled} participants</span>
-                </p>
-              </div>
+      {/* Send Course Confirmation Email Dialog */}
+      {confirmationEmailDialog.courseRunId && confirmationEmailDialog.courseRunDetails && (
+        <SendCourseConfirmationEmailDialog
+          open={confirmationEmailDialog.open && !confirmationEmailDialog.loading}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmationEmailDialog({
+                open: false,
+                courseRunId: null,
+                courseRunDetails: null,
+                loading: false,
+              });
+            }
+          }}
+          courseRunId={confirmationEmailDialog.courseRunId}
+          learners={
+            confirmationEmailDialog.courseRunDetails.courseRunLearners
+              ?.filter((l: any) => l.enrollmentStatus !== "WITHDRAWN")
+              .map((l: any) => ({
+                id: l.id,
+                name: l.learner?.fullname || "Unknown",
+                email: l.learner?.email || "",
+                organizationName: l.learner?.organization?.name || "N/A",
+              })) || []
+          }
+          courseRunDetails={{
+            serialNumber: confirmationEmailDialog.courseRunDetails.serialNumber || "",
+            courseName: confirmationEmailDialog.courseRunDetails.course?.title || "",
+            startDate: confirmationEmailDialog.courseRunDetails.startDatetime
+              ? new Date(confirmationEmailDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB")
+              : "",
+            endDate: confirmationEmailDialog.courseRunDetails.endDatetime
+              ? new Date(confirmationEmailDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB")
+              : "",
+            venue: confirmationEmailDialog.courseRunDetails.venue?.name || confirmationEmailDialog.courseRunDetails.specifiedLocation || "TBA",
+          }}
+          onSuccess={() => {
+            setConfirmationEmailDialog({
+              open: false,
+              courseRunId: null,
+              courseRunDetails: null,
+              loading: false,
+            });
+            fetchCourseRuns();
+          }}
+        />
+      )}
 
-              {emailDialog.type === "course_confirmation" && (
-                <>
-                  <div>
-                    <Label htmlFor="cc">CC (optional)</Label>
-                    <Input
-                      id="cc"
-                      type="email"
-                      placeholder="email@example.com"
-                      value={emailDialog.cc}
-                      onChange={(e) => setEmailDialog((prev) => ({ ...prev, cc: e.target.value }))}
-                      disabled={emailDialog.submitting}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="additionalBody">Additional Message (optional)</Label>
-                    <textarea
-                      id="additionalBody"
-                      className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Add any additional message to include in the email..."
-                      value={emailDialog.additionalBody}
-                      onChange={(e) => setEmailDialog((prev) => ({ ...prev, additionalBody: e.target.value }))}
-                      disabled={emailDialog.submitting}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="attachment">Attach File (optional)</Label>
-                    <Input
-                      id="attachment"
-                      type="file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.size > 10 * 1024 * 1024) {
-                            toast({ title: "Error", description: "File size must be less than 10MB", variant: "destructive" });
-                            return;
-                          }
-                          setEmailDialog((prev) => ({ ...prev, attachmentFile: file }));
-                        }
-                      }}
-                      disabled={emailDialog.submitting}
-                    />
-                    {emailDialog.attachmentFile && (
-                      <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-200 mt-2">
-                        <span className="text-sm text-blue-900">{emailDialog.attachmentFile.name}</span>
-                        <button
-                          onClick={() => setEmailDialog((prev) => ({ ...prev, attachmentFile: null, attachmentId: null }))}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">Max file size: 10MB</p>
-                  </div>
-                </>
-              )}
+      {/* Loading state for confirmation email dialog */}
+      {confirmationEmailDialog.open && confirmationEmailDialog.loading && (
+        <Dialog open={true} onOpenChange={() => {}}>
+          <DialogContent>
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-sm text-muted-foreground">Loading course run details...</p>
             </div>
-          )}
-          <DialogFooter className="flex flex-row-reverse gap-3">
-            <Button onClick={handleSendCourseConfirmationEmail} disabled={emailDialog.submitting}>
-              {emailDialog.submitting ? "Sending…" : "Send Email"}
-            </Button>
-            <Button variant="outline" onClick={closeEmailDialog} disabled={emailDialog.submitting}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Old Email Dialog - kept for training_assignment type if needed */}
+      {emailDialog.type === "training_assignment" && (
+        <Dialog open={emailDialog.open} onOpenChange={(open) => !open && closeEmailDialog()}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Training Assignment Email</DialogTitle>
+              <DialogDescription>Send training assignment emails to participants and trainers.</DialogDescription>
+            </DialogHeader>
+            {emailDialog.courseRun && (
+              <div className="space-y-4">
+                <div className="rounded-md border p-3">
+                  <p className="text-sm text-gray-600">
+                    Course: <span className="font-medium text-gray-900">{emailDialog.courseRun.title}</span>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Enrolled: <span className="font-medium text-gray-900">{emailDialog.courseRun.enrolled} participants</span>
+                  </p>
+                </div>
+              </div>
+            )}
+            <DialogFooter className="flex flex-row-reverse gap-3">
+              <Button variant="outline" onClick={closeEmailDialog} disabled={emailDialog.submitting}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Send Trainer Assignment Email Dialog */}
       {trainerEmailDialog.open && trainerEmailDialog.courseRunDetails && (
