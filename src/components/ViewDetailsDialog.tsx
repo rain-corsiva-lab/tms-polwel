@@ -103,7 +103,12 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
         permissionString = permission;
       } else if (permission?.permissionName) {
         // New database format: { permissionName: 'users.view' }
-        const [module, action] = permission.permissionName.split(".");
+        // Normalize malformed "post.course.run.*" to "post-course-run.*"
+        let normalized = permission.permissionName.toLowerCase().trim();
+        normalized = normalized.replace(/^post\.course\.run\./i, 'post-course-run.');
+        
+        const [module, action] = normalized.split(".");
+        
         // Convert to frontend format
         const moduleMapping: Record<string, string> = {
           users: "user-management-polwel",
@@ -114,6 +119,7 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
           bookings: "booking-management",
           calendar: "training-calendar",
           reports: "reports-analytics",
+          "post-course-run": "post-course-run", // Add mapping for post-course-run
         };
         const frontendModule = moduleMapping[module] || module;
         permissionString = `${frontendModule}:${action}`;
@@ -126,6 +132,38 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
       } else {
         console.warn("Unknown permission format:", permission);
         return;
+      }
+
+      // Also normalize if permissionString is a string format (e.g., "post.course.run.view")
+      if (typeof permissionString === "string") {
+        let normalized = permissionString.toLowerCase().trim();
+        normalized = normalized.replace(/^post\.course\.run\./i, 'post-course-run.');
+        // If it's still in dot format, convert to colon format
+        if (normalized.includes(".") && !normalized.includes(":")) {
+          const parts = normalized.split(".");
+          if (parts.length === 2) {
+            const [module, action] = parts;
+            const moduleMapping: Record<string, string> = {
+              users: "user-management-polwel",
+              trainers: "user-management-trainers",
+              clients: "user-management-client-orgs",
+              courses: "course-management",
+              venues: "course-venue-setup",
+              bookings: "booking-management",
+              calendar: "training-calendar",
+              reports: "reports-analytics",
+              "post-course-run": "post-course-run",
+            };
+            const frontendModule = moduleMapping[module] || module;
+            permissionString = `${frontendModule}:${action}`;
+          }
+        } else if (normalized.includes(".")) {
+          // Handle cases where normalization created post-course-run.view format
+          const parts = normalized.split(".");
+          if (parts.length === 2) {
+            permissionString = `${parts[0]}:${parts[1]}`;
+          }
+        }
       }
 
       const parts = permissionString.split(":");
@@ -147,6 +185,7 @@ export function ViewDetailsDialog({ userId, userName, trigger }: ViewDetailsDial
       "user-management-client-orgs": "Client Organisations",
       "course-venue-setup": "Course & Venue Setup",
       "course-runs-operations": "Course Runs & Operations",
+      "post-course-run": "Post Course Run", // Add display name for post-course-run
       "email-reporting-library": "Email & Reporting",
       "finance-activity": "Finance & Activity",
     };

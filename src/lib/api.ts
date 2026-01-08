@@ -118,9 +118,10 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
 };
 
 // API Configuration - In dev mode, use relative path (Vite proxy); in prod, use environment variable
-const API_BASE_URL = import.meta.env.MODE === 'development' 
-  ? '/api'
-  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// const API_BASE_URL = import.meta.env.MODE === 'development' 
+//   ? '/api'
+//   : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
 
 // Debug logging for environment
 console.log('🔧 Environment Debug:', {
@@ -1612,6 +1613,14 @@ export const courseRunsApi = {
   // Get certificate data for learners
   getCertificates: async (courseRunId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/certificates`);
+  },
+
+  // Send certificates via email to selected learners
+  sendCertificatesToLearners: async (courseRunId: string, learnerIds: string[]) => {
+    return apiRequest(`/course-runs/${courseRunId}/certificates/send`, {
+      method: 'POST',
+      body: JSON.stringify({ learnerIds }),
+    });
   },
 
   // Submit waiver form for absent learner

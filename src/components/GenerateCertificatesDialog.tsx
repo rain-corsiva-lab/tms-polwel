@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { courseRunsApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errorHandler";
-import { Award, Download, FileArchive, Loader2, X, FileText } from "lucide-react";
+import { Award, Download, FileArchive, Loader2, X, FileText, Mail } from "lucide-react";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
 
@@ -59,6 +59,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submittingWaiver, setSubmittingWaiver] = useState(false);
+  const [sendingCertificates, setSendingCertificates] = useState(false);
   const [courseRun, setCourseRun] = useState<CourseRunInfo | null>(null);
   const [learners, setLearners] = useState<LearnerWithAttendance[]>([]);
   const [selectedLearners, setSelectedLearners] = useState<string[]>([]);
@@ -232,6 +233,46 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
         description: getErrorMessage(error, "Failed to export certificates"),
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSendCertificates = async () => {
+    if (selectedLearners.length === 0) {
+      toast({
+        title: "No Learners Selected",
+        description: "Please select at least one participant to send certificates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSendingCertificates(true);
+      toast({
+        title: "Sending Certificates",
+        description: `Sending certificates to ${selectedLearners.length} participant(s)...`,
+      });
+
+      const response = await courseRunsApi.sendCertificatesToLearners(courseRunId, selectedLearners);
+
+      if (response?.success) {
+        const { success, failed, total } = response.data || {};
+        toast({
+          title: "Certificates Sent",
+          description: `Successfully sent ${success || 0} certificate(s)${failed > 0 ? `. ${failed} failed` : ''}`,
+        });
+      } else {
+        throw new Error(response?.error || response?.message || "Failed to send certificates");
+      }
+    } catch (error: any) {
+      console.error("Error sending certificates:", error);
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Failed to send certificates"),
+        variant: "destructive",
+      });
+    } finally {
+      setSendingCertificates(false);
     }
   };
 
@@ -480,6 +521,22 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
               <Button onClick={handleExportZip} disabled={selectedLearners.length === 0}>
                 <FileArchive className="h-4 w-4 mr-2" />
                 Export ZIP ({selectedLearners.length})
+              </Button>
+              <Button 
+                onClick={handleSendCertificates} 
+                disabled={selectedLearners.length === 0 || sendingCertificates}
+              >
+                {sendingCertificates ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send to Learners ({selectedLearners.length})
+                  </>
+                )}
               </Button>
             </div>
           </DialogFooter>

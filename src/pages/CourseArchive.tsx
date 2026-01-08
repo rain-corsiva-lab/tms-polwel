@@ -14,6 +14,7 @@ import { coursesApi, referencesApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/errorHandler";
 import * as XLSX from "xlsx";
+import PaginationControls from "@/components/ui/pagination";
 
 interface Course {
   id: string;
@@ -39,6 +40,14 @@ const CourseArchive = () => {
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const [exporting, setExporting] = useState(false);
+  
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    total: 0,
+    totalPages: 0,
+  });
+  const [perPage, setPerPage] = useState(50);
 
   // Sorting state
   const [sortField, setSortField] = useState<keyof Course | null>(null);
@@ -77,7 +86,16 @@ const CourseArchive = () => {
 
         // Load courses and venues
         setLoading((prev) => ({ ...prev, courses: true }));
-        const [coursesResponse, venuesResponse] = await Promise.all([coursesApi.getAll(), referencesApi.getVenues().catch(() => null)]);
+        const [coursesResponse, venuesResponse] = await Promise.all([
+          coursesApi.getAll({
+            page: pagination.page,
+            limit: perPage,
+            search: debouncedSearch || undefined,
+            category: selectedCategory !== "all" ? selectedCategory : undefined,
+            certificates: selectedCertificate !== "all" ? selectedCertificate : undefined,
+          }),
+          referencesApi.getVenues().catch(() => null)
+        ]);
         console.log("Courses API response:", coursesResponse);
 
         // Handle the correct API response structure: { success: true, courses: [...] }
@@ -93,6 +111,13 @@ const CourseArchive = () => {
         }
 
         setCourses(coursesData);
+        
+        // Update pagination state
+        setPagination({
+          page: coursesResponse.pagination?.currentPage || pagination.page,
+          total: coursesResponse.pagination?.totalCourses || coursesData.length,
+          totalPages: coursesResponse.pagination?.totalPages || Math.ceil((coursesResponse.pagination?.totalCourses || coursesData.length) / perPage),
+        });
 
         // Build venues map (id -> name) if venues were returned
         const vData = Array.isArray(venuesResponse?.data?.venues)
@@ -147,7 +172,8 @@ const CourseArchive = () => {
     };
 
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, perPage, debouncedSearch, selectedCategory, selectedCertificate]);
 
   // Debounce search input
   useEffect(() => {
@@ -156,6 +182,7 @@ const CourseArchive = () => {
     }
     searchTimeoutRef.current = setTimeout(() => {
       setDebouncedSearch(searchQuery);
+      setPagination((p) => ({ ...p, page: 1 })); // Reset to page 1 when search changes
     }, 500);
     return () => {
       if (searchTimeoutRef.current) {
@@ -209,7 +236,13 @@ const CourseArchive = () => {
     try {
       await coursesApi.toggleStatus(courseId);
       // Reload courses to reflect status change
-      const coursesResponse = await coursesApi.getAll();
+      const coursesResponse = await coursesApi.getAll({
+        page: pagination.page,
+        limit: perPage,
+        search: debouncedSearch || undefined,
+        category: selectedCategory !== "all" ? selectedCategory : undefined,
+        certificates: selectedCertificate !== "all" ? selectedCertificate : undefined,
+      });
       let coursesData = [];
       if (coursesResponse.success && Array.isArray(coursesResponse.courses)) {
         coursesData = coursesResponse.courses;
@@ -221,6 +254,13 @@ const CourseArchive = () => {
         coursesData = coursesResponse;
       }
       setCourses(coursesData);
+      
+      // Update pagination state
+      setPagination({
+        page: coursesResponse.pagination?.currentPage || pagination.page,
+        total: coursesResponse.pagination?.totalCourses || coursesData.length,
+        totalPages: coursesResponse.pagination?.totalPages || Math.ceil((coursesResponse.pagination?.totalCourses || coursesData.length) / perPage),
+      });
 
       toast({
         title: "Status Updated",
@@ -486,8 +526,8 @@ const CourseArchive = () => {
           <div className="flex items-center justify-between">
             <CardTitle>
               Courses ({sortedCourses.length})
-              {courses.length > 0 && sortedCourses.length !== courses.length && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">of {courses.length} total</span>
+              {pagination.total > 0 && sortedCourses.length !== pagination.total && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">of {pagination.total} total</span>
               )}
             </CardTitle>
             {Object.values(filters).some((arr) => arr.length > 0) && (
@@ -825,6 +865,21 @@ const CourseArchive = () => {
               </TableBody>
             </Table>
           )}
+          
+          {/* Pagination Controls */}
+          <div className="border-t pt-4 mt-4">
+            <PaginationControls
+              page={pagination.page}
+              perPage={perPage}
+              total={pagination.total}
+              onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+              onPerPageChange={(newPerPage) => {
+                setPerPage(newPerPage);
+                setPagination((prev) => ({ ...prev, page: 1 })); // Reset to page 1 when changing perPage
+              }}
+              perPageOptions={[10, 25, 50, 100, 200]}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
