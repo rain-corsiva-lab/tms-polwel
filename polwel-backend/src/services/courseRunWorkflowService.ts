@@ -98,7 +98,7 @@ const WORKFLOW_ACTIONS: Record<CourseRunWorkflowAction, WorkflowActionDefinition
     key: 'COMPLETE',
     label: 'Complete Run',
     description: 'Confirm that the run has completed successfully.',
-    from: [],
+    from: ['CONFIRMED', 'IN_PROGRESS', 'PENDING_BILLING', 'ACTIVE', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],
     to: 'COMPLETED',
   },
   ARCHIVE: {
