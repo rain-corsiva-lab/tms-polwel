@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 25 * 1024 * 1024, // 25MB - Microsoft Outlook restriction
   },
   fileFilter: (req, file, cb) => {
     // Allow common document types
