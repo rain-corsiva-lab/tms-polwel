@@ -649,13 +649,36 @@ export const courseRunController = {
         ];
       }
 
+      // Check if user is POLWEL ops user (has course-runs-operations permission but limited access)
+      // POLWEL ops users should only see IN_PROGRESS courses and only their own learners
+      let hasOpsPermission = false;
+      if (req.user && req.user.role === 'POLWEL' && req.user.permissions) {
+        const userPerms = req.user.permissions instanceof Set 
+          ? Array.from(req.user.permissions) 
+          : Array.isArray(req.user.permissions) 
+            ? req.user.permissions 
+            : [];
+        // Check if user has course-runs-operations permission (but not full POLWEL access)
+        // This indicates they are ops users with limited access
+        const permStrings = userPerms.map((p: any) => 
+          typeof p === 'string' ? p.toLowerCase() : (p?.permissionName || '').toLowerCase()
+        );
+        hasOpsPermission = permStrings.some((p: string) => 
+          p.includes('course-runs-operations') || p.includes('course.run')
+        ) && !permStrings.some((p: string) => p === 'course-run.view' || p === 'course.run.view');
+      }
+
       // Add status filter
       const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : undefined;
       
       console.log('[CourseRuns] Received status param:', status);
       console.log('[CourseRuns] Normalized status:', normalizedStatus);
+      console.log('[CourseRuns] Is POLWEL ops user:', hasOpsPermission);
       
-      if (normalizedStatus) {
+      // For POLWEL ops users, force IN_PROGRESS status only
+      if (hasOpsPermission) {
+        where.status = CourseStatus.IN_PROGRESS;
+      } else if (normalizedStatus) {
         // Check if status is comma-separated (multiple statuses)
         if (normalizedStatus.includes(',')) {
           const statusArray = normalizedStatus.split(',').map(s => s.trim()).filter(s => 
@@ -1881,22 +1904,29 @@ export const courseRunController = {
       const successes: Array<{ row: number; learnerId: string; learnerName: string }> = [];
       const errors: Array<{ row: number; email?: string; name?: string; reason: string }> = [];
 
-      const getOrganizationByName = async (name: string) => {
+      const getOrganizationByName = async (name: string, organizationType?: string) => {
         const normalized = name.toLowerCase();
-        if (organizationCache.has(normalized)) {
-          return organizationCache.get(normalized)!;
+        const cacheKey = organizationType ? `${normalized}:${organizationType}` : normalized;
+        if (organizationCache.has(cacheKey)) {
+          return organizationCache.get(cacheKey)!;
+        }
+
+        const where: any = {
+          name: {
+            equals: name,
+          },
+        };
+
+        if (organizationType) {
+          where.organizationType = organizationType;
         }
 
         const organization = await prisma.organization.findFirst({
-          where: {
-            name: {
-              equals: name,
-            },
-          },
+          where,
         });
 
         if (organization) {
-          organizationCache.set(normalized, organization);
+          organizationCache.set(cacheKey, organization);
         }
 
         return organization ?? null;
@@ -1963,15 +1993,19 @@ export const courseRunController = {
           const email = normalizeString(rawRow.email ?? rawRow.Email);
           const contact = normalizeString(rawRow.contact ?? rawRow.Contact);
           const designation = normalizeString(rawRow.designation ?? rawRow.Designation);
-          const organizationName = normalizeString(rawRow.clientOrganizationName ?? rawRow['Client Organization Name']);
+          const organizationType = normalizeString(rawRow.organizationType ?? rawRow['Organization Type'] ?? rawRow['Organisation Type']);
+          const organizationName = normalizeString(rawRow.clientOrganizationName ?? rawRow['Client Organization Name'] ?? rawRow['Client Organisation Name'] ?? rawRow.Division);
           const department = normalizeString(rawRow.department ?? rawRow.Department);
-          const paymentMethodLabel = normalizeString(rawRow.paymentMethod ?? rawRow['Payment Method']);
+          const buNumber = normalizeString(rawRow.buNumber ?? rawRow['BU Number'] ?? rawRow.BU);
+          const paymentMethodLabel = normalizeString(rawRow.paymentMethod ?? rawRow['Payment Method'] ?? rawRow['Payment Mode'] ?? rawRow.paymentMode);
           // Map display label to enum value
           const paymentMethod = paymentMethodLabel ? paymentModeMapping[paymentMethodLabel] || paymentMethodLabel : null;
-          const coordinatorEmail = normalizeString(rawRow.coordinatorEmail ?? rawRow['Coordinator email']);
+          const coordinatorEmail = normalizeString(rawRow.trainingCoordinatorEmail ?? rawRow['Training Coordinator Email'] ?? rawRow.coordinatorEmail ?? rawRow['Coordinator Email']);
+          const coordinatorName = normalizeString(rawRow.trainingCoordinatorName ?? rawRow['Training Coordinator Name'] ?? rawRow['Coordinator Name']);
+          const coordinatorContact = normalizeString(rawRow.trainingCoordinatorContact ?? rawRow['Training Coordinator Contact'] ?? rawRow['Coordinator Contact'] ?? rawRow['Coordinator Phone']);
           const discountName = normalizeString(rawRow.discountName ?? rawRow['discount name'] ?? rawRow['Discount Name']);
           const feesRemarks = normalizeString(rawRow.feesRemarks ?? rawRow['fees remarks'] ?? rawRow['Fees Remarks']);
-          const invoiceRemarks = normalizeString(rawRow.invoiceRemarks ?? rawRow['invoice remarks'] ?? rawRow['Invoice Remarks']);
+          const invoiceNumber = normalizeString(rawRow.invoiceNumber ?? rawRow['Invoice Number'] ?? rawRow.invoiceRemarks ?? rawRow['Invoice Remarks']);
           const remarks = normalizeString(rawRow.remarks ?? rawRow.Remarks);
 
           if (!name) {
@@ -1989,9 +2023,19 @@ export const courseRunController = {
           continue;
         }
 
-        const organization = await getOrganizationByName(organizationName);
+        if (!organizationType) {
+          errors.push({ row: index + 1, name, email, reason: 'Organization type is required' });
+          continue;
+        }
+
+        const organization = await getOrganizationByName(organizationName, organizationType);
         if (!organization) {
-          errors.push({ row: index + 1, name, email, reason: `Client organization "${organizationName}" was not found` });
+          errors.push({ row: index + 1, name, email, reason: `Client organization "${organizationName}" with type "${organizationType}" was not found` });
+          continue;
+        }
+
+        if (!coordinatorEmail) {
+          errors.push({ row: index + 1, name, email, reason: 'Training Coordinator Email is required' });
           continue;
         }
 
@@ -2002,19 +2046,18 @@ export const courseRunController = {
           // If coordinator doesn't exist, create one automatically
           if (!coordinator) {
             try {
-              // Extract name from email or use a default
-              const coordinatorName = normalizeString(rawRow.trainingCoordinatorName ?? rawRow['Training Coordinator Name']) 
-                || coordinatorEmail.split('@')[0] || 'Training Coordinator';
+              // Use provided name or extract from email or use a default
+              const finalCoordinatorName = coordinatorName || coordinatorEmail.split('@')[0] || 'Training Coordinator';
               
               coordinator = await prisma.user.create({
                 data: {
                   email: coordinatorEmail,
-                  name: coordinatorName,
+                  name: finalCoordinatorName,
                   role: UserRole.TRAINING_COORDINATOR,
                   status: 'ACTIVE',
                   password: '', // Will need to be set by the coordinator
                   organizationId: organization.id,
-                  contactNumber: normalizeString(rawRow.trainingCoordinatorContact ?? rawRow['Training Coordinator Contact']) || null,
+                  contactNumber: coordinatorContact || null,
                   designation: 'Training Coordinator',
                 },
               });
@@ -2113,7 +2156,7 @@ export const courseRunController = {
             discountAmount,
             totalFees,
             feesRemarks: feesRemarks || null,
-            invoiceNumber: invoiceRemarks || null,
+            invoiceNumber: invoiceNumber || null,
             remarks: remarks || null,
             departmentName: department || learner.departmentName || null,
             enrollmentStatus: 'ENROLLED',
@@ -3340,7 +3383,7 @@ export const courseRunController = {
           if (attachments && attachments.length > 0) {
             emailPayload.attachments = attachments;
           }
-
+          console.log('emailPayload', emailPayload);
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
           const status = didSend ? 'SENT' : 'FAILED';
@@ -4753,6 +4796,162 @@ export const courseRunController = {
       if (!res.headersSent) {
         res.status(500).json(buildErrorResponse('courseRunController.generateCertificatesZIP', 'Failed to generate certificates ZIP', error));
       }
+    }
+  },
+
+  sendCertificatesToLearners: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { learnerIds } = req.body;
+      const userId = req.user?.userId;
+
+      if (!id) {
+        res.status(400).json(buildErrorResponse('courseRunController.sendCertificatesToLearners', 'Course run ID is required', new Error('Missing ID')));
+        return;
+      }
+
+      if (!userId) {
+        res.status(401).json(buildErrorResponse('courseRunController.sendCertificatesToLearners', 'User not authenticated', new Error('No user ID')));
+        return;
+      }
+
+      if (!learnerIds || !Array.isArray(learnerIds) || learnerIds.length === 0) {
+        res.status(400).json(buildErrorResponse('courseRunController.sendCertificatesToLearners', 'Please provide learner IDs', new Error('Invalid learner IDs')));
+        return;
+      }
+
+      // Fetch course run with enrollments
+      const courseRun = await prisma.courseRun.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+        },
+        include: {
+          course: true,
+          courseRunTrainers: {
+            include: {
+              trainer: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          courseRunLearners: {
+            where: {
+              id: {
+                in: learnerIds,
+              },
+              deletedAt: null,
+            },
+            include: {
+              learner: {
+                select: {
+                  id: true,
+                  fullname: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json(buildErrorResponse('courseRunController.sendCertificatesToLearners', 'Course run not found', new Error('Not found')));
+        return;
+      }
+
+      if (courseRun.courseRunLearners.length === 0) {
+        res.status(404).json(buildErrorResponse('courseRunController.sendCertificatesToLearners', 'No enrollments found', new Error('No enrollments')));
+        return;
+      }
+
+      const baseUrl = process.env.FRONTEND_URL || 'https://tms.polwel.org';
+      const trainerNames = courseRun.courseRunTrainers
+        .map((ct: any) => ct.trainer?.name)
+        .filter(Boolean)
+        .join(', ');
+
+      let successCount = 0;
+      let failedCount = 0;
+      const results: Array<{ learnerId: string; learnerName: string; success: boolean; error?: string }> = [];
+
+      // Send certificate email to each selected learner
+      for (const enrollment of courseRun.courseRunLearners) {
+        const learner = enrollment.learner;
+        const email = learner?.email?.trim();
+
+        if (!email) {
+          failedCount += 1;
+          results.push({
+            learnerId: learner?.id || '',
+            learnerName: learner?.fullname || 'Unknown',
+            success: false,
+            error: 'No email address',
+          });
+          continue;
+        }
+
+        try {
+          const certificateDownloadUrl = `${baseUrl}/api/course-runs/certificates/download/${learner?.id}/${id}`;
+
+          const emailParams: any = {
+            email,
+            learnerName: learner?.fullname || 'Learner',
+            courseTitle: courseRun.course?.title || 'POLWEL Course',
+            certificateDownloadUrl,
+          };
+
+          if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
+          if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
+          if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
+          if (trainerNames) emailParams.trainerName = trainerNames;
+          if (courseRun.endDatetime) emailParams.completionDate = new Date(courseRun.endDatetime);
+
+          const didSend = await EmailService.sendCourseCompletionEmail(emailParams);
+
+          if (didSend) {
+            successCount += 1;
+            results.push({
+              learnerId: learner?.id || '',
+              learnerName: learner?.fullname || 'Unknown',
+              success: true,
+            });
+          } else {
+            failedCount += 1;
+            results.push({
+              learnerId: learner?.id || '',
+              learnerName: learner?.fullname || 'Unknown',
+              success: false,
+              error: 'Email service failed',
+            });
+          }
+        } catch (error: any) {
+          console.error(`Failed to send certificate email to ${email}:`, error);
+          failedCount += 1;
+          results.push({
+            learnerId: learner?.id || '',
+            learnerName: learner?.fullname || 'Unknown',
+            success: false,
+            error: error?.message || 'Unknown error',
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Sent ${successCount} certificate email(s) successfully${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+        data: {
+          total: courseRun.courseRunLearners.length,
+          success: successCount,
+          failed: failedCount,
+          results,
+        },
+      });
+    } catch (error) {
+      console.error('Error sending certificates to learners:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.sendCertificatesToLearners', 'Failed to send certificates', error));
     }
   },
 

@@ -91,8 +91,8 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
     division: user.division,
     lastLogin: new Date(),
     permissions: (user.permissions || [])
-      .filter((p) => p.granted)
-      .map((p) => p.permissionName),
+      .filter((p: any) => p.granted)
+      .map((p: any) => p.permissionName),
     organization: user.organization
       ? {
           id: user.organization.id,
@@ -193,31 +193,31 @@ router.post('/login', /* logRoute('AUTH_LOGIN'), */ async (req: Request, res: Re
 
     const requiresMfa = MFA_ENFORCED_ROLES.has(user.role);
 
-    if (requiresMfa) {
-      const { challenge, code } = await createOrResetChallenge(user.id);
-      const emailDelivery = await EmailService.sendMfaCodeEmail(
-        userEmail,
-        user.name,
-        code,
-        challenge.expiresAt
-      );
+  //   if (requiresMfa) {
+  //     const { challenge, code } = await createOrResetChallenge(user.id);
+  //     const emailDelivery = await EmailService.sendMfaCodeEmail(
+  //       userEmail,
+  //       user.name,
+  //       code,
+  //       challenge.expiresAt
+  //     );
 
-      const duration = Date.now() - startTime;
-      console.log(
-        `✅ [AUTH] MFA challenge issued for user: ${userEmail} (${user.role}) - Duration: ${duration}ms`
-      );
+  //     const duration = Date.now() - startTime;
+  //     console.log(
+  //       `✅ [AUTH] MFA challenge issued for user: ${userEmail} (${user.role}) - Duration: ${duration}ms`
+  //     );
 
-      res.status(200).json({
-        success: true,
-        mfaRequired: true,
-        challengeId: challenge.id,
-        expiresAt: challenge.expiresAt,
-  maskedEmail: maskEmail(userEmail),
-        resendCooldownSeconds: MFA_RESEND_COOLDOWN_SECONDS,
-        emailDelivery,
-      });
-      return;
-    }
+  //     res.status(200).json({
+  //       success: true,
+  //       mfaRequired: true,
+  //       challengeId: challenge.id,
+  //       expiresAt: challenge.expiresAt,
+  // maskedEmail: maskEmail(userEmail),
+  //       resendCooldownSeconds: MFA_RESEND_COOLDOWN_SECONDS,
+  //       emailDelivery,
+  //     });
+  //     return;
+  //   }
 
     const authPayload = await issueTokensForUser(user.id, { rememberMe });
     const duration = Date.now() - startTime;

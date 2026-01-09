@@ -16,13 +16,14 @@ type ImportLearnerRow = {
   email: string;
   contact?: string;
   designation?: string;
+  organizationType?: string;
   clientOrganizationName: string;
   department?: string;
   paymentMethod?: string;
   coordinatorEmail?: string;
   discountName?: string;
   feesRemarks?: string;
-  invoiceRemarks?: string;
+  invoiceNumber?: string;
   remarks?: string;
   buNumber?: string;
   trainingCoordinatorName?: string;
@@ -39,20 +40,17 @@ type ImportLearnerResultSummary = {
 
 const IMPORT_TEMPLATE_COLUMNS: Array<{ header: string; key: keyof ImportLearnerRow; required?: boolean; example?: string }> = [
   { header: "Name", key: "name", required: true, example: "Jane Doe" },
-  { header: "Department", key: "department", example: "Operations" },
   { header: "Designation", key: "designation", example: "Training Officer" },
   { header: "Email", key: "email", required: true, example: "jane.doe@example.com" },
   { header: "Contact", key: "contact", example: "+65 6123 4567" },
+  { header: "Organization Type", key: "organizationType", required: true, example: "SPF" },
   { header: "Client Organisation Name", key: "clientOrganizationName", required: true, example: "Singapore Police Force" },
-  { header: "Payment Method", key: "paymentMethod", example: "Company-Sponsored (Non-Home Team)" },
+  { header: "Department", key: "department", example: "Operations" },
   { header: "BU Number", key: "buNumber", example: "BU123456" },
+  { header: "Payment Method", key: "paymentMethod", example: "Company-Sponsored (Non-Home Team)" },
   { header: "Training Coordinator Name", key: "trainingCoordinatorName", example: "John Smith" },
-  { header: "Training Coordinator Email", key: "trainingCoordinatorEmail", example: "coordinator@example.com" },
+  { header: "Training Coordinator Email", key: "trainingCoordinatorEmail", required: true, example: "coordinator@example.com" },
   { header: "Training Coordinator Contact", key: "trainingCoordinatorContact", example: "+65 6789 0123" },
-  { header: "Discount Name", key: "discountName", example: "Home Team Subsidy" },
-  { header: "Fees Remarks", key: "feesRemarks" },
-  { header: "Invoice Remarks", key: "invoiceRemarks" },
-  { header: "Remarks", key: "remarks" },
 ];
 
 const PAYMENT_MODES = [
@@ -115,20 +113,19 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       learnersSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF366092" } };
       learnersSheet.getRow(1).alignment = { horizontal: "center", vertical: "middle" };
 
-      // Set column widths
-      const columnWidths = [20, 18, 20, 25, 18, 30, 30, 15, 25, 25, 20, 20, 15, 15, 15];
+      // Set column widths (12 columns now - removed Discount Name, Fees Remarks, Invoice Number, Remarks)
+      const columnWidths = [20, 20, 25, 18, 20, 30, 18, 15, 30, 25, 25, 20];
       learnersSheet.columns.forEach((col, idx) => {
         col.width = columnWidths[idx] || 15;
       });
 
-      // Add data validation dropdown for Payment Method column (column G, index 6)
-      // Validation applies to rows 2-1000
-      const paymentMethods = PAYMENT_MODES.join(",");
+      // Add data validation dropdown for Organization Type column (column E, index 4)
+      const organizationTypes = ["SPF", "POLWEL", "PUBLIC_SECTOR", "PRIVATE_SECTOR"].join(",");
       for (let row = 2; row <= 1000; row++) {
-        const cell = learnersSheet.getCell(`G${row}`);
+        const cell = learnersSheet.getCell(`E${row}`);
         (cell.dataValidation as any) = {
           type: "list",
-          formulae: [`"${paymentMethods}"`],
+          formulae: [`"${organizationTypes}"`],
         };
       }
 
@@ -143,6 +140,17 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
             formulae: [`='Name of Organisation'!$A$2:$A$${orgCount + 1}`],
           };
         }
+      }
+
+      // Add data validation dropdown for Payment Method column (column I, index 8)
+      // Validation applies to rows 2-1000
+      const paymentMethods = PAYMENT_MODES.join(",");
+      for (let row = 2; row <= 1000; row++) {
+        const cell = learnersSheet.getCell(`I${row}`);
+        (cell.dataValidation as any) = {
+          type: "list",
+          formulae: [`"${paymentMethods}"`],
+        };
       }
 
       // Create Payment Method reference sheet
@@ -298,13 +306,17 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
             email: extractValue(["Email", "email"]),
             contact: extractValue(["Contact", "contact", "Contact Number", "Phone"]),
             designation: extractValue(["Designation", "designation", "Title"]),
-            clientOrganizationName: extractValue(["Client Organization Name", "clientOrganizationName", "Client Organisation Name"]),
+            organizationType: extractValue(["Organization Type", "organizationType", "Organisation Type"]),
+            clientOrganizationName: extractValue(["Client Organization Name", "clientOrganizationName", "Client Organisation Name", "Division", "division"]),
             department: extractValue(["Department", "department", "Department Name", "departmentName"]),
-            paymentMethod: extractValue(["Payment Method", "paymentMethod", "Payment Mode"]),
-            coordinatorEmail: extractValue(["Coordinator Email", "coordinatorEmail", "Training Coordinator Email"]),
+            buNumber: extractValue(["BU Number", "buNumber", "BU"]),
+            paymentMethod: extractValue(["Payment Method", "paymentMethod", "Payment Mode", "paymentMode"]),
+            trainingCoordinatorName: extractValue(["Training Coordinator Name", "trainingCoordinatorName", "Coordinator Name"]),
+            trainingCoordinatorEmail: extractValue(["Training Coordinator Email", "trainingCoordinatorEmail", "Coordinator Email", "coordinatorEmail"]),
+            trainingCoordinatorContact: extractValue(["Training Coordinator Contact", "trainingCoordinatorContact", "Coordinator Contact", "Coordinator Phone"]),
             discountName: extractValue(["Discount Name", "discountName"]),
             feesRemarks: extractValue(["Fees Remarks", "feesRemarks", "Fee Remarks"]),
-            invoiceRemarks: extractValue(["Invoice Remarks", "invoiceRemarks", "Invoice Number"]),
+            invoiceNumber: extractValue(["Invoice Number", "invoiceNumber", "Invoice Remarks", "invoiceRemarks"]),
             remarks: extractValue(["Remarks", "remarks"]),
           };
 
@@ -324,7 +336,9 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
         const missingFields: string[] = [];
         if (!row.name) missingFields.push("Name");
         if (!row.email) missingFields.push("Email");
-        if (!row.clientOrganizationName) missingFields.push("Client Organization Name");
+        if (!row.organizationType) missingFields.push("Organization Type");
+        if (!row.clientOrganizationName) missingFields.push("Client Organisation Name");
+        if (!row.trainingCoordinatorEmail) missingFields.push("Training Coordinator Email");
         if (missingFields.length) {
           rowValidationIssues.push(
             `Row ${index + 2}: Missing ${missingFields.join(", ")}. These participants will fail to import until the details are provided.`

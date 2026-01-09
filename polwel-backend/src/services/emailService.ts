@@ -154,7 +154,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -374,7 +374,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -502,7 +502,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -618,7 +618,7 @@ class EmailService {
                     <tr>
                       <td class="footer">
                         <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@polwel.org'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'support@polwel.org'}</a>.</div>
+                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
                       </td>
                     </tr>
                   </table>
@@ -1084,6 +1084,22 @@ class EmailService {
                     <div class="info-box-content">${additionalNotes}</div>
                   </div>
                   ` : ''}
+
+                  <div class="info-box">
+                    <div class="info-box-title">Withdrawal Policy</div>
+                    <div class="info-box-content">
+                      • <strong>More than 10 working days before the course commencement date:</strong> 0% of the total course fees will be chargeable (i.e. 100% refundable)<br/><br/>
+                      • <strong>Within 10 working days before the course commencement date:</strong> 50% of the total course fees will be chargeable (i.e. 50% refundable)<br/><br/>
+                      • <strong>Absence on the day of the confirmed course:</strong> Will be deemed as no-show in which 100% of the total course fees will be chargeable (i.e. non-refundable).
+                    </div>
+                  </div>
+
+                  <div class="info-box">
+                    <div class="info-box-title">Photos & Videography</div>
+                    <div class="info-box-content">
+                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org/privacy-policy" style="color: #4b5563; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
+                    </div>
+                  </div>
 
                   <div class="closing-text">
                     Thank you.

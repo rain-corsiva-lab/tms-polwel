@@ -137,6 +137,12 @@ interface CourseRunDetailData {
       email: string;
       contactNumber?: string;
       designation?: string;
+      trainingCoordinator?: {
+        id: string;
+        name: string;
+        email: string;
+        contactNumber?: string;
+      } | null;
     };
   }>;
 }
@@ -694,9 +700,9 @@ const CourseRunDetail: React.FC = () => {
         row.getCell(12).value = "";
         row.getCell(13).value = "";
         row.getCell(14).value = courseRun.clientOrganization?.buNumber || "";
-        row.getCell(15).value = courseRun.courseRunTrainers?.[0]?.trainer?.name || "";
-        row.getCell(16).value = courseRun.courseRunTrainers?.[0]?.trainer?.email || "";
-        row.getCell(17).value = "";
+        row.getCell(15).value = learner.trainingCoordinator?.name || "";
+        row.getCell(16).value = learner.trainingCoordinator?.email || "";
+        row.getCell(17).value = learner.trainingCoordinator?.contactNumber || "";
         row.getCell(18).value = "";
 
         // Style enrolled row
@@ -834,9 +840,9 @@ const CourseRunDetail: React.FC = () => {
           row.getCell(12).value = "";
           row.getCell(13).value = "";
           row.getCell(14).value = courseRun.clientOrganization?.buNumber || "";
-          row.getCell(15).value = courseRun.courseRunTrainers?.[0]?.trainer?.name || "";
-          row.getCell(16).value = courseRun.courseRunTrainers?.[0]?.trainer?.email || "";
-          row.getCell(17).value = "";
+          row.getCell(15).value = learner.trainingCoordinator?.name || "";
+          row.getCell(16).value = learner.trainingCoordinator?.email || "";
+          row.getCell(17).value = learner.trainingCoordinator?.contactNumber || "";
           row.getCell(18).value = "";
 
           // Style withdrawn row
