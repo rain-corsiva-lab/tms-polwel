@@ -1977,6 +1977,52 @@ export const courseRunController = {
 
       const normalizeString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
+      // Check for duplicate emails within the CSV file BEFORE processing
+      const emailCountMap = new Map<string, number[]>();
+      for (let i = 0; i < rows.length; i += 1) {
+        const rawRow = rows[i] ?? {};
+        const email = normalizeString(rawRow.email ?? rawRow.Email);
+        if (email) {
+          const normalizedEmail = email.toLowerCase();
+          if (!emailCountMap.has(normalizedEmail)) {
+            emailCountMap.set(normalizedEmail, []);
+          }
+          emailCountMap.get(normalizedEmail)!.push(i + 1); // Store row numbers (1-indexed)
+        }
+      }
+
+      // Add errors for duplicate emails in CSV
+      for (const [email, rowNumbers] of emailCountMap.entries()) {
+        if (rowNumbers.length > 1 && rowNumbers[0] !== undefined) {
+          const firstRowNumber = rowNumbers[0];
+          const firstRow = rows[firstRowNumber - 1] ?? {};
+          const rowName = normalizeString(firstRow.name ?? firstRow.Name);
+          errors.push({
+            row: firstRowNumber,
+            name: rowName,
+            email: email,
+            reason: `Duplicate email "${email}" found in rows ${rowNumbers.join(', ')}. Each participant must have a unique email address.`,
+          });
+          // Mark all duplicate rows (except first) as errors
+          for (let i = 1; i < rowNumbers.length; i += 1) {
+            const dupRowNumber = rowNumbers[i];
+            if (dupRowNumber !== undefined) {
+              const dupRow = rows[dupRowNumber - 1] ?? {};
+              const dupRowName = normalizeString(dupRow.name ?? dupRow.Name);
+              errors.push({
+                row: dupRowNumber,
+                name: dupRowName,
+                email: email,
+                reason: `Duplicate email "${email}" (also found in row ${firstRowNumber}). Each participant must have a unique email address.`,
+              });
+            }
+          }
+        }
+      }
+
+      // Skip processing rows that have duplicate email errors
+      const errorRows = new Set(errors.map(e => e.row));
+
       // Payment mode mapping from display labels to enum values
       const paymentModeMapping: Record<string, string> = {
         'Self-Payment': 'SELF_SPONSORED',
@@ -1987,6 +2033,10 @@ export const courseRunController = {
       };
 
       for (let index = 0; index < rows.length; index += 1) {
+        // Skip rows that already have errors (like duplicate emails)
+        if (errorRows.has(index + 1)) {
+          continue;
+        }
         try {
           const rawRow = rows[index] ?? {};
           const name = normalizeString(rawRow.name ?? rawRow.Name);
@@ -2127,7 +2177,12 @@ export const courseRunController = {
         }
 
         if (newlyEnrolledLearnerIds.has(learner.id)) {
-          errors.push({ row: index + 1, name, email, reason: 'Duplicate learner entry in import file' });
+          errors.push({ 
+            row: index + 1, 
+            name, 
+            email, 
+            reason: `Duplicate email "${email}" found in import file. This participant appears multiple times in your CSV.` 
+          });
           continue;
         }
 
