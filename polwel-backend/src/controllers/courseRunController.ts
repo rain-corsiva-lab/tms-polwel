@@ -2569,6 +2569,24 @@ export const courseRunController = {
         return;
       }
 
+      // Check if course has started (on or after start date)
+      // Attendance (including Absent) should only be allowed from the course start date onwards
+      if (courseRun.startDatetime) {
+        const courseStartDate = new Date(courseRun.startDatetime);
+        const today = new Date();
+        // Reset to midnight for date-only comparison (ignore time)
+        today.setHours(0, 0, 0, 0);
+        courseStartDate.setHours(0, 0, 0, 0);
+        
+        if (today < courseStartDate) {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot mark attendance before the course start date. Please use withdrawal if needed.',
+          });
+          return;
+        }
+      }
+
       const totalDays = calculateCourseRunDayCount(courseRun);
       const effectiveDayBoundary = Math.max(totalDays, day);
       const userId = (req as any)?.user?.userId ?? null;
@@ -3848,6 +3866,24 @@ export const courseRunController = {
           error: 'Learner is already withdrawn',
         });
         return;
+      }
+
+      // Check if course has started (on or after start date)
+      // Withdrawal should be disabled from the course start date onwards
+      if (enrollment.courseRun.startDatetime) {
+        const courseStartDate = new Date(enrollment.courseRun.startDatetime);
+        const today = new Date();
+        // Reset to midnight for date-only comparison (ignore time)
+        today.setHours(0, 0, 0, 0);
+        courseStartDate.setHours(0, 0, 0, 0);
+        
+        if (today >= courseStartDate) {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot withdraw participant on or after the course start date. Please mark as Absent instead.',
+          });
+          return;
+        }
       }
 
       // Handle supporting document upload if provided
