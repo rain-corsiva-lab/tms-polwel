@@ -794,6 +794,29 @@ export const courseRunController = {
 
       const total = matchingIds.length;
 
+      // Check which TALKS course runs have trainer assignment emails sent
+      const talksCourseRunIds = courseRuns
+        .filter(run => run.courseRunType === 'TALKS')
+        .map(run => run.id);
+
+      let talksWithTrainerEmails = new Set<string>();
+      if (talksCourseRunIds.length > 0) {
+        const trainerEmailHistory = await prisma.trainerAssignmentEmailHistory.findMany({
+          where: {
+            courseRunId: { in: talksCourseRunIds },
+            deletedAt: null,
+          },
+          select: {
+            courseRunId: true,
+          },
+          distinct: ['courseRunId'],
+        });
+
+        talksWithTrainerEmails = new Set(
+          trainerEmailHistory.map(history => history.courseRunId)
+        );
+      }
+
       // Format the response
       const formattedCourseRuns = courseRuns.map(run => {
         const course = run.course || { id: null, title: 'Untitled Course', courseCode: null, category: null };
@@ -838,6 +861,10 @@ export const courseRunController = {
           updatedAt: run.updatedAt,
           baseCourseFee: run.baseCourseFee,
           courseRunFeeType: run.courseRunFeeType,
+          // Only set hasTrainerAssignmentEmailSent for TALKS course runs
+          hasTrainerAssignmentEmailSent: run.courseRunType === 'TALKS' 
+            ? talksWithTrainerEmails.has(run.id) 
+            : undefined,
           workflow: {
             availableActions,
           },
@@ -3043,28 +3070,30 @@ export const courseRunController = {
           attachments.length > 0 ? attachments : null
         );
 
-        // create history record with attachments
-        try {
-          const emailHistory = await prisma.trainerAssignmentEmailHistory.create({
-            data: {
-              courseRunId: id,
-              trainerId: assignment.trainer.id,
-              cc: ccList.length > 0 ? ccList.join(', ') : null,
-              additionalBodyContent: additionalBody || null,
-            },
-          });
-
-          // Create attachment relationships if attachments provided
-          if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
-            await prisma.trainerEmailAttachment.createMany({
-              data: attachmentIds.map((mediaId: string) => ({
-                emailHistoryId: emailHistory.id,
-                mediaId: mediaId,
-              })),
+        // create history record with attachments - ONLY if email was sent successfully
+        if (result.success) {
+          try {
+            const emailHistory = await prisma.trainerAssignmentEmailHistory.create({
+              data: {
+                courseRunId: id,
+                trainerId: assignment.trainer.id,
+                cc: ccList.length > 0 ? ccList.join(', ') : null,
+                additionalBodyContent: additionalBody || null,
+              },
             });
+
+            // Create attachment relationships if attachments provided
+            if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+              await prisma.trainerEmailAttachment.createMany({
+                data: attachmentIds.map((mediaId: string) => ({
+                  emailHistoryId: emailHistory.id,
+                  mediaId: mediaId,
+                })),
+              });
+            }
+          } catch (histErr) {
+            console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
           }
-        } catch (histErr) {
-          console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
         }
 
         // update assignment status
@@ -3353,6 +3382,32 @@ export const courseRunController = {
           error: `Cannot send confirmation emails. Current status is ${courseRun.status}`,
         });
         return;
+      }
+
+      // For TALKS: Check if trainer assignment email has been sent
+      // If yes, block sending course confirmation email
+      if (courseRun.courseRunType === 'TALKS') {
+        const trainerEmailsSent = await prisma.trainerAssignmentEmailHistory.count({
+          where: {
+            courseRunId: id,
+            deletedAt: null,
+          },
+        });
+
+        const hasTrainers = await prisma.courseRunTrainer.count({
+          where: {
+            courseRunId: id,
+            deletedAt: null,
+          },
+        });
+
+        if (hasTrainers > 0 && trainerEmailsSent > 0) {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot send course confirmation email for Talks after trainer assignment email has been sent.',
+          });
+          return;
+        }
       }
 
       const ccList = normalizeEmailList(ccEmails);
@@ -3763,6 +3818,22 @@ export const courseRunController = {
               trainerAssignmentEmailStatus: result.success ? 'SENT' : 'FAILED',
             },
           });
+
+          // Create history record - ONLY if email was sent successfully
+          if (result.success) {
+            try {
+              await prisma.trainerAssignmentEmailHistory.create({
+                data: {
+                  courseRunId: id,
+                  trainerId: assignment.trainer.id,
+                  cc: null,
+                  additionalBodyContent: null,
+                },
+              });
+            } catch (histErr) {
+              console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
+            }
+          }
 
           if (result.success) {
             trainerSuccess += 1;
