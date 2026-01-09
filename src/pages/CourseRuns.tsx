@@ -480,9 +480,49 @@ const CourseRuns: React.FC = () => {
     setPagination((p) => ({ ...p, page: 1 }));
   };
 
-  // Format date only (without time)
-  const formatRange = (start: Date | null, end: Date | null) => {
+  // Format status label to user-friendly text
+  const formatStatusLabel = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'CONFIRMED_PENDING_CONFIRMATION_EMAILS': 'Pending Confirmation emails sent',
+      'CONFIRMED_PENDING_TA_APPROVAL': 'Pending TA',
+      'IN_PROGRESS': 'In Progress',
+      'PENDING': 'Pending',
+      'CONFIRMED': 'Confirmed',
+      'ACTIVE': 'Active',
+      'PENDING_BILLING': 'Pending Billing',
+      'COMPLETED': 'Completed',
+      'CANCELLED': 'Cancelled',
+      'DRAFT': 'Draft',
+    };
+    return statusMap[status] || status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  // Format date only (without time) or with time for TALKS
+  const formatRange = (start: Date | null, end: Date | null, courseType?: string) => {
     if (!start) return "—";
+    
+    // For TALKS, show date with time
+    if (courseType === 'TALKS') {
+      const dateOpts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+      const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true };
+      
+      const dateStr = start.toLocaleDateString(undefined, dateOpts);
+      const startTime = start.toLocaleTimeString(undefined, timeOpts);
+      
+      if (!end) return `${dateStr}, ${startTime}`;
+      
+      const endTime = end.toLocaleTimeString(undefined, timeOpts);
+      const sameDay = start.toDateString() === end.toDateString();
+      
+      if (sameDay) {
+        return `${dateStr}, ${startTime} to ${endTime}`;
+      }
+      
+      const endDateStr = end.toLocaleDateString(undefined, dateOpts);
+      return `${dateStr}, ${startTime} → ${endDateStr}, ${endTime}`;
+    }
+    
+    // For other types, show date only (existing logic)
     const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
     const startStr = start.toLocaleDateString(undefined, opts);
     if (!end) return startStr;
@@ -1318,7 +1358,15 @@ const CourseRuns: React.FC = () => {
                   </TableRow>
                 ) : (
                   filteredCourseRuns.map((courseRun) => (
-                    <TableRow key={courseRun.id}>
+                    <TableRow 
+                      key={courseRun.id}
+                      className={courseRun.status === "IN_PROGRESS" ? "cursor-pointer hover:bg-gray-50" : ""}
+                      onClick={() => {
+                        if (courseRun.status === "IN_PROGRESS") {
+                          handleView(courseRun);
+                        }
+                      }}
+                    >
                       <TableCell>
                         <div>
                           <div className="font-medium text-gray-900">{courseRun.title}</div>
@@ -1329,7 +1377,7 @@ const CourseRuns: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
                           <div>
-                            <div className="text-sm font-medium">{formatRange(courseRun.start, courseRun.end)}</div>
+                            <div className="text-sm font-medium">{formatRange(courseRun.start, courseRun.end, courseRun.courseType)}</div>
                           </div>
                         </div>
                       </TableCell>
@@ -1374,10 +1422,7 @@ const CourseRuns: React.FC = () => {
                             </button>
                           ) : (
                             <Badge className="self-center text-center" variant={getStatusBadgeVariant(courseRun.status)}>
-                              {courseRun.status
-                                .replace(/_/g, " ")
-                                .toLowerCase()
-                                .replace(/\b\w/g, (c) => c.toUpperCase())}
+                              {formatStatusLabel(courseRun.status)}
                             </Badge>
                           )}
                           {/* {courseRun.workflow?.learnerEmailStatus && (

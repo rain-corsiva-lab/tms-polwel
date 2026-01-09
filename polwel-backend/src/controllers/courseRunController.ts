@@ -649,13 +649,36 @@ export const courseRunController = {
         ];
       }
 
+      // Check if user is POLWEL ops user (has course-runs-operations permission but limited access)
+      // POLWEL ops users should only see IN_PROGRESS courses and only their own learners
+      let hasOpsPermission = false;
+      if (req.user && req.user.role === 'POLWEL' && req.user.permissions) {
+        const userPerms = req.user.permissions instanceof Set 
+          ? Array.from(req.user.permissions) 
+          : Array.isArray(req.user.permissions) 
+            ? req.user.permissions 
+            : [];
+        // Check if user has course-runs-operations permission (but not full POLWEL access)
+        // This indicates they are ops users with limited access
+        const permStrings = userPerms.map((p: any) => 
+          typeof p === 'string' ? p.toLowerCase() : (p?.permissionName || '').toLowerCase()
+        );
+        hasOpsPermission = permStrings.some((p: string) => 
+          p.includes('course-runs-operations') || p.includes('course.run')
+        ) && !permStrings.some((p: string) => p === 'course-run.view' || p === 'course.run.view');
+      }
+
       // Add status filter
       const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : undefined;
       
       console.log('[CourseRuns] Received status param:', status);
       console.log('[CourseRuns] Normalized status:', normalizedStatus);
+      console.log('[CourseRuns] Is POLWEL ops user:', hasOpsPermission);
       
-      if (normalizedStatus) {
+      // For POLWEL ops users, force IN_PROGRESS status only
+      if (hasOpsPermission) {
+        where.status = CourseStatus.IN_PROGRESS;
+      } else if (normalizedStatus) {
         // Check if status is comma-separated (multiple statuses)
         if (normalizedStatus.includes(',')) {
           const statusArray = normalizedStatus.split(',').map(s => s.trim()).filter(s => 

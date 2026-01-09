@@ -152,18 +152,43 @@ const OrganizationDashboard = () => {
     }
   };
 
+  // Format status label to user-friendly text
+  const formatStatusLabel = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'CONFIRMED_PENDING_CONFIRMATION_EMAILS': 'Pending Confirmation emails sent',
+      'CONFIRMED_PENDING_TA_APPROVAL': 'Pending TA',
+      'IN_PROGRESS': 'In Progress',
+      'PENDING': 'Pending',
+      'CONFIRMED': 'Confirmed',
+      'ACTIVE': 'Active',
+      'PENDING_BILLING': 'Pending Billing',
+      'COMPLETED': 'Completed',
+      'CANCELLED': 'Cancelled',
+      'DRAFT': 'Draft',
+    };
+    return statusMap[status] || status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   const getStatusBadge = (status: string) => {
     const statusLower = status.toLowerCase();
+    const statusLabel = formatStatusLabel(status);
+    
     if (statusLower.includes("progress") || statusLower === "ongoing" || statusLower === "in_progress") {
-      return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>;
+      return <Badge className="bg-blue-100 text-blue-800">{statusLabel}</Badge>;
     }
     if (statusLower === "completed" || statusLower === "pending_billing") {
-      return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+      return <Badge className="bg-green-100 text-green-800">{statusLabel}</Badge>;
     }
     if (statusLower === "active") {
-      return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+      return <Badge className="bg-green-100 text-green-800">{statusLabel}</Badge>;
     }
-    return <Badge variant="secondary">{status}</Badge>;
+    if (statusLower === "confirmed_pending_ta_approval") {
+      return <Badge className="bg-yellow-100 text-yellow-800">{statusLabel}</Badge>;
+    }
+    if (statusLower === "confirmed_pending_confirmation_emails") {
+      return <Badge className="bg-blue-100 text-blue-800">{statusLabel}</Badge>;
+    }
+    return <Badge variant="secondary">{statusLabel}</Badge>;
   };
 
   // Filter completed runs by date range
