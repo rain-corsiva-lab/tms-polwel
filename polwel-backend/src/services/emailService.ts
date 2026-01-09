@@ -1085,6 +1085,22 @@ class EmailService {
                   </div>
                   ` : ''}
 
+                  <div class="info-box">
+                    <div class="info-box-title">Withdrawal Policy</div>
+                    <div class="info-box-content">
+                      • <strong>More than 10 working days before the course commencement date:</strong> 0% of the total course fees will be chargeable (i.e. 100% refundable)<br/><br/>
+                      • <strong>Within 10 working days before the course commencement date:</strong> 50% of the total course fees will be chargeable (i.e. 50% refundable)<br/><br/>
+                      • <strong>Absence on the day of the confirmed course:</strong> Will be deemed as no-show in which 100% of the total course fees will be chargeable (i.e. non-refundable).
+                    </div>
+                  </div>
+
+                  <div class="info-box">
+                    <div class="info-box-title">Photos & Videography</div>
+                    <div class="info-box-content">
+                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org/privacy-policy" style="color: #4b5563; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
+                    </div>
+                  </div>
+
                   <div class="closing-text">
                     Thank you.
                   </div>
