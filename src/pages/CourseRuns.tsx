@@ -59,6 +59,7 @@ interface BackendCourseRun {
     learnerEmailStatus?: string;
     statusLastEvaluatedAt?: string | null;
   };
+  hasTrainerAssignmentEmailSent?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +111,7 @@ interface CourseRunUI {
     learnerEmailStatus?: string;
     statusLastEvaluatedAt?: Date | null;
   };
+  hasTrainerAssignmentEmailSent?: boolean;
 }
 
 interface PaginationState {
@@ -343,6 +345,7 @@ const CourseRuns: React.FC = () => {
             cancelReason: run.cancelReason ?? null,
             cancelledAt: run.cancelledAt ? new Date(run.cancelledAt) : null,
             statusLastEvaluatedAt: statusEvaluatedAt ? new Date(statusEvaluatedAt) : null,
+            hasTrainerAssignmentEmailSent: run.hasTrainerAssignmentEmailSent ?? false,
             workflow: {
               availableActions: workflowAvailable,
               learnerEmailStatus: run.workflow?.learnerEmailStatus || run.learnerEmailStatus,
@@ -935,6 +938,8 @@ const CourseRuns: React.FC = () => {
         type,
         cc: "",
         additionalBody: "",
+        attachmentFile: null,
+        attachmentId: null,
         submitting: false,
       });
     }
@@ -1465,9 +1470,12 @@ const CourseRuns: React.FC = () => {
                               <>
                                 {/* <DropdownMenuSeparator /> */}
                                 {/* <DropdownMenuLabel>Email Actions</DropdownMenuLabel> */}
-                                <DropdownMenuItem onClick={() => openEmailDialog(courseRun, "course_confirmation")}>
-                                  Send Course Confirmation Email
-                                </DropdownMenuItem>
+                                {/* For TALKS: Hide "Send Course Confirmation Email" if trainer assignment email has been sent */}
+                                {!(courseRun.courseType === "TALKS" && courseRun.hasTrainerAssignmentEmailSent) && (
+                                  <DropdownMenuItem onClick={() => openEmailDialog(courseRun, "course_confirmation")}>
+                                    Send Course Confirmation Email
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onClick={() => handleSendTrainingAssignmentEmail(courseRun)}>Send Training Assignment Email</DropdownMenuItem>
                               </>
                             )}

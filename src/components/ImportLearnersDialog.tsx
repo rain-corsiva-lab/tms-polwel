@@ -410,11 +410,34 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       if (importedCount > 0) {
         onSuccess?.();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to import participants:", error);
+      
+      // Extract specific error message from API response
+      let errorMessage = "We couldn't import participants. Please review your file and try again.";
+      
+      if (error?.data?.error) {
+        errorMessage = error.data.error;
+      } else if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // If there are validation errors in the response, show them
+      if (error?.data?.errors && Array.isArray(error.data.errors)) {
+        const errorDetails = error.data.errors
+          .map((err: any) => err.reason || err.message || err)
+          .slice(0, 3) // Show first 3 errors
+          .join(", ");
+        if (errorDetails) {
+          errorMessage = `${errorMessage}. ${errorDetails}`;
+        }
+      }
+      
       toast({
         title: "Import failed",
-        description: "We couldn't import learners. Please review your file and try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

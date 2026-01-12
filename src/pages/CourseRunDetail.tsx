@@ -233,6 +233,18 @@ const CourseRunDetail: React.FC = () => {
     return `${courseCode}${day}${month}${year}`;
   };
 
+  // Check if course has started (on or after start date)
+  // Withdrawal should be disabled from the course start date onwards
+  const isCourseStarted = (): boolean => {
+    if (!courseRun?.startDatetime) return false;
+    const courseStartDate = new Date(courseRun.startDatetime);
+    const today = new Date();
+    // Reset to midnight for date-only comparison (ignore time)
+    today.setHours(0, 0, 0, 0);
+    courseStartDate.setHours(0, 0, 0, 0);
+    return today >= courseStartDate;
+  };
+
   const initEditData = useCallback((cr: CourseRunDetailData) => {
     const start = cr.startDatetime ? new Date(cr.startDatetime) : null;
     const end = cr.endDatetime ? new Date(cr.endDatetime) : null;
@@ -1833,7 +1845,13 @@ const CourseRunDetail: React.FC = () => {
                     <Download className="h-4 w-4 mr-2" />
                     Import CSV
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setAttendanceDialogOpen(true)}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setAttendanceDialogOpen(true)}
+                    disabled={!isCourseStarted()}
+                    title={!isCourseStarted() ? "Attendance can only be marked from the course start date onwards. Use withdrawal if needed before the course starts." : ""}
+                  >
                     <Upload className="h-4 w-4 mr-2" />
                     Attendance/Class List
                   </Button>
@@ -1864,7 +1882,13 @@ const CourseRunDetail: React.FC = () => {
                           <Mail className="h-4 w-4 mr-2" />
                           Send Confirmation Email
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleBulkChangeStatus()} disabled={selectedParticipants.size === 0}>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleBulkChangeStatus()} 
+                          disabled={selectedParticipants.size === 0 || isCourseStarted()}
+                          title={isCourseStarted() ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent." : ""}
+                        >
                           Change Status to Withdrawn
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => handleBulkDeleteLearners()} disabled={selectedParticipants.size === 0}>
@@ -1965,9 +1989,14 @@ const CourseRunDetail: React.FC = () => {
                                       )}
                                       <DropdownMenuItem
                                         onClick={() => {
-                                          setSelectedLearnerForWithdrawal(learnerRecord);
-                                          setWithdrawalDialogOpen(true);
+                                          if (!isCourseStarted()) {
+                                            setSelectedLearnerForWithdrawal(learnerRecord);
+                                            setWithdrawalDialogOpen(true);
+                                          }
                                         }}
+                                        disabled={isCourseStarted()}
+                                        className={isCourseStarted() ? "opacity-50 cursor-not-allowed" : ""}
+                                        title={isCourseStarted() ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent." : ""}
                                       >
                                         Mark as Withdrawn
                                       </DropdownMenuItem>

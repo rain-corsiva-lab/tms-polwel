@@ -794,6 +794,29 @@ export const courseRunController = {
 
       const total = matchingIds.length;
 
+      // Check which TALKS course runs have trainer assignment emails sent
+      const talksCourseRunIds = courseRuns
+        .filter(run => run.courseRunType === 'TALKS')
+        .map(run => run.id);
+
+      let talksWithTrainerEmails = new Set<string>();
+      if (talksCourseRunIds.length > 0) {
+        const trainerEmailHistory = await prisma.trainerAssignmentEmailHistory.findMany({
+          where: {
+            courseRunId: { in: talksCourseRunIds },
+            deletedAt: null,
+          },
+          select: {
+            courseRunId: true,
+          },
+          distinct: ['courseRunId'],
+        });
+
+        talksWithTrainerEmails = new Set(
+          trainerEmailHistory.map(history => history.courseRunId)
+        );
+      }
+
       // Format the response
       const formattedCourseRuns = courseRuns.map(run => {
         const course = run.course || { id: null, title: 'Untitled Course', courseCode: null, category: null };
@@ -838,6 +861,10 @@ export const courseRunController = {
           updatedAt: run.updatedAt,
           baseCourseFee: run.baseCourseFee,
           courseRunFeeType: run.courseRunFeeType,
+          // Only set hasTrainerAssignmentEmailSent for TALKS course runs
+          hasTrainerAssignmentEmailSent: run.courseRunType === 'TALKS' 
+            ? talksWithTrainerEmails.has(run.id) 
+            : undefined,
           workflow: {
             availableActions,
           },
@@ -1977,6 +2004,52 @@ export const courseRunController = {
 
       const normalizeString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
+      // Check for duplicate emails within the CSV file BEFORE processing
+      const emailCountMap = new Map<string, number[]>();
+      for (let i = 0; i < rows.length; i += 1) {
+        const rawRow = rows[i] ?? {};
+        const email = normalizeString(rawRow.email ?? rawRow.Email);
+        if (email) {
+          const normalizedEmail = email.toLowerCase();
+          if (!emailCountMap.has(normalizedEmail)) {
+            emailCountMap.set(normalizedEmail, []);
+          }
+          emailCountMap.get(normalizedEmail)!.push(i + 1); // Store row numbers (1-indexed)
+        }
+      }
+
+      // Add errors for duplicate emails in CSV
+      for (const [email, rowNumbers] of emailCountMap.entries()) {
+        if (rowNumbers.length > 1 && rowNumbers[0] !== undefined) {
+          const firstRowNumber = rowNumbers[0];
+          const firstRow = rows[firstRowNumber - 1] ?? {};
+          const rowName = normalizeString(firstRow.name ?? firstRow.Name);
+          errors.push({
+            row: firstRowNumber,
+            name: rowName,
+            email: email,
+            reason: `Duplicate email "${email}" found in rows ${rowNumbers.join(', ')}. Each participant must have a unique email address.`,
+          });
+          // Mark all duplicate rows (except first) as errors
+          for (let i = 1; i < rowNumbers.length; i += 1) {
+            const dupRowNumber = rowNumbers[i];
+            if (dupRowNumber !== undefined) {
+              const dupRow = rows[dupRowNumber - 1] ?? {};
+              const dupRowName = normalizeString(dupRow.name ?? dupRow.Name);
+              errors.push({
+                row: dupRowNumber,
+                name: dupRowName,
+                email: email,
+                reason: `Duplicate email "${email}" (also found in row ${firstRowNumber}). Each participant must have a unique email address.`,
+              });
+            }
+          }
+        }
+      }
+
+      // Skip processing rows that have duplicate email errors
+      const errorRows = new Set(errors.map(e => e.row));
+
       // Payment mode mapping from display labels to enum values
       const paymentModeMapping: Record<string, string> = {
         'Self-Payment': 'SELF_SPONSORED',
@@ -1987,6 +2060,10 @@ export const courseRunController = {
       };
 
       for (let index = 0; index < rows.length; index += 1) {
+        // Skip rows that already have errors (like duplicate emails)
+        if (errorRows.has(index + 1)) {
+          continue;
+        }
         try {
           const rawRow = rows[index] ?? {};
           const name = normalizeString(rawRow.name ?? rawRow.Name);
@@ -2127,7 +2204,12 @@ export const courseRunController = {
         }
 
         if (newlyEnrolledLearnerIds.has(learner.id)) {
-          errors.push({ row: index + 1, name, email, reason: 'Duplicate learner entry in import file' });
+          errors.push({ 
+            row: index + 1, 
+            name, 
+            email, 
+            reason: `Duplicate email "${email}" found in import file. This participant appears multiple times in your CSV.` 
+          });
           continue;
         }
 
@@ -2512,6 +2594,24 @@ export const courseRunController = {
       if (!courseRun) {
         res.status(404).json({ success: false, error: 'Course run not found' });
         return;
+      }
+
+      // Check if course has started (on or after start date)
+      // Attendance (including Absent) should only be allowed from the course start date onwards
+      if (courseRun.startDatetime) {
+        const courseStartDate = new Date(courseRun.startDatetime);
+        const today = new Date();
+        // Reset to midnight for date-only comparison (ignore time)
+        today.setHours(0, 0, 0, 0);
+        courseStartDate.setHours(0, 0, 0, 0);
+        
+        if (today < courseStartDate) {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot mark attendance before the course start date. Please use withdrawal if needed.',
+          });
+          return;
+        }
       }
 
       const totalDays = calculateCourseRunDayCount(courseRun);
@@ -2970,28 +3070,30 @@ export const courseRunController = {
           attachments.length > 0 ? attachments : null
         );
 
-        // create history record with attachments
-        try {
-          const emailHistory = await prisma.trainerAssignmentEmailHistory.create({
-            data: {
-              courseRunId: id,
-              trainerId: assignment.trainer.id,
-              cc: ccList.length > 0 ? ccList.join(', ') : null,
-              additionalBodyContent: additionalBody || null,
-            },
-          });
-
-          // Create attachment relationships if attachments provided
-          if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
-            await prisma.trainerEmailAttachment.createMany({
-              data: attachmentIds.map((mediaId: string) => ({
-                emailHistoryId: emailHistory.id,
-                mediaId: mediaId,
-              })),
+        // create history record with attachments - ONLY if email was sent successfully
+        if (result.success) {
+          try {
+            const emailHistory = await prisma.trainerAssignmentEmailHistory.create({
+              data: {
+                courseRunId: id,
+                trainerId: assignment.trainer.id,
+                cc: ccList.length > 0 ? ccList.join(', ') : null,
+                additionalBodyContent: additionalBody || null,
+              },
             });
+
+            // Create attachment relationships if attachments provided
+            if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+              await prisma.trainerEmailAttachment.createMany({
+                data: attachmentIds.map((mediaId: string) => ({
+                  emailHistoryId: emailHistory.id,
+                  mediaId: mediaId,
+                })),
+              });
+            }
+          } catch (histErr) {
+            console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
           }
-        } catch (histErr) {
-          console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
         }
 
         // update assignment status
@@ -3280,6 +3382,32 @@ export const courseRunController = {
           error: `Cannot send confirmation emails. Current status is ${courseRun.status}`,
         });
         return;
+      }
+
+      // For TALKS: Check if trainer assignment email has been sent
+      // If yes, block sending course confirmation email
+      if (courseRun.courseRunType === 'TALKS') {
+        const trainerEmailsSent = await prisma.trainerAssignmentEmailHistory.count({
+          where: {
+            courseRunId: id,
+            deletedAt: null,
+          },
+        });
+
+        const hasTrainers = await prisma.courseRunTrainer.count({
+          where: {
+            courseRunId: id,
+            deletedAt: null,
+          },
+        });
+
+        if (hasTrainers > 0 && trainerEmailsSent > 0) {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot send course confirmation email for Talks after trainer assignment email has been sent.',
+          });
+          return;
+        }
       }
 
       const ccList = normalizeEmailList(ccEmails);
@@ -3691,6 +3819,22 @@ export const courseRunController = {
             },
           });
 
+          // Create history record - ONLY if email was sent successfully
+          if (result.success) {
+            try {
+              await prisma.trainerAssignmentEmailHistory.create({
+                data: {
+                  courseRunId: id,
+                  trainerId: assignment.trainer.id,
+                  cc: null,
+                  additionalBodyContent: null,
+                },
+              });
+            } catch (histErr) {
+              console.warn('Failed to create trainerAssignmentEmailHistory record:', (histErr as any)?.message || histErr);
+            }
+          }
+
           if (result.success) {
             trainerSuccess += 1;
           } else {
@@ -3793,6 +3937,24 @@ export const courseRunController = {
           error: 'Learner is already withdrawn',
         });
         return;
+      }
+
+      // Check if course has started (on or after start date)
+      // Withdrawal should be disabled from the course start date onwards
+      if (enrollment.courseRun.startDatetime) {
+        const courseStartDate = new Date(enrollment.courseRun.startDatetime);
+        const today = new Date();
+        // Reset to midnight for date-only comparison (ignore time)
+        today.setHours(0, 0, 0, 0);
+        courseStartDate.setHours(0, 0, 0, 0);
+        
+        if (today >= courseStartDate) {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot withdraw participant on or after the course start date. Please mark as Absent instead.',
+          });
+          return;
+        }
       }
 
       // Handle supporting document upload if provided
