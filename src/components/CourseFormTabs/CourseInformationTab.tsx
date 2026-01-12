@@ -317,30 +317,20 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="venue">Venue</Label>
-          <Select value={formData.venueId} onValueChange={handleVenueChange}>
+          <Label htmlFor="venueType">Venue</Label>
+          <Select 
+            value={formData.venueType || ""} 
+            onValueChange={(value) => onInputChange("venueType", value)}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select venue" />
+              <SelectValue placeholder="Select venue type" />
             </SelectTrigger>
             <SelectContent>
-              {Array.isArray(venues) && venues.length > 0 ? (
-                venues.map((venue: any) => {
-                  const name = typeof venue === "string" ? venue : venue?.name || "Unnamed Venue";
-                  const venueId = venue?.id || name;
-                  return (
-                    <SelectItem key={venueId} value={venueId}>
-                      {name}
-                    </SelectItem>
-                  );
-                })
-              ) : (
-                <SelectItem value="__no_venues__" disabled>
-                  No venues available
-                </SelectItem>
-              )}
+              <SelectItem value="HOTEL">Hotel</SelectItem>
+              <SelectItem value="ON_PREMISE">On Premise</SelectItem>
+              <SelectItem value="CLIENT_FACILITY">Client Facility</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-xs text-gray-400">Note: Venue should be created in Venue Management before being able to select here.</span>
         </div>
 
         <div className="space-y-2">

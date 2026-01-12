@@ -1248,6 +1248,8 @@ export interface Course {
   materials?: string[];
   venueFee?: number; // Venue expenses
   venue?: string;
+  venueId?: string;
+  venueType?: string;
   specifiedLocation?: string;
   trainers?: string[];
   certificates?: string;

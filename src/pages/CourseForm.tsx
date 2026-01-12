@@ -36,6 +36,7 @@ interface FormState {
   venueFee: number;
   venueFeeType: string;
   venueId: string;
+  venueType: string;
   specifiedLocation: string;
   certificates: string;
   remarks: string;
@@ -60,6 +61,7 @@ const initialForm: FormState = {
   venueFee: 0,
   venueFeeType: "PER_HEAD",
   venueId: "",
+  venueType: "",
   specifiedLocation: "",
   certificates: "polwel",
   remarks: "",
@@ -198,6 +200,7 @@ const CourseForm: React.FC = () => {
             venueFee: c.venueFee || 0,
             venueFeeType: c.venueFeeType || "",
             venueId: c.venueId || "",
+            venueType: c.venueType || "",
             specifiedLocation: c.specifiedLocation || "",
             certificates: c.certificates || "polwel",
             remarks: c.remarks || "",
@@ -364,6 +367,7 @@ const CourseForm: React.FC = () => {
       venueFeeType: formData.venueFeeType,
       // Only send venueId if it's a valid non-empty string
       venueId: formData.venueId && formData.venueId !== "" ? formData.venueId : undefined,
+      venueType: formData.venueType && formData.venueType !== "" ? formData.venueType : null,
       specifiedLocation: formData.specifiedLocation,
       certificates: formData.certificates,
       remarks: formData.remarks,

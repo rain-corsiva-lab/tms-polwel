@@ -134,6 +134,7 @@ model Course {
   materials          Json?
   venueFee           Float?
   venueId            String?
+  venueType          VenueType?
   certificates       String          @default("polwel")
   remarks            String?         @db.Text
   targetAudience     String?         @db.Text

@@ -29,6 +29,7 @@ const CourseCreateSchema = z.object({
   certificationType: z.string().optional(),
   level: z.string().optional(),
   venueId: z.string().optional(),
+  venueType: z.enum(['HOTEL', 'ON_PREMISE', 'CLIENT_FACILITY']).nullable().optional(),
   specifiedLocation: z.string().optional(),
   remarks: z.string().optional(),
   syllabus: z.string().optional(),
@@ -287,6 +288,7 @@ export const coursesController = {
       if (data.venueId !== undefined && data.venueId !== null && data.venueId !== '') {
         courseData.venueId = data.venueId;
       }
+      if (data.venueType !== undefined) courseData.venueType = data.venueType;
       if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
       if (data.remarks !== undefined) courseData.remarks = data.remarks;
       if (data.syllabus !== undefined) courseData.syllabus = data.syllabus;
@@ -486,6 +488,9 @@ export const coursesController = {
             } else if (key === 'venueId') {
               // Only set venueId if it's a valid non-empty string, otherwise set to null
               updateData[key] = (value && value !== '') ? value : null;
+            } else if (key === 'venueType') {
+              // Handle venueType (can be null)
+              updateData[key] = value || null;
             } else {
               updateData[key] = value;
             }
