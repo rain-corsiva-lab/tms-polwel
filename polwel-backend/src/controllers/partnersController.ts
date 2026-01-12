@@ -29,6 +29,8 @@ type PartnerRecord = {
   email: string | null;
   coursesAssigned: Prisma.JsonValue | null;
   pointOfContact: string | null;
+  pointOfContactDepartment: string | null;
+  pointOfContactEmail: string | null;
   contactNumber: string | null;
   contactDesignation: string | null;
   onboardingDate: Date | null;
@@ -47,6 +49,8 @@ const transformPartner = (partner: PartnerRecord) => ({
   status: partner.status,
   coursesAssigned: toStringArray(partner.coursesAssigned),
   pointOfContact: partner.pointOfContact || '',
+  pointOfContactDepartment: partner.pointOfContactDepartment || '',
+  pointOfContactEmail: partner.pointOfContactEmail || '',
   contactNumber: partner.contactNumber || '',
   contactDesignation: partner.contactDesignation || '',
   onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
@@ -64,6 +68,8 @@ const PartnerCreateSchema = z.object({
   email: z.string().email().optional(),
   coursesAssigned: z.array(z.string()).optional(),
   pointOfContact: z.string().optional(),
+  pointOfContactDepartment: z.string().optional(),
+  pointOfContactEmail: z.string().email().optional(),
   contactNumber: z.string().optional(),
   contactDesignation: z.string().optional(),
   onboardingDate: z.string().optional(),
@@ -120,6 +126,8 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
       where.OR = [
         { name: { contains: searchTerm } },
         { pointOfContact: { contains: searchTerm } },
+        { pointOfContactDepartment: { contains: searchTerm } },
+        { pointOfContactEmail: { contains: searchTerm } },
         { contactNumber: { contains: searchTerm } },
         { contactDesignation: { contains: searchTerm } },
       ];
@@ -135,6 +143,8 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
           status: true,
           coursesAssigned: true,
           pointOfContact: true,
+          pointOfContactDepartment: true,
+          pointOfContactEmail: true,
           contactNumber: true,
           contactDesignation: true,
           onboardingDate: true,
@@ -190,6 +200,8 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
         status: true,
         coursesAssigned: true,
         pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
         contactNumber: true,
         contactDesignation: true,
         onboardingDate: true,
@@ -224,7 +236,7 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
 
-    const { partnerName, email, coursesAssigned, pointOfContact, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
+    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
 
     const normalizedName = partnerName.trim();
 
@@ -243,6 +255,8 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         status: status ?? UserStatus.ACTIVE,
         coursesAssigned: Array.isArray(coursesAssigned) ? coursesAssigned : [],
         pointOfContact: normalizeString(pointOfContact),
+        pointOfContactDepartment: normalizeString(pointOfContactDepartment),
+        pointOfContactEmail: normalizeString(pointOfContactEmail),
         contactNumber: normalizeString(contactNumber),
         contactDesignation: normalizeString(contactDesignation),
         onboardingDate: parsedOnboardingDate,
@@ -258,6 +272,8 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         status: true,
         coursesAssigned: true,
         pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
         contactNumber: true,
         contactDesignation: true,
         onboardingDate: true,
@@ -273,9 +289,45 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
     return res.status(201).json(transformPartner(partner));
   } catch (error) {
     console.error('Error creating partner:', error);
+    
+    // Handle Prisma errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        // Unique constraint violation
+        const field = error.meta?.target as string[] | undefined;
+        const fieldName = field && field.length > 0 ? field[0] : 'field';
+        return res.status(409).json({ 
+          error: 'Validation failed',
+          message: `A partner with this ${fieldName} already exists.`,
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+      
+      if (error.code === 'P2003') {
+        // Foreign key constraint violation
+        return res.status(400).json({ 
+          error: 'Validation failed',
+          message: 'Invalid reference to related record.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+    }
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        message: 'Invalid input data.',
+        details: error.errors
+      });
+    }
+    
+    // Generic error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ 
       error: 'Failed to create partner',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
+      message: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
     });
   }
 };
@@ -290,7 +342,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
 
-    const { partnerName, email, coursesAssigned, pointOfContact, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
+    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
 
     if (!id) {
       return res.status(400).json({ error: 'Partner ID is required' });
@@ -331,6 +383,8 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         ...(status && { status }),
         ...(coursesAssigned !== undefined && { coursesAssigned: Array.isArray(coursesAssigned) ? coursesAssigned : [] }),
         ...(pointOfContact !== undefined && { pointOfContact: normalizeString(pointOfContact) }),
+        ...(pointOfContactDepartment !== undefined && { pointOfContactDepartment: normalizeString(pointOfContactDepartment) }),
+        ...(pointOfContactEmail !== undefined && { pointOfContactEmail: normalizeString(pointOfContactEmail) }),
         ...(contactNumber !== undefined && { contactNumber: normalizeString(contactNumber) }),
         ...(contactDesignation !== undefined && { contactDesignation: normalizeString(contactDesignation) }),
         ...(onboardingDate !== undefined && { onboardingDate: onboardingDateUpdate ?? null }),
@@ -346,6 +400,8 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         status: true,
         coursesAssigned: true,
         pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
         contactNumber: true,
         contactDesignation: true,
         onboardingDate: true,
@@ -498,6 +554,8 @@ export const getDeletedPartners = async (req: AuthenticatedRequest, res: Respons
         status: true,
         coursesAssigned: true,
         pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
         contactNumber: true,
         contactDesignation: true,
         onboardingDate: true,

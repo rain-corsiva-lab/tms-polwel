@@ -901,6 +901,8 @@ export const partnersApi = {
     email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
+    pointOfContactDepartment?: string;
+    pointOfContactEmail?: string;
     contactNumber?: string;
     contactDesignation?: string;
     onboardingDate?: string;
@@ -922,6 +924,8 @@ export const partnersApi = {
     email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
+    pointOfContactDepartment?: string;
+    pointOfContactEmail?: string;
     contactNumber?: string;
     contactDesignation?: string;
     status?: string;
