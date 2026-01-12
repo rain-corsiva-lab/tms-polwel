@@ -29,12 +29,12 @@ const Layout = () => {
   const sidebarWidth = isSidebarCollapsed ? "4rem" : "var(--sidebar-width)";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
+      <div className="flex w-full max-w-full">
         {shouldShowSidebar && <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />}
-        <div className="flex-1 flex flex-col transition-all duration-300" style={{ marginLeft: shouldShowSidebar ? sidebarWidth : 0 }}>
+        <div className="flex-1 flex flex-col transition-all duration-300 min-w-0 max-w-full" style={{ marginLeft: shouldShowSidebar ? sidebarWidth : 0 }}>
           <Header />
-          <main className="flex-1 p-6" style={{ paddingTop: "var(--header-height)" }}>
+          <main className="flex-1 p-6 w-full max-w-full overflow-x-hidden" style={{ paddingTop: "var(--header-height)" }}>
             <Outlet />
           </main>
         </div>
