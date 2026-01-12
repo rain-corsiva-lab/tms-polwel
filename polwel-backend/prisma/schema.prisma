@@ -790,6 +790,7 @@ enum VenueType {
   HOTEL
   ON_PREMISE
   CLIENT_FACILITY
+  ONLINE
 }
 
 enum AttendanceStatus {
