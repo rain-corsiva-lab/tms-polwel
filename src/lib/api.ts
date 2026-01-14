@@ -1402,6 +1402,18 @@ export const courseRunsApi = {
     });
   },
 
+  // Duplicate a course run from a past run
+  duplicate: async (payload: {
+    courseRunId: string;
+    startDatetime: string;
+    endDatetime: string;
+  }) => {
+    return apiRequest('/course-runs/duplicate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   update: async (id: string, courseRunData: any) => {
     return apiRequest(`/course-runs/${id}`, {
       method: 'PUT',

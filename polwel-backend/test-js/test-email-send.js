@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const EmailService = require('./dist/services/emailService').default;
+const EmailService = require('../dist/services/emailService').default;
 
 async function testEmailSending() {
   console.log('Testing password reset email sending...\n');

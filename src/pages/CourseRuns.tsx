@@ -20,6 +20,7 @@ import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen, Filter
 import { useToast } from "../hooks/use-toast";
 import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
 import { SendCourseConfirmationEmailDialog } from "../components/SendCourseConfirmationEmailDialog";
+import { DuplicateCourseRunDialog } from "../components/DuplicateCourseRunDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
@@ -294,6 +295,9 @@ const CourseRuns: React.FC = () => {
     loading: false,
   });
 
+  // State for Duplicate Course Run Dialog
+  const [duplicateDialog, setDuplicateDialog] = useState(false);
+
   const totalCount = pagination.total || courseRuns.length;
 
   // Fetch course runs data mirroring client organisation list behaviour
@@ -486,45 +490,51 @@ const CourseRuns: React.FC = () => {
   // Format status label to user-friendly text
   const formatStatusLabel = (status: string): string => {
     const statusMap: Record<string, string> = {
-      'CONFIRMED_PENDING_CONFIRMATION_EMAILS': 'Pending Confirmation emails sent',
-      'CONFIRMED_PENDING_TA_APPROVAL': 'Pending TA',
-      'IN_PROGRESS': 'In Progress',
-      'PENDING': 'Pending',
-      'CONFIRMED': 'Confirmed',
-      'ACTIVE': 'Active',
-      'PENDING_BILLING': 'Pending Billing',
-      'COMPLETED': 'Completed',
-      'CANCELLED': 'Cancelled',
-      'DRAFT': 'Draft',
+      CONFIRMED_PENDING_CONFIRMATION_EMAILS: "Pending Confirmation emails sent",
+      CONFIRMED_PENDING_TA_APPROVAL: "Pending TA",
+      IN_PROGRESS: "In Progress",
+      PENDING: "Pending",
+      CONFIRMED: "Confirmed",
+      ACTIVE: "Active",
+      PENDING_BILLING: "Pending Billing",
+      COMPLETED: "Completed",
+      CANCELLED: "Cancelled",
+      DRAFT: "Draft",
     };
-    return statusMap[status] || status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+    return (
+      statusMap[status] ||
+      status
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+    );
   };
 
   // Format date only (without time) or with time for TALKS
   const formatRange = (start: Date | null, end: Date | null, courseType?: string) => {
     if (!start) return "—";
-    
+
     // For TALKS, show date with time
-    if (courseType === 'TALKS') {
+    if (courseType === "TALKS") {
       const dateOpts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
       const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true };
-      
+
       const dateStr = start.toLocaleDateString(undefined, dateOpts);
       const startTime = start.toLocaleTimeString(undefined, timeOpts);
-      
+
       if (!end) return `${dateStr}, ${startTime}`;
-      
+
       const endTime = end.toLocaleTimeString(undefined, timeOpts);
       const sameDay = start.toDateString() === end.toDateString();
-      
+
       if (sameDay) {
         return `${dateStr}, ${startTime} to ${endTime}`;
       }
-      
+
       const endDateStr = end.toLocaleDateString(undefined, dateOpts);
       return `${dateStr}, ${startTime} → ${endDateStr}, ${endTime}`;
     }
-    
+
     // For other types, show date only (existing logic)
     const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
     const startStr = start.toLocaleDateString(undefined, opts);
@@ -1089,6 +1099,10 @@ const CourseRuns: React.FC = () => {
             <BookOpen className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
+          <Button variant="outline" onClick={() => setDuplicateDialog(true)} className="border-blue-600 text-blue-600 hover:bg-blue-50">
+            <Plus className="h-4 w-4 mr-2" />
+            Add from Post Run
+          </Button>
           <Button onClick={() => navigate("/course-runs/new")}>
             <Plus className="h-4 w-4 mr-2" />
             Create Course Run
@@ -1363,7 +1377,7 @@ const CourseRuns: React.FC = () => {
                   </TableRow>
                 ) : (
                   filteredCourseRuns.map((courseRun) => (
-                    <TableRow 
+                    <TableRow
                       key={courseRun.id}
                       className={courseRun.status === "IN_PROGRESS" ? "cursor-pointer hover:bg-gray-50" : ""}
                       onClick={() => {
@@ -1902,6 +1916,18 @@ const CourseRuns: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Duplicate Course Run Dialog */}
+      <DuplicateCourseRunDialog
+        open={duplicateDialog}
+        onClose={() => setDuplicateDialog(false)}
+        onSuccess={(newCourseRunId) => {
+          // Refresh the course runs list
+          fetchCourseRuns(pagination.page, pagination.limit);
+          // Navigate to the new course run
+          navigate(`/course-runs/${newCourseRunId}`);
+        }}
+      />
     </div>
   );
 };
