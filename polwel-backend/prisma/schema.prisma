@@ -79,6 +79,8 @@ model Partner {
   email               String?            @db.VarChar(255)
   status              UserStatus         @default(ACTIVE)
   pointOfContact      String?
+  pointOfContactDepartment String?
+  pointOfContactEmail String?            @db.VarChar(255)
   contactNumber       String?
   contactDesignation  String?
   coursesAssigned     Json?
@@ -132,6 +134,7 @@ model Course {
   materials          Json?
   venueFee           Float?
   venueId            String?
+  venueType          VenueType?
   certificates       String          @default("polwel")
   remarks            String?         @db.Text
   targetAudience     String?         @db.Text
@@ -787,6 +790,7 @@ enum VenueType {
   HOTEL
   ON_PREMISE
   CLIENT_FACILITY
+  ONLINE
 }
 
 enum AttendanceStatus {

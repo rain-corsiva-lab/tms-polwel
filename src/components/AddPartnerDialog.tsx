@@ -31,6 +31,7 @@ interface AddPartnerDialogProps {
 export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create", partner }: AddPartnerDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [formData, setFormData] = useState({
     partnerName: "",
     email: "",
@@ -40,6 +41,10 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
     bio: "",
     experience: "",
     status: "ACTIVE",
+    pointOfContact: "",
+    pointOfContactDepartment: "",
+    pointOfContactEmail: "",
+    contactDesignation: "",
   });
 
   const { toast } = useToast();
@@ -57,6 +62,10 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
         bio: (partner as any).bio || "",
         experience: (partner as any).experience || "",
         status: (partner as any).status || "ACTIVE",
+        pointOfContact: (partner as any).pointOfContact || "",
+        pointOfContactDepartment: (partner as any).pointOfContactDepartment || "",
+        pointOfContactEmail: (partner as any).pointOfContactEmail || "",
+        contactDesignation: (partner as any).contactDesignation || "",
       });
     }
   }, [isEditMode, partner]);
@@ -64,23 +73,35 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.partnerName || !formData.email) {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.partnerName) {
+      newErrors.partnerName = "Partner Name is required";
+    }
+
+    if (!formData.email) {
+      newErrors.email = "Email Address is required";
+    } else if (!isValidEmail(formData.email)) {
+      newErrors.email = "Please enter a valid email address (name@email.com)";
+    }
+
+    // Validate point-of-contact email if provided
+    if (formData.pointOfContactEmail && !isValidEmail(formData.pointOfContactEmail)) {
+      newErrors.pointOfContactEmail = "Please enter a valid email address (name@email.com)";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: firstError,
         variant: "destructive",
       });
       return;
     }
 
-    if (!isValidEmail(formData.email)) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid email address (name@email.com).",
-        variant: "destructive",
-      });
-      return;
-    }
+    setErrors({});
 
     setLoading(true);
     try {
@@ -90,7 +111,11 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
           partnerName: formData.partnerName,
           email: formData.email,
           partnerOrganization: formData.partnerOrganization || undefined,
+          pointOfContact: formData.pointOfContact || undefined,
+          pointOfContactDepartment: formData.pointOfContactDepartment || undefined,
+          pointOfContactEmail: formData.pointOfContactEmail || undefined,
           contactNumber: formData.contactNumber || undefined,
+          contactDesignation: formData.contactDesignation || undefined,
           onboardingDate: formData.onboardingDate ? new Date(formData.onboardingDate).toISOString() : undefined,
           bio: formData.bio || undefined,
           experience: formData.experience || undefined,
@@ -106,7 +131,11 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
           partnerName: formData.partnerName,
           email: formData.email,
           partnerOrganization: formData.partnerOrganization || undefined,
+          pointOfContact: formData.pointOfContact || undefined,
+          pointOfContactDepartment: formData.pointOfContactDepartment || undefined,
+          pointOfContactEmail: formData.pointOfContactEmail || undefined,
           contactNumber: formData.contactNumber || undefined,
+          contactDesignation: formData.contactDesignation || undefined,
           onboardingDate: formData.onboardingDate ? new Date(formData.onboardingDate).toISOString() : undefined,
           bio: formData.bio || undefined,
           experience: formData.experience || undefined,
@@ -127,7 +156,12 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
         bio: "",
         experience: "",
         status: "ACTIVE",
+        pointOfContact: "",
+        pointOfContactDepartment: "",
+        pointOfContactEmail: "",
+        contactDesignation: "",
       });
+      setErrors({});
       setOpen(false);
 
       if (onPartnerCreated) onPartnerCreated();
@@ -144,7 +178,12 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setErrors({});
+      }
+    }}>
       <DialogTrigger asChild>
         {isEditMode ? (
           <Button variant="ghost" size="sm">
@@ -175,9 +214,14 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
               <Input
                 id="partnerName"
                 value={formData.partnerName}
-                onChange={(e) => setFormData((prev) => ({ ...prev, partnerName: e.target.value }))}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, partnerName: e.target.value }));
+                  if (errors.partnerName) setErrors((prev) => ({ ...prev, partnerName: "" }));
+                }}
                 placeholder="Enter partner organization name"
+                className={errors.partnerName ? "border-red-500" : ""}
               />
+              {errors.partnerName && <p className="text-sm text-red-500 mt-1">{errors.partnerName}</p>}
             </div>
 
             <div>
@@ -186,9 +230,14 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, email: e.target.value }));
+                  if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
+                }}
                 placeholder="Enter partner's email address"
+                className={errors.email ? "border-red-500" : ""}
               />
+              {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
             </div>
 
             <div>
@@ -201,19 +250,70 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
               />
             </div>
 
-            <div>
-              <Label htmlFor="contactNumber">Contact Number</Label>
-              <Input
-                id="contactNumber"
-                value={formData.contactNumber}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                onChange={(e) => {
-                  const nextValue = digitsOnly(e.target.value);
-                  setFormData((prev) => ({ ...prev, contactNumber: nextValue }));
-                }}
-                placeholder="Partner contact number"
-              />
+            {/* Point-of-Contact Section */}
+            <div className="space-y-4 border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-gray-700">Point-of-Contact Details</h3>
+              
+              <div>
+                <Label htmlFor="pointOfContact">Point-of-Contact Name</Label>
+                <Input
+                  id="pointOfContact"
+                  value={formData.pointOfContact}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, pointOfContact: e.target.value }))}
+                  placeholder="Enter point-of-contact name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="pointOfContactDepartment">Department</Label>
+                <Input
+                  id="pointOfContactDepartment"
+                  value={formData.pointOfContactDepartment}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, pointOfContactDepartment: e.target.value }))}
+                  placeholder="Enter department"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="contactDesignation">Designation</Label>
+                <Input
+                  id="contactDesignation"
+                  value={formData.contactDesignation}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, contactDesignation: e.target.value }))}
+                  placeholder="Enter designation"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="pointOfContactEmail">Email</Label>
+                <Input
+                  id="pointOfContactEmail"
+                  type="email"
+                  value={formData.pointOfContactEmail}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, pointOfContactEmail: e.target.value }));
+                    if (errors.pointOfContactEmail) setErrors((prev) => ({ ...prev, pointOfContactEmail: "" }));
+                  }}
+                  placeholder="Enter point-of-contact email"
+                  className={errors.pointOfContactEmail ? "border-red-500" : ""}
+                />
+                {errors.pointOfContactEmail && <p className="text-sm text-red-500 mt-1">{errors.pointOfContactEmail}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="contactNumber">Contact Number</Label>
+                <Input
+                  id="contactNumber"
+                  value={formData.contactNumber}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={(e) => {
+                    const nextValue = digitsOnly(e.target.value);
+                    setFormData((prev) => ({ ...prev, contactNumber: nextValue }));
+                  }}
+                  placeholder="Enter contact number"
+                />
+              </div>
             </div>
 
             <div>

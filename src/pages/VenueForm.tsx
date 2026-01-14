@@ -192,7 +192,7 @@ const VenueForm = () => {
         contacts: validContacts,
         remarks: formData.remarks.trim(),
         status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE",
-        venueType: formData.venueType as "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY",
+        venueType: formData.venueType as "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY" | "ONLINE",
       };
 
       let response;
@@ -294,6 +294,7 @@ const VenueForm = () => {
                     <SelectItem value="HOTEL">Hotel</SelectItem>
                     <SelectItem value="ON_PREMISE">On Premise</SelectItem>
                     <SelectItem value="CLIENT_FACILITY">Client Facility</SelectItem>
+                    <SelectItem value="ONLINE">Online</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

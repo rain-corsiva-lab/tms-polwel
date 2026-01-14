@@ -53,7 +53,7 @@ const PORT = process.env.PORT || 3001;
 // Rate limiting - disabled for localhost/development, enabled for production
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || (NODE_ENV === 'development' ? '10000' : '100')), // Very high limit in dev
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || (NODE_ENV === 'development' ? '10000' : '10000')), // Very high limit in dev
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },

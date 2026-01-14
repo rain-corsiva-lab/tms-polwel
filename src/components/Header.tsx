@@ -55,7 +55,7 @@ const Header = () => {
   return (
     <div
       role="banner"
-      className="fixed top-0 left-0 right-0 bg-card border-b border-border h-16 flex items-center justify-between px-6 z-40"
+      className="fixed top-0 left-0 right-0 bg-card border-b border-border h-16 flex items-center justify-between px-6 z-40 w-full max-w-full overflow-x-hidden"
       style={{ height: "var(--header-height)" }}
     >
       <div className="flex items-center space-x-4">

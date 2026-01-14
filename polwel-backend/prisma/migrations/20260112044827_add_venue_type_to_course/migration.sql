@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `courses` ADD COLUMN `venueType` ENUM('HOTEL', 'ON_PREMISE', 'CLIENT_FACILITY') NULL;

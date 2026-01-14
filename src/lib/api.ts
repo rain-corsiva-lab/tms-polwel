@@ -901,6 +901,8 @@ export const partnersApi = {
     email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
+    pointOfContactDepartment?: string;
+    pointOfContactEmail?: string;
     contactNumber?: string;
     contactDesignation?: string;
     onboardingDate?: string;
@@ -922,6 +924,8 @@ export const partnersApi = {
     email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
+    pointOfContactDepartment?: string;
+    pointOfContactEmail?: string;
     contactNumber?: string;
     contactDesignation?: string;
     status?: string;
@@ -1244,6 +1248,8 @@ export interface Course {
   materials?: string[];
   venueFee?: number; // Venue expenses
   venue?: string;
+  venueId?: string;
+  venueType?: string;
   specifiedLocation?: string;
   trainers?: string[];
   certificates?: string;
@@ -1677,7 +1683,7 @@ export interface VenueCreateRequest {
   perHeadPriceIfMaxExceed?: number;
   status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   remarks?: string;
-  venueType?: "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY";
+  venueType?: "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY" | "ONLINE";
 }
 
 // Venues API

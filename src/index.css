@@ -120,11 +120,17 @@
 
   html {
     font-family: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
 
   /* Links use POLWEL Orange */
@@ -271,6 +277,24 @@
   /* Reserve space so page content is not overlapped by fixed header/sidebar */
   body {
     padding-top: var(--header-height);
+  }
+
+  /* Prevent horizontal overflow globally */
+  #root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Ensure all containers respect viewport width */
+  .container,
+  [class*="container"] {
+    max-width: 100%;
+  }
+
+  /* Table wrappers should handle overflow properly */
+  .overflow-x-auto {
+    max-width: 100%;
   }
 }
 
