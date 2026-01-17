@@ -9,8 +9,8 @@ set -e
 
 # Configuration
 PROJECT_DIR="/www/wwwroot/polwelpdms"
-PM2_PATH="/www/server/nodejs/v22.11.0/bin/pm2"
-NODE_PATH="/www/server/nodejs/v22.11.0/bin"
+PM2_PATH="/www/server/nodejs/v20.10.0/bin/pm2"
+NODE_PATH="/www/server/nodejs/v20.10.0/bin"
 
 # Add Node to PATH
 export PATH="$NODE_PATH:$PATH"
