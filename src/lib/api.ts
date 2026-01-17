@@ -901,6 +901,8 @@ export const partnersApi = {
     email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
+    pointOfContactDepartment?: string;
+    pointOfContactEmail?: string;
     contactNumber?: string;
     contactDesignation?: string;
     onboardingDate?: string;
@@ -922,6 +924,8 @@ export const partnersApi = {
     email?: string;
     coursesAssigned?: string[];
     pointOfContact?: string;
+    pointOfContactDepartment?: string;
+    pointOfContactEmail?: string;
     contactNumber?: string;
     contactDesignation?: string;
     status?: string;
@@ -1244,6 +1248,8 @@ export interface Course {
   materials?: string[];
   venueFee?: number; // Venue expenses
   venue?: string;
+  venueId?: string;
+  venueType?: string;
   specifiedLocation?: string;
   trainers?: string[];
   certificates?: string;
@@ -1393,6 +1399,18 @@ export const courseRunsApi = {
     return apiRequest('/course-runs', {
       method: 'POST',
       body: JSON.stringify(courseRunData),
+    });
+  },
+
+  // Duplicate a course run from a past run
+  duplicate: async (payload: {
+    courseRunId: string;
+    startDatetime: string;
+    endDatetime: string;
+  }) => {
+    return apiRequest('/course-runs/duplicate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 
@@ -1677,7 +1695,7 @@ export interface VenueCreateRequest {
   perHeadPriceIfMaxExceed?: number;
   status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   remarks?: string;
-  venueType?: "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY";
+  venueType?: "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY" | "ONLINE";
 }
 
 // Venues API

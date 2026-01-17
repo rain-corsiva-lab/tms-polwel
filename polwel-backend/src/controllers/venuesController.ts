@@ -22,7 +22,7 @@ interface VenueCreateRequest {
   perHeadPriceIfMaxExceed?: number;
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   remarks?: string;
-  venueType?: 'HOTEL' | 'ON_PREMISE' | 'CLIENT_FACILITY';
+  venueType?: 'HOTEL' | 'ON_PREMISE' | 'CLIENT_FACILITY' | 'ONLINE';
 }
 
 interface VenueUpdateRequest extends VenueCreateRequest {

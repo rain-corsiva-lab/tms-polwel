@@ -450,7 +450,7 @@ const CourseArchive = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <div className="container mx-auto py-6 px-4 w-full max-w-full overflow-x-hidden">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">List of Courses</h1>

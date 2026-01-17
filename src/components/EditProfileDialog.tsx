@@ -10,7 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronsUpDown, Edit, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { trainerDashboardApi } from "@/lib/api";
+import { trainerDashboardApi, referencesApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errorHandler";
 
 interface EditProfileDialogProps {
@@ -28,30 +28,52 @@ interface EditProfileDialogProps {
   onProfileUpdated?: (updatedData?: { specializations: string[]; writeUp: string }) => void;
 }
 
-const availableSpecializations = [
-  "Leadership Development",
-  "Team Building",
-  "Communication Skills",
-  "Project Management",
-  "Sales Training",
-  "Customer Service",
-  "Technical Training",
-  "Soft Skills Development",
-  "Change Management",
-  "Performance Management",
-  "Conflict Resolution",
-  "Presentation Skills",
-  "Time Management",
-  "Strategic Planning",
-  "Digital Skills",
-  "Compliance Training",
-];
-
 export function EditProfileDialog({ isOpen, onClose, profile, onProfileUpdated }: EditProfileDialogProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>(profile.specializations || []);
   const [profileWriteUp, setProfileWriteUp] = useState(profile.bio || "");
+  const [availableSpecializations, setAvailableSpecializations] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const { toast } = useToast();
+
+  // Fetch categories and flatten subcategories into specializations list
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await referencesApi.getCategories();
+        
+        if (response.success && response.data?.categories) {
+          // Flatten all subcategories from all categories into a single list
+          const allSubcategories: string[] = [];
+          response.data.categories.forEach((category: any) => {
+            if (category.subcategories && Array.isArray(category.subcategories)) {
+              allSubcategories.push(...category.subcategories);
+            }
+          });
+          
+          // Remove duplicates and sort alphabetically
+          const uniqueSubcategories = Array.from(new Set(allSubcategories)).sort();
+          setAvailableSpecializations(uniqueSubcategories);
+        }
+      } catch (error) {
+        console.error("Error loading categories:", error);
+        toast({
+          title: "Warning",
+          description: "Failed to load specializations. Please try again later.",
+          variant: "destructive",
+        });
+        // Set empty array on error
+        setAvailableSpecializations([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    if (isOpen) {
+      loadCategories();
+    }
+  }, [isOpen, toast]);
 
   // Sync local state when profile prop changes
   useEffect(() => {
@@ -133,10 +155,10 @@ export function EditProfileDialog({ isOpen, onClose, profile, onProfileUpdated }
               {/* Add Specialization */}
               <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-between">
+                  <Button variant="outline" size="sm" className="w-full justify-between" disabled={loadingCategories}>
                     <div className="flex items-center">
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Specialization
+                      {loadingCategories ? "Loading specializations..." : "Add Specialization"}
                     </div>
                     <ChevronsUpDown className="h-4 w-4 opacity-50" />
                   </Button>
@@ -145,17 +167,25 @@ export function EditProfileDialog({ isOpen, onClose, profile, onProfileUpdated }
                   <Command>
                     <CommandInput placeholder="Search specializations..." />
                     <CommandList>
-                      <CommandEmpty>No specializations found.</CommandEmpty>
-                      <CommandGroup>
-                        {availableSpecializations
-                          .filter((spec) => !selectedSpecializations.includes(spec))
-                          .map((specialization) => (
-                            <CommandItem key={specialization} value={specialization} onSelect={() => addSpecialization(specialization)}>
-                              <Check className={cn("mr-2 h-4 w-4", "opacity-0")} />
-                              {specialization}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
+                      {loadingCategories ? (
+                        <CommandEmpty>Loading specializations...</CommandEmpty>
+                      ) : availableSpecializations.length === 0 ? (
+                        <CommandEmpty>No specializations available.</CommandEmpty>
+                      ) : (
+                        <>
+                          <CommandEmpty>No specializations found.</CommandEmpty>
+                          <CommandGroup>
+                            {availableSpecializations
+                              .filter((spec) => !selectedSpecializations.includes(spec))
+                              .map((specialization) => (
+                                <CommandItem key={specialization} value={specialization} onSelect={() => addSpecialization(specialization)}>
+                                  <Check className={cn("mr-2 h-4 w-4", "opacity-0")} />
+                                  {specialization}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>

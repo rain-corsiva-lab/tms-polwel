@@ -22,7 +22,7 @@ async function testPasswordResetAPI() {
   // Test 2: Test direct email sending (simulating what the API would do)
   console.log('Test 2: Testing email service directly...');
   try {
-    const EmailService = require('./dist/services/emailService').default;
+    const EmailService = require('../dist/services/emailService').default;
     const testEmail = 'pdcs_tms@polwel.org.sg';
     const testName = 'Test User';
     const testResetUrl = 'http://localhost:8080/reset-password/test-token-123';

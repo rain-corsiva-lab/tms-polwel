@@ -28,6 +28,9 @@ router.get('/:id', requirePermissions('course-run.view'), courseRunController.ge
 // POST /api/course-runs - Create new course run
 router.post('/', requirePermissions('course-run.create'), courseRunController.create);
 
+// POST /api/course-runs/duplicate - Duplicate a course run from a past run
+router.post('/duplicate', requirePermissions('course-run.create'), courseRunController.duplicateCourseRun);
+
 // PUT /api/course-runs/:id - Update course run
 router.put('/:id', requirePermissions('course-run.edit'), courseRunController.update);
 
