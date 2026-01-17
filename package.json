@@ -7,7 +7,7 @@
     "dev": "vite --mode development",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "build:staging": "rm -f dist/.user.ini vite build --mode staging",
+    "build:staging": "rm -f dist/.user.ini && vite build --mode staging",
     "build:production": "vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
