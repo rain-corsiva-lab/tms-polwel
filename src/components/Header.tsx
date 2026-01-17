@@ -24,36 +24,40 @@ const Header = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'POLWEL':
-        return 'bg-red-100 text-red-800 hover:bg-red-200';
-      case 'TRAINING_COORDINATOR':
-        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
-      case 'TRAINER':
-        return 'bg-green-100 text-green-800 hover:bg-green-200';
-      case 'LEARNER':
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+      case "POLWEL":
+        return "bg-red-100 text-red-800 hover:bg-red-200";
+      case "TRAINING_COORDINATOR":
+        return "bg-blue-100 text-blue-800 hover:bg-blue-200";
+      case "TRAINER":
+        return "bg-green-100 text-green-800 hover:bg-green-200";
+      case "LEARNER":
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
       default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
     }
   };
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {
-      case 'POLWEL':
-        return 'POLWEL Admin';
-      case 'TRAINING_COORDINATOR':
-        return 'Training Coordinator';
-      case 'TRAINER':
-        return 'Trainer';
-      case 'LEARNER':
-        return 'Learner';
+      case "POLWEL":
+        return "POLWEL Admin";
+      case "TRAINING_COORDINATOR":
+        return "Training Coordinator";
+      case "TRAINER":
+        return "Associate Trainer";
+      case "LEARNER":
+        return "Learner";
       default:
         return role;
     }
   };
 
   return (
-    <header className="bg-card border-b border-border h-16 flex items-center justify-between px-6">
+    <div
+      role="banner"
+      className="fixed top-0 left-0 right-0 bg-card border-b border-border h-16 flex items-center justify-between px-6 z-40 w-full max-w-full overflow-x-hidden"
+      style={{ height: "var(--header-height)" }}
+    >
       <div className="flex items-center space-x-4">
         <h1 className="text-xl font-semibold text-foreground">Training Management System</h1>
         {user && (
@@ -63,17 +67,17 @@ const Header = () => {
           </Badge>
         )}
       </div>
-      
+
       <div className="flex items-center space-x-4">
-        <div className="relative">
+        {/* <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <input
             type="text"
             placeholder="Search..."
             className="pl-10 pr-4 py-2 border border-input rounded-md bg-background text-foreground w-64 focus:outline-none focus:ring-2 focus:ring-ring"
           />
-        </div>
-        
+        </div> */}
+
         <Button variant="ghost" size="icon">
           <Bell className="h-5 w-5" />
         </Button>
@@ -81,11 +85,15 @@ const Header = () => {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full" onMouseDown={(e) => e.preventDefault()}>
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={undefined} alt={user.name} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -94,14 +102,12 @@ const Header = () => {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{user.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user.email}
-                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   <div className="flex items-center space-x-1 mt-1">
                     <Badge variant="outline" className={`text-xs ${getRoleColor(user.role)}`}>
                       {getRoleDisplayName(user.role)}
                     </Badge>
-                    {user.status !== 'ACTIVE' && (
+                    {user.status !== "ACTIVE" && (
                       <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
                         {user.status}
                       </Badge>
@@ -110,19 +116,16 @@ const Header = () => {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
+              {/* <DropdownMenuItem className="cursor-pointer">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="cursor-pointer text-red-600 focus:text-red-600"
-                onClick={handleLogout}
-              >
+              <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
@@ -130,7 +133,7 @@ const Header = () => {
           </DropdownMenu>
         )}
       </div>
-    </header>
+    </div>
   );
 };
 

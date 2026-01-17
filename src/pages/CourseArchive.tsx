@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Eye, Power, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Loader2, Filter, X, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { coursesApi, referencesApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/errorHandler";
+import * as XLSX from "xlsx";
+import PaginationControls from "@/components/ui/pagination";
 
 interface Course {
   id: string;
@@ -15,11 +22,11 @@ interface Course {
   category: string;
   duration: string;
   durationType: string;
-  venue: string;
-  amountPerPax: number;
+  venueId: string;
+  defaultCourseFee: number;
   minParticipants?: number;
   certificates: string;
-  status: "active" | "archived" | "draft";
+  status?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -28,83 +35,161 @@ const CourseArchive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCertificate, setSelectedCertificate] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const [exporting, setExporting] = useState(false);
   
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    total: 0,
+    totalPages: 0,
+  });
+  const [perPage, setPerPage] = useState(50);
+
+  // Sorting state
+  const [sortField, setSortField] = useState<keyof Course | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Filter state - stores selected values for each column
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    category: [],
+    durationType: [],
+    venue: [],
+    minParticipants: [],
+    certificates: [],
+    status: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+
   // Loading and data states
   const [loading, setLoading] = useState({
     courses: false,
-    categories: false
+    categories: false,
   });
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [venuesMap, setVenuesMap] = useState<Record<string, string>>({});
 
   // Load data from API
   useEffect(() => {
     const loadData = async () => {
       try {
         // Load categories
-        setLoading(prev => ({ ...prev, categories: true }));
+        setLoading((prev) => ({ ...prev, categories: true }));
         const categoriesResponse = await referencesApi.getCategories();
-        setCategories(categoriesResponse.success && categoriesResponse.data && Array.isArray(categoriesResponse.data.categories) 
-          ? categoriesResponse.data.categories 
-          : []);
+        setCategories(
+          categoriesResponse.success && categoriesResponse.data && Array.isArray(categoriesResponse.data.categories) ? categoriesResponse.data.categories : []
+        );
 
-        // Load courses
-        setLoading(prev => ({ ...prev, courses: true }));
-        const coursesResponse = await coursesApi.getAll();
-        console.log('Courses API response:', coursesResponse);
-        
-        // Handle the correct API response structure: { success: true, data: { courses: [...] } }
+        // Load courses and venues
+        setLoading((prev) => ({ ...prev, courses: true }));
+        const [coursesResponse, venuesResponse] = await Promise.all([
+          coursesApi.getAll({
+            page: pagination.page,
+            limit: perPage,
+            search: debouncedSearch || undefined,
+            category: selectedCategory !== "all" ? selectedCategory : undefined,
+            certificates: selectedCertificate !== "all" ? selectedCertificate : undefined,
+          }),
+          referencesApi.getVenues().catch(() => null)
+        ]);
+        console.log("Courses API response:", coursesResponse);
+
+        // Handle the correct API response structure: { success: true, courses: [...] }
         let coursesData = [];
-        if (coursesResponse.success && coursesResponse.data && Array.isArray(coursesResponse.data.courses)) {
+        if (coursesResponse.success && Array.isArray(coursesResponse.courses)) {
+          coursesData = coursesResponse.courses;
+        } else if (coursesResponse.data && Array.isArray(coursesResponse.data.courses)) {
           coursesData = coursesResponse.data.courses;
         } else if (Array.isArray(coursesResponse.data)) {
           coursesData = coursesResponse.data;
         } else if (Array.isArray(coursesResponse)) {
           coursesData = coursesResponse;
         }
-          
-        setCourses(coursesData);
 
+        setCourses(coursesData);
+        
+        // Update pagination state
+        setPagination({
+          page: coursesResponse.pagination?.currentPage || pagination.page,
+          total: coursesResponse.pagination?.totalCourses || coursesData.length,
+          totalPages: coursesResponse.pagination?.totalPages || Math.ceil((coursesResponse.pagination?.totalCourses || coursesData.length) / perPage),
+        });
+
+        // Build venues map (id -> name) if venues were returned
+        const vData = Array.isArray(venuesResponse?.data?.venues)
+          ? venuesResponse.data.venues
+          : Array.isArray(venuesResponse?.data)
+          ? venuesResponse.data
+          : Array.isArray(venuesResponse?.venues)
+          ? venuesResponse.venues
+          : Array.isArray(venuesResponse)
+          ? venuesResponse
+          : [];
+
+        const map: Record<string, string> = {};
+        for (const v of vData) {
+          if (v && v.id) map[v.id] = v.name || v.title || v.address || String(v.id);
+        }
+        setVenuesMap(map);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error("Error loading data:", error);
         toast({
           title: "Error",
-          description: "Failed to load courses data",
-          variant: "destructive"
+          description: getErrorMessage(error, "Failed to load courses data"),
+          variant: "destructive",
         });
-        
+
         // Fallback to default categories
         setCategories([
           {
             name: "Self-Mastery",
             color: "bg-red-100 text-red-800 border-red-200",
-            subcategories: ["Growth Mindset", "Personal Effectiveness", "Self-awareness"]
+            subcategories: ["Growth Mindset", "Personal Effectiveness", "Self-awareness"],
           },
           {
-            name: "Thinking Skills", 
+            name: "Thinking Skills",
             color: "bg-blue-100 text-blue-800 border-blue-200",
-            subcategories: ["Agile Mindset", "Strategic Planning", "Critical Thinking & Creative Problem-Solving"]
+            subcategories: ["Agile Mindset", "Strategic Planning", "Critical Thinking & Creative Problem-Solving"],
           },
           {
             name: "People Skills",
-            color: "bg-green-100 text-green-800 border-green-200", 
-            subcategories: ["Emotional Intelligence", "Collaboration", "Communication"]
+            color: "bg-green-100 text-green-800 border-green-200",
+            subcategories: ["Emotional Intelligence", "Collaboration", "Communication"],
           },
           {
             name: "Leadership Skills",
             color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-            subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"]
-          }
+            subcategories: ["Mindful Leadership", "Empowerment", "Decision-making"],
+          },
         ]);
       } finally {
-        setLoading(prev => ({ ...prev, courses: false, categories: false }));
+        setLoading((prev) => ({ ...prev, courses: false, categories: false }));
       }
     };
 
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, perPage, debouncedSearch, selectedCategory, selectedCertificate]);
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPagination((p) => ({ ...p, page: 1 })); // Reset to page 1 when search changes
+    }, 500);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   const allCategories = () => {
     const cats: string[] = [];
@@ -126,68 +211,232 @@ const CourseArchive = () => {
     return "bg-gray-100 text-gray-800 border-gray-200";
   };
 
-  const handleStatusToggle = async (courseId: string, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === "active" ? "archived" : "active";
-      await coursesApi.updateStatus(courseId, newStatus);
-      
-      setCourses(prev =>
-        prev.map(course =>
-          course.id === courseId ? { ...course, status: newStatus } : course
-        )
-      );
-      
-      toast({
-        title: "Status Updated",
-        description: `Course ${newStatus === "active" ? "activated" : "archived"} successfully`
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update course status",
-        variant: "destructive"
-      });
-    }
-  };
+  // Status handling removed as courses no longer have a status field
 
   const handleDelete = async (courseId: string) => {
     if (window.confirm("Are you sure you want to delete this course? This action cannot be undone.")) {
       try {
         await coursesApi.delete(courseId);
-        setCourses(prev => prev.filter(course => course.id !== courseId));
+        setCourses((prev) => prev.filter((course) => course.id !== courseId));
         toast({
           title: "Course Deleted",
-          description: "Course has been successfully deleted"
+          description: "Course has been successfully deleted",
         });
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to delete course",
-          variant: "destructive"
+          description: getErrorMessage(error, "Failed to delete course"),
+          variant: "destructive",
         });
       }
     }
   };
 
-  // Filter courses based on selected filters
-  const filteredCourses = Array.isArray(courses) ? courses.filter(course => {
-    const categoryMatch = selectedCategory === "all" || (() => {
-      if (selectedCategory === course.category) return true;
-      
-      // Check if category is a subcategory of selected main category
-      for (const group of categories) {
-        if (group.name === selectedCategory && group.subcategories) {
-          return group.subcategories.includes(course.category);
-        }
+  const handleToggleStatus = async (courseId: string) => {
+    try {
+      await coursesApi.toggleStatus(courseId);
+      // Reload courses to reflect status change
+      const coursesResponse = await coursesApi.getAll({
+        page: pagination.page,
+        limit: perPage,
+        search: debouncedSearch || undefined,
+        category: selectedCategory !== "all" ? selectedCategory : undefined,
+        certificates: selectedCertificate !== "all" ? selectedCertificate : undefined,
+      });
+      let coursesData = [];
+      if (coursesResponse.success && Array.isArray(coursesResponse.courses)) {
+        coursesData = coursesResponse.courses;
+      } else if (coursesResponse.data && Array.isArray(coursesResponse.data.courses)) {
+        coursesData = coursesResponse.data.courses;
+      } else if (Array.isArray(coursesResponse.data)) {
+        coursesData = coursesResponse.data;
+      } else if (Array.isArray(coursesResponse)) {
+        coursesData = coursesResponse;
       }
-      return false;
-    })();
+      setCourses(coursesData);
+      
+      // Update pagination state
+      setPagination({
+        page: coursesResponse.pagination?.currentPage || pagination.page,
+        total: coursesResponse.pagination?.totalCourses || coursesData.length,
+        totalPages: coursesResponse.pagination?.totalPages || Math.ceil((coursesResponse.pagination?.totalCourses || coursesData.length) / perPage),
+      });
 
-    const statusMatch = selectedStatus === "all" || course.status === selectedStatus;
-    const certificateMatch = selectedCertificate === "all" || course.certificates === selectedCertificate;
+      toast({
+        title: "Status Updated",
+        description: "Course status has been successfully updated",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Failed to update course status"),
+        variant: "destructive",
+      });
+    }
+  };
 
-    return categoryMatch && statusMatch && certificateMatch;
-  }) : [];
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      toast.loading("Exporting courses...");
+
+      const dataToExport = filteredCourses.map((course) => ({
+        Title: course.title,
+        Category: course.category,
+        Duration: `${course.duration} ${course.durationType}`,
+        DefaultFee: course.defaultCourseFee,
+        MinParticipants: course.minParticipants || "N/A",
+        Certificates: course.certificates,
+        Status: course.status || "ACTIVE",
+        CreatedDate: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "N/A",
+      }));
+
+      if (dataToExport.length === 0) {
+        toast.error("No courses to export");
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Courses");
+      XLSX.writeFile(wb, `courses-${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success(`Exported ${dataToExport.length} course${dataToExport.length === 1 ? "" : "s"} successfully`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export courses");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Filter courses based on selected filters
+  const filteredCourses = Array.isArray(courses)
+    ? courses.filter((course) => {
+        const searchMatch =
+          !debouncedSearch ||
+          course.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          (course.category && course.category.toLowerCase().includes(debouncedSearch.toLowerCase()));
+
+        const categoryMatch =
+          selectedCategory === "all" ||
+          (() => {
+            if (selectedCategory === course.category) return true;
+
+            // Check if category is a subcategory of selected main category
+            for (const group of categories) {
+              if (group.name === selectedCategory && group.subcategories) {
+                return group.subcategories.includes(course.category);
+              }
+            }
+            return false;
+          })();
+
+        const certificateMatch = selectedCertificate === "all" || course.certificates === selectedCertificate;
+
+        // Apply column filters
+        const categoryFilterMatch = filters.category.length === 0 || filters.category.includes(course.category || "");
+        const durationTypeFilterMatch = filters.durationType.length === 0 || filters.durationType.includes(course.durationType || "");
+        const venueFilterMatch = filters.venue.length === 0 || filters.venue.includes(course.venue || "");
+        const minParticipantsFilterMatch = filters.minParticipants.length === 0 || filters.minParticipants.includes(String(course.minParticipants || 1));
+        const certificatesFilterMatch = filters.certificates.length === 0 || filters.certificates.includes(course.certificates || "");
+        const statusFilterMatch = filters.status.length === 0 || filters.status.includes(course.status || "ACTIVE");
+
+        return (
+          searchMatch &&
+          categoryMatch &&
+          certificateMatch &&
+          categoryFilterMatch &&
+          durationTypeFilterMatch &&
+          venueFilterMatch &&
+          minParticipantsFilterMatch &&
+          certificatesFilterMatch &&
+          statusFilterMatch
+        );
+      })
+    : [];
+
+  // Get unique values for each filterable column
+  const getUniqueValues = (field: keyof Course) => {
+    const values = Array.from(
+      new Set(
+        courses
+          .map((c) => {
+            let val = c[field];
+            if (field === "venue" && val && venuesMap[val]) {
+              return venuesMap[val];
+            }
+            return val ? String(val) : "";
+          })
+          .filter(Boolean)
+      )
+    );
+    return values.sort();
+  };
+
+  // Handle filter toggle
+  const handleFilterToggle = (field: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[field] || [];
+      const newValues = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: newValues };
+    });
+  };
+
+  // Clear all filters for a column
+  const clearColumnFilter = (field: string) => {
+    setFilters((prev) => ({ ...prev, [field]: [] }));
+  };
+
+  // Check if a column has active filters
+  const hasActiveFilter = (field: string) => {
+    return filters[field] && filters[field].length > 0;
+  };
+
+  // Sort courses based on selected field and direction
+  const sortedCourses = [...filteredCourses].sort((a, b) => {
+    if (!sortField) return 0;
+
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+
+    // Handle null/undefined
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return sortDirection === "asc" ? 1 : -1;
+    if (bValue == null) return sortDirection === "asc" ? -1 : 1;
+
+    // Compare based on type
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    // String comparison
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    if (aStr < bStr) return sortDirection === "asc" ? -1 : 1;
+    if (aStr > bStr) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Handle column header click for sorting
+  const handleSort = (field: keyof Course) => {
+    if (sortField === field) {
+      // Toggle direction
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Render sort icon
+  const renderSortIcon = (field: keyof Course) => {
+    if (sortField !== field) {
+      return <span className="ml-1 text-muted-foreground opacity-50">⇅</span>;
+    }
+    return sortDirection === "asc" ? <span className="ml-1">↑</span> : <span className="ml-1">↓</span>;
+  };
 
   if (loading.courses) {
     return (
@@ -201,25 +450,37 @@ const CourseArchive = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <div className="container mx-auto py-6 px-4 w-full max-w-full overflow-x-hidden">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Course Archive</h1>
-          <p className="text-muted-foreground">Manage and view all courses in the system.</p>
+          <h1 className="text-3xl font-bold tracking-tight">List of Courses</h1>
         </div>
-        <Button onClick={() => navigate('/course-creation/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Course
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleExport} disabled={exporting || filteredCourses.length === 0} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+          <Button onClick={() => navigate("/courses/new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add New Course
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Search Bar */}
       <Card className="mb-6">
+        <CardContent className="pt-6">
+          <Input placeholder="Search courses by title or category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full" />
+        </CardContent>
+      </Card>
+
+      {/* Filters */}
+      {/* <Card className="mb-6">
         <CardHeader>
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Category</label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -243,21 +504,6 @@ const CourseArchive = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <label className="text-sm font-medium">Certificate Type</label>
               <Select value={selectedCertificate} onValueChange={setSelectedCertificate}>
                 <SelectTrigger>
@@ -272,29 +518,47 @@ const CourseArchive = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Course Table */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Courses ({filteredCourses.length})
-            {courses.length > 0 && filteredCourses.length !== courses.length && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                of {courses.length} total
-              </span>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              Courses ({sortedCourses.length})
+              {pagination.total > 0 && sortedCourses.length !== pagination.total && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">of {pagination.total} total</span>
+              )}
+            </CardTitle>
+            {Object.values(filters).some((arr) => arr.length > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setFilters({
+                    category: [],
+                    durationType: [],
+                    venue: [],
+                    minParticipants: [],
+                    certificates: [],
+                    status: [],
+                  })
+                }
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear All Filters
+              </Button>
             )}
-          </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
-          {filteredCourses.length === 0 ? (
+          {sortedCourses.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No courses found matching the selected filters.</p>
               <Button
                 variant="outline"
                 onClick={() => {
                   setSelectedCategory("all");
-                  setSelectedStatus("all");
                   setSelectedCertificate("all");
                 }}
                 className="mt-4"
@@ -306,75 +570,292 @@ const CourseArchive = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Course Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Venue</TableHead>
-                  <TableHead>Price/Pax</TableHead>
-                  <TableHead>Min Pax</TableHead>
-                  <TableHead>Certificate</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("title")}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        Course Title
+                        {renderSortIcon("title")}
+                      </div>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("category")}>
+                        Category
+                        {renderSortIcon("category")}
+                      </div>
+                      <Popover open={openFilter === "category"} onOpenChange={(open) => setOpenFilter(open ? "category" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("category") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Category</span>
+                              {hasActiveFilter("category") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("category")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("category").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("category", value)}
+                              >
+                                <Checkbox checked={filters.category?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("durationType")}>
+                        Duration
+                        {renderSortIcon("durationType")}
+                      </div>
+                      <Popover open={openFilter === "durationType"} onOpenChange={(open) => setOpenFilter(open ? "durationType" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("durationType") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Duration Type</span>
+                              {hasActiveFilter("durationType") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("durationType")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("durationType").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("durationType", value)}
+                              >
+                                <Checkbox checked={filters.durationType?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("venue")}>
+                        Venue
+                        {renderSortIcon("venue")}
+                      </div>
+                      <Popover open={openFilter === "venue"} onOpenChange={(open) => setOpenFilter(open ? "venue" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("venue") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Venue</span>
+                              {hasActiveFilter("venue") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("venue")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("venue").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("venue", value)}
+                              >
+                                <Checkbox checked={filters.venue?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("defaultCourseFee")}>
+                    <div className="flex items-center">
+                      Price/Pax
+                      {renderSortIcon("defaultCourseFee")}
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("minParticipants")}>
+                        Min Pax
+                        {renderSortIcon("minParticipants")}
+                      </div>
+                      <Popover open={openFilter === "minParticipants"} onOpenChange={(open) => setOpenFilter(open ? "minParticipants" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("minParticipants") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Min Pax</span>
+                              {hasActiveFilter("minParticipants") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("minParticipants")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("minParticipants").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("minParticipants", value)}
+                              >
+                                <Checkbox checked={filters.minParticipants?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("certificates")}>
+                        Certificate
+                        {renderSortIcon("certificates")}
+                      </div>
+                      <Popover open={openFilter === "certificates"} onOpenChange={(open) => setOpenFilter(open ? "certificates" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("certificates") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Certificate</span>
+                              {hasActiveFilter("certificates") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("certificates")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("certificates").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("certificates", value)}
+                              >
+                                <Checkbox checked={filters.certificates?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center cursor-pointer hover:text-primary" onClick={() => handleSort("status")}>
+                        Status
+                        {renderSortIcon("status")}
+                      </div>
+                      <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("status") && "text-primary")}>
+                            <Filter className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-3 border-b">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Filter by Status</span>
+                              {hasActiveFilter("status") && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {getUniqueValues("status").map((value) => (
+                              <div
+                                key={value}
+                                className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                                onClick={() => handleFilterToggle("status", value)}
+                              >
+                                <Checkbox checked={filters.status?.includes(value)} />
+                                <span className="text-sm">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCourses.map((course) => (
+                {sortedCourses.map((course) => (
                   <TableRow key={course.id}>
                     <TableCell className="font-medium">{course.title}</TableCell>
                     <TableCell>
-                      <Badge className={getCategoryColor(course.category)}>
-                        {course.category}
-                      </Badge>
+                      <Badge className={getCategoryColor(course.category)}>{course.category}</Badge>
                     </TableCell>
-                    <TableCell>{course.duration} {course.durationType}</TableCell>
-                    <TableCell>{course.venue || 'TBD'}</TableCell>
-                    <TableCell>${course.amountPerPax?.toFixed(2) || '0.00'}</TableCell>
+                    <TableCell>
+                      {course.duration} {course.durationType}
+                    </TableCell>
+                    <TableCell>{(course.venueId && venuesMap[course.venueId]) || course.venueId || "TBD"}</TableCell>
+                    <TableCell>${course.defaultCourseFee?.toFixed(2) || "0.00"}</TableCell>
                     <TableCell>{course.minParticipants || 1}</TableCell>
                     <TableCell>
-                      <Badge variant={course.certificates === "polwel" ? "default" : "secondary"}>
-                        {course.certificates?.toUpperCase() || 'POLWEL'}
-                      </Badge>
+                      <Badge variant={course.certificates === "polwel" ? "default" : "secondary"}>{course.certificates?.toUpperCase() || "POLWEL"}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={
-                          course.status === "active" ? "default" : 
-                          course.status === "archived" ? "secondary" : "outline"
-                        }
+                      <Button
+                        variant={course.status === "ACTIVE" ? "default" : "secondary"}
+                        size="sm"
+                        onClick={() => handleToggleStatus(course.id)}
+                        className={course.status === "ACTIVE" ? "bg-green-600 hover:bg-green-700" : ""}
                       >
-                        {course.status?.toUpperCase() || 'DRAFT'}
-                      </Badge>
+                        {course.status || "ACTIVE"}
+                      </Button>
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/course-creation/detail/${course.id}`)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/courses/detail/${course.id}`)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/course-creation/edit/${course.id}`)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/courses/edit/${course.id}`)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleStatusToggle(course.id, course.status)}
-                          className={course.status === "active" ? "text-orange-600" : "text-green-600"}
-                        >
-                          <Power className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(course.id)}
-                          className="text-red-600 hover:bg-red-50"
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(course.id)} className="text-red-600 hover:bg-red-50">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -384,6 +865,21 @@ const CourseArchive = () => {
               </TableBody>
             </Table>
           )}
+          
+          {/* Pagination Controls */}
+          <div className="border-t pt-4 mt-4">
+            <PaginationControls
+              page={pagination.page}
+              perPage={perPage}
+              total={pagination.total}
+              onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+              onPerPageChange={(newPerPage) => {
+                setPerPage(newPerPage);
+                setPagination((prev) => ({ ...prev, page: 1 })); // Reset to page 1 when changing perPage
+              }}
+              perPageOptions={[10, 25, 50, 100, 200]}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

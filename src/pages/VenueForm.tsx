@@ -9,15 +9,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { venuesApi, type Contact, type Venue } from "@/lib/api";
+import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 
 interface VenueFormData {
   name: string;
+  address?: string;
   capacity: string;
-  feeType: string;
   fee: number | string;
+  maxParticipants?: number | string;
+  perHeadPriceIfMaxExceed?: number | string;
   contacts: Contact[];
   remarks: string;
   status: string;
+  venueType: string;
 }
 
 const VenueForm = () => {
@@ -27,12 +31,13 @@ const VenueForm = () => {
 
   const [formData, setFormData] = useState<VenueFormData>({
     name: "",
+    address: "",
     capacity: "",
-    feeType: "per_head",
     fee: "",
     contacts: [{ id: "temp-1", name: "", number: "", email: "" }],
     remarks: "",
-    status: "ACTIVE"
+    status: "ACTIVE",
+    venueType: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -48,68 +53,67 @@ const VenueForm = () => {
     try {
       setLoading(true);
       const response = await venuesApi.getById(venueId!);
-      
+
       if (response.success && response.data.venue) {
         const venue = response.data.venue;
         setFormData({
           name: venue.name,
+          address: venue.address || "",
           capacity: venue.capacity,
-          feeType: venue.feeType,
           fee: venue.fee,
-          contacts: venue.contacts && venue.contacts.length > 0 
-            ? venue.contacts 
-            : [{ id: "temp-1", name: "", number: "", email: "" }],
+          contacts: venue.contacts && venue.contacts.length > 0 ? venue.contacts : [{ id: "temp-1", name: "", number: "", email: "" }],
           remarks: venue.remarks || "",
-          status: venue.status || "ACTIVE"
+          status: venue.status || "ACTIVE",
+          venueType: venue.venueType || "",
         });
       } else {
         toast({
           title: "Error",
           description: response.error || "Failed to load venue data",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error('Error loading venue:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load venue data",
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      console.error("Error loading venue:", error);
+      errorHandlers.venueLoad(error, toast);
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: keyof VenueFormData, value: string | number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handleContactChange = (index: number, field: keyof Contact, value: string) => {
-    setFormData(prev => ({
+    const sanitizeSGPhone = (v: string) => {
+      let digits = v.replace(/\D/g, "");
+      if (digits.startsWith("65") && digits.length >= 10) digits = digits.slice(2);
+      if (digits.length > 8) digits = digits.slice(0, 8);
+      return digits;
+    };
+    setFormData((prev) => ({
       ...prev,
-      contacts: prev.contacts.map((contact, i) => 
-        i === index ? { ...contact, [field]: value } : contact
-      )
+      contacts: prev.contacts.map((contact, i) => (i === index ? { ...contact, [field]: field === "number" ? sanitizeSGPhone(value) : value } : contact)),
     }));
   };
 
   const addContact = () => {
     const newId = `temp-${Date.now()}`;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      contacts: [...prev.contacts, { id: newId, name: "", number: "", email: "" }]
+      contacts: [...prev.contacts, { id: newId, name: "", number: "", email: "" }],
     }));
   };
 
   const removeContact = (index: number) => {
     if (formData.contacts.length > 1) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        contacts: prev.contacts.filter((_, i) => i !== index)
+        contacts: prev.contacts.filter((_, i) => i !== index),
       }));
     }
   };
@@ -119,39 +123,38 @@ const VenueForm = () => {
       toast({
         title: "Validation Error",
         description: "Venue name is required",
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
 
     if (!formData.capacity.trim()) {
       toast({
-        title: "Validation Error", 
+        title: "Validation Error",
         description: "Capacity is required",
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
 
-    if (!formData.fee || formData.fee === "") {
+    // Allow zero fee, but not empty/undefined
+    if (formData.fee === "" || formData.fee === undefined || formData.fee === null) {
       toast({
         title: "Validation Error",
-        description: "Fee is required",
-        variant: "destructive"
+        description: "Fee is required (can be 0)",
+        variant: "destructive",
       });
       return false;
     }
 
     // Validate contacts
-    const validContacts = formData.contacts.filter(contact => 
-      contact.name.trim() || contact.number.trim() || contact.email.trim()
-    );
+    const validContacts = formData.contacts.filter((contact) => contact.name.trim() || contact.number.trim() || contact.email.trim());
 
     if (validContacts.length === 0) {
       toast({
         title: "Validation Error",
         description: "At least one contact is required",
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
@@ -161,7 +164,7 @@ const VenueForm = () => {
         toast({
           title: "Validation Error",
           description: "Complete contact information is required (name, number, and email)",
-          variant: "destructive"
+          variant: "destructive",
         });
         return false;
       }
@@ -172,25 +175,24 @@ const VenueForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     try {
       setSubmitting(true);
 
       // Filter out empty contacts
-      const validContacts = formData.contacts.filter(contact => 
-        contact.name.trim() && contact.number.trim() && contact.email.trim()
-      );
+      const validContacts = formData.contacts.filter((contact) => contact.name.trim() && contact.number.trim() && contact.email.trim());
 
       const venueData = {
         name: formData.name.trim(),
+        ...(formData.address && { address: formData.address.trim() }),
         capacity: formData.capacity.trim(),
-        feeType: (formData.feeType === "per_head" ? "PER_HEAD" : "PER_VENUE") as "PER_HEAD" | "PER_VENUE",
-        fee: typeof formData.fee === 'string' ? parseFloat(formData.fee) : formData.fee,
+        fee: typeof formData.fee === "string" ? parseFloat(formData.fee) : formData.fee,
         contacts: validContacts,
         remarks: formData.remarks.trim(),
-        status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE"
+        status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE",
+        venueType: formData.venueType as "HOTEL" | "ON_PREMISE" | "CLIENT_FACILITY" | "ONLINE",
       };
 
       let response;
@@ -203,23 +205,23 @@ const VenueForm = () => {
       if (response.success) {
         toast({
           title: "Success",
-          description: venueId ? "Venue updated successfully" : "Venue created successfully"
+          description: venueId ? "Venue updated successfully" : "Venue created successfully",
         });
-        navigate('/venue-setup');
+        navigate("/venue-setup");
       } else {
         toast({
           title: "Error",
-          description: response.error || "Failed to save venue",
-          variant: "destructive"
+          description: getErrorMessage(response, "Failed to save venue"),
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error('Error saving venue:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save venue",
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      console.error("Error saving venue:", error);
+      if (venueId) {
+        errorHandlers.venueUpdate(error, toast);
+      } else {
+        errorHandlers.venueCreate(error, toast);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -241,17 +243,11 @@ const VenueForm = () => {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <Button 
-          variant="outline" 
-          onClick={() => navigate("/venue-setup")}
-          className="mb-4"
-        >
+        <Button variant="outline" onClick={() => navigate("/venue-setup")} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Venues
         </Button>
-        <h1 className="text-3xl font-bold">
-          {venueId ? 'Edit Venue' : 'Add New Venue'}
-        </h1>
+        <h1 className="text-3xl font-bold">{venueId ? "Edit Venue" : "Add New Venue"}</h1>
       </div>
 
       <Card>
@@ -264,12 +260,16 @@ const VenueForm = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Venue Name *</Label>
+                <Input id="name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} placeholder="Enter venue name" required />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address">Venue Address</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Enter venue name"
-                  required
+                  id="address"
+                  value={formData.address || ""}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
+                  placeholder="Enter venue address"
                 />
               </div>
 
@@ -283,26 +283,25 @@ const VenueForm = () => {
                   required
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="venueType">Venue Type *</Label>
+                <Select value={formData.venueType} onValueChange={(value) => handleInputChange("venueType", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select venue type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="HOTEL">Hotel</SelectItem>
+                    <SelectItem value="ON_PREMISE">On Premise</SelectItem>
+                    <SelectItem value="CLIENT_FACILITY">Client Facility</SelectItem>
+                    <SelectItem value="ONLINE">Online</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Fee Structure */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="feeType">Fee Type *</Label>
-                <Select 
-                  value={formData.feeType} 
-                  onValueChange={(value) => handleInputChange("feeType", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="per_head">Per Head</SelectItem>
-                    <SelectItem value="per_venue">Per Venue</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="fee">Fee Amount ($) *</Label>
                 <Input
@@ -318,13 +317,40 @@ const VenueForm = () => {
               </div>
             </div>
 
+            {/* Conditional fields for per_venue fee type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="maxParticipants">Max Participants</Label>
+                <Input
+                  id="maxParticipants"
+                  type="number"
+                  min="1"
+                  value={formData.maxParticipants}
+                  onChange={(e) => handleInputChange("maxParticipants", e.target.value)}
+                  placeholder="Maximum participants allowed"
+                />
+                <p className="text-xs text-gray-500">If the number of participants exceeds this limit, additional per-head charges will apply</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="perHeadPriceIfMaxExceed">Per Head Price if Max Exceeded ($)</Label>
+                <Input
+                  id="perHeadPriceIfMaxExceed"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.perHeadPriceIfMaxExceed}
+                  onChange={(e) => handleInputChange("perHeadPriceIfMaxExceed", e.target.value)}
+                  placeholder="Price per extra participant"
+                />
+                <p className="text-xs text-gray-500">Charge per participant beyond the maximum limit</p>
+              </div>
+            </div>
+
             {/* Status */}
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => handleInputChange("status", value)}
-              >
+              <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
                 <SelectTrigger className="w-full md:w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -351,12 +377,7 @@ const VenueForm = () => {
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-semibold">Contact {index + 1}</h4>
                     {formData.contacts.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeContact(index)}
-                      >
+                      <Button type="button" variant="destructive" size="sm" onClick={() => removeContact(index)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -365,20 +386,12 @@ const VenueForm = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Name</Label>
-                      <Input
-                        value={contact.name}
-                        onChange={(e) => handleContactChange(index, "name", e.target.value)}
-                        placeholder="Contact name"
-                      />
+                      <Input value={contact.name} onChange={(e) => handleContactChange(index, "name", e.target.value)} placeholder="Contact name" />
                     </div>
 
                     <div className="space-y-2">
                       <Label>Phone Number</Label>
-                      <Input
-                        value={contact.number}
-                        onChange={(e) => handleContactChange(index, "number", e.target.value)}
-                        placeholder="+65 1234 5678"
-                      />
+                      <Input value={contact.number} onChange={(e) => handleContactChange(index, "number", e.target.value)} placeholder="+65 1234 5678" />
                     </div>
 
                     <div className="space-y-2">
@@ -410,12 +423,7 @@ const VenueForm = () => {
             {/* Submit Button */}
             <div className="flex justify-end pt-4">
               <Button type="submit" disabled={submitting}>
-                {submitting 
-                  ? "Saving..." 
-                  : venueId 
-                    ? "Update Venue" 
-                    : "Create Venue"
-                }
+                {submitting ? "Saving..." : venueId ? "Update Venue" : "Create Venue"}
               </Button>
             </div>
           </form>

@@ -1,53 +1,52 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { z } from 'zod';
-import { PrismaClient, CourseStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
+import sanitizeHtml from 'sanitize-html';
 
-const prisma = new PrismaClient();
+
 
 // Validation schemas based on actual schema and frontend form
 const CourseCreateSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  courseCode: z.string().trim().max(5, "Course code must be at most 5 characters"),
   description: z.string().optional(),
+  learningObjectives: z.string().optional(),
   category: z.string().min(1, "Category is required"),
-  objectives: z.array(z.string()).default([]),
+  objectives: z.union([z.array(z.string()), z.any()]).default([]),
   targetAudience: z.string().optional(),
-  prerequisites: z.array(z.string()).default([]),
-  materials: z.array(z.string()).default([]),
-  duration: z.string().optional(),
+  prerequisites: z.union([z.array(z.string()), z.any()]).default([]),
+  materials: z.union([z.array(z.string()), z.any()]).default([]),
+  duration: z.string().min(1, "Duration is required").refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num >= 1;
+  }, { message: "Duration must be at least 1" }),
   durationType: z.string().default("days"),
-  maxParticipants: z.number().int().positive().default(25),
-  minParticipants: z.number().int().positive().default(1),
+  maxParticipants: z.number().int().positive().nullable().optional(),
+  minParticipants: z.union([z.number().int().positive(), z.null()]).transform(val => val ?? 1).default(1),
   certificates: z.string().default("polwel"),
   certificationType: z.string().optional(),
   level: z.string().optional(),
-  venue: z.string().optional(),
-  trainers: z.array(z.string()).default([]),
+  venueId: z.string().optional(),
+  venueType: z.enum(['HOTEL', 'ON_PREMISE', 'CLIENT_FACILITY']).nullable().optional(),
+  specifiedLocation: z.string().optional(),
   remarks: z.string().optional(),
-  courseOutline: z.any().optional(), // JSON
   syllabus: z.string().optional(),
   assessmentMethod: z.string().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
   
-  // Financial fields matching frontend
-  courseFee: z.number().default(0),
-  venueFee: z.number().default(0),
-  trainerFee: z.number().default(0),
-  amountPerPax: z.number().default(0),
-  discount: z.number().default(0),
-  adminFees: z.number().default(0),
-  contingencyFees: z.number().default(0),
-  serviceFees: z.number().default(0),
-  vitalFees: z.number().default(0),
-  
-  status: z.nativeEnum(CourseStatus).default('DRAFT' as CourseStatus)
+  // Simplified financial fields - allow null and transform to default
+  defaultCourseFee: z.union([z.number(), z.null()]).transform(val => val ?? 0).default(0),
+  contractFees: z.union([z.number(), z.null()]).transform(val => val ?? 0).default(0),
+  venueFee: z.number().nullable().optional(),
+  venueFeeType: z.string().optional(), // Fee type suffix (/ venue or / head)
+  discounts: z.union([z.array(z.object({ id: z.string().optional(), name: z.string(), percentage: z.number().nonnegative().max(100) })), z.any()]).optional(),
+  venueMaxParticipants: z.number().int().positive().nullable().optional(),
+  perHeadPriceIfMaxExceed: z.number().nullable().optional()
 });
 
 const CourseUpdateSchema = CourseCreateSchema.partial();
-
-const CourseStatusSchema = z.object({
-  status: z.nativeEnum(CourseStatus)
-});
 
 export const coursesController = {
   // Get all courses with pagination and filtering
@@ -58,7 +57,6 @@ export const coursesController = {
         limit = '10',
         search,
         category,
-        status,
         certificates,
         sortBy = 'createdAt',
         sortOrder = 'desc'
@@ -73,9 +71,9 @@ export const coursesController = {
 
       if (search) {
         where.OR = [
-          { title: { contains: search as string, mode: 'insensitive' } },
-          { description: { contains: search as string, mode: 'insensitive' } },
-          { category: { contains: search as string, mode: 'insensitive' } }
+          { title: { contains: search as string } },
+          { description: { contains: search as string } },
+          { category: { contains: search as string } }
         ];
       }
 
@@ -83,26 +81,13 @@ export const coursesController = {
         where.category = category as string;
       }
 
-      if (status && status !== 'all') {
-        where.status = status as CourseStatus;
-      }
-
       if (certificates && certificates !== 'all') {
         where.certificates = certificates as string;
       }
 
-      // Get courses with creator info
+      // Get courses
       const courses = await prisma.course.findMany({
         where,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        },
         orderBy: {
           [sortBy as string]: sortOrder as 'asc' | 'desc'
         },
@@ -113,40 +98,19 @@ export const coursesController = {
       // Get total count for pagination
       const totalCourses = await prisma.course.count({ where });
 
-      // Calculate financial metrics for each course using actual schema fields
-      const coursesWithMetrics = courses.map((course: any) => {
-        const totalFeesPerPax = course.amountPerPax || 0;
-        const totalCostPerPax = (course.courseFee + course.venueFee + course.trainerFee + course.adminFees + course.contingencyFees + course.serviceFees + course.vitalFees) / (course.maxParticipants || 1);
-        
-        const totalRevenue = totalFeesPerPax * (course.maxParticipants || 0);
-        const totalCost = totalCostPerPax * (course.maxParticipants || 0);
-        const totalProfit = totalRevenue - totalCost;
-        const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-        return {
-          ...course,
-          calculatedMetrics: {
-            totalRevenue: totalRevenue,
-            totalCost: totalCost,
-            totalProfit: totalProfit,
-            profitMargin: profitMargin
-          }
-        };
-      });
+  const coursesWithMetrics = courses; // Metrics removed per new simplified model
 
       const totalPages = Math.ceil(totalCourses / limitNum);
 
       return res.json({
         success: true,
-        data: {
-          courses: coursesWithMetrics,
-          pagination: {
-            currentPage: pageNum,
-            totalPages,
-            totalCourses,
-            hasNext: pageNum < totalPages,
-            hasPrev: pageNum > 1
-          }
+        courses: coursesWithMetrics,
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          totalCourses,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1
         }
       });
     } catch (error) {
@@ -174,11 +138,29 @@ export const coursesController = {
       const course = await prisma.course.findUnique({
         where: { id },
         include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
+          courseTrainers: {
+            include: {
+              trainer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  partnerOrganization: true,
+                  specializations: true
+                }
+              }
+            }
+          },
+          coursePartners: {
+            include: {
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  status: true
+                }
+              }
             }
           }
         }
@@ -191,28 +173,9 @@ export const coursesController = {
         });
       }
 
-      // Calculate financial metrics using actual schema fields
-      const totalFeesPerPax = course.amountPerPax || 0;
-      const totalCostPerPax = (course.courseFee + course.venueFee + course.trainerFee + course.adminFees + course.contingencyFees + course.serviceFees + course.vitalFees) / (course.maxParticipants || 1);
-      
-      const totalRevenue = totalFeesPerPax * (course.maxParticipants || 0);
-      const totalCost = totalCostPerPax * (course.maxParticipants || 0);
-      const totalProfit = totalRevenue - totalCost;
-      const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-      const courseWithMetrics = {
-        ...course,
-        calculatedMetrics: {
-          totalRevenue: totalRevenue,
-          totalCost: totalCost,
-          totalProfit: totalProfit,
-          profitMargin: profitMargin
-        }
-      };
-
       return res.json({
         success: true,
-        data: { course: courseWithMetrics }
+        data: { course }
       });
     } catch (error) {
       console.error('Error fetching course:', error);
@@ -240,6 +203,32 @@ export const coursesController = {
       const data = validation.data;
       const userId = req.user?.userId;
 
+      // Additional business validations
+      const validationErrors: string[] = [];
+
+      // Validate trainer requirement
+      if (!req.body.trainers || !Array.isArray(req.body.trainers) || req.body.trainers.length === 0) {
+        validationErrors.push('At least one trainer is required');
+      }
+
+      // Validate venue pricing fields when venueFeeType is PER_VENUE (if provided, they must be valid)
+      if (data.venueFeeType === 'PER_VENUE') {
+        if (data.venueMaxParticipants !== null && data.venueMaxParticipants !== undefined && data.venueMaxParticipants <= 0) {
+          validationErrors.push('Max Participants (Venue) must be greater than 0 if provided');
+        }
+        if (data.perHeadPriceIfMaxExceed !== null && data.perHeadPriceIfMaxExceed !== undefined && data.perHeadPriceIfMaxExceed < 0) {
+          validationErrors.push('Per Head Price If Max Exceed must be 0 or greater if provided');
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors.map(msg => ({ message: msg }))
+        });
+      }
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -250,13 +239,40 @@ export const coursesController = {
       // Create course data object
       const courseData: any = {
         title: data.title,
-        status: data.status,
-        certificates: data.certificates,
-        createdBy: userId
+        certificates: data.certificates
       };
 
+      if (data.courseCode) {
+        courseData.courseCode = data.courseCode.toUpperCase();
+      }
+
       // Add optional fields only if they exist - matching actual schema
-      if (data.description !== undefined) courseData.description = data.description;
+      if (data.description !== undefined) {
+        courseData.description = sanitizeHtml(data.description, {
+          allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+          allowedAttributes: {
+            a: ['href','name','target','rel'],
+            img: ['src','alt','title'],
+            span: ['style'],
+            p: ['style'],
+            div: ['style']
+          },
+          allowedSchemes: ['data','http','https']
+        });
+      }
+      if (data.learningObjectives !== undefined) {
+        courseData.learningObjectives = sanitizeHtml(data.learningObjectives, {
+          allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+          allowedAttributes: {
+            a: ['href','name','target','rel'],
+            img: ['src','alt','title'],
+            span: ['style'],
+            p: ['style'],
+            div: ['style']
+          },
+          allowedSchemes: ['data','http','https']
+        });
+      }
       if (data.category !== undefined) courseData.category = data.category;
       if (data.objectives !== undefined) courseData.objectives = data.objectives;
       if (data.targetAudience !== undefined) courseData.targetAudience = data.targetAudience;
@@ -268,36 +284,77 @@ export const coursesController = {
       if (data.minParticipants !== undefined) courseData.minParticipants = data.minParticipants;
       if (data.certificationType !== undefined) courseData.certificationType = data.certificationType;
       if (data.level !== undefined) courseData.level = data.level;
-      if (data.venue !== undefined) courseData.venue = data.venue;
-      if (data.trainers !== undefined) courseData.trainers = data.trainers;
+      // Only set venueId if it's a valid non-empty string (prevents foreign key constraint violation)
+      if (data.venueId !== undefined && data.venueId !== null && data.venueId !== '') {
+        courseData.venueId = data.venueId;
+      }
+      if (data.venueType !== undefined) courseData.venueType = data.venueType;
+      if (data.specifiedLocation !== undefined) courseData.specifiedLocation = data.specifiedLocation;
       if (data.remarks !== undefined) courseData.remarks = data.remarks;
-      if (data.courseOutline !== undefined) courseData.courseOutline = data.courseOutline;
       if (data.syllabus !== undefined) courseData.syllabus = data.syllabus;
       if (data.assessmentMethod !== undefined) courseData.assessmentMethod = data.assessmentMethod;
+      if (data.status !== undefined) courseData.status = data.status;
       
-      // Financial fields
-      if (data.courseFee !== undefined) courseData.courseFee = data.courseFee;
+      // Simplified financial fields
+      if (data.defaultCourseFee !== undefined) courseData.defaultCourseFee = data.defaultCourseFee;
+      if (data.contractFees !== undefined) courseData.contractFees = data.contractFees;
       if (data.venueFee !== undefined) courseData.venueFee = data.venueFee;
-      if (data.trainerFee !== undefined) courseData.trainerFee = data.trainerFee;
-      if (data.amountPerPax !== undefined) courseData.amountPerPax = data.amountPerPax;
-      if (data.discount !== undefined) courseData.discount = data.discount;
-      if (data.adminFees !== undefined) courseData.adminFees = data.adminFees;
-      if (data.contingencyFees !== undefined) courseData.contingencyFees = data.contingencyFees;
-      if (data.serviceFees !== undefined) courseData.serviceFees = data.serviceFees;
-      if (data.vitalFees !== undefined) courseData.vitalFees = data.vitalFees;
+      if (data.venueFeeType !== undefined) courseData.venueFeeType = data.venueFeeType;
+      if (data.discounts !== undefined) courseData.discounts = data.discounts;
+      if (data.venueMaxParticipants !== undefined) courseData.venueMaxParticipants = data.venueMaxParticipants;
+      if (data.perHeadPriceIfMaxExceed !== undefined) courseData.perHeadPriceIfMaxExceed = data.perHeadPriceIfMaxExceed;
 
       const course = await prisma.course.create({
-        data: courseData,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
+        data: courseData
       });
+
+      // Handle trainers and partners via pivot tables if provided
+      if (req.body.trainers && Array.isArray(req.body.trainers) && req.body.trainers.length > 0) {
+        // Separate trainers (Users) and partners (Partners) based on their existence in respective tables
+        const trainersAndPartners = await Promise.all(
+          req.body.trainers.map(async (item: any) => {
+            // Support both string IDs (legacy) and objects with {id, feePerRun, remarks}
+            const itemId = typeof item === 'string' ? item : item.id;
+            const feePerRun = typeof item === 'object' && item.feePerRun !== undefined ? item.feePerRun : (courseData.contractFees || 0);
+            const remarks = typeof item === 'object' && item.remarks ? item.remarks : null;
+            
+            const user = await prisma.user.findUnique({ where: { id: itemId }, select: { id: true, role: true } });
+            if (user && user.role === 'TRAINER') {
+              return { type: 'trainer', id: itemId, feePerRun, remarks };
+            }
+            const partner = await prisma.partner.findUnique({ where: { id: itemId }, select: { id: true } });
+            if (partner) {
+              return { type: 'partner', id: itemId };
+            }
+            return null;
+          })
+        );
+
+        const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer');
+        const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
+
+        if (trainers.length > 0) {
+          // If syncRemarksToTrainers flag is true, use course-level remarks for all trainers
+          const remarksToUse = req.body.syncRemarksToTrainers ? data.remarks : null;
+          
+          await prisma.courseTrainer.createMany({
+            data: trainers.map((trainer) => ({ 
+              courseId: course.id, 
+              trainerId: trainer!.id,
+              feePerRun: trainer!.feePerRun,
+              remarks: remarksToUse !== null ? remarksToUse : trainer!.remarks
+            })),
+            skipDuplicates: true
+          });
+        }
+
+        if (partners.length > 0) {
+          await prisma.coursePartner.createMany({
+            data: partners.map((partnerId) => ({ courseId: course.id, partnerId })),
+            skipDuplicates: true
+          });
+        }
+      }
 
       // Log audit trail
       if (req.user?.userId) {
@@ -364,28 +421,146 @@ export const coursesController = {
 
       const data = validation.data;
 
+      // Additional business validations
+      const validationErrors: string[] = [];
+
+      // Validate trainer requirement if trainers array is provided
+      if (req.body.trainers !== undefined) {
+        if (!Array.isArray(req.body.trainers) || req.body.trainers.length === 0) {
+          validationErrors.push('At least one trainer is required');
+        }
+      }
+
+      // Validate venue pricing fields when venueFeeType is PER_VENUE (if provided, they must be valid)
+      if (data.venueFeeType === 'PER_VENUE') {
+        if (data.venueMaxParticipants !== null && data.venueMaxParticipants !== undefined && data.venueMaxParticipants <= 0) {
+          validationErrors.push('Max Participants (Venue) must be greater than 0 if provided');
+        }
+        if (data.perHeadPriceIfMaxExceed !== null && data.perHeadPriceIfMaxExceed !== undefined && data.perHeadPriceIfMaxExceed < 0) {
+          validationErrors.push('Per Head Price If Max Exceed must be 0 or greater if provided');
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors.map(msg => ({ message: msg }))
+        });
+      }
+
       // Create update data object, only including defined fields
       const updateData: any = {};
       Object.keys(data).forEach(key => {
+        if (key === 'createdBy' || key === 'creator') return; // prevent manual creator change
         const value = data[key as keyof typeof data];
         if (value !== undefined) {
-          updateData[key] = value;
+          if (key === 'description' && typeof value === 'string') {
+            updateData.description = sanitizeHtml(value, {
+              allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+              allowedAttributes: {
+                a: ['href','name','target','rel'],
+                img: ['src','alt','title'],
+                span: ['style'],
+                p: ['style'],
+                div: ['style']
+              },
+              allowedSchemes: ['data','http','https']
+            });
+          } else if (key === 'learningObjectives' && typeof value === 'string') {
+            updateData.learningObjectives = sanitizeHtml(value, {
+              allowedTags: ['h1','h2','h3','h4','h5','h6','blockquote','p','a','ul','ol','li','b','i','strong','em','u','strike','code','hr','br','div','span','img'],
+              allowedAttributes: {
+                a: ['href','name','target','rel'],
+                img: ['src','alt','title'],
+                span: ['style'],
+                p: ['style'],
+                div: ['style']
+              },
+              allowedSchemes: ['data','http','https']
+            });
+          } else {
+            if (key === 'courseCode' && typeof value === 'string') {
+              updateData.courseCode = value.toUpperCase();
+            } else if (key === 'venueMaxParticipants' || key === 'perHeadPriceIfMaxExceed') {
+              // Explicitly handle nullable venue pricing fields
+              updateData[key] = value;
+            } else if (key === 'venueId') {
+              // Only set venueId if it's a valid non-empty string, otherwise set to null
+              updateData[key] = (value && value !== '') ? value : null;
+            } else if (key === 'venueType') {
+              // Handle venueType (can be null)
+              updateData[key] = value || null;
+            } else {
+              updateData[key] = value;
+            }
+          }
         }
       });
 
       const updatedCourse = await prisma.course.update({
         where: { id },
-        data: updateData,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+        data: updateData
+      });
+
+      // Handle trainers and partners via pivot tables if provided
+      if (req.body.trainers && Array.isArray(req.body.trainers)) {
+        // Delete existing trainer and partner associations
+        await prisma.courseTrainer.deleteMany({
+          where: { courseId: id }
+        });
+        await prisma.coursePartner.deleteMany({
+          where: { courseId: id }
+        });
+
+        // Create new associations
+        if (req.body.trainers.length > 0) {
+          // Separate trainers (Users) and partners (Partners)
+          const trainersAndPartners = await Promise.all(
+            req.body.trainers.map(async (item: any) => {
+              // Support both string IDs (legacy) and objects with {id, feePerRun, remarks}
+              const itemId = typeof item === 'string' ? item : item.id;
+              const feePerRun = typeof item === 'object' && item.feePerRun !== undefined ? item.feePerRun : (data.contractFees || 0);
+              const remarks = typeof item === 'object' && item.remarks ? item.remarks : null;
+              
+              const user = await prisma.user.findUnique({ where: { id: itemId }, select: { id: true, role: true } });
+              if (user && user.role === 'TRAINER') {
+                return { type: 'trainer', id: itemId, feePerRun, remarks };
+              }
+              const partner = await prisma.partner.findUnique({ where: { id: itemId }, select: { id: true } });
+              if (partner) {
+                return { type: 'partner', id: itemId };
+              }
+              return null;
+            })
+          );
+
+          const trainers = trainersAndPartners.filter((item) => item?.type === 'trainer');
+          const partners = trainersAndPartners.filter((item) => item?.type === 'partner').map((item) => item!.id);
+
+          if (trainers.length > 0) {
+            // If syncRemarksToTrainers flag is true, use course-level remarks for all trainers
+            const remarksToUse = req.body.syncRemarksToTrainers ? data.remarks : null;
+            
+            await prisma.courseTrainer.createMany({
+              data: trainers.map((trainer) => ({ 
+                courseId: id, 
+                trainerId: trainer!.id,
+                feePerRun: trainer!.feePerRun,
+                remarks: remarksToUse !== null ? remarksToUse : trainer!.remarks
+              })),
+              skipDuplicates: true
+            });
+          }
+
+          if (partners.length > 0) {
+            await prisma.coursePartner.createMany({
+              data: partners.map((partnerId) => ({ courseId: id, partnerId })),
+              skipDuplicates: true
+            });
           }
         }
-      });
+      }
 
       // Log audit trail
       if (req.user?.userId) {
@@ -478,8 +653,8 @@ export const coursesController = {
     }
   },
 
-  // Update course status
-  async updateCourseStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  // Toggle course status (ACTIVE/INACTIVE)
+  async toggleCourseStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
 
@@ -487,16 +662,6 @@ export const coursesController = {
         return res.status(400).json({
           success: false,
           message: 'Course ID is required'
-        });
-      }
-
-      // Validate input
-      const validation = CourseStatusSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: validation.error.errors
         });
       }
 
@@ -512,48 +677,39 @@ export const coursesController = {
         });
       }
 
-      const { status } = validation.data;
-      const oldStatus = existingCourse.status;
+      // Toggle status
+      const newStatus = existingCourse.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
 
       const updatedCourse = await prisma.course.update({
         where: { id },
-        data: { status },
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
+        data: { status: newStatus }
       });
 
       // Log audit trail
       if (req.user?.userId) {
         await AuditService.log({
           userId: req.user.userId,
-          action: 'Course Status Changed',
+          action: 'Course Status Updated',
           actionType: 'STATUS_CHANGE',
           tableName: 'courses',
           recordId: id,
-          oldValues: { status: oldStatus },
-          newValues: { status },
-          details: `Changed course status from ${oldStatus} to ${status} for: ${updatedCourse.title}`,
+          oldValues: { status: existingCourse.status },
+          newValues: { status: newStatus },
+          details: `Changed course status from ${existingCourse.status} to ${newStatus}: ${existingCourse.title}`,
           performedBy: req.user.userId
         }, req);
       }
 
       return res.json({
         success: true,
-        message: 'Course status updated successfully',
+        message: `Course ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`,
         data: { course: updatedCourse }
       });
     } catch (error) {
-      console.error('Error updating course status:', error);
+      console.error('Error toggling course status:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to update course status',
+        message: 'Failed to toggle course status',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -562,13 +718,8 @@ export const coursesController = {
   // Get course statistics
   async getCourseStatistics(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
-      // Get total counts by status
-      const statusCounts = await prisma.course.groupBy({
-        by: ['status'],
-        _count: {
-          id: true
-        }
-      });
+      // Get total courses
+      const totalCourses = await prisma.course.count();
 
       // Get total counts by category
       const categoryCounts = await prisma.course.groupBy({
@@ -583,9 +734,6 @@ export const coursesController = {
         }
       });
 
-      // Get total courses count
-      const totalCourses = await prisma.course.count();
-
       // Get recent courses
       const recentCourses = await prisma.course.findMany({
         take: 5,
@@ -595,36 +743,7 @@ export const coursesController = {
         select: {
           id: true,
           title: true,
-          status: true,
-          createdAt: true,
-          creator: {
-            select: {
-              name: true
-            }
-          }
-        }
-      });
-
-      // Calculate financial statistics using actual schema fields
-      const financialStats = await prisma.course.aggregate({
-        _avg: {
-          courseFee: true,
-          venueFee: true,
-          trainerFee: true,
-          amountPerPax: true,
-          adminFees: true,
-          contingencyFees: true,
-          serviceFees: true,
-          vitalFees: true
-        },
-        _sum: {
-          courseFee: true,
-          venueFee: true,
-          trainerFee: true,
-          amountPerPax: true
-        },
-        _count: {
-          id: true
+          createdAt: true
         }
       });
 
@@ -632,27 +751,11 @@ export const coursesController = {
         success: true,
         data: {
           totalCourses,
-          statusBreakdown: statusCounts.reduce((acc: Record<string, number>, curr: any) => {
-            acc[curr.status] = curr._count.id;
-            return acc;
-          }, {}),
           categoryBreakdown: categoryCounts.reduce((acc: Record<string, number>, curr: any) => {
-            if (curr.category) {
-              acc[curr.category] = curr._count.id;
-            }
+            if (curr.category) acc[curr.category] = curr._count.id;
             return acc;
           }, {}),
-          recentCourses,
-          financialStats: {
-            averageCourseFee: financialStats._avg?.courseFee || 0,
-            averageVenueFee: financialStats._avg?.venueFee || 0,
-            averageTrainerFee: financialStats._avg?.trainerFee || 0,
-            averageAmountPerPax: financialStats._avg?.amountPerPax || 0,
-            averageAdminFees: financialStats._avg?.adminFees || 0,
-            totalCourseFees: financialStats._sum?.courseFee || 0,
-            totalVenueFees: financialStats._sum?.venueFee || 0,
-            totalTrainerFees: financialStats._sum?.trainerFee || 0
-          }
+          recentCourses
         }
       });
     } catch (error) {

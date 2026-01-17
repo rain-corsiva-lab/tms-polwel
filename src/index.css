@@ -1,11 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Enterprise TMS Design System - Professional and Clean */
+/* POLWEL Training Management System - Professional Design System */
 
 @layer base {
   :root {
+    /* POLWEL Brand Colors */
+    --polwel-navy: #001A45;
+    --polwel-orange: #F7941D;
+    --polwel-grey: #6D6E71;
+
+    /* Accent Colors - POLWEL */
+    --accent-red: #ef4750;
+    --accent-red-light: #ef9fa1;
+    --accent-blue: #3fb6e8;
+    --accent-blue-light: #aee0f1;
+    --accent-green: #61bb47;
+    --accent-green-light: #b6d878;
+    --accent-yellow: #fbdf08;
+    --accent-yellow-light: #faf370;
+
+    /* Base Colors */
     --background: 0 0% 98%;
     --foreground: 215 25% 12%;
 
@@ -15,18 +33,20 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 12%;
 
-    --primary: 217 91% 60%;
+    /* Primary - POLWEL Orange */
+    --primary: 32 95% 49%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 217 91% 55%;
+    --primary-hover: 32 95% 44%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 215 25% 12%;
+    /* Secondary - POLWEL Navy */
+    --secondary: 216 100% 14%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 217 91% 95%;
-    --accent-foreground: 217 91% 60%;
+    --accent: 32 95% 95%;
+    --accent-foreground: 32 95% 49%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -39,25 +59,18 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --ring: 32 95% 49%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 216 100% 14%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 32 95% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 216 100% 20%;
+    --sidebar-accent-foreground: 32 95% 49%;
+    --sidebar-border: 216 100% 10%;
+    --sidebar-ring: 32 95% 49%;
   }
 
   .dark {
@@ -70,32 +83,33 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 32 95% 49%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 216 100% 14%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
     --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent-foreground: 32 95% 49%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --ring: 32 95% 49%;
+    
+    --sidebar-background: 216 100% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 32 95% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 216 100% 20%;
+    --sidebar-accent-foreground: 32 95% 49%;
+    --sidebar-border: 216 100% 8%;
+    --sidebar-ring: 32 95% 49%;
   }
 }
 
@@ -104,7 +118,236 @@
     @apply border-border;
   }
 
+  html {
+    font-family: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
+
+  /* Links use POLWEL Orange */
+  a {
+    @apply text-[#F7941D] hover:text-[#d87a16] transition-colors;
+  }
+
+  /* Buttons use POLWEL Navy for primary actions */
+  button {
+    @apply transition-colors;
+  }
+
+  /* Primary buttons with Navy background */
+  .bg-primary {
+    @apply bg-[#001A45];
+  }
+
+  .bg-primary:hover {
+    @apply bg-[#000d2a];
+  }
+
+  /* Button variants - Navy for primary/default state */
+  button.bg-\[#001A45\] {
+    @apply bg-[#001A45] text-white;
+  }
+
+  button.bg-\[#001A45\]:hover {
+    @apply bg-[#000d2a];
+  }
+
+  /* Tailwind button styles - primary = Navy */
+  .btn-primary, 
+  button[class*="bg-primary"],
+  [role="button"].bg-primary {
+    @apply bg-[#001A45] text-white hover:bg-[#000d2a];
+  }
+
+  /* Dialog buttons - Navy for primary action */
+  [role="dialog"] button:not([class*="ghost"]):not([class*="outline"]):not([class*="secondary"]) {
+    @apply bg-[#001A45] text-white hover:bg-[#000d2a];
+  }
+
+  /* Sidebar active menu items - Navy background */
+  .sidebar-active {
+    @apply bg-[#001A45] text-white;
+  }
+
+  .sidebar-active:hover {
+    @apply bg-[#000d2a];
+  }
+
+  /* Sidebar menu items in expanded mode with Navy active/hover */
+  nav [class*="NavLink"] {
+    @apply transition-colors;
+  }
+
+  /* Active NavLink items */
+  nav a[aria-current="page"],
+  nav [class*="isActive"] {
+    @apply bg-[#001A45] text-white;
+  }
+
+  /* Active/selected states for all interactive elements */
+  [aria-selected="true"],
+  [data-state="checked"],
+  [data-state="on"] {
+    @apply bg-[#001A45] text-white;
+  }
+
+  /* Calendar selected dates - Navy */
+  .react-datepicker__day--selected,
+  .react-datepicker__day--in-selecting-range,
+  .react-datepicker__day--in-range {
+    @apply bg-[#001A45] !important;
+    color: white !important;
+  }
+
+  .react-datepicker__day--keyboard-selected {
+    @apply bg-[#001A45] !important;
+    color: white !important;
+  }
+
+  /* Active date picker header - Navy */
+  .react-datepicker__current-month,
+  .react-datepicker-time__header {
+    @apply text-[#001A45];
+  }
+
+  /* Dropdown menu items - Navy when active/hover */
+  [role="menuitem"][aria-current="page"],
+  [role="menuitem"][data-state="checked"] {
+    @apply bg-[#001A45] text-white;
+  }
+
+  [role="menuitem"]:hover:not([aria-disabled="true"]) {
+    @apply bg-[#001A45]/10;
+  }
+
+  /* Table rows - Navy for selected */
+  tbody tr.selected,
+  tbody tr[aria-selected="true"] {
+    @apply bg-[#001A45]/10;
+  }
+
+  /* Form elements - Navy for focus/active states */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply border-[#001A45] ring-[#001A45];
+  }
+
+  /* Checkbox and radio buttons - Use primary orange when checked */
+  input[type="checkbox"]:checked,
+  input[type="radio"]:checked {
+    @apply accent-[#F7941D];
+  }
+
+  /* Toggle switches - Navy when on */
+  [role="switch"][aria-checked="true"] {
+    @apply bg-[#001A45];
+  }
+
+  /* Badge indicators - Navy for active/highlight */
+  .badge[data-state="active"],
+  .badge.active {
+    @apply bg-[#001A45] text-white;
+  }
+
+  /* Accordion items - Navy when expanded */
+  [role="region"] {
+    @apply border-[#001A45]/20;
+  }
+
+  [aria-expanded="true"] {
+    @apply text-[#001A45];
+  }
+
+  /* Fixed header/sidebar layout vars */
+  :root {
+    --header-height: 4rem; /* matches h-16 */
+    --sidebar-width: 16rem; /* matches w-64 */
+  }
+
+  /* Reserve space so page content is not overlapped by fixed header/sidebar */
+  body {
+    padding-top: var(--header-height);
+  }
+
+  /* Prevent horizontal overflow globally */
+  #root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Ensure all containers respect viewport width */
+  .container,
+  [class*="container"] {
+    max-width: 100%;
+  }
+
+  /* Table wrappers should handle overflow properly */
+  .overflow-x-auto {
+    max-width: 100%;
+  }
+}
+
+/* Hide native datepicker icon for inputs we control so we show only our custom icon */
+.date-input-no-native::-webkit-calendar-picker-indicator {
+  display: none;
+}
+.date-input-no-native::-webkit-clear-button {
+  display: none;
+}
+/* Firefox */
+.date-input-no-native::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* Ensure the wrapper has cursor pointer to indicate clickability */
+.relative > .date-input-no-native {
+  cursor: pointer;
+}
+
+/* Raise SweetAlert2 above dialog overlays */
+.swal2-container {
+  z-index: 100000 !important;
+}
+
+/* While SweetAlert2 is open, disable pointer events on Radix portals (dialogs, dropdowns) */
+body.swal2-shown [data-radix-portal] {
+  pointer-events: none !important;
+}
+
+button.relative.flex.items-center.rounded-sm{
+  width: 100%;
+}
+
+/* ReactQuill editor styles - prevent content overflow */
+.quill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.quill .ql-toolbar {
+  flex-shrink: 0;
+}
+
+.quill .ql-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.quill .ql-editor {
+  min-height: 120px;
+  max-height: 180px;
+  overflow-y: auto;
 }

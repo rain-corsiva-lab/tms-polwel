@@ -2,37 +2,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoreHorizontal, Edit, Trash2, Eye, History, Mail } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/date";
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: 'POLWEL' | 'TrainingCoordinator' | 'Trainer' | 'Learner';
-  status: 'Active' | 'Inactive' | 'Pending' | 'Locked';
+  role: "POLWEL" | "TrainingCoordinator" | "Trainer" | "Learner";
+  status: "Active" | "Inactive" | "Pending" | "Locked";
   lastLogin?: string;
-  mfaEnabled: boolean;
   passwordExpiry?: string;
   failedLoginAttempts?: number;
-  
+
   // Organization info (for TCs and Learners)
   organization?: string;
   division?: string;
   buCostCentre?: string;
-  
+
   // Additional fields for display
   permissionLevel?: string;
-  availabilityStatus?: string;
   courses?: string[];
   additionalEmails?: string[];
-  
+
   // Audit trail for POLWEL users
   auditTrail?: AuditTrailEntry[];
 }
@@ -44,23 +39,23 @@ interface UserTableProps {
 
 const getRoleColor = (role: string) => {
   switch (role) {
-    case 'POLWEL':
-      return 'bg-primary text-primary-foreground';
-    case 'TrainingCoordinator':
-      return 'bg-warning text-warning-foreground';
-    case 'Trainer':
-      return 'bg-success text-success-foreground';
-    case 'Learner':
-      return 'bg-blue-500 text-white';
+    case "POLWEL":
+      return "bg-primary text-primary-foreground";
+    case "TrainingCoordinator":
+      return "bg-warning text-warning-foreground";
+    case "Trainer":
+      return "bg-success text-success-foreground";
+    case "Learner":
+      return "bg-blue-500 text-white";
     default:
-      return 'bg-muted text-muted-foreground';
+      return "bg-muted text-muted-foreground";
   }
 };
 
 const getRoleDisplay = (role: string) => {
   switch (role) {
-    case 'TrainingCoordinator':
-      return 'Training Coordinator';
+    case "TrainingCoordinator":
+      return "Training Coordinator";
     default:
       return role;
   }
@@ -68,16 +63,16 @@ const getRoleDisplay = (role: string) => {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'Active':
-      return 'bg-success text-success-foreground';
-    case 'Inactive':
-      return 'bg-muted text-muted-foreground';
-    case 'Pending':
-      return 'bg-warning text-warning-foreground';
-    case 'Locked':
-      return 'bg-destructive text-destructive-foreground';
+    case "Active":
+      return "bg-success text-success-foreground";
+    case "Inactive":
+      return "bg-muted text-muted-foreground";
+    case "Pending":
+      return "bg-warning text-warning-foreground";
+    case "Locked":
+      return "bg-destructive text-destructive-foreground";
     default:
-      return 'bg-muted text-muted-foreground';
+      return "bg-muted text-muted-foreground";
   }
 };
 
@@ -106,22 +101,17 @@ const UserTable = ({ users, title }: UserTableProps) => {
                 <tr key={user.id} className="border-b border-border hover:bg-muted/50">
                   <td className="py-3 px-4">
                     <div>
-                      {user.role === 'POLWEL' && user.auditTrail ? (
-                        <AuditTrailDialog 
-                          userName={user.name} 
-                          userEmail={user.email} 
-                          auditTrail={user.auditTrail}
-                        >
+                      {user.role === "POLWEL" && user.auditTrail ? (
+                        <AuditTrailDialog userId={user.id} userName={user.name} userEmail={user.email}>
                           <button className="text-left hover:text-primary transition-colors">
                             <div className="font-medium text-foreground underline decoration-dotted">{user.name}</div>
                             {user.organization && (
                               <div className="text-sm text-muted-foreground">
-                                {user.organization}{user.division && ` - ${user.division}`}
+                                {user.organization}
+                                {user.division && ` - ${user.division}`}
                               </div>
                             )}
-                            {user.buCostCentre && (
-                              <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>
-                            )}
+                            {user.buCostCentre && <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>}
                           </button>
                         </AuditTrailDialog>
                       ) : (
@@ -129,12 +119,11 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           <div className="font-medium text-foreground">{user.name}</div>
                           {user.organization && (
                             <div className="text-sm text-muted-foreground">
-                              {user.organization}{user.division && ` - ${user.division}`}
+                              {user.organization}
+                              {user.division && ` - ${user.division}`}
                             </div>
                           )}
-                          {user.buCostCentre && (
-                            <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>
-                          )}
+                          {user.buCostCentre && <div className="text-xs text-muted-foreground">BU: {user.buCostCentre}</div>}
                         </div>
                       )}
                     </div>
@@ -142,31 +131,21 @@ const UserTable = ({ users, title }: UserTableProps) => {
                   <td className="py-3 px-4">
                     <div className="text-foreground">{user.email}</div>
                     {user.additionalEmails && user.additionalEmails.length > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{user.additionalEmails.length} more
-                      </div>
+                      <div className="text-xs text-muted-foreground">+{user.additionalEmails.length} more</div>
                     )}
                   </td>
-                   <td className="py-3 px-4">
-                     <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
-                      {(user.failedLoginAttempts ?? 0) > 0 && (
-                        <div className="text-xs text-destructive mt-1">
-                          {user.failedLoginAttempts} failed attempts
-                        </div>
-                      )}
-                   </td>
                   <td className="py-3 px-4">
-                    <div className="text-muted-foreground text-sm">
-                      {user.passwordExpiry || 'Not set'}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-muted-foreground">
-                    {user.lastLogin || 'Never'}
+                    <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                    {(user.failedLoginAttempts ?? 0) > 0 && <div className="text-xs text-destructive mt-1">{user.failedLoginAttempts} failed attempts</div>}
                   </td>
                   <td className="py-3 px-4">
-                    <DropdownMenu>
+                    <div className="text-muted-foreground text-sm">{user.passwordExpiry || "Not set"}</div>
+                  </td>
+                  <td className="py-3 px-4 text-muted-foreground">{user.lastLogin ? formatDate(user.lastLogin) : "Never"}</td>
+                  <td className="py-3 px-4">
+                    <SafeDropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -175,12 +154,8 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        {user.role === 'POLWEL' && user.auditTrail && (
-                          <AuditTrailDialog 
-                            userName={user.name} 
-                            userEmail={user.email} 
-                            auditTrail={user.auditTrail}
-                          >
+                        {user.role === "POLWEL" && user.auditTrail && (
+                          <AuditTrailDialog userId={user.id} userName={user.name} userEmail={user.email}>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               <History className="h-4 w-4 mr-2" />
                               View Audit Trail
@@ -191,7 +166,7 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit User
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => {
                             toast({
                               title: "Password Reset Link Sent",
@@ -207,7 +182,7 @@ const UserTable = ({ users, title }: UserTableProps) => {
                           Delete User
                         </DropdownMenuItem>
                       </DropdownMenuContent>
-                    </DropdownMenu>
+                    </SafeDropdownMenu>
                   </td>
                 </tr>
               ))}

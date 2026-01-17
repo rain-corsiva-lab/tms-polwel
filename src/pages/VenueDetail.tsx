@@ -11,7 +11,7 @@ const VenueDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [venue, setVenue] = useState<Venue | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,38 +25,27 @@ const VenueDetail = () => {
     try {
       setLoading(true);
       const response = await venuesApi.getById(id!);
-      
+
       if (response.success && response.data.venue) {
         setVenue(response.data.venue);
       } else {
         toast({
           title: "Error",
           description: response.error || "Failed to load venue data",
-          variant: "destructive"
+          variant: "destructive",
         });
-        navigate('/venue-setup');
+        navigate("/venue-setup");
       }
     } catch (error) {
-      console.error('Error loading venue:', error);
+      console.error("Error loading venue:", error);
       toast({
         title: "Error",
         description: "Failed to load venue data",
-        variant: "destructive"
+        variant: "destructive",
       });
-      navigate('/venue-setup');
+      navigate("/venue-setup");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getFeeTypeBadge = (feeType: string) => {
-    switch (feeType?.toLowerCase()) {
-      case "per_head":
-        return <Badge variant="default">Per Head</Badge>;
-      case "per_venue":
-        return <Badge variant="secondary">Per Venue</Badge>;
-      default:
-        return <Badge variant="outline">{feeType}</Badge>;
     }
   };
 
@@ -70,6 +59,19 @@ const VenueDetail = () => {
         return <Badge variant="destructive">Maintenance</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getVenueTypeBadge = (venueType: string) => {
+    switch (venueType?.toUpperCase()) {
+      case "HOTEL":
+        return <Badge variant="default">Hotel</Badge>;
+      case "ON_PREMISE":
+        return <Badge variant="secondary">On Premise</Badge>;
+      case "CLIENT_FACILITY":
+        return <Badge variant="outline">Client Facility</Badge>;
+      default:
+        return <Badge variant="outline">{venueType}</Badge>;
     }
   };
 
@@ -92,7 +94,7 @@ const VenueDetail = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <p className="text-muted-foreground mb-4">Venue not found</p>
-            <Button onClick={() => navigate('/venue-setup')}>
+            <Button onClick={() => navigate("/venue-setup")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Venues
             </Button>
@@ -102,16 +104,12 @@ const VenueDetail = () => {
     );
   }
 
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/venue-setup')}
-          >
+          <Button variant="outline" onClick={() => navigate("/venue-setup")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Venues
           </Button>
@@ -119,9 +117,7 @@ const VenueDetail = () => {
             <h1 className="text-3xl font-bold text-foreground">{venue.name}</h1>
             <div className="flex items-center space-x-2 mt-2">
               {getStatusBadge(venue.status)}
-              <Badge variant={venue.feeType === "per_head" ? "default" : "secondary"}>
-                {venue.feeType === "per_head" ? "Per Head" : "Per Venue"}
-              </Badge>
+              {venue.venueType && getVenueTypeBadge(venue.venueType)}
             </div>
           </div>
         </div>
@@ -155,7 +151,7 @@ const VenueDetail = () => {
                 <h3 className="font-semibold text-foreground mb-2">Pricing</h3>
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span>${venue.fee} {venue.feeType === "per_head" ? "per person" : "per venue"}</span>
+                  <span>${venue.fee}</span>
                 </div>
               </div>
 
@@ -205,13 +201,6 @@ const VenueDetail = () => {
               <CardTitle>Venue Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Fee Structure</h4>
-                <Badge variant={venue.feeType === "per_head" ? "default" : "secondary"}>
-                  {venue.feeType === "per_head" ? "Per Head" : "Per Venue"}
-                </Badge>
-              </div>
-
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-1">Capacity</h4>
                 <p className="text-sm">{venue.capacity}</p>

@@ -2,197 +2,174 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign } from "lucide-react";
 
 interface FeesRevenueTabProps {
   formData: any;
-  calculations: any;
   onInputChange: (field: string, value: any) => void;
+  venues?: any[];
+  selectedVenueId?: string;
 }
 
-const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, calculations, onInputChange }) => {
+const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange, venues = [], selectedVenueId }) => {
+  const selectedVenue = venues.find((v: any) => v?.id === selectedVenueId);
+  const handleNumericInputChange = (field: string, value: string) => {
+    // Remove leading zeros and handle empty string
+    const cleanValue = value.replace(/^0+/, "") || "0";
+    const numericValue = parseFloat(cleanValue) || 0;
+    onInputChange(field, numericValue);
+  };
+
+  const formatDisplayValue = (value: number | undefined) => {
+    // Return empty string if value is 0 or undefined, otherwise return the value as string
+    return value === 0 || value === undefined ? "" : value.toString();
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Default Course Fee */}
-      <div className="space-y-2">
-        <Label htmlFor="defaultCourseFee">Default Course Fee ($)</Label>
-        <Input
-          id="defaultCourseFee"
-          type="number"
-          value={formData.defaultCourseFee || 0}
-          onChange={(e) => onInputChange("defaultCourseFee", parseFloat(e.target.value) || 0)}
-          placeholder="0.00"
-        />
-        <p className="text-sm text-muted-foreground">Base fee for this course template</p>
-      </div>
-
-      <Separator />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="courseFee">Course Fee ($)</Label>
-          <Input
-            id="courseFee"
-            type="number"
-            value={formData.courseFee}
-            onChange={(e) => onInputChange("courseFee", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="venueFee">Venue Fee ($)</Label>
-          <Input
-            id="venueFee"
-            type="number"
-            value={formData.venueFee}
-            onChange={(e) => onInputChange("venueFee", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="trainerFee">Trainer Fee ($)</Label>
-          <Input
-            id="trainerFee"
-            type="number"
-            value={formData.trainerFee}
-            onChange={(e) => onInputChange("trainerFee", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="adminFees">Admin Fees ($)</Label>
-          <Input
-            id="adminFees"
-            type="number"
-            value={formData.adminFees}
-            onChange={(e) => onInputChange("adminFees", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="contingencyFees">Contingency Fees ($)</Label>
-          <Input
-            id="contingencyFees"
-            type="number"
-            value={formData.contingencyFees}
-            onChange={(e) => onInputChange("contingencyFees", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="serviceFees">Service Fees ($)</Label>
-          <Input
-            id="serviceFees"
-            type="number"
-            value={formData.serviceFees}
-            onChange={(e) => onInputChange("serviceFees", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="vitalFees">Vital Fees ($)</Label>
-          <Input
-            id="vitalFees"
-            type="number"
-            value={formData.vitalFees}
-            onChange={(e) => onInputChange("vitalFees", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="minPax">Minimum Pax</Label>
-          <Input
-            id="minPax"
-            type="number"
-            min="1"
-            value={formData.minPax}
-            onChange={(e) => onInputChange("minPax", parseInt(e.target.value) || 1)}
-            placeholder="1"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="amountPerPax">Amount per Pax ($)</Label>
-          <Input
-            id="amountPerPax"
-            type="number"
-            value={formData.amountPerPax}
-            onChange={(e) => onInputChange("amountPerPax", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="discount">Discount (%)</Label>
-          <Input
-            id="discount"
-            type="number"
-            min="0"
-            max="100"
-            value={formData.discount}
-            onChange={(e) => onInputChange("discount", parseFloat(e.target.value) || 0)}
-            placeholder="0"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="remarks">Remarks (for minimum pax not met)</Label>
-        <Textarea
-          id="remarks"
-          value={formData.remarks}
-          onChange={(e) => onInputChange("remarks", e.target.value)}
-          placeholder="Enter remarks when minimum pax is not met"
-          rows={2}
-        />
-      </div>
-
-      {/* Financial Summary */}
-      <div className="space-y-4">
-        <Separator />
-        <h3 className="text-lg font-semibold">Financial Summary</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Total Fee</Label>
-            <p className="text-2xl font-bold text-foreground">${calculations.totalFee.toFixed(2)}</p>
+    <div className="space-y-6">
+      {/* REVENUE SECTION */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-sm">
+            {/* <DollarSign className="h-4 w-4 mr-2" /> */}
+            Revenue
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="defaultCourseFee" className="text-sm font-medium">
+                Default Course Fee ($)
+              </Label>
+              <Input
+                id="defaultCourseFee"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formatDisplayValue(formData.defaultCourseFee)}
+                onChange={(e) => handleNumericInputChange("defaultCourseFee", e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-gray-500">Fee charged to participants/client</p>
+            </div>
           </div>
-          
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Minimum Revenue</Label>
-            <p className="text-2xl font-bold text-foreground">${calculations.minimumRevenue.toFixed(2)}</p>
+        </CardContent>
+      </Card>
+
+      {/* EXPENSES SECTION */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Expenses</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 3-Column Layout: Contract Fees, Venue Fee Type, Base Venue Fee */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Contract Fees */}
+            <div className="space-y-2">
+              <Label htmlFor="contractFees" className="text-sm font-medium">
+                Contract Fees ($)
+              </Label>
+              <Input
+                id="contractFees"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formatDisplayValue(formData.contractFees)}
+                onChange={(e) => handleNumericInputChange("contractFees", e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-gray-500">Contract/trainer fees paid out</p>
+            </div>
+
+            {/* Venue Fee Type */}
+            <div className="space-y-2">
+              <Label htmlFor="venueFeeType" className="text-sm font-medium">
+                Venue Fee Type
+              </Label>
+              <Select value={formData.venueFeeType} onValueChange={(value) => onInputChange("venueFeeType", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select fee type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PER_HEAD">PER_HEAD</SelectItem>
+                  <SelectItem value="PER_VENUE">PER_VENUE</SelectItem>
+                  <SelectItem value="FIXED">FIXED</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">Pricing model for venue charges</p>
+            </div>
+
+            {/* Base Venue Fee */}
+            <div className="space-y-2">
+              <Label htmlFor="venueFee" className="text-sm font-medium">
+                Base Venue Fee ($)
+              </Label>
+              <Input
+                id="venueFee"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formatDisplayValue(formData.venueFee)}
+                onChange={(e) => handleNumericInputChange("venueFee", e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-gray-500">Base venue rental fee</p>
+            </div>
           </div>
-          
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Total Cost</Label>
-            <p className="text-2xl font-bold text-foreground">${calculations.totalCost.toFixed(2)}</p>
+
+          {/* Show venue-specific fields if PER_VENUE fee type */}
+          {formData.venueFeeType === "PER_VENUE" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+              <div className="space-y-2">
+                <Label htmlFor="venueMaxParticipants" className="text-sm font-medium">
+                  Max Participants (Venue) <span className="text-gray-400">(Optional)</span>
+                </Label>
+                <Input
+                  id="venueMaxParticipants"
+                  type="number"
+                  min="1"
+                  value={typeof formData.venueMaxParticipants === "number" ? formData.venueMaxParticipants : formData.venueMaxParticipants || ""}
+                  onChange={(e) => onInputChange("venueMaxParticipants", e.target.value ? parseInt(e.target.value, 10) : "")}
+                  placeholder="Enter maximum participants"
+                />
+                <p className="text-xs text-gray-500">Maximum participants before per-head charges apply</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="perHeadPriceIfMaxExceed" className="text-sm font-medium">
+                  Per Head Fee if Max Exceeded ($) <span className="text-gray-400">(Optional)</span>
+                </Label>
+                <Input
+                  id="perHeadPriceIfMaxExceed"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={typeof formData.perHeadPriceIfMaxExceed === "number" ? formData.perHeadPriceIfMaxExceed : formData.perHeadPriceIfMaxExceed || ""}
+                  onChange={(e) => onInputChange("perHeadPriceIfMaxExceed", e.target.value ? parseFloat(e.target.value) : "")}
+                  placeholder="0.00"
+                />
+                <p className="text-xs text-gray-500">Additional fee per participant if maximum is exceeded</p>
+              </div>
+            </div>
+          )}
+
+          {/* 1-Column Layout: Remarks (full width) */}
+          <div className="space-y-2">
+            <Label htmlFor="remarks" className="text-sm font-medium">
+              Remarks
+            </Label>
+            <Textarea
+              id="remarks"
+              value={formData.remarks}
+              onChange={(e) => onInputChange("remarks", e.target.value)}
+              placeholder="Enter any remarks for this course's financial arrangement"
+              rows={3}
+            />
           </div>
-          
-          <div className="p-4 bg-muted rounded-lg">
-            <Label className="text-sm text-muted-foreground">Profit</Label>
-            <p className={`text-2xl font-bold ${calculations.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${calculations.profit.toFixed(2)}
-            </p>
-          </div>
-        </div>
-        
-        <div className="p-4 bg-muted rounded-lg">
-          <Label className="text-sm text-muted-foreground">Profit Margin</Label>
-          <p className={`text-3xl font-bold ${calculations.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {calculations.profitMargin.toFixed(2)}%
-          </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

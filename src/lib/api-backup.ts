@@ -61,7 +61,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, retries =
         }));
         
         console.error(`API Error (${response.status}):`, errorData);
-        throw new Error(`API Error: ${errorData.message || response.statusText}`);
+        throw new Error(errorData.message || response.statusText);
       }
 
       const data = await response.json();
@@ -255,12 +255,7 @@ export const polwelUsersApi = {
   },
 
   // Toggle MFA
-  toggleMfa: async (id: string, enabled: boolean) => {
-    return apiRequest(`/polwel-users/${id}/toggle-mfa`, {
-      method: 'POST',
-      body: JSON.stringify({ enabled }),
-    });
-  },
+
 
   // Get detailed user information
   getDetails: async (id: string | number) => {
@@ -366,7 +361,8 @@ export const trainersApi = {
   // Create trainer blockout
   createBlockout: async (id: string, blockoutData: {
     date: string;
-    reason: string;
+  // Remarks replace reason and are optional
+  remarks?: string;
     type: string;
     description?: string;
     isRecurring?: boolean;
@@ -402,9 +398,9 @@ export const trainersApi = {
   },
 };
 
-// Client Organizations API
+// Client Organisations API
 export const clientOrganizationsApi = {
-  // Get all organizations with pagination and filtering
+  // Get all organisations with pagination and filtering
   getAll: async (params: {
     page?: number;
     limit?: number;
@@ -430,7 +426,6 @@ export const clientOrganizationsApi = {
   // Create new organization
   create: async (orgData: {
     name: string;
-    displayName?: string;
     industry?: string;
     status?: string;
     address?: string;
@@ -448,7 +443,6 @@ export const clientOrganizationsApi = {
   // Update organization
   update: async (id: string, orgData: {
     name?: string;
-    displayName?: string;
     industry?: string;
     status?: string;
     address?: string;

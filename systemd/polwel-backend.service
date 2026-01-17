@@ -1,0 +1,33 @@
+[Unit]
+Description=POLWEL Backend API Server
+Documentation=https://github.com/your-repo/polwel
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/polwel/backend
+Environment=NODE_ENV=staging
+Environment=PATH=/usr/bin:/usr/local/bin
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=10
+KillMode=mixed
+KillSignal=SIGINT
+TimeoutStopSec=5
+SyslogIdentifier=polwel-backend
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/www/polwel/backend
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

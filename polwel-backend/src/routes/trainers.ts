@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, authorizeRoles } from '../middleware/auth';
+import { authenticateToken, authorizeRoles, requirePermissions } from '../middleware/auth';
 import {
   getTrainers,
   getTrainerById,
@@ -10,8 +10,18 @@ import {
   createTrainerBlockout,
   deleteTrainerBlockout,
   getPartnerOrganizations,
-  getTrainerCourseRuns
+  getTrainerCourseRuns,
+  getTrainerTrainingSummary,
+  resendTrainerSetup,
+  getDeletedTrainers,
+  restoreTrainer
 } from '../controllers/trainersController';
+import { 
+  listTrainerFees,
+  createTrainerFee,
+  updateTrainerFee,
+  deleteTrainerFee
+} from '../controllers/trainerFeesController';
 
 const router = express.Router();
 
@@ -19,21 +29,36 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Routes accessible by POLWEL and TRAINING_COORDINATOR
-router.get('/', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getTrainers);
-router.get('/partner-organizations', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getPartnerOrganizations);
-router.get('/:id', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getTrainerById);
+router.get('/', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.view'), getTrainers);
+router.get('/partner-organizations', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.view'), getPartnerOrganizations);
+router.get('/:id', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.view'), getTrainerById);
 
 // Routes accessible only by POLWEL
-router.post('/', authorizeRoles('POLWEL'), createTrainer);
-router.put('/:id', authorizeRoles('POLWEL'), updateTrainer);
-router.delete('/:id', authorizeRoles('POLWEL'), deleteTrainer);
+router.post('/', authorizeRoles('POLWEL'), requirePermissions('trainers.create'), createTrainer);
+router.put('/:id', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), updateTrainer);
+router.delete('/:id', authorizeRoles('POLWEL'), requirePermissions('trainers.delete'), deleteTrainer);
+
+// Get deleted trainers and restore
+router.get('/deleted/all', authorizeRoles('POLWEL'), requirePermissions('trainers.view'), getDeletedTrainers);
+router.patch('/:id/restore', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), restoreTrainer);
 
 // Trainer blockout routes
-router.get('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getTrainerBlockouts);
-router.post('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), createTrainerBlockout);
-router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), deleteTrainerBlockout);
+router.get('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.view'), getTrainerBlockouts);
+router.post('/:id/blockouts', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.edit'), createTrainerBlockout);
+// Allow trainers to delete their own blockouts - ownership validation in controller
+router.delete('/:id/blockouts/:blockoutId', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR', 'TRAINER'), deleteTrainerBlockout);
 
 // Trainer course runs
-router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getTrainerCourseRuns);
+router.get('/:id/course-runs', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('course-run.view'), getTrainerCourseRuns);
+router.get('/:id/training-summary', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('course-run.view'), getTrainerTrainingSummary);
+
+// Trainer onboarding
+router.post('/:id/resend-setup', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), resendTrainerSetup);
+
+// Trainer fees (POLWEL + TRAINING_COORDINATOR read, POLWEL manage)
+router.get('/:id/fees', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), requirePermissions('trainers.view'), listTrainerFees);
+router.post('/:id/fees', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), createTrainerFee);
+router.put('/:id/fees/:feeId', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), updateTrainerFee);
+router.delete('/:id/fees/:feeId', authorizeRoles('POLWEL'), requirePermissions('trainers.edit'), deleteTrainerFee);
 
 export default router;

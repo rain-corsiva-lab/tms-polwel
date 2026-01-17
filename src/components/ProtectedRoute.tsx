@@ -1,20 +1,19 @@
-import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Lock, Building } from 'lucide-react';
+import { ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, Lock, Building } from "lucide-react";
+import Forbidden from "@/pages/Forbidden";
+import { toCanonicalPermission } from "@/lib/permissionMapping";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRoles?: string[];
   organizationId?: string;
+  requiredPermissions?: string[];
 }
 
-export function ProtectedRoute({ 
-  children, 
-  requiredRoles = [], 
-  organizationId 
-}: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRoles = [], organizationId, requiredPermissions = [] }: ProtectedRouteProps) {
   const { isAuthenticated, user, loading, hasRole, canAccessOrganization } = useAuth();
   const location = useLocation();
 
@@ -31,68 +30,38 @@ export function ProtectedRoute({
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  // Check if user account is active
-  if (user.status !== 'ACTIVE') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <AlertTriangle className="w-12 h-12 mx-auto text-yellow-500 mb-2" />
-            <CardTitle className="text-lg">Account Status</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-2">
-            <p className="text-muted-foreground">
-              Your account is currently <strong>{user.status.toLowerCase()}</strong>.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Please contact your system administrator for assistance.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Role checks
+  if (requiredRoles && requiredRoles.length > 0 && !hasRole(requiredRoles)) {
+    return <Navigate to="/403" replace />;
   }
 
-  // Check role-based access
-  if (requiredRoles.length > 0 && !hasRole(requiredRoles)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Lock className="w-12 h-12 mx-auto text-red-500 mb-2" />
-            <CardTitle className="text-lg">Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-2">
-            <p className="text-muted-foreground">
-              You don't have permission to access this page.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Required: {requiredRoles.join(', ')} | Your role: {user.role}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Check organization-specific access
+  // Organization checks
   if (organizationId && !canAccessOrganization(organizationId)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Building className="w-12 h-12 mx-auto text-red-500 mb-2" />
-            <CardTitle className="text-lg">Organization Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground">
-              You don't have access to this organization's data.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <Navigate to="/403" replace />;
+  }
+
+  // Permission checks (client-side convenience; backend remains source of truth)
+  if (requiredPermissions.length > 0) {
+    const raw = (user as any)?.permissions;
+    // Only enforce on the client if we actually have a permissions list.
+    // If not present, let the backend enforce so we don't block valid users by mistake.
+    if (Array.isArray(raw) && raw.length > 0) {
+      const userPerms = new Set(
+        raw
+          .map((perm: any) => {
+            const permName = typeof perm === "string" ? perm : perm?.permissionName;
+            if (!permName) {
+              return null;
+            }
+            return toCanonicalPermission(permName).toLowerCase();
+          })
+          .filter((value): value is string => Boolean(value))
+      );
+
+      const needs = requiredPermissions.map((perm) => toCanonicalPermission(perm).toLowerCase());
+      const ok = needs.every((p) => userPerms.has(p));
+      if (!ok) return <Navigate to="/403" replace />;
+    }
   }
 
   // All checks passed, render the protected content

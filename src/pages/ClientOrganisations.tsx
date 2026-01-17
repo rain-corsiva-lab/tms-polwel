@@ -1,18 +1,24 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, UserCheck, Calendar, Search, Plus } from "lucide-react";
+import { Building2, Search, Download, Loader2, Filter } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+// native select used for status/org-type to avoid portal scroll-jump
 import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
 import { clientOrganizationsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import PaginationControls from "@/components/ui/pagination";
 
 interface ClientOrg {
   id: string;
   name: string;
-  industry: string;
+  organizationType?: "POLWEL" | "SPF" | "PUBLIC_SECTOR" | "PRIVATE_SECTOR";
   coordinatorsCount: number;
   learnersCount: number;
   status: "ACTIVE" | "INACTIVE";
@@ -22,195 +28,397 @@ const ClientOrganisations = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [clientOrgs, setClientOrgs] = useState<ClientOrg[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [orgTypeFilter, setOrgTypeFilter] = useState<"ALL_TYPES" | "POLWEL" | "SPF" | "PUBLIC_SECTOR" | "PRIVATE_SECTOR">("ALL_TYPES");
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 50, // Load more items for grid view
     total: 0,
     totalPages: 0,
   });
+  const [perPage, setPerPage] = useState(10);
+  const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
 
-  // Dummy data for client organizations
-  const dummyClientOrgs: ClientOrg[] = [
-    {
-      id: "1",
-      name: "TechCorp Singapore",
-      industry: "Technology",
-      coordinatorsCount: 3,
-      learnersCount: 45,
-      status: "ACTIVE"
-    },
-    {
-      id: "2", 
-      name: "Healthcare Solutions Pte Ltd",
-      industry: "Healthcare",
-      coordinatorsCount: 2,
-      learnersCount: 28,
-      status: "ACTIVE"
-    },
-    {
-      id: "3",
-      name: "Financial Services Group",
-      industry: "Finance",
-      coordinatorsCount: 4,
-      learnersCount: 67,
-      status: "ACTIVE"
-    },
-    {
-      id: "4",
-      name: "Manufacturing Excellence",
-      industry: "Manufacturing",
-      coordinatorsCount: 1,
-      learnersCount: 15,
-      status: "INACTIVE"
-    },
-    {
-      id: "5",
-      name: "Education Partners",
-      industry: "Education",
-      coordinatorsCount: 2,
-      learnersCount: 32,
-      status: "ACTIVE"
-    }
-  ];
+  // Excel-style filter state
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    status: [],
+    organizationType: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
-  // Fetch client organizations from API
-  const fetchClientOrgs = async () => {
+  // No dummy data: always fetch from server. In case of error we show an empty list and surface a toast.
+
+  // Fetch client organisations from API
+  const fetchClientOrgs = async (pageArg?: number, limitArg?: number) => {
     try {
       setLoading(true);
+      const pageToUse = pageArg ?? pagination.page;
+      const limitToUse = limitArg ?? perPage;
+
       const response = await clientOrganizationsApi.getAll({
-        page: pagination.page,
-        limit: pagination.limit,
+        page: pageToUse,
+        limit: limitToUse,
         search: searchTerm || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
+        organizationType: orgTypeFilter !== "ALL_TYPES" ? orgTypeFilter : undefined,
       });
 
       // Map backend data to frontend interface
-      const mappedOrgs = response.organizations?.map(org => ({
-        id: org.id,
-        name: org.name,
-        industry: org.industry || "",
-        coordinatorsCount: org.coordinatorsCount || 0,
-        learnersCount: org.learnersCount || 0,
-        status: org.status,
-      })) || [];
+      const mappedOrgs: ClientOrg[] =
+        response.organizations?.map((org: any) => ({
+          id: org.id,
+          name: org.name ?? org.displayName ?? org.display_name ?? "",
+          organizationType: org.organizationType,
+          coordinatorsCount: org.coordinatorsCount || 0,
+          learnersCount: org.learnersCount || 0,
+          status: org.status,
+        })) || [];
 
       setClientOrgs(mappedOrgs);
-      setPagination(response.pagination || pagination);
+      setPagination(
+        response.pagination || { page: pageToUse, total: mappedOrgs.length, totalPages: Math.max(1, Math.ceil((mappedOrgs.length || 0) / limitToUse)) }
+      );
     } catch (error) {
-      console.error('Error fetching client organizations:', error);
-      // Use dummy data when API fails
-      setClientOrgs(dummyClientOrgs);
-      setPagination({
-        page: 1,
-        limit: 50,
-        total: dummyClientOrgs.length,
-        totalPages: 1
-      });
+      console.error("Error fetching client organizations:", error);
+      // If fetch fails, show empty list and surface a toast so user is aware
+      setClientOrgs([]);
+      setPagination((p) => ({ ...p, total: 0, totalPages: 0 }));
+      toast({ title: "Failed to fetch client organisations", description: "Please try again later.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch organizations on component mount and when search changes
+  // Debounced search effect
   useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      fetchClientOrgs();
-    }, 300); // Debounce search
-
-    return () => clearTimeout(debounceTimer);
+    const t = setTimeout(() => {
+      setPagination((p) => ({ ...p, page: 1 }));
+      fetchClientOrgs(1);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
+
+  // Immediate refetch on page, status, org type, or perPage changes
+  useEffect(() => {
+    fetchClientOrgs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, statusFilter, orgTypeFilter, perPage]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
 
-  // Filter client orgs based on search term (for immediate UI feedback)
-  const filteredOrgs = clientOrgs.filter(org =>
-    org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.industry.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const response = await clientOrganizationsApi.getAll({
+        search: searchTerm || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
+        organizationType: orgTypeFilter !== "ALL_TYPES" ? orgTypeFilter : undefined,
+        all: true,
+      });
+
+      const rows = (response.organizations || []).map((org: any) => ({
+        Name: org.name ?? "",
+        OrganisationType:
+          org.organizationType === "PUBLIC_SECTOR"
+            ? "Public Sector"
+            : org.organizationType === "PRIVATE_SECTOR"
+            ? "Private Sector"
+            : org.organizationType ?? "",
+        Status: org.status ?? "",
+        Coordinators: org.coordinatorsCount ?? 0,
+        Participants: org.learnersCount ?? 0,
+        ContactEmail: org.contactEmail ?? "",
+        ContactPhone: org.contactPhone ?? "",
+        BUNumber: org.buNumber ?? "",
+        CreatedAt: org.createdAt ?? "",
+        UpdatedAt: org.updatedAt ?? "",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Client Organisations");
+      XLSX.writeFile(workbook, "client_organisations.xlsx");
+      toast({
+        title: "Exported",
+        description: `Exported ${rows.length} client organisation${rows.length === 1 ? "" : "s"}.`,
+      });
+    } catch (error) {
+      console.error("Error exporting client organisations:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't export the client organisations. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const orgTypeOptions = useMemo(
+    () => [
+      { value: "ALL_TYPES", label: "All Types" },
+      { value: "POLWEL", label: "POLWEL" },
+      { value: "SPF", label: "SPF" },
+      { value: "PUBLIC_SECTOR", label: "Public Sector" },
+      { value: "PRIVATE_SECTOR", label: "Private Sector" },
+    ],
+    []
   );
+
+  // Excel-style filter functions
+  const getUniqueValues = (field: keyof ClientOrg) => {
+    const values = Array.from(new Set(clientOrgs.map((org) => String(org[field] || "")).filter(Boolean)));
+    return values.sort();
+  };
+
+  const handleFilterToggle = (field: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[field] || [];
+      const newValues = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: newValues };
+    });
+  };
+
+  const clearColumnFilter = (field: string) => {
+    setFilters((prev) => ({ ...prev, [field]: [] }));
+  };
+
+  const hasActiveFilter = (field: string) => {
+    return filters[field] && filters[field].length > 0;
+  };
+
+  // Apply column filters
+  const filteredClientOrgs = clientOrgs.filter((org) => {
+    // Status filter
+    if (filters.status.length > 0 && !filters.status.includes(org.status)) {
+      return false;
+    }
+    // Organization Type filter
+    if (filters.organizationType.length > 0 && org.organizationType && !filters.organizationType.includes(org.organizationType)) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Client Organisation</h1>
-          <p className="text-muted-foreground">Manage client organisations and their training programs</p>
+          <h1 className="text-3xl font-bold tracking-tight">Client Organisation</h1>
         </div>
-        <AddOrganisationDialog onOrganisationCreated={fetchClientOrgs} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+          <AddOrganisationDialog onOrganisationCreated={fetchClientOrgs} />
+        </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search client organisations..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Search client organisations..." value={searchTerm} onChange={(e) => handleSearch(e.target.value)} className="pl-10" />
+        </div>
+        <div className="w-40">
+          <label className="sr-only" htmlFor="statusSelect">
+            Status
+          </label>
+          <select
+            id="statusSelect"
+            value={statusFilter}
+            onChange={(e) => {
+              const v = e.target.value as any;
+              setStatusFilter(v);
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+            className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
+          >
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+        <div className="w-48">
+          {/* Native select used to avoid portal/scroll jump caused by popover-based selects */}
+          <label className="sr-only" htmlFor="orgTypeSelect">
+            Organisation Type
+          </label>
+          <select
+            id="orgTypeSelect"
+            value={orgTypeFilter}
+            onChange={(e) => {
+              const v = e.target.value as any;
+              setOrgTypeFilter(v);
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+            className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full"
+          >
+            {orgTypeOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading client organizations...</p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrgs.map((org) => (
-            <Link key={org.id} to={`/client-organisations/${org.id}`}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">{org.name}</CardTitle>
-                    </div>
-                    <Badge variant={org.status === "ACTIVE" ? "default" : "secondary"}>
-                      {org.status}
-                    </Badge>
-                  </div>
-                  {org.industry && <CardDescription>{org.industry}</CardDescription>}
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <UserCheck className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Coordinators</span>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Organisation Type</span>
+                  <Popover open={openFilter === "organizationType"} onOpenChange={(open) => setOpenFilter(open ? "organizationType" : null)}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("organizationType") && "text-primary")}>
+                        <Filter className="h-3.5 w-3.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-0" align="start">
+                      <div className="p-3 border-b">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Filter by Type</span>
+                          {hasActiveFilter("organizationType") && (
+                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("organizationType")}>
+                              Clear
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-semibold">{org.coordinatorsCount}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Learners</span>
+                      <div className="max-h-64 overflow-y-auto p-2">
+                        {getUniqueValues("organizationType").map((value) => (
+                          <div
+                            key={value}
+                            className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                            onClick={() => handleFilterToggle("organizationType", value)}
+                          >
+                            <Checkbox checked={filters.organizationType?.includes(value)} />
+                            <span className="text-sm">{value}</span>
+                          </div>
+                        ))}
                       </div>
-                      <span className="font-semibold">{org.learnersCount}</span>
-                    </div>
-                    
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </TableHead>
+              <TableHead>Coordinators</TableHead>
+              <TableHead>Participants</TableHead>
+              <TableHead>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Status</span>
+                  <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("status") && "text-primary")}>
+                        <Filter className="h-3.5 w-3.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-0" align="start">
+                      <div className="p-3 border-b">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Filter by Status</span>
+                          {hasActiveFilter("status") && (
+                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto p-2">
+                        {getUniqueValues("status").map((value) => (
+                          <div
+                            key={value}
+                            className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                            onClick={() => handleFilterToggle("status", value)}
+                          >
+                            <Checkbox checked={filters.status?.includes(value)} />
+                            <span className="text-sm">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    <span>Loading client organisations...</span>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                </TableCell>
+              </TableRow>
+            ) : filteredClientOrgs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <Building2 className="h-8 w-8" />
+                    <div>No organisations found</div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredClientOrgs.map((org) => (
+                <TableRow key={org.id}>
+                  <TableCell>
+                    <Link to={`/client-organisations/${org.id}`} className="text-primary hover:underline">
+                      {org.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {org.organizationType ? (
+                      <Badge variant="outline">
+                        {org.organizationType === "PUBLIC_SECTOR"
+                          ? "Public Sector"
+                          : org.organizationType === "PRIVATE_SECTOR"
+                          ? "Private Sector"
+                          : org.organizationType}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{org.coordinatorsCount}</TableCell>
+                  <TableCell>{org.learnersCount}</TableCell>
+                  <TableCell>
+                    <Badge variant={org.status === "ACTIVE" ? "default" : "secondary"}>{org.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link to={`/client-organisations/${org.id}`}>
+                      <Button variant="outline" size="sm">
+                        Manage
+                      </Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-          {filteredOrgs.length === 0 && !loading && (
-            <div className="col-span-full text-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No organizations found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm ? "Try adjusting your search terms" : "No client organizations have been added yet"}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="px-1">
+        <PaginationControls
+          page={pagination.page}
+          perPage={perPage}
+          total={pagination.total}
+          onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+          onPerPageChange={(pp) => {
+            setPerPage(pp);
+            setPagination((prev) => ({ ...prev, page: 1 }));
+          }}
+        />
+      </div>
     </div>
   );
 };

@@ -1,8 +1,9 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
+
 
 export const referencesController = {
   // Get all trainers (both internal and partner trainers)
@@ -11,7 +12,8 @@ export const referencesController = {
       const trainers = await prisma.user.findMany({
         where: {
           role: UserRole.TRAINER,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          deletedAt: null
         },
         select: {
           id: true,
@@ -51,29 +53,36 @@ export const referencesController = {
   // Get all partner organizations
   async getPartners(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
-      const partners = await prisma.user.findMany({
+      const partners = await prisma.partner.findMany({
         where: {
-          role: UserRole.TRAINER,
-          partnerOrganization: {
-            not: null
-          },
-          status: 'ACTIVE'
+          status: UserStatus.ACTIVE,
+          deletedAt: null
         },
         select: {
-          partnerOrganization: true
+          id: true,
+          name: true,
+          email: true,
+          pointOfContact: true,
+          contactNumber: true,
+          contactDesignation: true
         },
-        distinct: ['partnerOrganization']
+        orderBy: {
+          name: 'asc'
+        }
       });
 
-      const uniquePartners = [...new Set(
-        partners
-          .map(p => p.partnerOrganization)
-          .filter(Boolean)
-      )].sort();
+      const formattedPartners = partners.map(partner => ({
+        id: partner.id,
+        partnerName: partner.name?.trim() || 'Unnamed Partner',
+        email: partner.email || null,
+        pointOfContact: partner.pointOfContact || null,
+        contactNumber: partner.contactNumber || null,
+        contactDesignation: partner.contactDesignation || null
+      }));
 
       return res.json({
         success: true,
-        data: { partners: uniquePartners }
+        data: { partners: formattedPartners }
       });
     } catch (error) {
       console.error('Error fetching partners:', error);
@@ -90,7 +99,8 @@ export const referencesController = {
     try {
       const venues = await prisma.venue.findMany({
         where: {
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          deletedAt: null
         },
         select: {
           id: true,

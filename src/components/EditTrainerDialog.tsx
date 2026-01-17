@@ -1,28 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import DateInput from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X, Edit, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isValidEmail } from "@/lib/validators";
 import { trainersApi } from "@/lib/api";
+import { digitsOnly } from "@/lib/utils";
+import { errorHandlers } from "@/lib/errorHandler";
 
 interface Trainer {
   id: string;
@@ -30,13 +20,15 @@ interface Trainer {
   email: string;
   role: string;
   status: string;
-  availabilityStatus?: string;
+  contactNumber?: string;
+  onboardingDate?: string | null;
   partnerOrganization?: string;
   courses?: string[];
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
   specializations?: string[];
+  certifications?: string[];
   bio?: string;
   experience?: string;
 }
@@ -49,54 +41,55 @@ interface EditTrainerDialogProps {
 export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // Map enum values to display values
-  const getDisplayValue = (enumValue: string) => {
-    switch (enumValue) {
-      case 'AVAILABLE': return 'Available';
-      case 'LIMITED': return 'Limited';
-      case 'UNAVAILABLE': return 'Unavailable';
-      default: return enumValue || 'Available';
-    }
-  };
 
+  // Map enum values to display values
   const [formData, setFormData] = useState({
     name: trainer.name,
     email: trainer.email,
     status: trainer.status,
-    availabilityStatus: getDisplayValue(trainer.availabilityStatus || 'AVAILABLE'),
-    partnerOrganization: trainer.partnerOrganization || '',
-    bio: trainer.bio || '',
+    contactNumber: digitsOnly((trainer as any).contactNumber || ""),
+    onboardingDate: (trainer as any).onboardingDate ? String((trainer as any).onboardingDate).split("T")[0] : "",
+    partnerOrganization: trainer.partnerOrganization || "",
+    bio: trainer.bio || "",
     specializations: trainer.specializations || trainer.courses || [],
-    certifications: [] as string[],
-    experience: trainer.experience || '',
+    certifications: trainer.certifications || [],
+    experience: trainer.experience || "",
   });
 
-  const [newSpecialization, setNewSpecialization] = useState('');
-  const [newCertification, setNewCertification] = useState('');
+  const [newSpecialization, setNewSpecialization] = useState("");
+  const [newCertification, setNewCertification] = useState("");
 
   const { toast } = useToast();
+
+  const sanitizeSGPhone = (value: string | undefined) => {
+    if (!value) return undefined;
+    let digits = value.replace(/\D/g, "");
+    if (digits.startsWith("65") && digits.length >= 10) digits = digits.slice(2);
+    if (digits.length > 8) digits = digits.slice(0, 8);
+    return digits || undefined;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Map display values to enum values
-      const getEnumValue = (displayValue: string) => {
-        switch (displayValue) {
-          case 'Available': return 'AVAILABLE';
-          case 'Limited': return 'LIMITED';
-          case 'Unavailable': return 'UNAVAILABLE';
-          default: return displayValue;
-        }
-      };
-
+      if (!isValidEmail(formData.email)) {
+        toast({
+          title: "Validation Error",
+          description: "Please enter a valid email address (name@email.com).",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      const sanitizedPhone = sanitizeSGPhone(formData.contactNumber);
       await trainersApi.update(trainer.id, {
         name: formData.name,
         email: formData.email,
         status: formData.status,
-        availabilityStatus: getEnumValue(formData.availabilityStatus),
+        ...(sanitizedPhone !== undefined && { contactNumber: sanitizedPhone }),
+        ...(formData.onboardingDate ? { onboardingDate: new Date(formData.onboardingDate).toISOString() } : {}),
         partnerOrganization: formData.partnerOrganization || undefined,
         bio: formData.bio || undefined,
         specializations: formData.specializations,
@@ -112,55 +105,51 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
       setOpen(false);
       onTrainerUpdated();
     } catch (error) {
-      console.error('Error updating trainer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update trainer. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.trainerUpdate(error, toast);
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    const nextValue = field === "contactNumber" ? digitsOnly(value) : value;
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: nextValue,
     }));
   };
 
   const addSpecialization = () => {
     if (newSpecialization.trim() && !formData.specializations.includes(newSpecialization.trim())) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        specializations: [...prev.specializations, newSpecialization.trim()]
+        specializations: [...prev.specializations, newSpecialization.trim()],
       }));
-      setNewSpecialization('');
+      setNewSpecialization("");
     }
   };
 
   const removeSpecialization = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      specializations: prev.specializations.filter((_, i) => i !== index)
+      specializations: prev.specializations.filter((_, i) => i !== index),
     }));
   };
 
   const addCertification = () => {
     if (newCertification.trim() && !formData.certifications.includes(newCertification.trim())) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        certifications: [...prev.certifications, newCertification.trim()]
+        certifications: [...prev.certifications, newCertification.trim()],
       }));
-      setNewCertification('');
+      setNewCertification("");
     }
   };
 
   const removeCertification = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index)
+      certifications: prev.certifications.filter((_, i) => i !== index),
     }));
   };
 
@@ -171,166 +160,133 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Edit Trainer</DialogTitle>
-          <DialogDescription>
-            Update trainer information and specializations.
-          </DialogDescription>
+          {/* <DialogDescription>Update trainer information and specializations.</DialogDescription> */}
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto px-6 space-y-4 flex-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactNumber">Contact Number</Label>
+                <Input
+                  id="contactNumber"
+                  value={(formData as any).contactNumber}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={(e) => handleInputChange("contactNumber", e.target.value)}
+                  placeholder="Mobile or office number"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="onboardingDate">Onboarding Date</Label>
+              <DateInput id="onboardingDate" value={(formData as any).onboardingDate} onChange={(v) => handleInputChange("onboardingDate", v)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="partnerOrganization">Partner Organization</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                required
+                id="partnerOrganization"
+                value={formData.partnerOrganization}
+                onChange={(e) => handleInputChange("partnerOrganization", e.target.value)}
+                placeholder="Enter partner organization"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                required
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea id="bio" value={formData.bio} onChange={(e) => handleInputChange("bio", e.target.value)} placeholder="Enter trainer bio" rows={3} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="experience">Experience</Label>
+              <Textarea
+                id="experience"
+                value={formData.experience}
+                onChange={(e) => handleInputChange("experience", e.target.value)}
+                placeholder="Enter trainer experience"
+                rows={3}
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => handleInputChange('status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="SUSPENDED">Suspended</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Specializations</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  value={newSpecialization}
+                  onChange={(e) => setNewSpecialization(e.target.value)}
+                  placeholder="Add specialization"
+                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecialization())}
+                />
+                <Button type="button" onClick={addSpecialization} size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.specializations.map((spec, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {spec}
+                    <Button type="button" variant="ghost" size="sm" className="h-auto p-0 ml-1" onClick={() => removeSpecialization(index)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="availabilityStatus">Availability</Label>
-              <Select
-                value={formData.availabilityStatus}
-                onValueChange={(value) => handleInputChange('availabilityStatus', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select availability" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Available">Available</SelectItem>
-                  <SelectItem value="Limited">Limited</SelectItem>
-                  <SelectItem value="Unavailable">Unavailable</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Certifications</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  value={newCertification}
+                  onChange={(e) => setNewCertification(e.target.value)}
+                  placeholder="Add certification"
+                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addCertification())}
+                />
+                <Button type="button" onClick={addCertification} size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.certifications.map((cert, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {cert}
+                    <Button type="button" variant="ghost" size="sm" className="h-auto p-0 ml-1" onClick={() => removeCertification(index)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="partnerOrganization">Partner Organization</Label>
-            <Input
-              id="partnerOrganization"
-              value={formData.partnerOrganization}
-              onChange={(e) => handleInputChange('partnerOrganization', e.target.value)}
-              placeholder="Enter partner organization"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={formData.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
-              placeholder="Enter trainer bio"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="experience">Experience</Label>
-            <Textarea
-              id="experience"
-              value={formData.experience}
-              onChange={(e) => handleInputChange('experience', e.target.value)}
-              placeholder="Enter trainer experience"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Specializations</Label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                value={newSpecialization}
-                onChange={(e) => setNewSpecialization(e.target.value)}
-                placeholder="Add specialization"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialization())}
-              />
-              <Button type="button" onClick={addSpecialization} size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.specializations.map((spec, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {spec}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-0 ml-1"
-                    onClick={() => removeSpecialization(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Certifications</Label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                value={newCertification}
-                onChange={(e) => setNewCertification(e.target.value)}
-                placeholder="Add certification"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCertification())}
-              />
-              <Button type="button" onClick={addCertification} size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.certifications.map((cert, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {cert}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-0 ml-1"
-                    onClick={() => removeCertification(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

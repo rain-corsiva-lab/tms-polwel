@@ -1,0 +1,9 @@
+-- AlterTable
+ALTER TABLE `course_run_learners` ADD COLUMN `paymentMode` ENUM('COMPANY_BILLING', 'CREDIT_CARD', 'BANK_TRANSFER', 'ULTF', 'TRANSITION_DOLLARS', 'SELF_SPONSORED', 'GOVERNMENT_FUNDING', 'NOT_APPLICABLE') NULL;
+
+-- AlterTable
+ALTER TABLE `course_runs` ADD COLUMN `additionalCostExceedingCapacity` DECIMAL(10, 2) NULL,
+    ADD COLUMN `courseFeeType` ENUM('PER_HEAD', 'PER_VENUE', 'FIXED') NULL;
+
+-- AlterTable
+ALTER TABLE `courses` ADD COLUMN `courseFeeType` ENUM('PER_HEAD', 'PER_VENUE', 'FIXED') NULL DEFAULT 'PER_HEAD';

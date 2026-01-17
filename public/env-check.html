@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Check - POLWEL</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .env-info { background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 10px 0; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .warning { color: orange; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔧 POLWEL Environment Configuration Check</h1>
+    
+    <div class="env-info">
+        <h3>Environment Variables:</h3>
+        <p><strong>API URL:</strong> <span id="api-url"></span></p>
+        <p><strong>Environment:</strong> <span id="environment"></span></p>
+        <p><strong>App Name:</strong> <span id="app-name"></span></p>
+        <p><strong>Current URL:</strong> <span id="current-url"></span></p>
+    </div>
+
+    <div class="env-info">
+        <h3>API Connection Test:</h3>
+        <p><strong>Status:</strong> <span id="api-status">Testing...</span></p>
+        <p><strong>Response:</strong> <span id="api-response"></span></p>
+        <button onclick="testApiConnection()">🔄 Test Again</button>
+    </div>
+
+    <div class="env-info">
+        <h3>Expected Configuration:</h3>
+        <p><strong>Expected API URL:</strong> https://polwel-pdms.customized3.corsivalab.xyz/api</p>
+        <p><strong>Expected Environment:</strong> staging</p>
+    </div>
+
+    <script>
+        // Display environment variables
+        document.getElementById('api-url').textContent = window.__ENV_API_URL__ || 'Not set';
+        document.getElementById('environment').textContent = window.__ENV_NODE_ENV__ || 'Not set';
+        document.getElementById('app-name').textContent = window.__ENV_APP_NAME__ || 'Not set';
+        document.getElementById('current-url').textContent = window.location.href;
+
+        // Test API connection
+        async function testApiConnection() {
+            const statusEl = document.getElementById('api-status');
+            const responseEl = document.getElementById('api-response');
+            
+            statusEl.textContent = 'Testing...';
+            statusEl.className = '';
+            responseEl.textContent = '';
+
+            try {
+                const apiUrl = window.__ENV_API_URL__ || 'https://polwel-pdms.customized3.corsivalab.xyz/api';
+                const response = await fetch(`${apiUrl}/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.textContent = '✅ Connected';
+                    statusEl.className = 'success';
+                    responseEl.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    statusEl.textContent = `❌ Failed (${response.status})`;
+                    statusEl.className = 'error';
+                    responseEl.textContent = await response.text();
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ Connection Error';
+                statusEl.className = 'error';
+                responseEl.textContent = error.message;
+            }
+        }
+
+        // Auto-test on page load
+        testApiConnection();
+    </script>
+</body>
+</html>

@@ -1,32 +1,23 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { errorHandlers } from "@/lib/errorHandler";
+import { digitsOnly } from "@/lib/utils";
+import { isValidEmail } from "@/lib/validators";
 
 interface AddCoordinatorDialogProps {
   onCoordinatorAdd: (coordinatorData: {
     name: string;
     email: string;
-    department: string;
+    contactNumber: string;
+    designation: string;
     password: string;
+    isPrimary?: boolean;
   }) => Promise<void>;
 }
 
@@ -36,15 +27,18 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
     name: "",
     email: "",
     contactNumber: "",
-    department: "",
+    designation: "",
+    isPrimary: false,
   });
 
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.contactNumber || !formData.department) {
+
+    const sanitizedContact = digitsOnly(formData.contactNumber);
+
+    if (!formData.name || !formData.email || !sanitizedContact || !formData.designation) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -53,20 +47,42 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
       return;
     }
 
+    if (!isValidEmail(formData.email)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address (name@email.com).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate Singapore phone number (8 digits)
+    if (sanitizedContact.length !== 8) {
+      toast({
+        title: "Validation Error",
+        description: "Contact number must be exactly 8 digits (Singapore format).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Generate temporary password for coordinator
       const tempPassword = Math.random().toString(36).slice(-8);
-      
+
       await onCoordinatorAdd({
-        name: formData.name,
-        email: formData.email,
-        department: formData.department,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        contactNumber: sanitizedContact,
+        designation: formData.designation.trim(),
         password: tempPassword,
+        isPrimary: formData.isPrimary || false,
       });
 
+      // Only show success toast if the API call succeeds
       toast({
         title: "Training Coordinator Created",
-        description: `Training Coordinator "${formData.name}" has been created successfully.`,
+        description: `Training Coordinator "${formData.name}" has been created successfully. Onboarding email sent with secure link.`,
       });
 
       // Reset form and close dialog
@@ -74,15 +90,12 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
         name: "",
         email: "",
         contactNumber: "",
-        department: "",
+        designation: "",
+        isPrimary: false,
       });
       setOpen(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create coordinator. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.coordinatorCreate(error, toast);
     }
   };
 
@@ -100,53 +113,65 @@ export function AddCoordinatorDialog({ onCoordinatorAdd }: AddCoordinatorDialogP
             <UserCheck className="h-5 w-5" />
             Add New Training Coordinator
           </DialogTitle>
-          <DialogDescription>
-            Create a new training coordinator account. User will set password in onboarding flow.
-          </DialogDescription>
+          {/* <DialogDescription>Create a new training coordinator account. User will set password in onboarding flow.</DialogDescription> */}
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="coordinatorName">Training Coordinator Name *</Label>
             <Input
               id="coordinatorName"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Enter coordinator's full name"
             />
           </div>
-          
+
+          <div className="flex items-center space-x-2 pt-2">
+            <input
+              id="isPrimary"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={formData.isPrimary}
+              onChange={(e) => setFormData((prev) => ({ ...prev, isPrimary: e.target.checked }))}
+            />
+            <Label htmlFor="isPrimary">Set as primary training coordinator</Label>
+          </div>
+
           <div>
             <Label htmlFor="coordinatorEmail">Email Address * (Unique Identifier)</Label>
             <Input
               id="coordinatorEmail"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="Enter unique email address"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="coordinatorContact">Contact Number *</Label>
-            <Input
-              id="coordinatorContact"
-              value={formData.contactNumber}
-              onChange={(e) => setFormData(prev => ({ ...prev, contactNumber: e.target.value }))}
-              placeholder="Enter contact number"
             />
           </div>
 
           <div>
-            <Label htmlFor="coordinatorDepartment">Department *</Label>
+            <Label htmlFor="coordinatorContact">Contact Number * (8 digits)</Label>
             <Input
-              id="coordinatorDepartment"
-              value={formData.department}
-              onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-              placeholder="Enter department"
+              id="coordinatorContact"
+              value={formData.contactNumber}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={8}
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: digitsOnly(e.target.value).slice(0, 8) }))}
+              placeholder="e.g., 91234567"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Singapore mobile number format</p>
+          </div>
+
+          <div>
+            <Label htmlFor="coordinatorDesignation">Designation *</Label>
+            <Input
+              id="coordinatorDesignation"
+              value={formData.designation}
+              onChange={(e) => setFormData((prev) => ({ ...prev, designation: e.target.value }))}
+              placeholder="Enter designation"
             />
           </div>
-          
         </form>
 
         <DialogFooter>

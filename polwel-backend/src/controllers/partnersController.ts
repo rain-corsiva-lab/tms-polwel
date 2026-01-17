@@ -1,109 +1,183 @@
-import { Request, Response } from 'express';
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { Response } from 'express';
+import { Prisma, UserStatus } from '@prisma/client';
+import { z } from 'zod';
+import prisma from '../lib/prisma';
+import { AuthenticatedRequest } from '../middleware/auth';
 
-// Type definition for authenticated request
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-    role: string;
-    organizationId?: string;
-  };
-}
+const toStringArray = (value: Prisma.JsonValue | null | undefined): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+  return [];
+};
 
-const prisma = new PrismaClient();
-
-// Interface for partner data (no email/password since it's not a user account)
+// Interface for partner data (simplified to match trainer structure)
 interface PartnerData {
   partnerName: string;
-  coursesAssigned?: string[];
-  pointOfContact?: string;
+  email?: string;
   contactNumber?: string;
-  contactDesignation?: string;
+  onboardingDate?: string;
+  status?: UserStatus;
+  notes?: string;
 }
+
+type PartnerRecord = {
+  id: string;
+  name: string;
+  status: UserStatus;
+  email: string | null;
+  coursesAssigned: Prisma.JsonValue | null;
+  pointOfContact: string | null;
+  pointOfContactDepartment: string | null;
+  pointOfContactEmail: string | null;
+  contactNumber: string | null;
+  contactDesignation: string | null;
+  onboardingDate: Date | null;
+  notes: string | null;
+  partnerOrganization: string | null;
+  bio: string | null;
+  experience: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const transformPartner = (partner: PartnerRecord) => ({
+  id: partner.id,
+  partnerName: partner.name,
+  email: partner.email || '',
+  status: partner.status,
+  coursesAssigned: toStringArray(partner.coursesAssigned),
+  pointOfContact: partner.pointOfContact || '',
+  pointOfContactDepartment: partner.pointOfContactDepartment || '',
+  pointOfContactEmail: partner.pointOfContactEmail || '',
+  contactNumber: partner.contactNumber || '',
+  contactDesignation: partner.contactDesignation || '',
+  onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
+  notes: partner.notes || undefined,
+  partnerOrganization: partner.partnerOrganization || undefined,
+  bio: partner.bio || undefined,
+  experience: partner.experience || undefined,
+  createdAt: partner.createdAt,
+  updatedAt: partner.updatedAt,
+});
+
+// Zod schemas for partner create/update validation
+const PartnerCreateSchema = z.object({
+  partnerName: z.string().min(1, 'Partner name is required'),
+  email: z.string().email().optional(),
+  coursesAssigned: z.array(z.string()).optional(),
+  pointOfContact: z.string().optional(),
+  pointOfContactDepartment: z.string().optional(),
+  pointOfContactEmail: z.string().email().optional(),
+  contactNumber: z.string().optional(),
+  contactDesignation: z.string().optional(),
+  onboardingDate: z.string().optional(),
+  status: z.nativeEnum(UserStatus).optional(),
+  notes: z.string().optional(),
+  partnerOrganization: z.string().optional(),
+  bio: z.string().optional(),
+  experience: z.string().optional(),
+});
+
+const PartnerUpdateSchema = PartnerCreateSchema.partial();
+
+const normalizeString = (value?: string | null) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+};
 
 // Get all partners with pagination and filtering
 export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { page = 1, limit = 10, search, status } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const rawPage = typeof req.query.page === 'string' ? req.query.page : undefined;
+    const parsedPage = rawPage ? Number(rawPage) : undefined;
+    const pageNum = parsedPage && Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
-    // Build where clause for partners (using TRAINER role with partnerOrganization)
-    const where: any = {
-      role: 'TRAINER',
-      partnerOrganization: {
-        not: null // Only trainers who are partners have this field set
-      },
-      status: {
-        not: 'INACTIVE' // Filter out inactive partners
+    const rawLimit = typeof req.query.limit === 'string' ? req.query.limit : undefined;
+    const exportAll = req.query.export === 'true' || req.query.all === 'true' || rawLimit === 'all';
+    let limitNum = 10;
+    if (!exportAll && rawLimit !== undefined) {
+      const parsedLimit = Number(rawLimit);
+      if (Number.isFinite(parsedLimit) && parsedLimit > 0) {
+        limitNum = Math.floor(parsedLimit);
       }
-    };
+    }
+    const skip = exportAll ? undefined : (pageNum - 1) * limitNum;
+    const take = exportAll ? undefined : limitNum;
 
-    // Add search filter if provided (search in partner name and contact info)
-    if (search) {
+    const where: Prisma.PartnerWhereInput = {};
+
+    const statusParam = typeof req.query.status === 'string' ? req.query.status.trim().toUpperCase() : '';
+    // Always exclude deleted partners
+    where.deletedAt = null;
+    
+    // If caller explicitly requests 'ALL', do not filter by status
+    if (statusParam && statusParam !== 'ALL') {
+      where.status = statusParam as UserStatus;
+    } else if (!statusParam) {
+      // default behaviour: hide INACTIVE unless caller specified otherwise
+      where.status = { not: UserStatus.INACTIVE };
+    }
+
+    const searchTerm = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    if (searchTerm) {
       where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { bio: { contains: search as string, mode: 'insensitive' } }, // point of contact
-        { partnerOrganization: { contains: search as string, mode: 'insensitive' } },
-        { experience: { contains: search as string, mode: 'insensitive' } } // contact number
+        { name: { contains: searchTerm } },
+        { pointOfContact: { contains: searchTerm } },
+        { pointOfContactDepartment: { contains: searchTerm } },
+        { pointOfContactEmail: { contains: searchTerm } },
+        { contactNumber: { contains: searchTerm } },
+        { contactDesignation: { contains: searchTerm } },
       ];
     }
 
-    // Add status filter if provided
-    if (status && status !== '') {
-      where.status = status as UserStatus;
-    }
-
-    // Get partners with pagination
     const [partners, total] = await Promise.all([
-      prisma.user.findMany({
+      prisma.partner.findMany({
         where,
         select: {
           id: true,
           name: true,
+          email: true,
           status: true,
-          partnerOrganization: true, // This will be the partner name
-          bio: true, // Store point of contact info here
-          experience: true, // Store contact number here
-          specializations: true, // Store courses assigned here
-          certifications: true, // Store contact designation here
+          coursesAssigned: true,
+          pointOfContact: true,
+          pointOfContactDepartment: true,
+          pointOfContactEmail: true,
+          contactNumber: true,
+          contactDesignation: true,
+          onboardingDate: true,
+          notes: true,
+          partnerOrganization: true,
+          bio: true,
+          experience: true,
           createdAt: true,
           updatedAt: true,
         },
-        skip,
-        take: Number(limit),
-        orderBy: { createdAt: 'desc' },
+        ...(skip !== undefined ? { skip } : {}),
+        ...(take !== undefined ? { take } : {}),
+        orderBy: { updatedAt: 'desc' },
       }),
-      prisma.user.count({ where }),
+      prisma.partner.count({ where }),
     ]);
 
-    // Transform data to match frontend expectations (no user account fields)
-    const transformedPartners = partners.map(partner => ({
-      id: partner.id,
-      partnerName: partner.partnerOrganization || partner.name,
-      status: partner.status,
-      coursesAssigned: partner.specializations || [],
-      pointOfContact: partner.bio || '',
-      contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
-      createdAt: partner.createdAt,
-      updatedAt: partner.updatedAt,
-    }));
+    const transformedPartners = partners.map(transformPartner);
 
     return res.json({
       partners: transformedPartners,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: exportAll ? 1 : pageNum,
+        limit: exportAll ? total : limitNum,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: exportAll ? 1 : Math.ceil(total / limitNum),
       },
     });
   } catch (error) {
     console.error('Error fetching partners:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Failed to fetch partners',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
+      details: process.env.NODE_ENV === 'development' ? error : undefined,
     });
   }
 };
@@ -117,49 +191,34 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ error: 'Partner ID is required' });
     }
 
-    const partner = await prisma.user.findFirst({
-      where: { 
-        id,
-        role: 'TRAINER',
-        partnerOrganization: {
-          not: null
-        },
-        status: {
-          not: 'INACTIVE'
-        }
-      },
+    const partner = await prisma.partner.findUnique({
+      where: { id },
       select: {
         id: true,
         name: true,
+        email: true,
         status: true,
+        coursesAssigned: true,
+        pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
+        contactNumber: true,
+        contactDesignation: true,
+        onboardingDate: true,
+        notes: true,
         partnerOrganization: true,
         bio: true,
         experience: true,
-        specializations: true,
-        certifications: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    if (!partner) {
+    if (!partner || partner.status === UserStatus.INACTIVE) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-    // Transform data to match frontend expectations (no user account fields)
-    const transformedPartner = {
-      id: partner.id,
-      partnerName: partner.partnerOrganization || partner.name,
-      status: partner.status,
-      coursesAssigned: partner.specializations || [],
-      pointOfContact: partner.bio || '',
-      contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
-      createdAt: partner.createdAt,
-      updatedAt: partner.updatedAt,
-    };
-
-    return res.json(transformedPartner);
+    return res.json(transformPartner(partner));
   } catch (error) {
     console.error('Error fetching partner:', error);
     return res.status(500).json({ 
@@ -172,73 +231,103 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
 // Create new partner
 export const createPartner = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { 
-      partnerName, 
-      coursesAssigned, 
-      pointOfContact, 
-      contactNumber, 
-      contactDesignation 
-    }: PartnerData = req.body;
-
-    // Validation - only partnerName is required
-    if (!partnerName) {
-      return res.status(400).json({ 
-        error: 'Missing required field: partnerName is required' 
-      });
+    const validation = PartnerCreateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
 
-    // Generate a unique email for database constraint (since User table requires email)
-    // This is a workaround since we're using the User table for partners
-    const uniqueEmail = `partner.${Date.now()}@internal.polwel.com`;
+    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
 
-    // Create partner (as trainer with partnerOrganization)
-    const partner = await prisma.user.create({
+    const normalizedName = partnerName.trim();
+
+    let parsedOnboardingDate: Date | null = null;
+    if (onboardingDate) {
+      const parsed = new Date(onboardingDate);
+      if (!Number.isNaN(parsed.getTime())) {
+        parsedOnboardingDate = parsed;
+      }
+    }
+
+    const partner = await prisma.partner.create({
       data: {
-        name: partnerName,
-        email: uniqueEmail, // Auto-generated internal email
-        password: '', // Empty password since partners don't login
-        role: 'TRAINER',
-        status: 'ACTIVE',
-        partnerOrganization: partnerName, // Store partner org name
-        bio: pointOfContact || '', // Store point of contact in bio
-        experience: contactNumber || '', // Store contact number in experience
-        specializations: coursesAssigned || [], // Store courses in specializations
-        certifications: contactDesignation ? [contactDesignation] : [], // Store designation in certifications
-        mfaEnabled: false,
+        name: normalizedName,
+        email: normalizeString(email),
+        status: status ?? UserStatus.ACTIVE,
+        coursesAssigned: Array.isArray(coursesAssigned) ? coursesAssigned : [],
+        pointOfContact: normalizeString(pointOfContact),
+        pointOfContactDepartment: normalizeString(pointOfContactDepartment),
+        pointOfContactEmail: normalizeString(pointOfContactEmail),
+        contactNumber: normalizeString(contactNumber),
+        contactDesignation: normalizeString(contactDesignation),
+        onboardingDate: parsedOnboardingDate,
+        notes: normalizeString(notes),
+        partnerOrganization: normalizeString(partnerOrganization),
+        bio: normalizeString(bio),
+        experience: normalizeString(experience),
       },
       select: {
         id: true,
         name: true,
+        email: true,
         status: true,
+        coursesAssigned: true,
+        pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
+        contactNumber: true,
+        contactDesignation: true,
+        onboardingDate: true,
+        notes: true,
         partnerOrganization: true,
         bio: true,
         experience: true,
-        specializations: true,
-        certifications: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    // Transform data to match frontend expectations (no email exposed)
-    const transformedPartner = {
-      id: partner.id,
-      partnerName: partner.partnerOrganization || partner.name,
-      status: partner.status,
-      coursesAssigned: partner.specializations || [],
-      pointOfContact: partner.bio || '',
-      contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
-      createdAt: partner.createdAt,
-      updatedAt: partner.updatedAt,
-    };
-
-    return res.status(201).json(transformedPartner);
+    return res.status(201).json(transformPartner(partner));
   } catch (error) {
     console.error('Error creating partner:', error);
+    
+    // Handle Prisma errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        // Unique constraint violation
+        const field = error.meta?.target as string[] | undefined;
+        const fieldName = field && field.length > 0 ? field[0] : 'field';
+        return res.status(409).json({ 
+          error: 'Validation failed',
+          message: `A partner with this ${fieldName} already exists.`,
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+      
+      if (error.code === 'P2003') {
+        // Foreign key constraint violation
+        return res.status(400).json({ 
+          error: 'Validation failed',
+          message: 'Invalid reference to related record.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+    }
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        message: 'Invalid input data.',
+        details: error.errors
+      });
+    }
+    
+    // Generic error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ 
       error: 'Failed to create partner',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
+      message: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
     });
   }
 };
@@ -247,73 +336,85 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
 export const updatePartner = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { 
-      partnerName, 
-      coursesAssigned, 
-      pointOfContact, 
-      contactNumber, 
-      contactDesignation,
-      status 
-    }: Partial<PartnerData> & { status?: UserStatus } = req.body;
+    const parsedBody = req.body as unknown;
+    const validation = PartnerUpdateSchema.safeParse(parsedBody);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
+    }
+
+    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
 
     if (!id) {
       return res.status(400).json({ error: 'Partner ID is required' });
     }
 
     // Check if partner exists
-    const existingPartner = await prisma.user.findFirst({
-      where: { 
-        id,
-        role: 'TRAINER',
-        partnerOrganization: {
-          not: null
-        }
-      }
+    const existingPartner = await prisma.partner.findUnique({
+      where: { id }
     });
 
     if (!existingPartner) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-    // Update partner (no email validation needed since partners aren't user accounts)
-    const partner = await prisma.user.update({
+    let onboardingDateUpdate: Date | null | undefined = undefined;
+    if (onboardingDate !== undefined) {
+      if (onboardingDate) {
+        const parsed = new Date(onboardingDate);
+        onboardingDateUpdate = Number.isNaN(parsed.getTime()) ? null : parsed;
+      } else {
+        onboardingDateUpdate = null;
+      }
+    }
+
+    let normalizedName: string | undefined;
+    if (partnerName !== undefined) {
+      normalizedName = partnerName.trim();
+      if (!normalizedName) {
+        return res.status(400).json({ error: 'Partner name cannot be empty' });
+      }
+    }
+
+    const partner = await prisma.partner.update({
       where: { id: existingPartner.id },
       data: {
-        ...(partnerName && { name: partnerName, partnerOrganization: partnerName }),
+        ...(normalizedName !== undefined && { name: normalizedName }),
+        ...(email !== undefined && { email: normalizeString(email) }),
         ...(status && { status }),
-        ...(pointOfContact !== undefined && { bio: pointOfContact }),
-        ...(contactNumber !== undefined && { experience: contactNumber }),
-        ...(coursesAssigned !== undefined && { specializations: coursesAssigned }),
-        ...(contactDesignation !== undefined && { certifications: contactDesignation ? [contactDesignation] : [] }),
+        ...(coursesAssigned !== undefined && { coursesAssigned: Array.isArray(coursesAssigned) ? coursesAssigned : [] }),
+        ...(pointOfContact !== undefined && { pointOfContact: normalizeString(pointOfContact) }),
+        ...(pointOfContactDepartment !== undefined && { pointOfContactDepartment: normalizeString(pointOfContactDepartment) }),
+        ...(pointOfContactEmail !== undefined && { pointOfContactEmail: normalizeString(pointOfContactEmail) }),
+        ...(contactNumber !== undefined && { contactNumber: normalizeString(contactNumber) }),
+        ...(contactDesignation !== undefined && { contactDesignation: normalizeString(contactDesignation) }),
+        ...(onboardingDate !== undefined && { onboardingDate: onboardingDateUpdate ?? null }),
+        ...(notes !== undefined && { notes: normalizeString(notes) }),
+        ...(partnerOrganization !== undefined && { partnerOrganization: normalizeString(partnerOrganization) }),
+        ...(bio !== undefined && { bio: normalizeString(bio) }),
+        ...(experience !== undefined && { experience: normalizeString(experience) }),
       },
       select: {
         id: true,
         name: true,
+        email: true,
         status: true,
+        coursesAssigned: true,
+        pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
+        contactNumber: true,
+        contactDesignation: true,
+        onboardingDate: true,
+        notes: true,
         partnerOrganization: true,
         bio: true,
         experience: true,
-        specializations: true,
-        certifications: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    // Transform data to match frontend expectations (no email/login fields)
-    const transformedPartner = {
-      id: partner.id,
-      partnerName: partner.partnerOrganization || partner.name,
-      status: partner.status,
-      coursesAssigned: partner.specializations || [],
-      pointOfContact: partner.bio || '',
-      contactNumber: partner.experience || '',
-      contactDesignation: partner.certifications?.[0] || '',
-      createdAt: partner.createdAt,
-      updatedAt: partner.updatedAt,
-    };
-
-    return res.json(transformedPartner);
+    return res.json(transformPartner(partner));
   } catch (error) {
     console.error('Error updating partner:', error);
     return res.status(500).json({ 
@@ -333,26 +434,20 @@ export const deletePartner = async (req: AuthenticatedRequest, res: Response) =>
     }
 
     // Check if partner exists
-    const existingPartner = await prisma.user.findFirst({
-      where: { 
-        id,
-        role: 'TRAINER',
-        partnerOrganization: {
-          not: null
-        }
-      }
+    const existingPartner = await prisma.partner.findUnique({
+      where: { id }
     });
 
     if (!existingPartner) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-    // Soft delete by setting status to INACTIVE
-    await prisma.user.update({
+    // Soft delete by setting deletedAt timestamp
+    await prisma.partner.update({
       where: { id: existingPartner.id },
       data: {
-        status: 'INACTIVE',
-        updatedAt: new Date(),
+        deletedAt: new Date(),
+        status: UserStatus.INACTIVE,
       },
     });
 
@@ -375,33 +470,17 @@ export const getPartnerStatistics = async (req: AuthenticatedRequest, res: Respo
       pendingPartners,
       inactivePartners,
     ] = await Promise.all([
-      prisma.user.count({
-        where: { 
-          role: 'TRAINER',
-          partnerOrganization: { not: null },
-          status: { not: 'INACTIVE' }
-        }
+      prisma.partner.count({
+        where: { status: { not: UserStatus.INACTIVE }, deletedAt: null }
       }),
-      prisma.user.count({
-        where: { 
-          role: 'TRAINER',
-          partnerOrganization: { not: null },
-          status: 'ACTIVE'
-        }
+      prisma.partner.count({
+        where: { status: UserStatus.ACTIVE, deletedAt: null }
       }),
-      prisma.user.count({
-        where: { 
-          role: 'TRAINER',
-          partnerOrganization: { not: null },
-          status: 'PENDING'
-        }
+      prisma.partner.count({
+        where: { status: UserStatus.PENDING, deletedAt: null }
       }),
-      prisma.user.count({
-        where: { 
-          role: 'TRAINER',
-          partnerOrganization: { not: null },
-          status: 'INACTIVE'
-        }
+      prisma.partner.count({
+        where: { status: UserStatus.INACTIVE, deletedAt: null }
       }),
     ]);
 
@@ -419,3 +498,90 @@ export const getPartnerStatistics = async (req: AuthenticatedRequest, res: Respo
     });
   }
 };
+
+// Restore deleted partner
+export const restorePartner = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Partner ID is required' });
+    }
+
+    // Check if partner exists and is deleted
+    const existingPartner = await prisma.partner.findUnique({
+      where: { id }
+    });
+
+    if (!existingPartner) {
+      return res.status(404).json({ error: 'Partner not found' });
+    }
+
+    if (!existingPartner.deletedAt) {
+      return res.status(400).json({ error: 'Partner is not deleted' });
+    }
+
+    // Restore by clearing deletedAt and setting status to ACTIVE
+    await prisma.partner.update({
+      where: { id: existingPartner.id },
+      data: {
+        deletedAt: null,
+        status: UserStatus.ACTIVE,
+      },
+    });
+
+    return res.json({ message: 'Partner restored successfully' });
+  } catch (error) {
+    console.error('Error restoring partner:', error);
+    return res.status(500).json({ 
+      error: 'Failed to restore partner',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
+
+// Get deleted partners
+export const getDeletedPartners = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const partners = await prisma.partner.findMany({
+      where: {
+        deletedAt: { not: null }
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        coursesAssigned: true,
+        pointOfContact: true,
+        pointOfContactDepartment: true,
+        pointOfContactEmail: true,
+        contactNumber: true,
+        contactDesignation: true,
+        onboardingDate: true,
+        notes: true,
+        partnerOrganization: true,
+        bio: true,
+        experience: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      },
+      orderBy: { deletedAt: 'desc' },
+    });
+
+    const transformedPartners = partners.map(transformPartner);
+
+    return res.json({
+      partners: transformedPartners,
+      total: partners.length,
+    });
+  } catch (error) {
+    console.error('Error fetching deleted partners:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch deleted partners',
+      details: process.env.NODE_ENV === 'development' ? error : undefined,
+    });
+  }
+};
+

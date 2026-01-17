@@ -1,56 +1,50 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { errorHandlers } from "@/lib/errorHandler";
+import { digitsOnly } from "@/lib/utils";
+import { isValidEmail } from "@/lib/validators";
 
 interface TrainingCoordinator {
   id: string;
   name: string;
   email: string;
-  department: string;
+  designation: string;
   status: string;
+  isPrimaryCoordinator?: boolean;
+  contactNumber?: string | null;
 }
 
 interface EditCoordinatorDialogProps {
   coordinator: TrainingCoordinator | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCoordinatorUpdate: (coordinatorId: string, coordinatorData: {
-    name?: string;
-    email?: string;
-    department?: string;
-    status?: string;
-  }) => Promise<void>;
+  onCoordinatorUpdate: (
+    coordinatorId: string,
+    coordinatorData: {
+      name?: string;
+      email?: string;
+      contactNumber?: string | null;
+      designation?: string;
+      status?: string;
+      isPrimary?: boolean;
+    }
+  ) => Promise<void>;
 }
 
-export function EditCoordinatorDialog({ 
-  coordinator, 
-  open, 
-  onOpenChange, 
-  onCoordinatorUpdate 
-}: EditCoordinatorDialogProps) {
+export function EditCoordinatorDialog({ coordinator, open, onOpenChange, onCoordinatorUpdate }: EditCoordinatorDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    department: "",
+    contactNumber: "",
+    designation: "",
     status: "ACTIVE",
+    isPrimary: false,
   });
   const [loading, setLoading] = useState(false);
 
@@ -62,16 +56,20 @@ export function EditCoordinatorDialog({
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
-        department: coordinator.department || "",
+        contactNumber: digitsOnly(coordinator.contactNumber || ""),
+        designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
+        isPrimary: !!coordinator.isPrimaryCoordinator,
       });
     }
   }, [coordinator]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!coordinator || !formData.name || !formData.email || !formData.department) {
+
+    const sanitizedContact = digitsOnly(formData.contactNumber);
+
+    if (!coordinator || !formData.name || !formData.email || !formData.designation || !sanitizedContact) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -80,16 +78,39 @@ export function EditCoordinatorDialog({
       return;
     }
 
+    if (!isValidEmail(formData.email)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address (name@email.com).",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validate Singapore phone number (8 digits)
+    if (sanitizedContact.length !== 8) {
+      toast({
+        title: "Validation Error",
+        description: "Contact number must be exactly 8 digits (Singapore format).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
-      
+
       await onCoordinatorUpdate(coordinator.id, {
-        name: formData.name,
-        email: formData.email,
-        department: formData.department,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        contactNumber: sanitizedContact || null,
+        designation: formData.designation.trim(),
         status: formData.status,
+        isPrimary: formData.isPrimary,
       });
 
+      // Only show success toast if the API call succeeds
       toast({
         title: "Coordinator Updated",
         description: `Training Coordinator "${formData.name}" has been updated successfully.`,
@@ -97,11 +118,7 @@ export function EditCoordinatorDialog({
 
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update coordinator. Please try again.",
-        variant: "destructive",
-      });
+      errorHandlers.coordinatorUpdate(error, toast);
     } finally {
       setLoading(false);
     }
@@ -113,8 +130,10 @@ export function EditCoordinatorDialog({
       setFormData({
         name: coordinator.name || "",
         email: coordinator.email || "",
-        department: coordinator.department || "",
+        contactNumber: digitsOnly(coordinator.contactNumber || ""),
+        designation: coordinator.designation || "",
         status: coordinator.status || "ACTIVE",
+        isPrimary: !!coordinator.isPrimaryCoordinator,
       });
     }
     onOpenChange(false);
@@ -128,53 +147,73 @@ export function EditCoordinatorDialog({
             <Edit className="h-5 w-5" />
             Edit Training Coordinator
           </DialogTitle>
-          <DialogDescription>
-            Update the training coordinator information below.
-          </DialogDescription>
+          <DialogDescription>Update the training coordinator information below.</DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="coordinatorName">Coordinator Name *</Label>
             <Input
               id="coordinatorName"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Enter coordinator's full name"
               disabled={loading}
             />
           </div>
-          
+
+          <div className="flex items-center space-x-2">
+            <input
+              id="isPrimary"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={formData.isPrimary}
+              onChange={(e) => setFormData((prev) => ({ ...prev, isPrimary: e.target.checked }))}
+            />
+            <Label htmlFor="isPrimary">Set as primary training coordinator</Label>
+          </div>
+
           <div>
             <Label htmlFor="coordinatorEmail">Email Address *</Label>
             <Input
               id="coordinatorEmail"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="Enter email address"
               disabled={loading}
             />
           </div>
-          
+
           <div>
-            <Label htmlFor="coordinatorDepartment">Department *</Label>
+            <Label htmlFor="coordinatorContact">Contact Number * (8 digits)</Label>
             <Input
-              id="coordinatorDepartment"
-              value={formData.department}
-              onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-              placeholder="Enter department"
+              id="coordinatorContact"
+              value={formData.contactNumber}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={8}
+              onChange={(e) => setFormData((prev) => ({ ...prev, contactNumber: digitsOnly(e.target.value).slice(0, 8) }))}
+              placeholder="e.g., 91234567"
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Singapore mobile number format</p>
+          </div>
+
+          <div>
+            <Label htmlFor="coordinatorDesignation">Designation *</Label>
+            <Input
+              id="coordinatorDesignation"
+              value={formData.designation}
+              onChange={(e) => setFormData((prev) => ({ ...prev, designation: e.target.value }))}
+              placeholder="Enter designation"
               disabled={loading}
             />
           </div>
 
           <div>
             <Label htmlFor="coordinatorStatus">Status *</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-              disabled={loading}
-            >
+            <Select value={formData.status} onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))} disabled={loading}>
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -185,30 +224,20 @@ export function EditCoordinatorDialog({
               </SelectContent>
             </Select>
           </div>
-          
         </form>
 
         <DialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleCancel}
-            disabled={loading}
-          >
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            disabled={loading}
-          >
+          <Button type="submit" onClick={handleSubmit} disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Updating...
               </>
             ) : (
-              'Update Coordinator'
+              "Update Coordinator"
             )}
           </Button>
         </DialogFooter>

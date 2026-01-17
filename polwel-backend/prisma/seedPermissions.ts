@@ -22,11 +22,6 @@ const permissions = [
   { name: 'clients.delete', description: 'Delete clients', module: 'Client Management', action: 'delete' },
 
   // Course Management
-  { name: 'courses.view', description: 'View courses', module: 'Course Management', action: 'read' },
-  { name: 'courses.create', description: 'Create courses', module: 'Course Management', action: 'create' },
-  { name: 'courses.edit', description: 'Edit courses', module: 'Course Management', action: 'update' },
-  { name: 'courses.delete', description: 'Delete courses', module: 'Course Management', action: 'delete' },
-
   // Venue Management
   { name: 'venues.view', description: 'View venues', module: 'Venue Management', action: 'read' },
   { name: 'venues.create', description: 'Create venues', module: 'Venue Management', action: 'create' },

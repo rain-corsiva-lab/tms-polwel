@@ -1,11 +1,38 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import PaginationControls from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "../lib/date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, Filter, Shield, Users, Clock, MoreHorizontal, Edit, Trash2, Key, Eye, History, Mail } from "lucide-react";
+import SafeDropdownMenu from "@/components/ui/safe-dropdown-menu";
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Download,
+  Filter,
+  Shield,
+  Users,
+  Clock,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Key,
+  Eye,
+  History,
+  Mail,
+  RefreshCw,
+  X,
+  Loader2,
+  Lock,
+  Unlock,
+  Search,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
 import UserTable from "@/components/UserTable";
 import { AddPolwelUserDialog } from "@/components/AddPolwelUserDialog";
 import { EditPolwelUserDialog } from "@/components/EditPolwelUserDialog";
@@ -13,7 +40,9 @@ import { AuditTrailDialog, AuditTrailEntry } from "@/components/AuditTrailDialog
 import { ViewDetailsDialog } from "@/components/ViewDetailsDialog";
 import { PasswordResetDialog } from "@/components/PasswordResetDialog";
 import { polwelUsersApi, debugAuthState } from "@/lib/api";
+import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { useAuth } from "@/hooks/useAuth";
 
 // Enhanced user data structure for POLWEL users
@@ -21,14 +50,13 @@ interface PolwelUser {
   id: string;
   name: string;
   email: string;
-  role: 'POLWEL';
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
+  role: "POLWEL";
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   lastLogin: string | null;
-  mfaEnabled: boolean;
+  // mfaEnabled removed
   passwordExpiry?: string;
   failedLoginAttempts?: number;
-  permissionLevel: string | null;
-  department: string | null;
+  // permissionLevel and department removed
   createdAt: string;
   updatedAt: string;
   auditTrail?: AuditTrailEntry[];
@@ -43,79 +71,82 @@ export default function PolwelUsers() {
     total: 0,
     totalPages: 0,
   });
+  const [perPage, setPerPage] = useState(10);
+  const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Excel-style filter state
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    status: [],
+  });
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   // Debug authentication state
   useEffect(() => {
-    console.log('PolwelUsers - Auth State:', { isAuthenticated, user });
+    console.log("PolwelUsers - Auth State:", { isAuthenticated, user });
     debugAuthState();
   }, [isAuthenticated, user]);
 
   // Dummy data for POLWEL users
   const dummyUsers: PolwelUser[] = [
-    {
-      id: "1",
-      name: "Alice Wong",
-      email: "alice.wong@polwel.com",
-      role: "POLWEL",
-      status: "ACTIVE",
-      lastLogin: "2024-08-12T10:30:00Z",
-      mfaEnabled: true,
-      passwordExpiry: "2024-12-31T23:59:59Z",
-      failedLoginAttempts: 0,
-      permissionLevel: "Administrator",
-      department: "Training Management",
-      createdAt: "2023-06-01T00:00:00Z",
-      updatedAt: "2024-08-12T10:30:00Z"
-    },
-    {
-      id: "2", 
-      name: "Robert Chen",
-      email: "robert.chen@polwel.com",
-      role: "POLWEL",
-      status: "ACTIVE",
-      lastLogin: "2024-08-11T14:15:00Z",
-      mfaEnabled: false,
-      passwordExpiry: "2024-11-30T23:59:59Z",
-      failedLoginAttempts: 0,
-      permissionLevel: "Training Coordinator",
-      department: "Course Development",
-      createdAt: "2023-07-15T00:00:00Z",
-      updatedAt: "2024-08-11T14:15:00Z"
-    },
-    {
-      id: "3",
-      name: "Maria Garcia",
-      email: "maria.garcia@polwel.com", 
-      role: "POLWEL",
-      status: "PENDING",
-      lastLogin: null,
-      mfaEnabled: false,
-      passwordExpiry: "2024-09-30T23:59:59Z",
-      failedLoginAttempts: 0,
-      permissionLevel: "Staff",
-      department: "Administration",
-      createdAt: "2024-08-01T00:00:00Z",
-      updatedAt: "2024-08-01T00:00:00Z"
-    },
-    {
-      id: "4",
-      name: "David Kim",
-      email: "david.kim@polwel.com",
-      role: "POLWEL", 
-      status: "ACTIVE",
-      lastLogin: "2024-08-10T09:45:00Z",
-      mfaEnabled: true,
-      passwordExpiry: "2024-10-31T23:59:59Z",
-      failedLoginAttempts: 0,
-      permissionLevel: "Training Coordinator",
-      department: "Quality Assurance",
-      createdAt: "2023-08-20T00:00:00Z",
-      updatedAt: "2024-08-10T09:45:00Z"
-    }
+    //   {
+    //     id: "1",
+    //     name: "Alice Wong",
+    //     email: "alice.wong@polwel.com",
+    //     role: "POLWEL",
+    //     status: "ACTIVE",
+    //     lastLogin: "2024-08-12T10:30:00Z",
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-12-31T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2023-06-01T00:00:00Z",
+    //     updatedAt: "2024-08-12T10:30:00Z",
+    //   },
+    //   {
+    //     id: "2",
+    //     name: "Robert Chen",
+    //     email: "robert.chen@polwel.com",
+    //     role: "POLWEL",
+    //     status: "ACTIVE",
+    //     lastLogin: "2024-08-11T14:15:00Z",
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-11-30T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2023-07-15T00:00:00Z",
+    //     updatedAt: "2024-08-11T14:15:00Z",
+    //   },
+    //   {
+    //     id: "3",
+    //     name: "Maria Garcia",
+    //     email: "maria.garcia@polwel.com",
+    //     role: "POLWEL",
+    //     status: "PENDING",
+    //     lastLogin: null,
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-09-30T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2024-08-01T00:00:00Z",
+    //     updatedAt: "2024-08-01T00:00:00Z",
+    //   },
+    //   {
+    //     id: "4",
+    //     name: "David Kim",
+    //     email: "david.kim@polwel.com",
+    //     role: "POLWEL",
+    //     status: "ACTIVE",
+    //     lastLogin: "2024-08-10T09:45:00Z",
+    // // mfaEnabled removed
+    //     passwordExpiry: "2024-10-31T23:59:59Z",
+    //     failedLoginAttempts: 0,
+    //     createdAt: "2023-08-20T00:00:00Z",
+    //     updatedAt: "2024-08-10T09:45:00Z",
+    //   },
   ];
 
   // Fetch users from API
@@ -124,51 +155,76 @@ export default function PolwelUsers() {
       setLoading(true);
       const response = await polwelUsersApi.getAll({
         page: pagination.page,
-        limit: pagination.limit,
-        search: searchQuery || undefined,
+        limit: perPage,
+        search: debouncedSearch || undefined,
         status: statusFilter || undefined,
       });
 
       setUsers(response.users || []);
-      setPagination(response.pagination || pagination);
-      
+      setPagination(response.pagination || { ...pagination, limit: perPage });
+
       // Debug: Log the first user to see the data structure
       if (response.users && response.users.length > 0) {
-        console.log('PolwelUsers: Sample user data:', response.users[0]);
-        console.log('PolwelUsers: User ID type:', typeof response.users[0].id, 'Value:', response.users[0].id);
+        console.log("PolwelUsers: Sample user data:", response.users[0]);
+        console.log("PolwelUsers: User ID type:", typeof response.users[0].id, "Value:", response.users[0].id);
       }
     } catch (error) {
-      console.error('Error fetching POLWEL users:', error);
-      
+      console.error("Error fetching POLWEL users:", error);
+
       // Check if it's an authentication error
       if (error instanceof Error) {
-        if (error.message.includes('Session expired') || 
-            error.message.includes('Authentication') ||
-            error.message.includes('TOKEN_EXPIRED')) {
-          console.log('Authentication error detected, user will be redirected to login');
+        if (error.message.includes("Session expired") || error.message.includes("Authentication") || error.message.includes("TOKEN_EXPIRED")) {
+          console.log("Authentication error detected, user will be redirected to login");
           // Don't set dummy data for auth errors - let auth service handle redirect
           setLoading(false);
           return;
         }
       }
-      
+
       // Use dummy data only for non-authentication errors
       setUsers(dummyUsers);
       setPagination({
         page: 1,
         limit: 10,
         total: dummyUsers.length,
-        totalPages: 1
+        totalPages: 1,
       });
     } finally {
       setLoading(false);
     }
   };
 
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Reset page when search or filters change
+  useEffect(() => {
+    setPagination((p) => ({ ...p, page: 1 }));
+  }, [debouncedSearch, statusFilter]);
+
   // Fetch users on component mount and when filters change
   useEffect(() => {
     fetchUsers();
-  }, [pagination.page, searchQuery, statusFilter]);
+  }, [pagination.page, debouncedSearch, statusFilter]);
+
+  useEffect(() => {
+    // refetch when perPage changes; reset to page 1
+    setPagination((p) => ({ ...p, page: 1 }));
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perPage]);
 
   // Handle user actions
   const handleDeleteUser = async (userId: string) => {
@@ -184,10 +240,10 @@ export default function PolwelUsers() {
       });
       fetchUsers(); // Refresh the list
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "Failed to delete user",
+        description: getErrorMessage(error, "Failed to delete user"),
         variant: "destructive",
       });
     }
@@ -201,37 +257,143 @@ export default function PolwelUsers() {
         description: `New temporary password: ${response.tempPassword}`,
       });
     } catch (error) {
-      console.error('Error resetting password:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reset password",
-        variant: "destructive",
-      });
+      console.error("Error resetting password:", error);
     }
   };
 
-  const handleToggleMfa = async (userId: string, enabled: boolean) => {
+  const handleStatusChange = async (userId: string, currentStatus: string, newStatus: "ACTIVE" | "INACTIVE") => {
+    if (!confirm(`Are you sure you want to change the status to ${newStatus}?`)) {
+      return;
+    }
+
     try {
-      await polwelUsersApi.toggleMfa(userId, enabled);
+      await polwelUsersApi.updateStatus(userId, newStatus);
       toast({
-        title: "MFA Updated",
-        description: `MFA ${enabled ? 'enabled' : 'disabled'} successfully`,
+        title: "Success",
+        description: `User status changed to ${newStatus}`,
       });
       fetchUsers(); // Refresh the list
     } catch (error) {
-      console.error('Error toggling MFA:', error);
+      console.error("Error updating user status:", error);
       toast({
         title: "Error",
-        description: "Failed to update MFA settings",
+        description: getErrorMessage(error, "Failed to update user status"),
         variant: "destructive",
       });
     }
   };
 
-  // Compute stats from real data
-  const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.status === 'ACTIVE').length;
-  const pendingUsers = users.filter(user => user.status === 'PENDING').length;
+  const handleResendSetup = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to resend the setup email to ${userName}?`)) {
+      return;
+    }
+
+    try {
+      const response = await polwelUsersApi.resendSetup(userId);
+      toast({
+        title: "Setup Email Sent",
+        description: "Setup email has been sent successfully",
+      });
+    } catch (error) {
+      console.error("Error resending setup email:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send setup email",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      toast({
+        title: "Exporting...",
+        description: "Generating POLWEL users export...",
+      });
+
+      const response = await polwelUsersApi.getAll({
+        search: debouncedSearch || undefined,
+        status: statusFilter || undefined,
+        limit: "all",
+      });
+
+      const dataset: PolwelUser[] = response.users || [];
+      if (dataset.length === 0) {
+        toast({
+          title: "No data",
+          description: "No users to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const rows = dataset.map((u) => ({
+        Name: u.name,
+        Email: u.email,
+        Status: u.status,
+        LastLogin: u.lastLogin ? formatDate(new Date(u.lastLogin)) : "Never",
+        CreatedAt: formatDate(new Date(u.createdAt)),
+        UpdatedAt: formatDate(new Date(u.updatedAt)),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "POLWEL_Users");
+      XLSX.writeFile(wb, `polwel-users-${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast({
+        title: "Export successful",
+        description: `Exported ${rows.length} POLWEL user${rows.length === 1 ? "" : "s"}`,
+      });
+    } catch (error) {
+      console.error("Error exporting POLWEL users:", error);
+      const message = error instanceof Error ? error.message : "We couldn't export the POLWEL users. Please try again.";
+      toast({
+        title: "Export failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Excel-style filter functions
+  const getUniqueValues = (field: keyof PolwelUser) => {
+    const values = Array.from(new Set(users.map((u) => String(u[field] || "")).filter(Boolean)));
+    return values.sort();
+  };
+
+  const handleFilterToggle = (field: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[field] || [];
+      const newValues = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: newValues };
+    });
+  };
+
+  const clearColumnFilter = (field: string) => {
+    setFilters((prev) => ({ ...prev, [field]: [] }));
+  };
+
+  const hasActiveFilter = (field: string) => {
+    return filters[field] && filters[field].length > 0;
+  };
+
+  // Apply column filters
+  const filteredUsers = users.filter((user) => {
+    // Status filter
+    if (filters.status.length > 0 && !filters.status.includes(user.status)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Compute stats from filtered data
+  const totalUsers = filteredUsers.length;
+  const activeUsers = filteredUsers.filter((user) => user.status === "ACTIVE").length;
+  const pendingUsers = filteredUsers.filter((user) => user.status === "PENDING").length;
+  const inactiveUsers = filteredUsers.filter((user) => user.status === "INACTIVE").length;
 
   if (loading) {
     return (
@@ -251,22 +413,60 @@ export default function PolwelUsers() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">POLWEL Staff Management</h1>
-          <p className="text-muted-foreground">
-            Manage POLWEL staff accounts, permissions, and access controls
-          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {exporting ? "Exporting..." : "Export"}
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setFilterOpen((o) => !o)}>
             <Filter className="h-4 w-4 mr-2" />
-            Filter
+            {filterOpen ? "Hide Filters" : "Filter"}
           </Button>
           <AddPolwelUserDialog />
         </div>
       </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name or email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1" />
+            {searchQuery && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {filterOpen && (
+        <Card className="border-dashed">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-9 rounded-md border bg-background px-3 py-1 text-sm"
+                >
+                  <option value="">All</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="LOCKED">Locked</option>
+                </select>
+              </div>
+              {statusFilter && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setStatusFilter("")} className="text-xs">
+                  <X className="h-3 w-3 mr-1" /> Clear
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -277,12 +477,10 @@ export default function PolwelUsers() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Active staff members with system access
-            </p>
+            <p className="text-xs text-muted-foreground">Active staff members with system access</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Users</CardTitle>
@@ -290,12 +488,10 @@ export default function PolwelUsers() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently active and authorized
-            </p>
+            <p className="text-xs text-muted-foreground">Currently active and authorized</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Accounts</CardTitle>
@@ -303,9 +499,7 @@ export default function PolwelUsers() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting activation or verification
-            </p>
+            <p className="text-xs text-muted-foreground">Awaiting activation or verification</p>
           </CardContent>
         </Card>
       </div>
@@ -321,49 +515,86 @@ export default function PolwelUsers() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Permission Level</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>MFA</TableHead>
+                {/* department and permission level removed */}
+                <TableHead>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Status</span>
+                    <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", hasActiveFilter("status") && "text-primary")}>
+                          <Filter className="h-3.5 w-3.5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-0" align="start">
+                        <div className="p-3 border-b">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Filter by Status</span>
+                            {hasActiveFilter("status") && (
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => clearColumnFilter("status")}>
+                                Clear
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto p-2">
+                          {getUniqueValues("status").map((value) => (
+                            <div
+                              key={value}
+                              className="flex items-center space-x-2 py-1.5 px-2 hover:bg-muted rounded-sm cursor-pointer"
+                              onClick={() => handleFilterToggle("status", value)}
+                            >
+                              <Checkbox checked={filters.status?.includes(value)} />
+                              <span className="text-sm">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </TableHead>
                 <TableHead>Last Login</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.department || 'Not Set'}</TableCell>
-                  <TableCell>{user.permissionLevel || 'Not Set'}</TableCell>
+                  {/* department and permission level removed */}
                   <TableCell>
-                    <Badge 
-                      variant={user.status === 'ACTIVE' ? 'default' : 
-                               user.status === 'PENDING' ? 'outline' : 'secondary'}
-                    >
-                      {user.status}
-                    </Badge>
+                    <Badge variant={user.status === "ACTIVE" ? "default" : user.status === "PENDING" ? "outline" : "secondary"}>{user.status}</Badge>
                   </TableCell>
+                  {/* MFA removed */}
                   <TableCell>
-                    <Badge variant={user.mfaEnabled ? "default" : "outline"}>
-                      {user.mfaEnabled ? "Enabled" : "Disabled"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                    {user.lastLogin
+                      ? (() => {
+                          try {
+                            const d = parseISO(user.lastLogin as string);
+                            return format(d, "dd/MM/yyyy");
+                          } catch (e) {
+                            // Fallback to toLocaleDateString if parse fails
+                            try {
+                              return formatDate(user.lastLogin);
+                            } catch (ee) {
+                              return "Invalid date";
+                            }
+                          }
+                        })()
+                      : "Never"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <EditPolwelUserDialog user={user} onUserUpdated={fetchUsers} />
-                      <DropdownMenu>
+                      <SafeDropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <ViewDetailsDialog 
-                            userId={user.id} 
+                          <ViewDetailsDialog
+                            userId={user.id}
                             userName={user.name}
                             trigger={
                               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -372,19 +603,15 @@ export default function PolwelUsers() {
                               </DropdownMenuItem>
                             }
                           />
-                          <AuditTrailDialog 
-                            userId={user.id} 
-                            userName={user.name} 
-                            userEmail={user.email}
-                          >
+                          <AuditTrailDialog userId={user.id} userName={user.name} userEmail={user.email}>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               <History className="h-4 w-4 mr-2" />
                               View Audit Trail
                             </DropdownMenuItem>
                           </AuditTrailDialog>
-                          <PasswordResetDialog 
-                            userId={user.id} 
-                            userName={user.name} 
+                          <PasswordResetDialog
+                            userId={user.id}
+                            userName={user.name}
                             userEmail={user.email}
                             trigger={
                               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -397,21 +624,35 @@ export default function PolwelUsers() {
                             <Key className="h-4 w-4 mr-2" />
                             Reset Password (Legacy)
                           </DropdownMenuItem> */}
-                          <DropdownMenuItem 
-                            onClick={() => handleToggleMfa(user.id, !user.mfaEnabled)}
-                          >
-                            <Shield className="h-4 w-4 mr-2" />
-                            {user.mfaEnabled ? 'Disable' : 'Enable'} MFA
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-destructive"
-                          >
+                          {user.status === "PENDING" && (
+                            <DropdownMenuItem onClick={() => handleResendSetup(user.id, user.name)}>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Resend Onboarding Email
+                            </DropdownMenuItem>
+                          )}
+                          {(user.status === "ACTIVE" || user.status === "INACTIVE") && (
+                            <>
+                              {user.status === "ACTIVE" && (
+                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status, "INACTIVE")}>
+                                  <Lock className="h-4 w-4 mr-2" />
+                                  Deactivate User
+                                </DropdownMenuItem>
+                              )}
+                              {user.status === "INACTIVE" && (
+                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status, "ACTIVE")}>
+                                  <Unlock className="h-4 w-4 mr-2" />
+                                  Activate User
+                                </DropdownMenuItem>
+                              )}
+                            </>
+                          )}
+                          {/* MFA toggle removed */}
+                          <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
-                      </DropdownMenu>
+                      </SafeDropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -419,12 +660,23 @@ export default function PolwelUsers() {
             </TableBody>
           </Table>
 
+          {/* Pagination controls - moved to bottom of table for better UX */}
+          <div className="px-4 border-t mt-4">
+            <PaginationControls
+              page={pagination.page}
+              perPage={perPage}
+              total={pagination.total}
+              onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+              onPerPageChange={(pp) => setPerPage(pp)}
+            />
+          </div>
+
           {users.length === 0 && (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">No users found</h3>
               <p className="text-muted-foreground">
-                {searchQuery || statusFilter ? "Try adjusting your search filters" : "No POLWEL users have been added yet"}
+                {debouncedSearch || statusFilter ? "Try adjusting your search filters" : "No POLWEL users have been added yet"}
               </p>
             </div>
           )}

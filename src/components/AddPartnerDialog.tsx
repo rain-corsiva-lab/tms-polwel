@@ -1,132 +1,145 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import DateInput from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Building2, Edit, X, Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Building2, Edit } from "lucide-react";
+import { digitsOnly } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { isValidEmail } from "@/lib/validators";
 import { partnersApi } from "@/lib/api";
-
-// Available courses for selection
-const availableCourses = [
-  "Leadership Development",
-  "Team Building", 
-  "Communication Skills",
-  "Customer Service",
-  "Project Management",
-  "Time Management",
-  "Conflict Resolution",
-  "Public Speaking",
-  "Digital Literacy",
-  "Safety Training",
-  "Compliance Training",
-  "HR Policies",
-  "Data Analysis",
-  "Software Development",
-  "Technical Skills",
-  "Sales Training",
-  "Professional Development",
-  "Career Coaching",
-  "Presentation Skills"
-];
+import { errorHandlers } from "@/lib/errorHandler";
 
 interface PartnerData {
   id?: string;
   partnerName: string;
-  coursesAssigned: string[];
-  pointOfContact: string;
+  email?: string;
   contactNumber: string;
-  contactDesignation: string;
+  onboardingDate?: string;
 }
 
 interface AddPartnerDialogProps {
   onPartnerCreated?: () => void;
   onSuccess?: () => void;
-  mode?: 'create' | 'edit';
+  mode?: "create" | "edit";
   partner?: PartnerData;
 }
 
-export function AddPartnerDialog({ 
-  onPartnerCreated, 
-  onSuccess, 
-  mode = 'create', 
-  partner 
-}: AddPartnerDialogProps) {
+export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create", partner }: AddPartnerDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [courseSearchOpen, setCourseSearchOpen] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [formData, setFormData] = useState({
     partnerName: "",
-    coursesAssigned: [] as string[],
-    pointOfContact: "",
+    email: "",
+    partnerOrganization: "",
     contactNumber: "",
+    onboardingDate: "",
+    bio: "",
+    experience: "",
+    status: "ACTIVE",
+    pointOfContact: "",
+    pointOfContactDepartment: "",
+    pointOfContactEmail: "",
     contactDesignation: "",
   });
 
   const { toast } = useToast();
-  const isEditMode = mode === 'edit';
+  const isEditMode = mode === "edit";
 
   // Initialize form data when in edit mode
   useEffect(() => {
     if (isEditMode && partner) {
       setFormData({
         partnerName: partner.partnerName || "",
-        coursesAssigned: partner.coursesAssigned || [],
-        pointOfContact: partner.pointOfContact || "",
-        contactNumber: partner.contactNumber || "",
-        contactDesignation: partner.contactDesignation || "",
+        email: partner.email || "",
+        partnerOrganization: (partner as any).partnerOrganization || "",
+        contactNumber: digitsOnly(partner.contactNumber || ""),
+        onboardingDate: partner.onboardingDate || "",
+        bio: (partner as any).bio || "",
+        experience: (partner as any).experience || "",
+        status: (partner as any).status || "ACTIVE",
+        pointOfContact: (partner as any).pointOfContact || "",
+        pointOfContactDepartment: (partner as any).pointOfContactDepartment || "",
+        pointOfContactEmail: (partner as any).pointOfContactEmail || "",
+        contactDesignation: (partner as any).contactDesignation || "",
       });
     }
   }, [isEditMode, partner]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Only partner name is required since it's just data, not a user account
+
+    const newErrors: { [key: string]: string } = {};
+
     if (!formData.partnerName) {
+      newErrors.partnerName = "Partner Name is required";
+    }
+
+    if (!formData.email) {
+      newErrors.email = "Email Address is required";
+    } else if (!isValidEmail(formData.email)) {
+      newErrors.email = "Please enter a valid email address (name@email.com)";
+    }
+
+    // Validate point-of-contact email if provided
+    if (formData.pointOfContactEmail && !isValidEmail(formData.pointOfContactEmail)) {
+      newErrors.pointOfContactEmail = "Please enter a valid email address (name@email.com)";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
       toast({
         title: "Validation Error",
-        description: "Please enter the partner name.",
+        description: firstError,
         variant: "destructive",
       });
       return;
     }
 
+    setErrors({});
+
     setLoading(true);
     try {
       if (isEditMode && partner?.id) {
         // Update existing partner
-        await partnersApi.update(partner.id, formData);
+        await partnersApi.update(partner.id, {
+          partnerName: formData.partnerName,
+          email: formData.email,
+          partnerOrganization: formData.partnerOrganization || undefined,
+          pointOfContact: formData.pointOfContact || undefined,
+          pointOfContactDepartment: formData.pointOfContactDepartment || undefined,
+          pointOfContactEmail: formData.pointOfContactEmail || undefined,
+          contactNumber: formData.contactNumber || undefined,
+          contactDesignation: formData.contactDesignation || undefined,
+          onboardingDate: formData.onboardingDate ? new Date(formData.onboardingDate).toISOString() : undefined,
+          bio: formData.bio || undefined,
+          experience: formData.experience || undefined,
+          status: formData.status,
+        });
         toast({
           title: "Partner Updated",
           description: `Partner "${formData.partnerName}" has been updated successfully.`,
         });
       } else {
         // Create new partner
-        await partnersApi.create(formData);
+        await partnersApi.create({
+          partnerName: formData.partnerName,
+          email: formData.email,
+          partnerOrganization: formData.partnerOrganization || undefined,
+          pointOfContact: formData.pointOfContact || undefined,
+          pointOfContactDepartment: formData.pointOfContactDepartment || undefined,
+          pointOfContactEmail: formData.pointOfContactEmail || undefined,
+          contactNumber: formData.contactNumber || undefined,
+          contactDesignation: formData.contactDesignation || undefined,
+          onboardingDate: formData.onboardingDate ? new Date(formData.onboardingDate).toISOString() : undefined,
+          bio: formData.bio || undefined,
+          experience: formData.experience || undefined,
+        });
         toast({
           title: "Partner Created",
           description: `Partner "${formData.partnerName}" has been created successfully.`,
@@ -134,52 +147,43 @@ export function AddPartnerDialog({
       }
 
       // Reset form and close dialog
-      resetForm();
+      setFormData({
+        partnerName: "",
+        email: "",
+        partnerOrganization: "",
+        contactNumber: "",
+        onboardingDate: "",
+        bio: "",
+        experience: "",
+        status: "ACTIVE",
+        pointOfContact: "",
+        pointOfContactDepartment: "",
+        pointOfContactEmail: "",
+        contactDesignation: "",
+      });
+      setErrors({});
       setOpen(false);
-      
+
       if (onPartnerCreated) onPartnerCreated();
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error saving partner:', error);
-      toast({
-        title: "Error",
-        description: `Failed to ${isEditMode ? 'update' : 'create'} partner. Please try again.`,
-        variant: "destructive",
-      });
+      if (isEditMode) {
+        errorHandlers.partnerUpdate(error, toast);
+      } else {
+        errorHandlers.partnerCreate(error, toast);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      partnerName: "",
-      coursesAssigned: [],
-      pointOfContact: "",
-      contactNumber: "",
-      contactDesignation: "",
-    });
-  };
-
-  const addCourse = (course: string) => {
-    if (!formData.coursesAssigned.includes(course)) {
-      setFormData(prev => ({
-        ...prev,
-        coursesAssigned: [...prev.coursesAssigned, course]
-      }));
-    }
-    setCourseSearchOpen(false);
-  };
-
-  const removeCourse = (courseToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      coursesAssigned: prev.coursesAssigned.filter(course => course !== courseToRemove)
-    }));
-  };
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setErrors({});
+      }
+    }}>
       <DialogTrigger asChild>
         {isEditMode ? (
           <Button variant="ghost" size="sm">
@@ -188,132 +192,179 @@ export function AddPartnerDialog({
         ) : (
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Add Partner
+            Add Training Partner
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            {isEditMode ? 'Edit Partner' : 'Add New Partner'}
+            {isEditMode ? "Edit Partner" : "Add Training Partner"}
           </DialogTitle>
-          <DialogDescription>
-            {isEditMode 
-              ? 'Update partner organization information and contact details.'
-              : 'Register a new partner organization with their contact details and assigned courses.'
-            }
-          </DialogDescription>
+          {/* <DialogDescription>
+            {isEditMode ? "Update partner information and contact details." : "Create a new training partner account. Partners do not have login capability."}
+          </DialogDescription> */}
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="partnerName">Partner Name *</Label>
-            <Input
-              id="partnerName"
-              value={formData.partnerName}
-              onChange={(e) => setFormData({ ...formData, partnerName: e.target.value })}
-              placeholder="Enter partner organization name"
-              required
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label>Courses Assigned</Label>
-            <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={courseSearchOpen}
-                  className="w-full justify-between"
-                >
-                  Search and select courses...
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Search courses..." />
-                  <CommandList>
-                    <CommandEmpty>No course found.</CommandEmpty>
-                    <CommandGroup>
-                      {availableCourses
-                        .filter(course => !formData.coursesAssigned.includes(course))
-                        .map((course) => (
-                        <CommandItem
-                          key={course}
-                          onSelect={() => addCourse(course)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              formData.coursesAssigned.includes(course) ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {course}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            
-            {formData.coursesAssigned.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.coursesAssigned.map((course) => (
-                  <Badge key={course} variant="secondary" className="flex items-center gap-1">
-                    {course}
-                    <X 
-                      className="h-3 w-3 cursor-pointer" 
-                      onClick={() => removeCourse(course)} 
-                    />
-                  </Badge>
-                ))}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto px-6 space-y-4 flex-1">
+            <div>
+              <Label htmlFor="partnerName">Partner Name *</Label>
+              <Input
+                id="partnerName"
+                value={formData.partnerName}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, partnerName: e.target.value }));
+                  if (errors.partnerName) setErrors((prev) => ({ ...prev, partnerName: "" }));
+                }}
+                placeholder="Enter partner organization name"
+                className={errors.partnerName ? "border-red-500" : ""}
+              />
+              {errors.partnerName && <p className="text-sm text-red-500 mt-1">{errors.partnerName}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email Address * (Must be unique)</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, email: e.target.value }));
+                  if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
+                }}
+                placeholder="Enter partner's email address"
+                className={errors.email ? "border-red-500" : ""}
+              />
+              {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="partnerOrganization">Partner Organization</Label>
+              <Input
+                id="partnerOrganization"
+                value={formData.partnerOrganization}
+                onChange={(e) => setFormData((prev) => ({ ...prev, partnerOrganization: e.target.value }))}
+                placeholder="Enter partner organization name"
+              />
+            </div>
+
+            {/* Point-of-Contact Section */}
+            <div className="space-y-4 border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-gray-700">Point-of-Contact Details</h3>
+              
+              <div>
+                <Label htmlFor="pointOfContact">Point-of-Contact Name</Label>
+                <Input
+                  id="pointOfContact"
+                  value={formData.pointOfContact}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, pointOfContact: e.target.value }))}
+                  placeholder="Enter point-of-contact name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="pointOfContactDepartment">Department</Label>
+                <Input
+                  id="pointOfContactDepartment"
+                  value={formData.pointOfContactDepartment}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, pointOfContactDepartment: e.target.value }))}
+                  placeholder="Enter department"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="contactDesignation">Designation</Label>
+                <Input
+                  id="contactDesignation"
+                  value={formData.contactDesignation}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, contactDesignation: e.target.value }))}
+                  placeholder="Enter designation"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="pointOfContactEmail">Email</Label>
+                <Input
+                  id="pointOfContactEmail"
+                  type="email"
+                  value={formData.pointOfContactEmail}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, pointOfContactEmail: e.target.value }));
+                    if (errors.pointOfContactEmail) setErrors((prev) => ({ ...prev, pointOfContactEmail: "" }));
+                  }}
+                  placeholder="Enter point-of-contact email"
+                  className={errors.pointOfContactEmail ? "border-red-500" : ""}
+                />
+                {errors.pointOfContactEmail && <p className="text-sm text-red-500 mt-1">{errors.pointOfContactEmail}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="contactNumber">Contact Number</Label>
+                <Input
+                  id="contactNumber"
+                  value={formData.contactNumber}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={(e) => {
+                    const nextValue = digitsOnly(e.target.value);
+                    setFormData((prev) => ({ ...prev, contactNumber: nextValue }));
+                  }}
+                  placeholder="Enter contact number"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="onboardingDate">Onboarding Date</Label>
+              <DateInput id="onboardingDate" value={formData.onboardingDate || ""} onChange={(v) => setFormData((prev) => ({ ...prev, onboardingDate: v }))} />
+            </div>
+
+            {isEditMode && (
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
+
+            <div>
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData((prev) => ({ ...prev, bio: e.target.value }))}
+                placeholder="Enter partner bio"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="experience">Experience</Label>
+              <Textarea
+                id="experience"
+                value={formData.experience}
+                onChange={(e) => setFormData((prev) => ({ ...prev, experience: e.target.value }))}
+                placeholder="Enter partner experience"
+                rows={3}
+              />
+            </div>
           </div>
 
-          <div>
-            <Label htmlFor="pointOfContact">Point of Contact</Label>
-            <Input
-              id="pointOfContact"
-              value={formData.pointOfContact}
-              onChange={(e) => setFormData({ ...formData, pointOfContact: e.target.value })}
-              placeholder="Enter contact person name"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="contactNumber">Contact Number</Label>
-            <Input
-              id="contactNumber"
-              value={formData.contactNumber}
-              onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-              placeholder="Enter contact number"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="contactDesignation">Contact Designation</Label>
-            <Input
-              id="contactDesignation"
-              value={formData.contactDesignation}
-              onChange={(e) => setFormData({ ...formData, contactDesignation: e.target.value })}
-              placeholder="Enter contact person designation"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setOpen(false)}
-            >
+          <DialogFooter className="px-6 py-4 border-t">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : (isEditMode ? 'Update Partner' : 'Add Partner')}
+            <Button type="submit" onClick={handleSubmit} disabled={loading}>
+              {loading ? "Saving..." : isEditMode ? "Update Training Partner" : "Create Training Partner"}
             </Button>
           </DialogFooter>
         </form>

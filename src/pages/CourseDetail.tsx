@@ -3,8 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Clock, Users, MapPin, DollarSign, Award, Calendar } from "lucide-react";
+import { ArrowLeft, Edit, Clock, Users, MapPin, Award, Percent, GraduationCap, ClipboardCheck, User as UserIcon, Layers } from "lucide-react";
 import { coursesApi } from "@/lib/api";
+import { formatDate } from "../lib/date";
+import DOMPurify from "dompurify";
 import { useToast } from "@/hooks/use-toast";
 
 const CourseDetail = () => {
@@ -17,40 +19,40 @@ const CourseDetail = () => {
   useEffect(() => {
     const fetchCourse = async () => {
       if (!id) return;
-      
+
       try {
         setLoading(true);
-        console.log('Fetching course with ID:', id);
+        console.log("Fetching course with ID:", id);
         const response = await coursesApi.getById(id);
-        console.log('Course API response:', response);
-        
+        console.log("Course API response:", response);
+
         // FIXED DATA EXTRACTION - Handle real API structure
         let courseData = null;
         if (response?.success && response?.data?.course) {
           courseData = response.data.course;
-          console.log('Using response.data.course (correct API structure)');
+          console.log("Using response.data.course (correct API structure)");
         } else if (response?.success && response?.data) {
           courseData = response.data;
-          console.log('Using response.data');
+          console.log("Using response.data");
         } else if (response?.data?.course) {
           courseData = response.data.course;
-          console.log('Using response.data.course');
+          console.log("Using response.data.course");
         } else if (response?.data) {
           courseData = response.data;
-          console.log('Using response.data');
+          console.log("Using response.data");
         } else if (response && response.title) {
           courseData = response;
-          console.log('Using response directly');
+          console.log("Using response directly");
         }
-        
-        console.log('Extracted course data:', courseData);
+
+        console.log("Extracted course data:", courseData);
         setCourse(courseData);
       } catch (error) {
-        console.error('Error fetching course:', error);
+        console.error("Error fetching course:", error);
         toast({
           title: "Error",
           description: "Failed to load course details",
-          variant: "destructive"
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -76,9 +78,7 @@ const CourseDetail = () => {
       <div className="container mx-auto py-6 px-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Course Not Found</h1>
-          <Button onClick={() => navigate('/course-creation')}>
-            Back to Courses
-          </Button>
+          <Button onClick={() => navigate("/courses")}>Back to Courses</Button>
         </div>
       </div>
     );
@@ -89,26 +89,28 @@ const CourseDetail = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/course-creation')}>
+          <Button variant="outline" onClick={() => navigate("/courses")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Courses
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{course.title}</h1>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              {course.title}
+              {course.courseCode && (
+                <Badge variant="secondary" className="text-xs font-mono tracking-wide">
+                  {course.courseCode}
+                </Badge>
+              )}
+            </h1>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                {course.category || 'Mindful Leadership'}
-              </Badge>
-              <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                Active
-              </Badge>
-              <Badge className="bg-blue-600 text-white">
-                {course.certificates === 'polwel' ? 'POLWEL' : 'PARTNER'}
-              </Badge>
+              {course.category && <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{course.category}</Badge>}
+              {course.level && <Badge className="bg-purple-100 text-purple-800 border-purple-200">Lvl: {course.level}</Badge>}
+              {/* status removed from Course model */}
+              <Badge className="bg-blue-600 text-white">{course.certificates === "polwel" ? "POLWEL" : "PARTNER"}</Badge>
             </div>
           </div>
         </div>
-        <Button onClick={() => navigate(`/course-creation/edit/${course.id}`)}>
+        <Button onClick={() => navigate(`/courses/edit/${course.id}`)}>
           <Edit className="mr-2 h-4 w-4" />
           Edit Course
         </Button>
@@ -117,95 +119,96 @@ const CourseDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Course Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Course Overview */}
+          {/* Course Synopsis */}
           <Card>
             <CardHeader>
-              <CardTitle>Course Overview</CardTitle>
+              <CardTitle>Course Synopsis</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 leading-relaxed">
-                {course.description || "No description available."}
-              </p>
+            <CardContent className="space-y-6">
+              {/* Course Overview */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Course Overview</h3>
+                {course.description ? (
+                  <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
+                ) : (
+                  <p className="text-gray-500 italic">No description available.</p>
+                )}
+              </div>
+
+              {/* Learning Objectives */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Learning Objectives</h3>
+                {course.learningObjectives ? (
+                  <div
+                    className="prose prose-sm max-w-none text-gray-600"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.learningObjectives) }}
+                  />
+                ) : course.objectives && Array.isArray(course.objectives) && course.objectives.length > 0 ? (
+                  <ul className="space-y-2 text-gray-600">
+                    {course.objectives.map((objective, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                        {objective}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 italic">No learning objectives specified for this course.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
-          {/* Learning Objectives - USE REAL DATABASE DATA */}
+          {/* Discounts & Pricing */}
           <Card>
             <CardHeader>
-              <CardTitle>Learning Objectives</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {course.objectives && Array.isArray(course.objectives) && course.objectives.length > 0 ? (
-                <ul className="space-y-2 text-gray-600">
-                  {course.objectives.map((objective, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                      {objective}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 italic">No learning objectives specified for this course.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Course Outline - USE REAL DATABASE DATA */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Course Outline</CardTitle>
+              <CardTitle>Discounts & Pricing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {course.courseOutline && typeof course.courseOutline === 'object' && Object.keys(course.courseOutline).length > 0 ? (
-                // Display real course outline from database
-                (() => {
-                  const outline = course.courseOutline;
-                  if (Array.isArray(outline)) {
-                    return outline.map((module, index) => (
-                      <div key={index} className="border-l-4 border-blue-500 pl-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-semibold">{module.title || `Module ${index + 1}`}</h4>
-                          <span className="text-sm text-gray-500">{module.day || `Day ${index + 1}`}</span>
-                        </div>
-                        {module.topics && Array.isArray(module.topics) && (
-                          <ul className="text-sm text-gray-600 space-y-1">
-                            {module.topics.map((topic, topicIndex) => (
-                              <li key={topicIndex}>• {topic}</li>
-                            ))}
-                          </ul>
-                        )}
-                        {module.description && (
-                          <p className="text-sm text-gray-600 mt-2">{module.description}</p>
-                        )}
+              {course.discounts && Array.isArray(course.discounts) && course.discounts.length > 0 ? (
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {course.discounts.map((d: any, idx: number) => (
+                      <div key={d.id || idx} className="flex items-center justify-between rounded border p-2 bg-slate-50">
+                        <span className="text-sm font-medium flex items-center gap-2">
+                          <Percent className="h-3 w-3 text-slate-500" /> {d.name || `Discount ${idx + 1}`}
+                        </span>
+                        <span className="text-sm font-semibold">{d.percentage}%</span>
                       </div>
-                    ));
-                  } else {
-                    // Handle object format
-                    return Object.entries(outline).map(([key, value], index) => (
-                      <div key={key} className="border-l-4 border-blue-500 pl-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-semibold">{(value as any)?.title || key}</h4>
-                          <span className="text-sm text-gray-500">{(value as any)?.day || `Day ${index + 1}`}</span>
-                        </div>
-                        {(value as any)?.description && (
-                          <p className="text-sm text-gray-600">{(value as any).description}</p>
-                        )}
-                      </div>
-                    ));
-                  }
-                })()
-              ) : course.syllabus ? (
-                // Fallback to syllabus if available
-                <div className="text-sm text-gray-600">
-                  <pre className="whitespace-pre-wrap">{course.syllabus}</pre>
+                    ))}
+                  </div>
                 </div>
               ) : (
-                <p className="text-gray-500 italic">No course outline available for this course.</p>
+                <p className="text-sm text-gray-500 italic">No structured discounts configured.</p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div className="space-y-1">
+                  <div className="text-gray-500">Default Course Fee</div>
+                  <div className="font-semibold">${(course.defaultCourseFee || 0).toFixed(2)}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-gray-500">Billing Rate</div>
+                  <div className="font-semibold">${(course.billingRate || 0).toFixed(2)}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-gray-500">Venue Expenses</div>
+                  <div className="font-semibold">${(course.venueFee || 0).toFixed(2)}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-gray-500">Contracts Fees</div>
+                  <div className="font-semibold">${(course.contractsFeePayout || 0).toFixed(2)}</div>
+                </div>
+              </div>
+              {course.remarks && (
+                <div className="pt-2 border-t text-sm">
+                  <div className="text-gray-500 mb-1">Remarks</div>
+                  <p className="text-gray-700 whitespace-pre-wrap">{course.remarks}</p>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Additional Information - USE REAL DATABASE DATA */}
+          {/* Additional Information */}
           <Card>
             <CardHeader>
               <CardTitle>Additional Information</CardTitle>
@@ -224,7 +227,7 @@ const CourseDetail = () => {
                     <p className="text-sm text-gray-500 italic">No specific prerequisites for this course.</p>
                   )}
                 </div>
-                
+
                 {course.materials && Array.isArray(course.materials) && course.materials.length > 0 && (
                   <div>
                     <h4 className="font-semibold text-sm mb-1">Materials</h4>
@@ -242,11 +245,20 @@ const CourseDetail = () => {
                     <p className="text-sm text-gray-600">{course.targetAudience}</p>
                   </div>
                 )}
-                
-                {course.remarks && (
+                {course.assessmentMethod && (
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Remarks</h4>
-                    <p className="text-sm text-gray-600">{course.remarks}</p>
+                    <h4 className="font-semibold text-sm mb-1 flex items-center gap-1">
+                      <ClipboardCheck className="h-3 w-3" /> Assessment Method
+                    </h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{course.assessmentMethod}</p>
+                  </div>
+                )}
+                {course.certificationType && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1 flex items-center gap-1">
+                      <GraduationCap className="h-3 w-3" /> Certification Type
+                    </h4>
+                    <p className="text-sm text-gray-600">{course.certificationType}</p>
                   </div>
                 )}
               </div>
@@ -266,7 +278,9 @@ const CourseDetail = () => {
                 <Clock className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Duration</div>
-                  <div className="font-semibold">{course.duration || '3'} {course.durationType || 'days'}</div>
+                  <div className="font-semibold">
+                    {course.duration || "3"} {course.durationType || "days"}
+                  </div>
                 </div>
               </div>
 
@@ -274,23 +288,20 @@ const CourseDetail = () => {
                 <Users className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Capacity</div>
-                  <div className="font-semibold">{course.minParticipants || course.minPax || '15'} - {course.maxParticipants || '25'} pax</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <DollarSign className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Price per Pax</div>
-                  <div className="font-semibold">${(course.amountPerPax || 0).toFixed(2)}</div>
+                  <div className="font-semibold">
+                    {course.minParticipants ?? "-"} – {course.maxParticipants ?? "-"} pax
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <MapPin className="h-4 w-4 text-gray-500" />
                 <div>
-                  <div className="text-sm text-gray-500">Venue</div>
-                  <div className="font-semibold">{course.venue || 'Main Training Room'}</div>
+                  <div className="text-sm text-gray-500">Venue / Location</div>
+                  <div className="font-semibold">
+                    {course.venue || "Main Training Room"}
+                    {course.specifiedLocation && <span className="text-xs text-gray-500 ml-1">({course.specifiedLocation})</span>}
+                  </div>
                 </div>
               </div>
 
@@ -298,9 +309,7 @@ const CourseDetail = () => {
                 <Award className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Certificate</div>
-                  <Badge className="bg-blue-600 text-white text-xs">
-                    {course.certificates === 'polwel' ? 'POLWEL' : 'PARTNER'}
-                  </Badge>
+                  <Badge className="bg-blue-600 text-white text-xs">{course.certificates === "polwel" ? "POLWEL" : "PARTNER"}</Badge>
                 </div>
               </div>
             </CardContent>
@@ -312,32 +321,20 @@ const CourseDetail = () => {
               <CardTitle>Assigned Trainers</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {course.trainers && course.trainers.length > 0 ? (
-                course.trainers.map((trainer, index) => (
+              {course.courseTrainers && course.courseTrainers.length > 0 ? (
+                course.courseTrainers.map((ct, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
-                      {typeof trainer === 'string' ? trainer.charAt(0) : (trainer.name || 'T').charAt(0)}
+                      {ct.trainer?.name ? ct.trainer.name.charAt(0) : "T"}
                     </div>
-                    <div className="font-medium">
-                      {typeof trainer === 'string' ? trainer : trainer.name || 'Unknown Trainer'}
+                    <div>
+                      <div className="font-medium">{ct.trainer?.name || "Unknown Trainer"}</div>
+                      {ct.trainer?.partnerOrganization && <div className="text-xs text-gray-500">{ct.trainer.partnerOrganization}</div>}
                     </div>
                   </div>
                 ))
               ) : (
-                <>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
-                      JS
-                    </div>
-                    <div className="font-medium">John Smith</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">
-                      SJ
-                    </div>
-                    <div className="font-medium">Sarah Johnson</div>
-                  </div>
-                </>
+                <div className="text-sm text-gray-500">No trainers assigned</div>
               )}
             </CardContent>
           </Card>
@@ -350,18 +347,49 @@ const CourseDetail = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Created:</span>
-                <span className="text-sm font-medium">{course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '2024-01-15'}</span>
+                <span className="text-sm font-medium">{course.createdAt ? formatDate(course.createdAt) : "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Last Updated:</span>
-                <span className="text-sm font-medium">{course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : '2024-03-10'}</span>
+                <span className="text-sm font-medium">{course.updatedAt ? formatDate(course.updatedAt) : "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Course ID:</span>
-                <span className="text-sm font-medium">{course.id?.slice(-8) || '1'}</span>
+                <span className="text-sm font-medium">{course.id?.slice(-8) || "-"}</span>
               </div>
+              {course.creator && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500 flex items-center gap-1">
+                    <UserIcon className="h-3 w-3" /> Creator
+                  </span>
+                  <span className="text-sm font-medium">{course.creator.name || course.creator.email || "—"}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
+          {(course.level || course.certificationType) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Classification</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {course.level && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <Layers className="h-3 w-3" /> Level
+                    </span>
+                    <span className="text-sm font-medium">{course.level}</span>
+                  </div>
+                )}
+                {course.certificationType && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Certification</span>
+                    <span className="text-sm font-medium">{course.certificationType}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

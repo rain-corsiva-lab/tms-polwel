@@ -24,8 +24,7 @@ interface TrainerBlockout {
   trainerId: string;
   trainerName: string;
   date: string;
-  reason: string;
-  type: "maintenance" | "holiday" | "unavailable" | "personal" | "other";
+  remarks?: string | null;
   description?: string;
 }
 
@@ -33,39 +32,36 @@ interface TrainingCalendarProps {
   trainers: Trainer[];
   trainerBlockouts?: TrainerBlockout[];
   onDateSelect?: (date: Date) => void;
-  onTrainerBlockoutAdd?: (blockout: Omit<TrainerBlockout, 'id'>) => void;
+  onTrainerBlockoutAdd?: (blockout: Omit<TrainerBlockout, "id">) => void;
   onTrainerBlockoutRemove?: (blockoutId: string) => void;
   canManageBlockouts?: boolean;
   selectedTrainerId?: string;
 }
 
-const TrainingCalendar = ({ 
-  trainers, 
-  trainerBlockouts = [], 
-  onDateSelect, 
-  onTrainerBlockoutAdd, 
-  onTrainerBlockoutRemove, 
+const TrainingCalendar = ({
+  trainers,
+  trainerBlockouts = [],
+  onDateSelect,
+  onTrainerBlockoutAdd,
+  onTrainerBlockoutRemove,
   canManageBlockouts = false,
-  selectedTrainerId
+  selectedTrainerId,
 }: TrainingCalendarProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isBlockoutDialogOpen, setIsBlockoutDialogOpen] = useState(false);
   const [selectedTrainerForBlockout, setSelectedTrainerForBlockout] = useState<string>("");
   const [blockoutForm, setBlockoutForm] = useState({
-    reason: "",
-    type: "unavailable" as TrainerBlockout['type'],
-    description: ""
+    remarks: "",
+    description: "",
   });
 
   const getBlockoutsForDate = (date: Date) => {
-    return trainerBlockouts.filter(blockout => 
-      isSameDay(parseISO(blockout.date), date)
-    );
+    return trainerBlockouts.filter((blockout) => isSameDay(parseISO(blockout.date), date));
   };
 
   const getTrainersBlockedOnDate = (date: Date) => {
-    return getBlockoutsForDate(date).map(blockout => blockout.trainerName);
+    return getBlockoutsForDate(date).map((blockout) => blockout.trainerName);
   };
 
   const isDateBlocked = (date: Date) => {
@@ -85,43 +81,23 @@ const TrainingCalendar = ({
     }
   };
 
-  const getBlockoutTypeColor = (type: string) => {
-    switch (type) {
-      case "maintenance":
-        return "bg-orange-500";
-      case "holiday":
-        return "bg-red-500";
-      case "unavailable":
-        return "bg-gray-500";
-      case "personal":
-        return "bg-blue-500";
-      case "other":
-        return "bg-purple-500";
-      default:
-        return "bg-gray-500";
-    }
+  const getBlockoutTypeColor = () => {
+    // 'type' removed; use a neutral color for blockout indicators
+    return "bg-gray-500";
   };
 
   const getDayContent = (date: Date) => {
     const dayBlockouts = getBlockoutsForDate(date);
-    
+
     if (dayBlockouts.length === 0) return null;
-    
+
     return (
       <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
         <div className="flex space-x-1">
-          {dayBlockouts.slice(0, 3).map((blockout, index) => (
-            <div
-              key={blockout.id}
-              className={cn(
-                "w-2 h-2 rounded-full",
-                getBlockoutTypeColor(blockout.type)
-              )}
-            />
+          {dayBlockouts.slice(0, 3).map((blockout) => (
+            <div key={blockout.id} className={cn("w-2 h-2 rounded-full", getBlockoutTypeColor())} />
           ))}
-          {dayBlockouts.length > 3 && (
-            <div className="w-2 h-2 rounded-full bg-gray-700" />
-          )}
+          {dayBlockouts.length > 3 && <div className="w-2 h-2 rounded-full bg-gray-700" />}
         </div>
       </div>
     );
@@ -138,22 +114,21 @@ const TrainingCalendar = ({
   };
 
   const handleAddTrainerBlockout = () => {
-    if (!selectedDate || !blockoutForm.reason.trim() || !selectedTrainerForBlockout) return;
-    
-    const selectedTrainer = trainers.find(t => t.id === selectedTrainerForBlockout);
+    if (!selectedDate || !selectedTrainerForBlockout) return;
+
+    const selectedTrainer = trainers.find((t) => t.id === selectedTrainerForBlockout);
     if (!selectedTrainer) return;
-    
-    const newBlockout: Omit<TrainerBlockout, 'id'> = {
+
+    const newBlockout: Omit<TrainerBlockout, "id"> = {
       trainerId: selectedTrainerForBlockout,
       trainerName: selectedTrainer.name,
-      date: selectedDate.toISOString().split('T')[0],
-      reason: blockoutForm.reason,
-      type: blockoutForm.type,
-      description: blockoutForm.description
+      date: selectedDate.toISOString().split("T")[0],
+      remarks: blockoutForm.remarks || undefined,
+      description: blockoutForm.description,
     };
-    
+
     onTrainerBlockoutAdd?.(newBlockout);
-    setBlockoutForm({ reason: "", type: "unavailable", description: "" });
+    setBlockoutForm({ remarks: "", description: "" });
     setSelectedTrainerForBlockout("");
     setIsBlockoutDialogOpen(false);
   };
@@ -170,31 +145,19 @@ const TrainingCalendar = ({
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <CalendarIcon className="h-5 w-5" />
-              <span>Trainer Availability Calendar</span>
+              <span>Associate Trainer Availability Calendar</span>
             </CardTitle>
-            <CardDescription>
-              View trainer blockout dates. Blocked dates show which trainers are unavailable.
-            </CardDescription>
+            {/* <CardDescription>View associate trainer blockout dates. Blocked dates show which associate trainers are unavailable.</CardDescription> */}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {/* Calendar Month Navigation */}
               <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1))}
-                >
+                <Button variant="outline" size="sm" onClick={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1))}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <h3 className="text-lg font-semibold">
-                  {format(currentMonth, "MMMM yyyy")}
-                </h3>
-                <Button
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1))}
-                >
+                <h3 className="text-lg font-semibold">{format(currentMonth, "MMMM yyyy")}</h3>
+                <Button variant="outline" size="sm" onClick={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1))}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -213,18 +176,18 @@ const TrainingCalendar = ({
                     Day: ({ date, ...props }) => {
                       const isBlocked = isDateBlocked(date);
                       return (
-                        <div className={cn(
-                          "relative p-2 hover:bg-accent rounded-md cursor-pointer min-h-[3rem]",
-                          isBlocked && "bg-red-50 text-red-400 cursor-not-allowed hover:bg-red-50"
-                        )}>
-                          <div className="text-sm">{date.getDate()}</div>
-                          {isBlocked && (
-                            <Ban className="absolute top-1 right-1 h-3 w-3 text-red-500" />
+                        <div
+                          className={cn(
+                            "relative p-2 hover:bg-accent rounded-md cursor-pointer min-h-[3rem]",
+                            isBlocked && "bg-red-50 text-red-400 cursor-not-allowed hover:bg-red-50"
                           )}
+                        >
+                          <div className="text-sm">{date.getDate()}</div>
+                          {isBlocked && <Ban className="absolute top-1 right-1 h-3 w-3 text-red-500" />}
                           {getDayContent(date)}
                         </div>
                       );
-                    }
+                    },
                   }}
                 />
               </div>
@@ -261,15 +224,11 @@ const TrainingCalendar = ({
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">
-              {selectedDate ? format(selectedDate, "MMMM dd, yyyy") : "Select a Date"}
-            </CardTitle>
+            <CardTitle className="text-lg">{selectedDate ? format(selectedDate, "MMMM dd, yyyy") : "Select a Date"}</CardTitle>
             <CardDescription>
-              {selectedDateBlockouts.length > 0 ? (
-                `${selectedDateBlockouts.length} trainer${selectedDateBlockouts.length > 1 ? 's' : ''} blocked out`
-              ) : (
-                "All trainers available for this date"
-              )}
+              {selectedDateBlockouts.length > 0
+                ? `${selectedDateBlockouts.length} associate trainer${selectedDateBlockouts.length > 1 ? "s" : ""} blocked out`
+                : "All associate trainers available for this date"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -279,28 +238,17 @@ const TrainingCalendar = ({
                   <div key={blockout.id} className="p-4 border border-red-200 rounded-lg bg-red-50">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <div className={cn(
-                          "w-3 h-3 rounded-full",
-                          getBlockoutTypeColor(blockout.type)
-                        )} />
+                        <div className={cn("w-3 h-3 rounded-full", getBlockoutTypeColor())} />
                         <h4 className="font-medium text-red-800">{blockout.trainerName}</h4>
                       </div>
                       {canManageBlockouts && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveTrainerBlockout(blockout.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleRemoveTrainerBlockout(blockout.id)} className="text-red-600 hover:text-red-800">
                           <X className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
                     <p className="text-sm text-red-700 mb-1">
-                      <strong>Reason:</strong> {blockout.reason}
-                    </p>
-                    <p className="text-sm text-red-700 mb-1">
-                      <strong>Type:</strong> {blockout.type}
+                      <strong>Remarks:</strong> {blockout.remarks || ""}
                     </p>
                     {blockout.description && (
                       <p className="text-sm text-red-700">
@@ -311,9 +259,7 @@ const TrainingCalendar = ({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                All trainers are available for this date.
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-8">All trainers are available for this date.</p>
             )}
           </CardContent>
         </Card>
@@ -336,13 +282,11 @@ const TrainingCalendar = ({
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Block Out Trainer</DialogTitle>
-                      <DialogDescription>
-                        Block out a trainer for {selectedDate ? format(selectedDate, "MMMM dd, yyyy") : "this date"}.
-                      </DialogDescription>
+                      <DialogDescription>Block out a trainer for {selectedDate ? format(selectedDate, "MMMM dd, yyyy") : "this date"}.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="trainer">Trainer *</Label>
+                        <Label htmlFor="trainer">Associate Trainer *</Label>
                         <select
                           id="trainer"
                           className="w-full p-2 border rounded-md"
@@ -357,49 +301,32 @@ const TrainingCalendar = ({
                           ))}
                         </select>
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label htmlFor="reason">Reason *</Label>
+                        <Label htmlFor="remarks">Remarks (optional)</Label>
                         <Input
-                          id="reason"
-                          placeholder="e.g., Personal leave, Training"
-                          value={blockoutForm.reason}
-                          onChange={(e) => setBlockoutForm(prev => ({ ...prev, reason: e.target.value }))}
+                          id="remarks"
+                          placeholder="Optional remarks"
+                          value={blockoutForm.remarks}
+                          onChange={(e) => setBlockoutForm((prev) => ({ ...prev, remarks: e.target.value }))}
                         />
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="type">Type</Label>
-                        <select
-                          id="type"
-                          className="w-full p-2 border rounded-md"
-                          value={blockoutForm.type}
-                          onChange={(e) => setBlockoutForm(prev => ({ ...prev, type: e.target.value as TrainerBlockout['type'] }))}
-                        >
-                          <option value="unavailable">Unavailable</option>
-                          <option value="personal">Personal</option>
-                          <option value="holiday">Holiday</option>
-                          <option value="maintenance">Maintenance</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
-                      
+
+                      {/* type removed - remarks now optional */}
+
                       <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>
                         <Textarea
                           id="description"
                           placeholder="Additional details (optional)"
                           value={blockoutForm.description}
-                          onChange={(e) => setBlockoutForm(prev => ({ ...prev, description: e.target.value }))}
+                          onChange={(e) => setBlockoutForm((prev) => ({ ...prev, description: e.target.value }))}
                         />
                       </div>
-                      
+
                       <div className="flex space-x-2 pt-4">
-                        <Button 
-                          onClick={handleAddTrainerBlockout} 
-                          disabled={!blockoutForm.reason.trim() || !selectedTrainerForBlockout}
-                        >
-                          Block Trainer
+                        <Button onClick={handleAddTrainerBlockout} disabled={!selectedTrainerForBlockout}>
+                          Block Associate Trainer
                         </Button>
                         <Button variant="outline" onClick={() => setIsBlockoutDialogOpen(false)}>
                           Cancel

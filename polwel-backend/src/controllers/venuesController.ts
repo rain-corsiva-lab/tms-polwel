@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
+
 
 interface Contact {
   id: string;
@@ -17,10 +17,12 @@ interface VenueCreateRequest {
   description?: string;
   facilities?: string[];
   contacts: Contact[];
-  feeType: 'PER_HEAD' | 'PER_VENUE';
   fee: number;
+  maxParticipants?: number;
+  perHeadPriceIfMaxExceed?: number;
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   remarks?: string;
+  venueType?: 'HOTEL' | 'ON_PREMISE' | 'CLIENT_FACILITY' | 'ONLINE';
 }
 
 interface VenueUpdateRequest extends VenueCreateRequest {
@@ -31,31 +33,73 @@ export const venuesController = {
   // Get all venues
   getVenues: async (req: Request, res: Response) => {
     try {
-      const venues = await prisma.venue.findMany({
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
+      const { venueType, search, status, page, limit } = req.query;
+      
+      // Pagination
+      const rawPage = typeof page === 'string' ? page : undefined;
+      const parsedPage = rawPage ? Number(rawPage) : undefined;
+      const pageNum = parsedPage && Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+
+      const rawLimit = typeof limit === 'string' ? limit : undefined;
+      const exportAll = req.query.export === 'true' || rawLimit === 'all';
+      let limitNum = 10;
+      if (!exportAll && rawLimit !== undefined) {
+        const parsedLimit = Number(rawLimit);
+        if (Number.isFinite(parsedLimit) && parsedLimit > 0) {
+          limitNum = Math.floor(parsedLimit);
+        }
+      }
+      
+      const skip = exportAll ? undefined : (pageNum - 1) * limitNum;
+      const take = exportAll ? undefined : limitNum;
+      
+      // Build where clause for filtering
+      const where: any = {};
+      if (venueType && typeof venueType === 'string') {
+        where.venueType = venueType.toUpperCase();
+      }
+
+      if (status && typeof status === 'string') {
+        where.status = status.toUpperCase();
+      }
+
+      if (search && typeof search === 'string') {
+        where.OR = [
+          { name: { contains: search } },
+          { address: { contains: search } }
+        ];
+      }
+      
+      const [venues, total] = await Promise.all([
+        prisma.venue.findMany({
+          where,
+          include: {
+            creator: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            _count: {
+              select: {
+                bookings: true,
+                courseRuns: true
+              }
             }
           },
-          _count: {
-            select: {
-              bookings: true,
-              courseRuns: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      });
+          orderBy: {
+            createdAt: 'desc'
+          },
+          ...(skip !== undefined ? { skip } : {}),
+          ...(take !== undefined ? { take } : {})
+        }),
+        prisma.venue.count({ where })
+      ]);
 
       // Transform venues to match frontend expectations
       const transformedVenues = venues.map(venue => ({
         ...venue,
-        feeType: venue.feeType.toLowerCase(), // Convert PER_HEAD to per_head
         contacts: Array.isArray(venue.contacts) ? venue.contacts : [],
         bookingCount: venue._count.bookings,
         courseRunCount: venue._count.courseRuns
@@ -63,7 +107,13 @@ export const venuesController = {
 
       res.json({
         success: true,
-        data: transformedVenues
+        venues: transformedVenues,
+        pagination: {
+          page: exportAll ? 1 : pageNum,
+          limit: exportAll ? total : limitNum,
+          total,
+          totalPages: exportAll ? 1 : Math.ceil(total / limitNum)
+        }
       });
     } catch (error) {
       console.error('Error fetching venues:', error);
@@ -111,8 +161,8 @@ export const venuesController = {
           courseRuns: {
             select: {
               id: true,
-              startDate: true,
-              endDate: true,
+              startDatetime: true,
+              endDatetime: true,
               course: {
                 select: {
                   id: true,
@@ -121,7 +171,7 @@ export const venuesController = {
               }
             },
             orderBy: {
-              startDate: 'desc'
+              startDatetime: 'desc'
             },
             take: 5
           }
@@ -138,7 +188,6 @@ export const venuesController = {
       // Transform venue to match frontend expectations
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(), // Convert PER_HEAD to per_head
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 
@@ -194,33 +243,25 @@ export const venuesController = {
         name: venueData.name.trim(),
         capacity: venueData.capacity || '',
         contacts: JSON.parse(JSON.stringify(validContacts)), // Serialize/deserialize to ensure JSON compatibility
-        feeType: venueData.feeType || 'PER_VENUE',
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',
+        venueType: venueData.venueType || 'HOTEL',
         createdBy: userId,
         ...(venueData.address && { address: venueData.address.trim() }),
         ...(venueData.description && { description: venueData.description.trim() }),
         ...(venueData.facilities && { facilities: venueData.facilities }),
-        ...(venueData.remarks && { remarks: venueData.remarks.trim() })
+        ...(venueData.remarks && { remarks: venueData.remarks.trim() }),
+        ...(venueData.maxParticipants && { maxParticipants: venueData.maxParticipants }),
+        ...(venueData.perHeadPriceIfMaxExceed && { perHeadPriceIfMaxExceed: venueData.perHeadPriceIfMaxExceed })
       } as any; // Type assertion for Prisma compatibility
 
       const venue = await prisma.venue.create({
-        data: dataToCreate,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
+        data: dataToCreate
       });
 
       // Transform venue to match frontend expectations
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(),
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 
@@ -295,13 +336,15 @@ export const venuesController = {
         name: venueData.name.trim(),
         capacity: venueData.capacity || '',
         contacts: JSON.parse(JSON.stringify(validContacts)), // Serialize/deserialize to ensure JSON compatibility
-        feeType: venueData.feeType || 'PER_VENUE',
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',
+        venueType: venueData.venueType || 'HOTEL',
         ...(venueData.address !== undefined && { address: venueData.address?.trim() || null }),
         ...(venueData.description !== undefined && { description: venueData.description?.trim() || null }),
         ...(venueData.facilities !== undefined && { facilities: venueData.facilities || [] }),
-        ...(venueData.remarks !== undefined && { remarks: venueData.remarks?.trim() || null })
+        ...(venueData.remarks !== undefined && { remarks: venueData.remarks?.trim() || null }),
+        ...(venueData.maxParticipants !== undefined && { maxParticipants: venueData.maxParticipants || null }),
+        ...(venueData.perHeadPriceIfMaxExceed !== undefined && { perHeadPriceIfMaxExceed: venueData.perHeadPriceIfMaxExceed || null })
       } as any; // Type assertion for Prisma compatibility
 
       const venue = await prisma.venue.update({
@@ -321,7 +364,6 @@ export const venuesController = {
       // Transform venue to match frontend expectations
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(),
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 
@@ -426,7 +468,6 @@ export const venuesController = {
 
       const transformedVenue = {
         ...venue,
-        feeType: venue.feeType.toLowerCase(),
         contacts: Array.isArray(venue.contacts) ? venue.contacts : []
       };
 

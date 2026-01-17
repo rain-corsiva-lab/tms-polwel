@@ -79,7 +79,7 @@ const DiscountsTab: React.FC<DiscountsTabProps> = ({ formData, onInputChange }) 
                 placeholder="e.g., Early Bird, Student, Corporate"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="discountPercentage">Percentage (%)</Label>
               <Input
@@ -93,9 +93,9 @@ const DiscountsTab: React.FC<DiscountsTabProps> = ({ formData, onInputChange }) 
                 placeholder="10.0"
               />
             </div>
-            
+
             <div className="flex items-end">
-              <Button onClick={addDiscount} className="w-full">
+              <Button type="button" onClick={addDiscount} className="w-full">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Discount
               </Button>
@@ -116,31 +116,28 @@ const DiscountsTab: React.FC<DiscountsTabProps> = ({ formData, onInputChange }) 
                 <TableRow>
                   <TableHead>Discount Name</TableHead>
                   <TableHead>Percentage</TableHead>
-                  <TableHead>Value (based on amount per pax)</TableHead>
+                  {/* Removed value column tied to amountPerPax */}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {discounts.map((discount: Discount) => {
-                  const discountValue = (formData.amountPerPax * discount.percentage) / 100;
-                  return (
-                    <TableRow key={discount.id}>
-                      <TableCell className="font-medium">{discount.name}</TableCell>
-                      <TableCell>{discount.percentage}%</TableCell>
-                      <TableCell>${discountValue.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeDiscount(discount.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {discounts.map((discount: Discount) => (
+                  <TableRow key={discount.id}>
+                    <TableCell className="font-medium">{discount.name}</TableCell>
+                    <TableCell>{discount.percentage}%</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDiscount(discount.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           ) : (
@@ -156,35 +153,7 @@ const DiscountsTab: React.FC<DiscountsTabProps> = ({ formData, onInputChange }) 
       </Card>
 
       {/* Discount Summary */}
-      {discounts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Discount Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <Label className="text-sm text-muted-foreground">Total Discounts</Label>
-                <p className="text-2xl font-bold text-foreground">{discounts.length}</p>
-              </div>
-              
-              <div className="p-4 bg-muted rounded-lg">
-                <Label className="text-sm text-muted-foreground">Highest Discount</Label>
-                <p className="text-2xl font-bold text-foreground">
-                  {Math.max(...discounts.map((d: Discount) => d.percentage))}%
-                </p>
-              </div>
-              
-              <div className="p-4 bg-muted rounded-lg">
-                <Label className="text-sm text-muted-foreground">Max Discount Value</Label>
-                <p className="text-2xl font-bold text-foreground">
-                  ${Math.max(...discounts.map((d: Discount) => (formData.amountPerPax * d.percentage) / 100)).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Removed discount summary dependent on amountPerPax */}
     </div>
   );
 };
