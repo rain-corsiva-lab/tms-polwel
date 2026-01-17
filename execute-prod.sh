@@ -3,6 +3,8 @@
 # POLWEL Production Deployment Script
 # Executed via Bitbucket Pipelines SSH
 
+# Run entire script as root
+sudo bash << 'EOF'
 set -e
 
 # Configuration
@@ -46,3 +48,5 @@ $PM2_PATH restart polwel-backend || $PM2_PATH start ecosystem.config.js --name p
 
 echo "✅ Production deployment completed!"
 $PM2_PATH status
+
+EOF
