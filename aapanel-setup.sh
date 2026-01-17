@@ -17,7 +17,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[INFO]${NC} $1"S
 }
 
 print_warning() {
