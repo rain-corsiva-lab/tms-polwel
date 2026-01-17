@@ -1,0 +1,21 @@
+image: node:20.10.0
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Production
+          script:
+            - apt-get update && apt-get install unzip -y
+            - apt-get install openssh-client -y
+            - echo $pem | base64 --decode > prod.pem
+            - chmod 400 prod.pem
+            - ssh -i prod.pem $ssh_name@$prod_ip 'bash -s' < execute-prod.sh
+    staging:
+      - step:
+          name: Staging
+          script:
+            - apt-get update && apt-get install unzip -y
+            - apt-get install openssh-client -y
+            - echo $stag_pem | base64 --decode > stag.pem
+            - chmod 400 stag.pem
+            - ssh -i stag.pem $ssh_name@$stag_ip 'bash -s' < execute-stag.sh
