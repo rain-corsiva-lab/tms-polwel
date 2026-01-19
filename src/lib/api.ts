@@ -13,12 +13,41 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
     }
   };
 
-  // Special handling: conflict details for trainer blockouts (HTTP 409)
-  if (original?.status === 409 && original?.data) {
+  // PRIORITY 1: Check HTTP status codes first (more reliable than message text)
+  
+  // 500-599: Server Errors
+  if (original?.status >= 500 && original?.status < 600) {
+    const serverError = new Error(
+      original?.data?.message || 
+      original?.data?.error || 
+      errorMessage || 
+      'A server error occurred. Please try again later.'
+    );
+    serverError.name = 'ServerError';
+    preserveProps(serverError);
+    console.error('🔴 Server Error (5xx):', {
+      status: original.status,
+      endpoint,
+      message: serverError.message,
+      data: original.data
+    });
+    return serverError;
+  }
+  
+  // 400-499: Client Errors (except 401/403 which are handled earlier)
+  if (original?.status === 404) {
+    const notFoundError = new Error('The requested resource was not found.');
+    notFoundError.name = 'NotFoundError';
+    preserveProps(notFoundError);
+    return notFoundError;
+  }
+  
+  if (original?.status === 409) {
+    // Special handling: conflict details for trainer blockouts
     try {
       const d = original.data;
-      let msg = d.message || d.error || errorMessage;
-      if (d.conflicts && Array.isArray(d.conflicts) && d.conflicts.length > 0) {
+      let msg = d?.message || d?.error || errorMessage;
+      if (d?.conflicts && Array.isArray(d.conflicts) && d.conflicts.length > 0) {
         const dates = d.conflicts
           .map((c: any) => (c.startDate === c.endDate ? c.startDate : `${c.startDate} to ${c.endDate}`))
           .slice(0, 5)
@@ -33,23 +62,45 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       e.name = 'ConflictError';
       preserveProps(e);
       return e;
-    } catch {}
+    } catch {
+      const conflictError = new Error(errorMessage);
+      conflictError.name = 'ConflictError';
+      preserveProps(conflictError);
+      return conflictError;
+    }
   }
   
-  // Network/Connection Errors
+  if (original?.status >= 400 && original?.status < 500) {
+    // Generic 4xx client error
+    const clientError = new Error(
+      original?.data?.message || 
+      original?.data?.error || 
+      errorMessage
+    );
+    clientError.name = 'ClientError';
+    preserveProps(clientError);
+    return clientError;
+  }
+  
+  // PRIORITY 2: Check message text for actual network/connection issues
+  
+  // True Network/Connection Errors (no HTTP response received)
   if (lowerMessage.includes('failed to fetch') || 
-      lowerMessage.includes('network') ||
+      lowerMessage.includes('network request failed') ||
       lowerMessage.includes('connection') ||
       lowerMessage.includes('cors') ||
       lowerMessage.includes('timeout') ||
       lowerMessage.includes('timed out') ||
       lowerMessage.includes('aborted') ||
       lowerMessage.includes('certificate') ||
-      lowerMessage.includes('ssl') ||
-      lowerMessage.includes('fetch')) {
+      lowerMessage.includes('ssl')) {
     const networkError = new Error('Unable to connect to the server. Please check your internet connection and try again.');
     networkError.name = 'NetworkError';
     preserveProps(networkError);
+    console.error('🔴 Network Error:', {
+      endpoint,
+      originalMessage: errorMessage
+    });
     return networkError;
   }
   
@@ -293,39 +344,52 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         endpoint,
         errorName: classifiedError.name,
         errorMessage: classifiedError.message,
+        errorStatus: (error as any)?.status,
         originalError: error.message,
         token: token ? 'Present' : 'Missing',
         apiBaseUrl: API_BASE_URL,
         environment: import.meta.env.MODE
       });
       
-      // Handle network errors with retry logic with exponential backoff
-      if (classifiedError.name === 'NetworkError') {
-        if (i < attempts.length - 1) {
-          const backoffDelay = Math.min(1000 * Math.pow(2, i), 3000); // Max 3 seconds
-          console.log(`Network error detected, retrying in ${backoffDelay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
-          continue;
-        } else {
-          // Final network error - throw user-friendly message
-          console.error('All network retry attempts failed');
-          throw classifiedError;
-        }
+      // Don't retry on authentication errors
+      if (classifiedError.name === 'AuthenticationError') {
+        throw classifiedError;
       }
       
-      // If permission error, show toast and soft redirect to /403
+      // Don't retry on permission errors
       if (classifiedError.name === 'PermissionError') {
-        // Do not auto-toast here; components performing explicit actions should toast.
-        // For full page loads, route guards will redirect to /403.
         if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/403')) {
           window.history.replaceState(null, '', '/403');
         }
         throw classifiedError;
       }
-
-      // Don't retry on authentication errors
-      if (classifiedError.name === 'AuthenticationError') {
+      
+      // Don't retry on server errors (500) - these need to be fixed on backend
+      if (classifiedError.name === 'ServerError') {
+        console.error('🔴 Server error detected - not retrying:', classifiedError.message);
         throw classifiedError;
+      }
+      
+      // Don't retry on client errors (400, 404, 409, etc) - these are request issues
+      if (classifiedError.name === 'ClientError' || 
+          classifiedError.name === 'NotFoundError' ||
+          classifiedError.name === 'ConflictError' ||
+          classifiedError.name === 'ValidationError') {
+        throw classifiedError;
+      }
+      
+      // ONLY retry on TRUE network errors (connection failures)
+      if (classifiedError.name === 'NetworkError') {
+        if (i < attempts.length - 1) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, i), 3000); // Max 3 seconds
+          console.log(`🔄 True network error detected, retrying in ${backoffDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          continue;
+        } else {
+          // Final network error - throw user-friendly message
+          console.error('❌ All network retry attempts failed');
+          throw classifiedError;
+        }
       }
       
       // For other errors, if this is the last attempt, throw the classified error

@@ -14,8 +14,17 @@ export const errorHandler = (
   let error = { ...err };
   error.message = err.message;
 
-  // Log error
-  console.error(err);
+  // Enhanced error logging with more context
+  console.error('🔴 Error Handler Triggered:', {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path,
+    query: req.query,
+    errorName: err.name,
+    errorMessage: err.message,
+    statusCode: err.statusCode,
+    stack: err.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines of stack
+  });
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -34,12 +43,42 @@ export const errorHandler = (
     const message = Object.values((err as any).errors).map((val: any) => val.message).join(', ');
     error = { message, statusCode: 400, name: 'ValidationError', isOperational: true };
   }
+  
+  // Prisma errors
+  if (err.name === 'PrismaClientKnownRequestError') {
+    const prismaError = err as any;
+    if (prismaError.code === 'P2002') {
+      error = { message: 'A record with this value already exists', statusCode: 400, name: 'ValidationError', isOperational: true };
+    } else if (prismaError.code === 'P2025') {
+      error = { message: 'Record not found', statusCode: 404, name: 'NotFoundError', isOperational: true };
+    } else {
+      error = { message: 'Database error occurred', statusCode: 500, name: 'DatabaseError', isOperational: false };
+    }
+  }
+  
+  // Prisma connection errors
+  if (err.name === 'PrismaClientInitializationError' || err.name === 'PrismaClientRustPanicError') {
+    console.error('🔴 Prisma Connection Error:', err);
+    error = { message: 'Database connection error. Please try again later.', statusCode: 503, name: 'DatabaseConnectionError', isOperational: false };
+  }
 
-  res.status(error.statusCode || 500).json({
+  const statusCode = error.statusCode || 500;
+  const responseBody = {
     success: false,
     error: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    code: err.name,
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      details: err 
+    }),
+  };
+
+  console.error('🔴 Error Response:', {
+    statusCode,
+    body: responseBody
   });
+
+  res.status(statusCode).json(responseBody);
 };
 
 export const createError = (message: string, statusCode: number): ApiError => {
