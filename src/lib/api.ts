@@ -41,6 +41,11 @@ const classifyAndFormatError = (error: any, endpoint: string): Error => {
       lowerMessage.includes('network') ||
       lowerMessage.includes('connection') ||
       lowerMessage.includes('cors') ||
+      lowerMessage.includes('timeout') ||
+      lowerMessage.includes('timed out') ||
+      lowerMessage.includes('aborted') ||
+      lowerMessage.includes('certificate') ||
+      lowerMessage.includes('ssl') ||
       lowerMessage.includes('fetch')) {
     const networkError = new Error('Unable to connect to the server. Please check your internet connection and try again.');
     networkError.name = 'NetworkError';
@@ -181,6 +186,9 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const config: RequestInit = {
     ...options,
     headers,
+    // Add timeout and keep-alive settings
+    signal: options.signal || AbortSignal.timeout(30000), // 30 second timeout
+    keepalive: true, // Keep connection alive for better performance
   };
 
   // Try different approaches to handle connection issues
@@ -291,14 +299,16 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
         environment: import.meta.env.MODE
       });
       
-      // Handle network errors with retry logic
+      // Handle network errors with retry logic with exponential backoff
       if (classifiedError.name === 'NetworkError') {
         if (i < attempts.length - 1) {
-          console.log(`Network error detected, trying alternative approach...`);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          const backoffDelay = Math.min(1000 * Math.pow(2, i), 3000); // Max 3 seconds
+          console.log(`Network error detected, retrying in ${backoffDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
           continue;
         } else {
           // Final network error - throw user-friendly message
+          console.error('All network retry attempts failed');
           throw classifiedError;
         }
       }

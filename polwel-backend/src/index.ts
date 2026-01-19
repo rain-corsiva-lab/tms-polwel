@@ -164,6 +164,36 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request timeout middleware - prevent hanging connections
+app.use((req, res, next) => {
+  // Set timeout to 30 seconds for all requests except file uploads
+  const timeout = req.path.includes('/uploads') ? 120000 : 30000; // 2 min for uploads, 30s for others
+  
+  req.setTimeout(timeout, () => {
+    console.error(`⏱️ Request timeout on ${req.method} ${req.path} after ${timeout}ms`);
+    if (!res.headersSent) {
+      res.status(408).json({
+        error: 'Request timeout',
+        message: 'The server took too long to respond. Please try again.',
+        code: 'REQUEST_TIMEOUT'
+      });
+    }
+  });
+  
+  res.setTimeout(timeout, () => {
+    console.error(`⏱️ Response timeout on ${req.method} ${req.path} after ${timeout}ms`);
+    if (!res.headersSent) {
+      res.status(504).json({
+        error: 'Gateway timeout',
+        message: 'The server took too long to process your request. Please try again.',
+        code: 'GATEWAY_TIMEOUT'
+      });
+    }
+  });
+  
+  next();
+});
+
 // Serve static files from uploads directory
 const uploadsPath = path.join(process.cwd(), 'uploads');
 app.use('/uploads', express.static(uploadsPath));
