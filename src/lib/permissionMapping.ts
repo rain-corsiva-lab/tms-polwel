@@ -60,6 +60,12 @@ const permissionNameMapping: Record<string, string> = {
   'waiver:create': 'waiver.create',
   'waiver:edit': 'waiver.edit',
   'waiver:delete': 'waiver.delete',
+
+  // Resource library module
+  'resource-library:view': 'resource-library.view',
+  'resource-library:create': 'resource-library.create',
+  'resource-library:edit': 'resource-library.edit',
+  'resource-library:delete': 'resource-library.delete',
 };
 
 export function mapFrontendPermissions(frontendPerms: string[]) {

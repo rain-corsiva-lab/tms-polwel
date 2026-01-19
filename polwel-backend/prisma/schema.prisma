@@ -67,6 +67,7 @@ model User {
   venuesCreated                   Venue[]
   courseRunsCancelled             CourseRun[]                     @relation("CourseRunCancelledBy")
   waiverReviews                   CourseRunLearner[]              @relation("WaiverReviewedBy")
+  resourceLibraryUploads          ResourceLibrary[]
 
   @@index([createdBy], map: "users_createdBy_fkey")
   @@index([organizationId], map: "users_organizationId_fkey")
@@ -814,4 +815,35 @@ enum BillingStatus {
   ALL_COMPLETED
   MIXED_STATUS
   ALL_INCOMPLETED
+}
+
+enum ResourceLibraryStatus {
+  DRAFT
+  PUBLISHED
+  DELETED
+}
+
+enum ResourceLibraryAudience {
+  TRAINING_COORDINATORS
+  ALL_USERS
+}
+
+model ResourceLibrary {
+  id              String                      @id @default(cuid())
+  title           String
+  description     String?                     @db.Text
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  mimeType        String?
+  status          ResourceLibraryStatus       @default(DRAFT)
+  targetAudience  ResourceLibraryAudience     @default(TRAINING_COORDINATORS)
+  uploadedBy      String?
+  uploader        User?                       @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  deletedAt       DateTime?
+  publishedAt     DateTime?
+
+  @@map("resource_library")
 }

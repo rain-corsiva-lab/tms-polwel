@@ -279,6 +279,42 @@ class AuthService {
     return userData ? JSON.parse(userData) : null;
   }
 
+  /**
+   * Refresh user data from backend to get updated permissions
+   * Call this after permission changes to update the UI immediately
+   */
+  async refreshUser(): Promise<User> {
+    // Fetch user profile
+    const profileResponse = await this.apiRequest('/profile');
+    const profileData = profileResponse.data || profileResponse;
+    
+    // Fetch user permissions separately
+    let permissions: string[] = [];
+    try {
+      const permResponse = await this.apiRequest(`/polwel-users/${profileData.id}`);
+      const userDetail = permResponse.user || permResponse.data || permResponse;
+      if (userDetail.permissions && Array.isArray(userDetail.permissions)) {
+        permissions = userDetail.permissions
+          .filter((p: any) => p.granted !== false)
+          .map((p: any) => typeof p === 'string' ? p : p.permissionName)
+          .filter(Boolean);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch permissions during refresh:', e);
+      // Keep existing permissions if fetch fails
+      const currentUser = this.getUser();
+      permissions = currentUser?.permissions || [];
+    }
+    
+    const userData = {
+      ...profileData,
+      permissions,
+    };
+    localStorage.setItem(this.userKey, JSON.stringify(userData));
+    this.broadcastAuthUpdate();
+    return userData;
+  }
+
   getPendingMfa(): PendingMfaChallenge | null {
     const pending = localStorage.getItem(this.pendingMfaKey);
     if (!pending) {

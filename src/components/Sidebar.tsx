@@ -16,6 +16,7 @@ import {
   FileWarning,
   PanelLeftClose,
   PanelLeftOpen,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -65,7 +66,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
           cn(
             "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
             isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]",
-            isCollapsed && "justify-center"
+            isCollapsed && "justify-center",
           )
         }
       >
@@ -183,7 +184,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                         className={({ isActive }) =>
                           cn(
                             "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
+                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]",
                           )
                         }
                       >
@@ -209,7 +210,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                         className={({ isActive }) =>
                           cn(
                             "flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
                           )
                         }
                       >
@@ -244,7 +245,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                         className={({ isActive }) =>
                           cn(
                             "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
+                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]",
                           )
                         }
                       >
@@ -270,7 +271,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                         className={({ isActive }) =>
                           cn(
                             "flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
+                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]",
                           )
                         }
                       >
@@ -309,6 +310,13 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
           {postRunManagementVisible && (
             <Can I="view" a="PostCourseRun">
               <NavItem to="/waiver-requests" icon={FileWarning} label="Waiver Requests" />
+            </Can>
+          )}
+
+          {/* Resource Library - Standalone Menu Item */}
+          {postRunManagementVisible && (
+            <Can I="view" a="ResourceLibrary">
+              <NavItem to="/resource-library" icon={Library} label="Resource Library" />
             </Can>
           )}
         </TooltipProvider>

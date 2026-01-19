@@ -2022,6 +2022,81 @@ export const waiversApi = {
   },
 };
 
+// Resource Library API
+export const resourceLibraryApi = {
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    targetAudience?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/resource-library?${queryString}` : '/resource-library';
+    
+    return apiRequest(endpoint);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest(`/resource-library/${id}`);
+  },
+
+  create: async (data: {
+    title: string;
+    description?: string;
+    fileName: string;
+    fileUrl: string;
+    fileSize?: number;
+    mimeType?: string;
+    targetAudience?: string;
+    status?: string;
+  }) => {
+    return apiRequest('/resource-library', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: string, data: {
+    title?: string;
+    description?: string;
+    fileName?: string;
+    fileUrl?: string;
+    fileSize?: number;
+    mimeType?: string;
+    targetAudience?: string;
+    status?: string;
+  }) => {
+    return apiRequest(`/resource-library/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateStatus: async (id: string, status: string) => {
+    return apiRequest(`/resource-library/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest(`/resource-library/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 export {
   API_BASE_URL,
 };
@@ -2039,4 +2114,5 @@ export default {
   trainerDashboardApi,
   billingReportsApi,
   waiversApi,
+  resourceLibraryApi,
 };

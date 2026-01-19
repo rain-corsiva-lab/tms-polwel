@@ -35,6 +35,7 @@ import PostRunManagement from "./pages/PostRunManagement";
 import PostRunDetail from "./pages/PostRunDetail";
 import BillingReports from "./pages/BillingReports";
 import WaiverRequests from "./pages/WaiverRequests";
+import ResourceLibrary from "./pages/ResourceLibrary";
 
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
@@ -260,6 +261,16 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredPermissions={["post-course-run.view"]}>
                     <WaiverRequests />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Resource Library */}
+              <Route
+                path="resource-library"
+                element={
+                  <ProtectedRoute requiredPermissions={["resource-library.view"]}>
+                    <ResourceLibrary />
                   </ProtectedRoute>
                 }
               />

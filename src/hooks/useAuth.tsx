@@ -14,6 +14,7 @@ interface AuthContextType {
   verifyMfaCode: (code: string) => Promise<AuthResponse>;
   resendMfaCode: () => Promise<PendingMfaChallenge>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   loading: boolean;
   hasRole: (roleOrRoles: string | string[]) => boolean;
   canAccessOrganization: (orgId: string) => boolean;
@@ -132,6 +133,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const updatedUser = await authService.refreshUser();
+      setUser(updatedUser);
+      // The ability will automatically update due to useMemo dependency
+      toast.success("Permissions updated");
+    } catch (error) {
+      console.error("Failed to refresh user permissions:", error);
+      toast.error("Failed to refresh permissions");
+    }
+  };
+
   const hasRole = (roleOrRoles: string | string[]) => {
     const userObj = authService.getUser();
     if (!userObj) return false;
@@ -192,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyMfaCode,
         resendMfaCode,
         logout,
+        refreshUser,
         loading,
         hasRole,
         canAccessOrganization,
