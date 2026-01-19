@@ -258,7 +258,29 @@ const startServer = () => {
   server.headersTimeout = 66000; // 66 seconds (must be longer than keepAliveTimeout)
   
   console.log('⏱️  Server timeouts configured: keepAlive=65s, headers=66s');
+  
+  // Handle server errors
+  server.on('error', (error: any) => {
+    console.error('🔴 Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+      process.exit(1);
+    }
+  });
 };
+
+// Global error handlers for uncaught errors
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('🔴 Unhandled Rejection at:', promise);
+  console.error('🔴 Reason:', reason);
+  // Don't exit process - log and continue
+});
+
+process.on('uncaughtException', (error: Error) => {
+  console.error('🔴 Uncaught Exception:', error);
+  console.error('🔴 Stack:', error.stack);
+  // Log but don't exit - let PM2 handle restart if needed
+});
 
 startServer();
 
