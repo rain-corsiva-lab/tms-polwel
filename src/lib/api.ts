@@ -2116,14 +2116,14 @@ export const reportingApi = {
     page?: number;
     limit?: number;
     search?: string;
-    organization?: string;
+    organizationId?: string;
     status?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
-    if (params.organization) queryParams.append('organization', params.organization);
+    if (params.organizationId) queryParams.append('organizationId', params.organizationId);
     if (params.status) queryParams.append('status', params.status);
     return apiRequest(`/reporting/runs-by-organisation?${queryParams}`);
   },
@@ -2132,14 +2132,14 @@ export const reportingApi = {
     page?: number;
     limit?: number;
     search?: string;
-    trainer?: string;
+    trainerId?: string;
     status?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
-    if (params.trainer) queryParams.append('trainer', params.trainer);
+    if (params.trainerId) queryParams.append('trainerId', params.trainerId);
     if (params.status) queryParams.append('status', params.status);
     return apiRequest(`/reporting/runs-by-trainer?${queryParams}`);
   },
@@ -2149,14 +2149,14 @@ export const reportingApi = {
     limit?: number;
     search?: string;
     status?: string;
-    organization?: string;
+    organizationId?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
     if (params.status) queryParams.append('status', params.status);
-    if (params.organization) queryParams.append('organization', params.organization);
+    if (params.organizationId) queryParams.append('organizationId', params.organizationId);
     return apiRequest(`/reporting/runs-by-status?${queryParams}`);
   },
 
@@ -2164,16 +2164,16 @@ export const reportingApi = {
     page?: number;
     limit?: number;
     search?: string;
-    month?: string;
-    year?: string;
+    startDate?: string;
+    endDate?: string;
     status?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
-    if (params.month) queryParams.append('month', params.month);
-    if (params.year) queryParams.append('year', params.year);
+    if (params.startDate) queryParams.append('startDate', params.startDate);
+    if (params.endDate) queryParams.append('endDate', params.endDate);
     if (params.status) queryParams.append('status', params.status);
     return apiRequest(`/reporting/runs-by-period?${queryParams}`);
   },
@@ -2182,14 +2182,14 @@ export const reportingApi = {
     page?: number;
     limit?: number;
     search?: string;
-    venue?: string;
+    venueId?: string;
     status?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
-    if (params.venue) queryParams.append('venue', params.venue);
+    if (params.venueId) queryParams.append('venueId', params.venueId);
     if (params.status) queryParams.append('status', params.status);
     return apiRequest(`/reporting/runs-by-venue?${queryParams}`);
   },

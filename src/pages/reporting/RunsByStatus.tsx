@@ -79,9 +79,21 @@ export default function RunsByStatus() {
     fetchFilterOptions();
   }, []);
 
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchRuns();
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Immediate refetch on filter changes
   useEffect(() => {
     fetchRuns();
-  }, [page, search, status, organization]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, status, organization]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -95,13 +107,15 @@ export default function RunsByStatus() {
   const fetchRuns = async () => {
     setLoading(true);
     try {
+      console.log("RunsByStatus - Fetching with:", { page, search, status, organizationId: organization });
       const response = await reportingApi.getRunsByStatus({
         page,
         limit,
         ...(search && { search }),
         ...(status && { status }),
-        ...(organization && { organization }),
+        ...(organization && { organizationId: organization }),
       });
+      console.log("RunsByStatus - Response:", response);
       setRuns(response.data);
       setTotal(response.pagination.total);
     } catch (error: any) {
@@ -128,7 +142,7 @@ export default function RunsByStatus() {
         limit: 10000,
         ...(search && { search }),
         ...(status && { status }),
-        ...(organization && { organization }),
+        ...(organization && { organizationId: organization }),
       });
       const allRuns = response.data;
 

@@ -357,7 +357,7 @@ export const getQuarterDetails = async (req: AuthenticatedRequest, res: Response
 // Get Runs by Organisation
 export const getRunsByOrganisation = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { organizationId, search, page = '1', limit = '20' } = req.query;
+    const { organizationId, status, search, page = '1', limit = '20' } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -368,6 +368,10 @@ export const getRunsByOrganisation = async (req: AuthenticatedRequest, res: Resp
 
     if (organizationId && typeof organizationId === 'string') {
       where.clientOrganizationId = organizationId;
+    }
+
+    if (status && typeof status === 'string') {
+      where.status = status as CourseStatus;
     }
 
     if (search && typeof search === 'string') {
@@ -473,7 +477,7 @@ export const getRunsByOrganisation = async (req: AuthenticatedRequest, res: Resp
 // Get Runs by Trainer
 export const getRunsByTrainer = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { trainerId, search, page = '1', limit = '20' } = req.query;
+    const { trainerId, status, search, page = '1', limit = '20' } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -488,6 +492,10 @@ export const getRunsByTrainer = async (req: AuthenticatedRequest, res: Response)
           trainerId: trainerId,
         },
       };
+    }
+
+    if (status && typeof status === 'string') {
+      where.status = status as CourseStatus;
     }
 
     if (search && typeof search === 'string') {
@@ -672,7 +680,7 @@ export const getRunsByStatus = async (req: AuthenticatedRequest, res: Response) 
 // Get Runs by Period
 export const getRunsByPeriod = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { startDate, endDate, search, page = '1', limit = '20' } = req.query;
+    const { startDate, endDate, status, search, page = '1', limit = '20' } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -691,6 +699,10 @@ export const getRunsByPeriod = async (req: AuthenticatedRequest, res: Response) 
       where.endDatetime = {
         lte: new Date(endDate),
       };
+    }
+
+    if (status && typeof status === 'string') {
+      where.status = status as CourseStatus;
     }
 
     if (search && typeof search === 'string') {
@@ -764,7 +776,7 @@ export const getRunsByPeriod = async (req: AuthenticatedRequest, res: Response) 
 // Get Runs by Venue
 export const getRunsByVenue = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { venueId, search, page = '1', limit = '20' } = req.query;
+    const { venueId, status, search, page = '1', limit = '20' } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -775,6 +787,10 @@ export const getRunsByVenue = async (req: AuthenticatedRequest, res: Response) =
 
     if (venueId && typeof venueId === 'string') {
       where.venueId = venueId;
+    }
+
+    if (status && typeof status === 'string') {
+      where.status = status as CourseStatus;
     }
 
     if (search && typeof search === 'string') {

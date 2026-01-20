@@ -85,9 +85,21 @@ export default function RunsByVenue() {
     fetchFilterOptions();
   }, []);
 
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchRuns();
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Immediate refetch on filter changes
   useEffect(() => {
     fetchRuns();
-  }, [page, search, venue, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, venue, status]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -101,13 +113,15 @@ export default function RunsByVenue() {
   const fetchRuns = async () => {
     setLoading(true);
     try {
+      console.log("RunsByVenue - Fetching with:", { page, search, venueId: venue, status });
       const response = await reportingApi.getRunsByVenue({
         page,
         limit,
         ...(search && { search }),
-        ...(venue && { venue }),
+        ...(venue && { venueId: venue }),
         ...(status && { status }),
       });
+      console.log("RunsByVenue - Response:", response);
       setRuns(response.data);
       setTotal(response.pagination.total);
     } catch (error: any) {
@@ -133,7 +147,7 @@ export default function RunsByVenue() {
         page: 1,
         limit: 10000,
         ...(search && { search }),
-        ...(venue && { venue }),
+        ...(venue && { venueId: venue }),
         ...(status && { status }),
       });
       const allRuns = response.data;

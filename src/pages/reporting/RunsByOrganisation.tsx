@@ -79,9 +79,21 @@ export default function RunsByOrganisation() {
     fetchFilterOptions();
   }, []);
 
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchRuns();
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Immediate refetch on filter changes
   useEffect(() => {
     fetchRuns();
-  }, [page, search, organization, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, organization, status]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -95,21 +107,15 @@ export default function RunsByOrganisation() {
   const fetchRuns = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...(search && { search }),
-        ...(organization && { organization }),
-        ...(status && { status }),
-      });
-
+      console.log("RunsByOrganisation - Fetching with:", { page, search, organizationId: organization, status });
       const response = await reportingApi.getRunsByOrganisation({
         page,
         limit,
         ...(search && { search }),
-        ...(organization && { organization }),
+        ...(organization && { organizationId: organization }),
         ...(status && { status }),
       });
+      console.log("RunsByOrganisation - Response:", response);
       setRuns(response.data);
       setTotal(response.pagination.total);
     } catch (error: any) {
@@ -135,7 +141,7 @@ export default function RunsByOrganisation() {
         page: 1,
         limit: 10000,
         ...(search && { search }),
-        ...(organization && { organization }),
+        ...(organization && { organizationId: organization }),
         ...(status && { status }),
       });
       const allRuns = response.data;

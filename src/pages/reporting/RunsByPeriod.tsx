@@ -37,7 +37,7 @@ export default function RunsByPeriod() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [month, setMonth] = useState("");
-  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [year, setYear] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -96,9 +96,21 @@ export default function RunsByPeriod() {
     fetchFilterOptions();
   }, []);
 
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchRuns();
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Immediate refetch on filter changes
   useEffect(() => {
     fetchRuns();
-  }, [page, search, month, year, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, month, year, status]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -112,12 +124,31 @@ export default function RunsByPeriod() {
   const fetchRuns = async () => {
     setLoading(true);
     try {
+      // Convert month/year to startDate/endDate
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+
+      if (year) {
+        if (month) {
+          // Specific month and year
+          const monthNum = parseInt(month);
+          const yearNum = parseInt(year);
+          startDate = new Date(yearNum, monthNum - 1, 1).toISOString();
+          endDate = new Date(yearNum, monthNum, 0, 23, 59, 59).toISOString();
+        } else {
+          // Whole year
+          const yearNum = parseInt(year);
+          startDate = new Date(yearNum, 0, 1).toISOString();
+          endDate = new Date(yearNum, 11, 31, 23, 59, 59).toISOString();
+        }
+      }
+
       const response = await reportingApi.getRunsByPeriod({
         page,
         limit,
         ...(search && { search }),
-        ...(month && { month }),
-        ...(year && { year }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
         ...(status && { status }),
       });
       setRuns(response.data);
@@ -141,12 +172,31 @@ export default function RunsByPeriod() {
 
   const handleExportToExcel = async () => {
     try {
+      // Convert month/year to startDate/endDate
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+
+      if (year) {
+        if (month) {
+          // Specific month and year
+          const monthNum = parseInt(month);
+          const yearNum = parseInt(year);
+          startDate = new Date(yearNum, monthNum - 1, 1).toISOString();
+          endDate = new Date(yearNum, monthNum, 0, 23, 59, 59).toISOString();
+        } else {
+          // Whole year
+          const yearNum = parseInt(year);
+          startDate = new Date(yearNum, 0, 1).toISOString();
+          endDate = new Date(yearNum, 11, 31, 23, 59, 59).toISOString();
+        }
+      }
+
       const response = await reportingApi.getRunsByPeriod({
         page: 1,
         limit: 10000,
         ...(search && { search }),
-        ...(month && { month }),
-        ...(year && { year }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
         ...(status && { status }),
       });
       const allRuns = response.data;
@@ -218,16 +268,17 @@ export default function RunsByPeriod() {
                 />
               </div>
               <Select
-                value={year}
+                value={year || "all"}
                 onValueChange={(value) => {
-                  setYear(value);
+                  setYear(value === "all" ? "" : value);
                   setPage(1);
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Year" />
+                  <SelectValue placeholder="All Years" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
                   {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                     <SelectItem key={y} value={y.toString()}>
                       {y}

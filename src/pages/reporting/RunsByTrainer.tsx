@@ -80,9 +80,21 @@ export default function RunsByTrainer() {
     fetchFilterOptions();
   }, []);
 
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchRuns();
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Immediate refetch on filter changes
   useEffect(() => {
     fetchRuns();
-  }, [page, search, trainer, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, trainer, status]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -96,13 +108,15 @@ export default function RunsByTrainer() {
   const fetchRuns = async () => {
     setLoading(true);
     try {
+      console.log("RunsByTrainer - Fetching with:", { page, search, trainerId: trainer, status });
       const response = await reportingApi.getRunsByTrainer({
         page,
         limit,
         ...(search && { search }),
-        ...(trainer && { trainer }),
+        ...(trainer && { trainerId: trainer }),
         ...(status && { status }),
       });
+      console.log("RunsByTrainer - Response:", response);
       setRuns(response.data);
       setTotal(response.pagination.total);
     } catch (error: any) {
@@ -128,7 +142,7 @@ export default function RunsByTrainer() {
         page: 1,
         limit: 10000,
         ...(search && { search }),
-        ...(trainer && { trainer }),
+        ...(trainer && { trainerId: trainer }),
         ...(status && { status }),
       });
       const allRuns = response.data;
