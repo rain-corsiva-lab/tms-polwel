@@ -100,6 +100,13 @@ const permissionNameMapping: Record<string, string> = {
   'resource-library:update': 'resource-library.edit',
   'resource-library:delete': 'resource-library.delete',
 
+  // Reporting module
+  'reporting:view': 'reporting.view',
+  'reporting:create': 'reporting.create',
+  'reporting:edit': 'reporting.edit',
+  'reporting:update': 'reporting.edit',
+  'reporting:delete': 'reporting.delete',
+
   // Optional calendar support (front may send legacy key)
   'calendar:view': 'calendar.view',
   'calendar:create': 'calendar.create',

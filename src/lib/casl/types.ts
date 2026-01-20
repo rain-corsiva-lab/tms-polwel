@@ -25,6 +25,7 @@ export type Subject =
   | 'Report'            // Billing & Reports
   | 'Waiver'            // Waiver Requests
   | 'ResourceLibrary'   // Resource Library
+  | 'Reporting'         // Reporting Dashboard
   | 'Calendar'          // Training calendar
   | 'all';              // special subject: applies to all resources
 
@@ -48,6 +49,7 @@ export const MODULE_TO_SUBJECT: Record<string, Subject> = {
   'reports': 'Report',
   'waiver': 'Waiver',
   'resource-library': 'ResourceLibrary',
+  'reporting': 'Reporting',
   'calendar': 'Calendar',
 };
 
@@ -61,6 +63,8 @@ export const SUBJECT_TO_MODULE: Record<Subject, string> = {
   'PostCourseRun': 'post-course-run',
   'Report': 'reports',
   'Waiver': 'waiver',
+  'ResourceLibrary': 'resource-library',
+  'Reporting': 'reporting',
   'Calendar': 'calendar',
   'all': 'all',
 };

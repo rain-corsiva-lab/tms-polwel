@@ -2097,6 +2097,112 @@ export const resourceLibraryApi = {
   },
 };
 
+// Reporting API
+export const reportingApi = {
+  getBoardReport: async (year?: number) => {
+    const params = year ? `?year=${year}` : '';
+    return apiRequest(`/reporting/board-report${params}`);
+  },
+
+  getBoardReportAll: async () => {
+    return apiRequest('/reporting/board-report-all');
+  },
+
+  getQuarterDetails: async (quarter: string, year: number) => {
+    return apiRequest(`/reporting/quarter-details?quarter=${quarter}&year=${year}`);
+  },
+
+  getRunsByOrganisation: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    organization?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.organization) queryParams.append('organization', params.organization);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-organisation?${queryParams}`);
+  },
+
+  getRunsByTrainer: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    trainer?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.trainer) queryParams.append('trainer', params.trainer);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-trainer?${queryParams}`);
+  },
+
+  getRunsByStatus: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    organization?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.organization) queryParams.append('organization', params.organization);
+    return apiRequest(`/reporting/runs-by-status?${queryParams}`);
+  },
+
+  getRunsByPeriod: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    month?: string;
+    year?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.month) queryParams.append('month', params.month);
+    if (params.year) queryParams.append('year', params.year);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-period?${queryParams}`);
+  },
+
+  getRunsByVenue: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    venue?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.venue) queryParams.append('venue', params.venue);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-venue?${queryParams}`);
+  },
+
+  getRunDetails: async (id: string) => {
+    return apiRequest(`/reporting/run-details/${id}`);
+  },
+
+  getFilterOptions: async () => {
+    return apiRequest('/reporting/filter-options');
+  },
+};
+
 export {
   API_BASE_URL,
 };
@@ -2115,4 +2221,5 @@ export default {
   billingReportsApi,
   waiversApi,
   resourceLibraryApi,
+  reportingApi,
 };

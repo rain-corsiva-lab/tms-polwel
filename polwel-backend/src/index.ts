@@ -41,6 +41,7 @@ import uploadsRoutes from './routes/uploads';
 import { startCourseRunStatusJob, evaluateCourseRunStatusesNow } from './jobs/courseRunStatusJob';
 import dashboardRoutes from './routes/dashboard';
 import resourceLibraryRoutes from './routes/resourceLibrary';
+import reportingRoutes from './routes/reporting';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -234,6 +235,7 @@ app.use('/api/waivers', waiverRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/resource-library', resourceLibraryRoutes);
+app.use('/api/reporting', reportingRoutes);
 
 // Error handling middleware
 app.use(errorLogger); // Add error logging before error handlers

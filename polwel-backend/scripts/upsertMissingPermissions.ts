@@ -60,6 +60,12 @@ export const PERMISSIONS: Perm[] = [
   { name: 'waiver.edit', description: 'Edit waiver requests', module: 'Waiver Requests', action: 'update' },
   { name: 'waiver.delete', description: 'Delete waiver requests', module: 'Waiver Requests', action: 'delete' },
 
+  // Reporting module → reporting.* permissions
+  { name: 'reporting.view', description: 'View reports', module: 'Reporting', action: 'read' },
+  { name: 'reporting.create', description: 'Create reports', module: 'Reporting', action: 'create' },
+  { name: 'reporting.edit', description: 'Edit reports', module: 'Reporting', action: 'update' },
+  { name: 'reporting.delete', description: 'Delete reports', module: 'Reporting', action: 'delete' },
+
 ];
 
 async function main() {

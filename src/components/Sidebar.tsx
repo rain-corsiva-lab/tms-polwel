@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Library,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -317,6 +318,13 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
           {postRunManagementVisible && (
             <Can I="view" a="ResourceLibrary">
               <NavItem to="/resource-library" icon={Library} label="Resource Library" />
+            </Can>
+          )}
+
+          {/* Reporting - Standalone Menu Item */}
+          {postRunManagementVisible && (
+            <Can I="view" a="Reporting">
+              <NavItem to="/reporting" icon={BarChart3} label="Reporting" />
             </Can>
           )}
         </TooltipProvider>

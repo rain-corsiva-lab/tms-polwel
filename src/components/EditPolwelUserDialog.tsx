@@ -29,7 +29,8 @@ type ModuleKey =
   | "post-course-run"
   | "billing-reports"
   | "waiver"
-  | "resource-library";
+  | "resource-library"
+  | "reporting";
 
 type UserPermissions = Record<ModuleKey, ModulePermissions>;
 
@@ -43,6 +44,7 @@ const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean
   "billing-reports": { label: "Billing Reports" },
   waiver: { label: "Waiver Requests" },
   "resource-library": { label: "Resource Library" },
+  reporting: { label: "Reporting" },
 };
 
 const createDefaultPermissions = (): UserPermissions => ({
@@ -55,6 +57,7 @@ const createDefaultPermissions = (): UserPermissions => ({
   "billing-reports": { view: false, create: false, edit: false, delete: false },
   waiver: { view: false, create: false, edit: false, delete: false },
   "resource-library": { view: false, create: false, edit: false, delete: false },
+  reporting: { view: false, create: false, edit: false, delete: false },
 });
 
 interface PolwelUser {
@@ -118,6 +121,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       "billing-reports": "billing-reports", // Also support direct billing-reports key
       waiver: "waiver", // Waiver module
       waivers: "waiver", // Alternate naming
+      reporting: "reporting", // Reporting module
       "resource-library": "resource-library", // Resource Library module
       // Handle malformed database entries:
       post: "post-course-run", // DB has "post.course.run.*" malformed entries
