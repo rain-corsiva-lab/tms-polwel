@@ -164,6 +164,36 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request timeout middleware - prevent hanging connections
+app.use((req, res, next) => {
+  // Set timeout to 30 seconds for all requests except file uploads
+  const timeout = req.path.includes('/uploads') ? 120000 : 30000; // 2 min for uploads, 30s for others
+  
+  req.setTimeout(timeout, () => {
+    console.error(`⏱️ Request timeout on ${req.method} ${req.path} after ${timeout}ms`);
+    if (!res.headersSent) {
+      res.status(408).json({
+        error: 'Request timeout',
+        message: 'The server took too long to respond. Please try again.',
+        code: 'REQUEST_TIMEOUT'
+      });
+    }
+  });
+  
+  res.setTimeout(timeout, () => {
+    console.error(`⏱️ Response timeout on ${req.method} ${req.path} after ${timeout}ms`);
+    if (!res.headersSent) {
+      res.status(504).json({
+        error: 'Gateway timeout',
+        message: 'The server took too long to process your request. Please try again.',
+        code: 'GATEWAY_TIMEOUT'
+      });
+    }
+  });
+  
+  next();
+});
+
 // Serve static files from uploads directory
 const uploadsPath = path.join(process.cwd(), 'uploads');
 app.use('/uploads', express.static(uploadsPath));
@@ -228,7 +258,29 @@ const startServer = () => {
   server.headersTimeout = 66000; // 66 seconds (must be longer than keepAliveTimeout)
   
   console.log('⏱️  Server timeouts configured: keepAlive=65s, headers=66s');
+  
+  // Handle server errors
+  server.on('error', (error: any) => {
+    console.error('🔴 Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+      process.exit(1);
+    }
+  });
 };
+
+// Global error handlers for uncaught errors
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('🔴 Unhandled Rejection at:', promise);
+  console.error('🔴 Reason:', reason);
+  // Don't exit process - log and continue
+});
+
+process.on('uncaughtException', (error: Error) => {
+  console.error('🔴 Uncaught Exception:', error);
+  console.error('🔴 Stack:', error.stack);
+  // Log but don't exit - let PM2 handle restart if needed
+});
 
 startServer();
 

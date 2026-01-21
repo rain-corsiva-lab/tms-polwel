@@ -52,6 +52,8 @@ export const coursesController = {
   // Get all courses with pagination and filtering
   async getCourses(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
+      console.log('📥 getCourses called with query:', req.query);
+
       const {
         page = '1',
         limit = '10',
@@ -62,47 +64,70 @@ export const coursesController = {
         sortOrder = 'desc'
       } = req.query;
 
-      const pageNum = parseInt(page as string);
-      const limitNum = parseInt(limit as string);
+      // Validate and sanitize pagination parameters
+      const pageNum = Math.max(1, parseInt(page as string) || 1);
+      const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 10)); // Max 200, min 1
       const skip = (pageNum - 1) * limitNum;
+
+      console.log('📊 Pagination:', { pageNum, limitNum, skip });
+
+      // Validate sortBy field - only allow safe fields
+      const allowedSortFields = ['createdAt', 'updatedAt', 'title', 'category', 'status'];
+      const safeSortBy = allowedSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+      
+      // Validate sortOrder
+      const safeSortOrder = (sortOrder === 'asc' || sortOrder === 'desc') ? sortOrder : 'desc';
+
+      console.log('🔄 Sort:', { sortBy: safeSortBy, sortOrder: safeSortOrder });
 
       // Build where clause
       const where: any = {};
 
-      if (search) {
+      if (search && typeof search === 'string' && search.trim()) {
+        // MySQL is case-insensitive by default for contains
         where.OR = [
-          { title: { contains: search as string } },
-          { description: { contains: search as string } },
-          { category: { contains: search as string } }
+          { title: { contains: search.trim() } },
+          { description: { contains: search.trim() } },
+          { category: { contains: search.trim() } }
         ];
       }
 
-      if (category && category !== 'all') {
-        where.category = category as string;
+      if (category && category !== 'all' && typeof category === 'string') {
+        where.category = category;
       }
 
-      if (certificates && certificates !== 'all') {
-        where.certificates = certificates as string;
+      if (certificates && certificates !== 'all' && typeof certificates === 'string') {
+        where.certificates = certificates;
       }
 
-      // Get courses
-      const courses = await prisma.course.findMany({
-        where,
-        orderBy: {
-          [sortBy as string]: sortOrder as 'asc' | 'desc'
-        },
-        skip,
-        take: limitNum
-      });
+      console.log('🔍 Where clause:', JSON.stringify(where, null, 2));
 
-      // Get total count for pagination
-      const totalCourses = await prisma.course.count({ where });
+      // Get courses with error handling for database query
+      let courses, totalCourses;
+      try {
+        courses = await prisma.course.findMany({
+          where,
+          orderBy: {
+            [safeSortBy]: safeSortOrder
+          },
+          skip,
+          take: limitNum
+        });
 
-  const coursesWithMetrics = courses; // Metrics removed per new simplified model
+        // Get total count for pagination
+        totalCourses = await prisma.course.count({ where });
+        
+        console.log('✅ Query successful:', { coursesCount: courses.length, totalCourses });
+      } catch (dbError) {
+        console.error('🔴 Database query failed:', dbError);
+        throw new Error(`Database query failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}`);
+      }
+      
+      const coursesWithMetrics = courses; // Metrics removed per new simplified model
 
       const totalPages = Math.ceil(totalCourses / limitNum);
 
-      return res.json({
+      const responseData = {
         success: true,
         courses: coursesWithMetrics,
         pagination: {
@@ -112,13 +137,26 @@ export const coursesController = {
           hasNext: pageNum < totalPages,
           hasPrev: pageNum > 1
         }
+      };
+
+      console.log('📤 Sending response:', { 
+        coursesCount: coursesWithMetrics.length, 
+        pagination: responseData.pagination 
       });
+
+      return res.json(responseData);
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error('🔴 Error in getCourses:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch courses',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
       });
     }
   },
