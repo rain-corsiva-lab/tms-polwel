@@ -48,6 +48,24 @@ export const PERMISSIONS: Perm[] = [
   { name: 'post-course-run.edit', description: 'Edit post course run artefacts', module: 'Post Course Run', action: 'update' },
   { name: 'post-course-run.delete', description: 'Delete post course run artefacts', module: 'Post Course Run', action: 'delete' },
 
+  // Resource Library module → resource-library.* permissions
+  { name: 'resource-library.view', description: 'View resource library resources', module: 'Resource Library', action: 'read' },
+  { name: 'resource-library.create', description: 'Create resource library resources', module: 'Resource Library', action: 'create' },
+  { name: 'resource-library.edit', description: 'Edit resource library resources', module: 'Resource Library', action: 'update' },
+  { name: 'resource-library.delete', description: 'Delete resource library resources', module: 'Resource Library', action: 'delete' },
+
+  // Waiver module → waiver.* permissions
+  { name: 'waiver.view', description: 'View waiver requests', module: 'Waiver Requests', action: 'read' },
+  { name: 'waiver.create', description: 'Create waiver requests', module: 'Waiver Requests', action: 'create' },
+  { name: 'waiver.edit', description: 'Edit waiver requests', module: 'Waiver Requests', action: 'update' },
+  { name: 'waiver.delete', description: 'Delete waiver requests', module: 'Waiver Requests', action: 'delete' },
+
+  // Reporting module → reporting.* permissions
+  { name: 'reporting.view', description: 'View reports', module: 'Reporting', action: 'read' },
+  { name: 'reporting.create', description: 'Create reports', module: 'Reporting', action: 'create' },
+  { name: 'reporting.edit', description: 'Edit reports', module: 'Reporting', action: 'update' },
+  { name: 'reporting.delete', description: 'Delete reports', module: 'Reporting', action: 'delete' },
+
 ];
 
 async function main() {

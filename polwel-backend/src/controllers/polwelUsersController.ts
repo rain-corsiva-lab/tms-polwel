@@ -86,6 +86,27 @@ const permissionNameMapping: Record<string, string> = {
   'billing-reports:update': 'reports.edit',
   'billing-reports:delete': 'reports.delete',
 
+  // Waiver module
+  'waiver:view': 'waiver.view',
+  'waiver:create': 'waiver.create',
+  'waiver:edit': 'waiver.edit',
+  'waiver:update': 'waiver.edit',
+  'waiver:delete': 'waiver.delete',
+
+  // Resource Library module
+  'resource-library:view': 'resource-library.view',
+  'resource-library:create': 'resource-library.create',
+  'resource-library:edit': 'resource-library.edit',
+  'resource-library:update': 'resource-library.edit',
+  'resource-library:delete': 'resource-library.delete',
+
+  // Reporting module
+  'reporting:view': 'reporting.view',
+  'reporting:create': 'reporting.create',
+  'reporting:edit': 'reporting.edit',
+  'reporting:update': 'reporting.edit',
+  'reporting:delete': 'reporting.delete',
+
   // Optional calendar support (front may send legacy key)
   'calendar:view': 'calendar.view',
   'calendar:create': 'calendar.create',
@@ -179,8 +200,10 @@ const mapPermissionNames = (frontendPermissions: string[]): string[] => {
     }
 
     // Normalize common frontend formats into dot-style heuristically
+    // IMPORTANT: Only replace colons with dots, NOT hyphens!
+    // Hyphens are part of module names like "resource-library" and "post-course-run"
     const norm = String(permission).toLowerCase();
-    const dot1 = norm.replace(/:/g, '.').replace(/-/g, '.');
+    const dot1 = norm.replace(/:/g, '.');
     // If it already looks dot-style, use it
     if (dot1.includes('.')) {
       console.log(`Normalized permission heuristic: ${permission} -> ${dot1}`);

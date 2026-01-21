@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Edit, Shield } from "lucide-react";
 import { polwelUsersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { errorHandlers } from "@/lib/errorHandler";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 
@@ -27,7 +28,9 @@ type ModuleKey =
   | "course-run"
   | "post-course-run"
   | "billing-reports"
-  | "waiver";
+  | "waiver"
+  | "resource-library"
+  | "reporting";
 
 type UserPermissions = Record<ModuleKey, ModulePermissions>;
 
@@ -40,6 +43,8 @@ const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean
   "post-course-run": { label: "Post Course Run" },
   "billing-reports": { label: "Billing Reports" },
   waiver: { label: "Waiver Requests" },
+  "resource-library": { label: "Resource Library" },
+  reporting: { label: "Reporting" },
 };
 
 const createDefaultPermissions = (): UserPermissions => ({
@@ -51,6 +56,8 @@ const createDefaultPermissions = (): UserPermissions => ({
   "post-course-run": { view: false, create: false, edit: false, delete: false },
   "billing-reports": { view: false, create: false, edit: false, delete: false },
   waiver: { view: false, create: false, edit: false, delete: false },
+  "resource-library": { view: false, create: false, edit: false, delete: false },
+  reporting: { view: false, create: false, edit: false, delete: false },
 });
 
 interface PolwelUser {
@@ -90,6 +97,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
   const [permissions, setPermissions] = useState<UserPermissions>(createDefaultPermissions());
 
   const { toast } = useToast();
+  const { user: currentUser, refreshUser } = useAuth();
 
   // Load user permissions when dialog opens
   useEffect(() => {
@@ -113,6 +121,8 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
       "billing-reports": "billing-reports", // Also support direct billing-reports key
       waiver: "waiver", // Waiver module
       waivers: "waiver", // Alternate naming
+      reporting: "reporting", // Reporting module
+      "resource-library": "resource-library", // Resource Library module
       // Handle malformed database entries:
       post: "post-course-run", // DB has "post.course.run.*" malformed entries
     };
@@ -183,19 +193,13 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
         permissions: permissionNames,
       });
 
-      // If editing the currently logged-in user, fetch fresh details and refresh auth storage
-      try {
-        const { authService } = await import("@/lib/auth");
-        const me = authService.getUser();
-        if (me && me.id === user.id) {
-          // Re-fetch this user to get updated permissions and store
-          const refreshed = await polwelUsersApi.getById(user.id);
-          const nextUser = { ...me, permissions: (refreshed?.permissions || []).filter((p: any) => p.granted).map((p: any) => p.permissionName) };
-          localStorage.setItem("polwel_user_data", JSON.stringify(nextUser));
-          window.dispatchEvent(new CustomEvent("polwel_auth_updated"));
+      // If editing the currently logged-in user, refresh their permissions immediately
+      if (currentUser && currentUser.id === user.id) {
+        try {
+          await refreshUser();
+        } catch (e) {
+          console.error("Failed to refresh current user permissions:", e);
         }
-      } catch (e) {
-        // ignore refresh errors
       }
 
       toast({
@@ -355,7 +359,7 @@ export function EditPolwelUserDialog({ user, onUserUpdated }: EditPolwelUserDial
                                         }
                                         return { ...acc, [key]: setAll };
                                       },
-                                      {} as ModulePermissions
+                                      {} as ModulePermissions,
                                     ),
                                   }));
                                 }}
