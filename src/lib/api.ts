@@ -2022,6 +2022,187 @@ export const waiversApi = {
   },
 };
 
+// Resource Library API
+export const resourceLibraryApi = {
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    targetAudience?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/resource-library?${queryString}` : '/resource-library';
+    
+    return apiRequest(endpoint);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest(`/resource-library/${id}`);
+  },
+
+  create: async (data: {
+    title: string;
+    description?: string;
+    fileName: string;
+    fileUrl: string;
+    fileSize?: number;
+    mimeType?: string;
+    targetAudience?: string;
+    status?: string;
+  }) => {
+    return apiRequest('/resource-library', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: string, data: {
+    title?: string;
+    description?: string;
+    fileName?: string;
+    fileUrl?: string;
+    fileSize?: number;
+    mimeType?: string;
+    targetAudience?: string;
+    status?: string;
+  }) => {
+    return apiRequest(`/resource-library/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateStatus: async (id: string, status: string) => {
+    return apiRequest(`/resource-library/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest(`/resource-library/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Reporting API
+export const reportingApi = {
+  getBoardReport: async (year?: number) => {
+    const params = year ? `?year=${year}` : '';
+    return apiRequest(`/reporting/board-report${params}`);
+  },
+
+  getBoardReportAll: async () => {
+    return apiRequest('/reporting/board-report-all');
+  },
+
+  getQuarterDetails: async (quarter: string, year: number) => {
+    return apiRequest(`/reporting/quarter-details?quarter=${quarter}&year=${year}`);
+  },
+
+  getRunsByOrganisation: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    organizationId?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.organizationId) queryParams.append('organizationId', params.organizationId);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-organisation?${queryParams}`);
+  },
+
+  getRunsByTrainer: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    trainerId?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.trainerId) queryParams.append('trainerId', params.trainerId);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-trainer?${queryParams}`);
+  },
+
+  getRunsByStatus: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    organizationId?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.organizationId) queryParams.append('organizationId', params.organizationId);
+    return apiRequest(`/reporting/runs-by-status?${queryParams}`);
+  },
+
+  getRunsByPeriod: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.startDate) queryParams.append('startDate', params.startDate);
+    if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-period?${queryParams}`);
+  },
+
+  getRunsByVenue: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    venueId?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.venueId) queryParams.append('venueId', params.venueId);
+    if (params.status) queryParams.append('status', params.status);
+    return apiRequest(`/reporting/runs-by-venue?${queryParams}`);
+  },
+
+  getRunDetails: async (id: string) => {
+    return apiRequest(`/reporting/run-details/${id}`);
+  },
+
+  getFilterOptions: async () => {
+    return apiRequest('/reporting/filter-options');
+  },
+};
+
 export {
   API_BASE_URL,
 };
@@ -2039,4 +2220,6 @@ export default {
   trainerDashboardApi,
   billingReportsApi,
   waiversApi,
+  resourceLibraryApi,
+  reportingApi,
 };

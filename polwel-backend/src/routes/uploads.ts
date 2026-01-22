@@ -12,13 +12,17 @@ const router = Router();
 
 // Configure multer for email attachments
 const attachmentsDir = path.join(process.cwd(), 'uploads/email-attachments');
+const resourceLibraryDir = path.join(process.cwd(), 'uploads/resource-library');
 
-// Ensure directory exists
+// Ensure directories exist
 if (!fs.existsSync(attachmentsDir)) {
   fs.mkdirSync(attachmentsDir, { recursive: true });
 }
+if (!fs.existsSync(resourceLibraryDir)) {
+  fs.mkdirSync(resourceLibraryDir, { recursive: true });
+}
 
-const storage = multer.diskStorage({
+const storageEmailAttachments = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, attachmentsDir);
   },
@@ -28,8 +32,18 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({
-  storage,
+const storageResourceLibrary = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, resourceLibraryDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const uploadEmailAttachment = multer({
+  storage: storageEmailAttachments,
   limits: {
     fileSize: 25 * 1024 * 1024, // 25MB - Microsoft Outlook restriction
   },
@@ -55,6 +69,21 @@ const upload = multer({
   },
 });
 
+const uploadResourceLibrary = multer({
+  storage: storageResourceLibrary,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB for PDF documents
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only PDF files for resource library
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed for Resource Library'));
+    }
+  },
+});
+
 const buildErrorResponse = (method: string, userMessage: string, error: unknown) => {
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
   return {
@@ -68,7 +97,7 @@ const buildErrorResponse = (method: string, userMessage: string, error: unknown)
 router.post(
   '/email-attachments',
   authenticateToken,
-  upload.single('file'),
+  uploadEmailAttachment.single('file'),
   async (req: Request, res: Response): Promise<void> => {
     try {
       if (!req.file) {
@@ -113,6 +142,64 @@ router.post(
       }
 
       res.status(500).json(buildErrorResponse('uploadsRoute.emailAttachments', 'Failed to upload attachment', error));
+    }
+  },
+);
+
+// POST /api/uploads/media/upload - Upload media file (for Resource Library PDFs)
+router.post(
+  '/media/upload',
+  authenticateToken,
+  uploadResourceLibrary.single('file'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          error: 'No file provided',
+        });
+        return;
+      }
+
+      const userId = (req as any).user?.userId || (req as any).user?.id || 'system';
+
+      // Build the URL for the uploaded file
+      const fileUrl = `/uploads/resource-library/${req.file.filename}`;
+
+      // Store file metadata in database
+      const media = await prisma.media.create({
+        data: {
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          path: fileUrl, // Store relative URL path
+          mimeType: req.file.mimetype,
+          size: req.file.size,
+        },
+      });
+
+      res.json({
+        success: true,
+        url: fileUrl,
+        fileId: media.id,
+        id: media.id,
+        originalName: media.originalName,
+        filename: media.filename,
+        mimeType: media.mimeType,
+        size: media.size,
+      });
+    } catch (error) {
+      console.error('Error uploading media file:', error);
+
+      // Clean up uploaded file if there was an error
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (unlinkErr) {
+          console.error('Error deleting uploaded file:', unlinkErr);
+        }
+      }
+
+      res.status(500).json(buildErrorResponse('uploadsRoute.mediaUpload', 'Failed to upload file', error));
     }
   },
 );
