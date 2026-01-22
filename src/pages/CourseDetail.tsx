@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Clock, Users, MapPin, Award, Percent, GraduationCap, ClipboardCheck, User as UserIcon, Layers } from "lucide-react";
+import { ArrowLeft, Edit, Clock, Users, MapPin, Award, Percent, GraduationCap, ClipboardCheck, User as UserIcon, Layers, Download } from "lucide-react";
 import { coursesApi } from "@/lib/api";
 import { formatDate } from "../lib/date";
 import DOMPurify from "dompurify";
@@ -15,6 +15,7 @@ const CourseDetail = () => {
   const { toast } = useToast();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -61,6 +62,29 @@ const CourseDetail = () => {
 
     fetchCourse();
   }, [id, toast]);
+
+  const handleExportRunHistory = async () => {
+    if (!id) return;
+
+    try {
+      setExporting(true);
+      await coursesApi.exportRunHistory(id);
+
+      toast({
+        title: "Success",
+        description: "Course run history exported successfully",
+      });
+    } catch (error) {
+      console.error("Error exporting course run history:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to export course run history",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -262,6 +286,23 @@ const CourseDetail = () => {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Export Course Run History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Export Course Run History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-4">
+                Export all course run data including learners, trainers, fees, and billing information to an Excel file. Each course run will be in a separate
+                sheet.
+              </p>
+              <Button onClick={handleExportRunHistory} disabled={exporting} className="w-full">
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? "Exporting..." : "Export Run History"}
+              </Button>
             </CardContent>
           </Card>
         </div>
