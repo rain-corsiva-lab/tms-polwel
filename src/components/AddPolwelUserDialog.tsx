@@ -27,7 +27,9 @@ type ModuleKey =
   | "course-run"
   | "post-course-run"
   | "billing-reports"
-  | "waiver";
+  | "waiver"
+  | "resource-library"
+  | "reporting";
 
 type UserPermissions = Record<ModuleKey, ModulePermissions>;
 
@@ -40,6 +42,8 @@ const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean
   "post-course-run": { label: "Post Course Run" },
   "billing-reports": { label: "Billing Reports" },
   waiver: { label: "Waiver Requests" },
+  "resource-library": { label: "Resource Library" },
+  reporting: { label: "Reporting" },
 };
 
 const createDefaultPermissions = (): UserPermissions => ({
@@ -51,6 +55,8 @@ const createDefaultPermissions = (): UserPermissions => ({
   "post-course-run": { view: false, create: false, edit: false, delete: false },
   "billing-reports": { view: false, create: false, edit: false, delete: false },
   waiver: { view: false, create: false, edit: false, delete: false },
+  "resource-library": { view: false, create: false, edit: false, delete: false },
+  reporting: { view: false, create: false, edit: false, delete: false },
 });
 
 export function AddPolwelUserDialog() {
@@ -271,7 +277,7 @@ export function AddPolwelUserDialog() {
                                         }
                                         return { ...acc, [key]: setAll };
                                       },
-                                      {} as ModulePermissions
+                                      {} as ModulePermissions,
                                     ),
                                   }));
                                 }}

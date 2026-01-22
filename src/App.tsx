@@ -35,6 +35,14 @@ import PostRunManagement from "./pages/PostRunManagement";
 import PostRunDetail from "./pages/PostRunDetail";
 import BillingReports from "./pages/BillingReports";
 import WaiverRequests from "./pages/WaiverRequests";
+import ResourceLibrary from "./pages/ResourceLibrary";
+import Reporting from "./pages/Reporting";
+import BoardReport from "./pages/reporting/BoardReport";
+import RunsByOrganisation from "./pages/reporting/RunsByOrganisation";
+import RunsByTrainer from "./pages/reporting/RunsByTrainer";
+import RunsByStatus from "./pages/reporting/RunsByStatus";
+import RunsByPeriod from "./pages/reporting/RunsByPeriod";
+import RunsByVenue from "./pages/reporting/RunsByVenue";
 
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
@@ -260,6 +268,74 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredPermissions={["post-course-run.view"]}>
                     <WaiverRequests />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Resource Library */}
+              <Route
+                path="resource-library"
+                element={
+                  <ProtectedRoute requiredPermissions={["resource-library.view"]}>
+                    <ResourceLibrary />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Reporting */}
+              <Route
+                path="reporting"
+                element={
+                  <ProtectedRoute requiredPermissions={["reporting.view"]}>
+                    <Reporting />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reporting/board-report"
+                element={
+                  <ProtectedRoute requiredPermissions={["reporting.view"]}>
+                    <BoardReport />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reporting/runs-by-organisation"
+                element={
+                  <ProtectedRoute requiredPermissions={["reporting.view"]}>
+                    <RunsByOrganisation />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reporting/runs-by-trainer"
+                element={
+                  <ProtectedRoute requiredPermissions={["reporting.view"]}>
+                    <RunsByTrainer />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reporting/runs-by-status"
+                element={
+                  <ProtectedRoute requiredPermissions={["reporting.view"]}>
+                    <RunsByStatus />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reporting/runs-by-period"
+                element={
+                  <ProtectedRoute requiredPermissions={["reporting.view"]}>
+                    <RunsByPeriod />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reporting/runs-by-venue"
+                element={
+                  <ProtectedRoute requiredPermissions={["reporting.view"]}>
+                    <RunsByVenue />
                   </ProtectedRoute>
                 }
               />

@@ -440,69 +440,105 @@ class EmailService {
           <head>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <!--[if mso]>
+            <noscript>
+              <xml>
+                <o:OfficeDocumentSettings>
+                  <o:PixelsPerInch>96</o:PixelsPerInch>
+                </o:OfficeDocumentSettings>
+              </xml>
+            </noscript>
+            <![endif]-->
             <title>POLWEL Security Code</title>
-            <style>
-              body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
-              .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
-              .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
-              .content { padding: 32px 28px; }
-              .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .code-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .code-label { text-transform: uppercase; font-size: 13px; letter-spacing: 2.2px; color: #4b5563; font-weight: 600; margin-bottom: 12px; }
-              .code { font-size: 38px; letter-spacing: 12px; font-weight: 700; color: #374151; }
-              .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
-              .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
-              .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
-              .checklist ul { padding: 0; margin: 0; list-style: none; }
-              .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
-              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #f3f4f6; border: 1px solid #9ca3af; font-size: 13px; color: #6b7280; line-height: 1.6; }
-              .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
-              .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
-              @media (max-width: 600px) {
-                .outer { margin: 0 12px; }
-                .content { padding: 28px 22px; }
-                .code { letter-spacing: 10px; font-size: 32px; }
-              }
-            </style>
           </head>
-          <body>
-            <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #f5f5f5 !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5 !important;">
               <tr>
-                <td align="center">
-                  <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
+                <td align="center" style="padding: 40px 20px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%;">
+                    <!-- Header -->
                     <tr>
-                      <td class="header">
-                        <h1>Secure your login</h1>
-                        <p>POLWEL Training Management System</p>
+                      <td bgcolor="#1f2937" style="padding: 32px 24px; background-color: #1f2937 !important; text-align: center;">
+                        <!--[if mso]>
+                        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
+                        <v:textbox inset="0,0,0,0">
+                        <![endif]-->
+                        <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">🔒 Secure your login</h1>
+                        <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #e5e7eb !important; font-family: Arial, sans-serif !important;">POLWEL Training Management System</p>
+                        <!--[if mso]>
+                        </v:textbox>
+                        </v:rect>
+                        <![endif]-->
                       </td>
                     </tr>
+                    <!-- Content -->
                     <tr>
-                      <td class="content">
-                        <p class="greeting">Hi ${friendlyName},</p>
-                        <p class="meta">Use the one-time security code below to complete your sign in. The code expires at <strong>${formattedExpiry}</strong> (${expiryMinutes} minute${expiryMinutes === 1 ? '' : 's'} remaining).</p>
-                        <div class="code-card">
-                          <div class="code-label">One-time security code</div>
-                          <div class="code">${code}</div>
-                        </div>
-                        <div class="checklist">
-                          <p>Next steps:</p>
-                          <ul>
-                            <li><span>1</span><div>Enter the code on the verification screen as soon as possible.</div></li>
-                            <li><span>2</span><div>Make sure you are signing in from a trusted device and network.</div></li>
-                            <li><span>3</span><div>Do not share this code with anyone. POLWEL will never ask you for it.</div></li>
-                          </ul>
-                        </div>
-                        <div class="warning">Didn&#39;t request this code? Reset your password immediately or contact the POLWEL support team so we can help secure your account.</div>
+                      <td bgcolor="#ffffff" style="padding: 32px 24px; background-color: #ffffff !important;">
+                        <p style="font-size: 16px !important; margin: 0 0 16px 0 !important; padding: 0 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Hi ${friendlyName},</p>
+                        <p style="margin: 0 0 20px 0 !important; padding: 0 !important; font-size: 15px !important; color: #374151 !important; line-height: 1.7 !important; font-family: Arial, sans-serif !important;">Use the one-time security code below to complete your sign in. The code expires at <strong style="color: #1f2937 !important;">${formattedExpiry}</strong> (${expiryMinutes} minute${expiryMinutes === 1 ? '' : 's'} remaining).</p>
+                        
+                        <!-- Code Card -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                          <tr>
+                            <td bgcolor="#f8fafc" style="background-color: #f8fafc !important; border: 2px solid #d1d5db; padding: 24px; text-align: center;">
+                              <div style="text-transform: uppercase; font-size: 13px !important; letter-spacing: 2px; color: #4b5563 !important; font-weight: 600 !important; margin-bottom: 12px; font-family: Arial, sans-serif !important;">ONE-TIME SECURITY CODE</div>
+                              <div style="font-size: 38px !important; letter-spacing: 12px; font-weight: 700 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">${code}</div>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <!-- Checklist -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                          <tr>
+                            <td bgcolor="#f8fafc" style="padding: 20px 24px; background-color: #f8fafc !important; border: 1px solid #e5e7eb;">
+                              <p style="margin: 0 0 12px 0 !important; padding: 0 !important; font-size: 15px !important; font-weight: 600 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Next steps:</p>
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                  <td style="padding-bottom: 10px; font-size: 14px !important; color: #475569 !important; font-family: Arial, sans-serif !important;">
+                                    <span style="display: inline-block; width: 20px; height: 20px; background-color: #4b5563 !important; color: #ffffff !important; font-weight: 700 !important; font-size: 12px !important; text-align: center; margin-right: 10px; font-family: Arial, sans-serif !important;">1</span>
+                                    Enter the code on the verification screen as soon as possible.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding-bottom: 10px; font-size: 14px !important; color: #475569 !important; font-family: Arial, sans-serif !important;">
+                                    <span style="display: inline-block; width: 20px; height: 20px; background-color: #4b5563 !important; color: #ffffff !important; font-weight: 700 !important; font-size: 12px !important; text-align: center; margin-right: 10px; font-family: Arial, sans-serif !important;">2</span>
+                                    Make sure you are signing in from a trusted device and network.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding-bottom: 0; font-size: 14px !important; color: #475569 !important; font-family: Arial, sans-serif !important;">
+                                    <span style="display: inline-block; width: 20px; height: 20px; background-color: #4b5563 !important; color: #ffffff !important; font-weight: 700 !important; font-size: 12px !important; text-align: center; margin-right: 10px; font-family: Arial, sans-serif !important;">3</span>
+                                    Do not share this code with anyone. POLWEL will never ask you for it.
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <!-- Warning -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0 0;">
+                          <tr>
+                            <td bgcolor="#f3f4f6" style="padding: 18px 22px; background-color: #f3f4f6 !important; border: 1px solid #d1d5db; font-size: 13px !important; color: #6b7280 !important; line-height: 1.6 !important; font-family: Arial, sans-serif !important;">
+                              <strong style="color: #1f2937 !important;">Didn't request this code?</strong> Reset your password immediately or contact the POLWEL support team so we can help secure your account.
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
+                    <!-- Footer -->
                     <tr>
-                      <td class="footer">
-                        &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
+                      <td bgcolor="#1f2937" style="padding: 24px; text-align: center; background-color: #1f2937 !important;">
+                        <!--[if mso]>
+                        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
+                        <v:textbox inset="0,0,0,0">
+                        <![endif]-->
+                        <p style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
+                        <p style="margin: 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color: #9ca3af !important; text-decoration: underline !important; font-family: Arial, sans-serif !important;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a></p>
+                        <!--[if mso]>
+                        </v:textbox>
+                        </v:rect>
+                        <![endif]-->
                       </td>
                     </tr>
                   </table>
@@ -560,65 +596,95 @@ class EmailService {
           <head>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <!--[if mso]>
+            <noscript>
+              <xml>
+                <o:OfficeDocumentSettings>
+                  <o:PixelsPerInch>96</o:PixelsPerInch>
+                </o:OfficeDocumentSettings>
+              </xml>
+            </noscript>
+            <![endif]-->
             <title>POLWEL Account Setup</title>
-            <style>
-              body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
-              .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
-              .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
-              .content { padding: 32px 28px; }
-              .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #e5e7eb; color: #1f2937; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #d1d5db; }
-              .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
-              .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
-              .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
-              .checklist ul { padding: 0; margin: 0; list-style: none; }
-              .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
-              .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
-              .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
-              @media (max-width: 600px) {
-                .outer { margin: 0 12px; }
-                .content { padding: 28px 22px; }
-              }
-            </style>
           </head>
-          <body>
-            <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #f5f5f5 !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5 !important;">
               <tr>
-                <td align="center">
-                  <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
+                <td align="center" style="padding: 40px 20px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%;">
+                    <!-- Header -->
                     <tr>
-                      <td class="header">
-                        <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">👤 Welcome to POLWEL!</h1>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #f3f4f6 !important;">Complete Your Account Setup</p>
+                      <td bgcolor="#1f2937" style="padding: 32px 24px; background-color: #1f2937 !important; text-align: center;">
+                        <!--[if mso]>
+                        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
+                        <v:textbox inset="0,0,0,0">
+                        <![endif]-->
+                        <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">👤 Welcome to POLWEL!</h1>
+                        <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #e5e7eb !important; font-family: Arial, sans-serif !important;">Complete Your Account Setup</p>
+                        <!--[if mso]>
+                        </v:textbox>
+                        </v:rect>
+                        <![endif]-->
                       </td>
                     </tr>
+                    <!-- Content -->
                     <tr>
-                      <td class="content">
-                        <p class="greeting">Hello ${name},</p>
-                        <p class="meta">Welcome to the POLWEL Training Management System! We're excited to have you on board. Click the button below to complete your account setup and start using the platform.</p>
-                        <div class="button-card">
-                          <a href="${setupUrl}" class="button">Complete Account Setup</a>
-                        </div>
-                        <div class="checklist">
-                          <p>Getting started:</p>
-                          <ul>
-                            <li><span>1</span><div>Set up your account password securely.</div></li>
-                            <li><span>2</span><div>Complete your profile information.</div></li>
-                            <li><span>3</span><div>Access all platform features based on your role.</div></li>
-                          </ul>
-                        </div>
+                      <td bgcolor="#ffffff" style="padding: 32px 24px; background-color: #ffffff !important;">
+                        <p style="font-size: 16px !important; margin: 0 0 16px 0 !important; padding: 0 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Hello ${name},</p>
+                        <p style="margin: 0 0 20px 0 !important; padding: 0 !important; font-size: 15px !important; color: #374151 !important; font-family: Arial, sans-serif !important;">Welcome to the POLWEL Training Management System! We're excited to have you on board. Click the button below to complete your account setup and start using the platform.</p>
+                        
+                        <!-- Button Card -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                          <tr>
+                            <td bgcolor="#f8fafc" style="background-color: #f8fafc !important; border: 1px solid #e5e7eb; padding: 24px; text-align: center;">
+                              <a href="${setupUrl}" style="display: inline-block; background-color: #1f2937 !important; color: #ffffff !important; padding: 15px 30px; text-decoration: none; font-weight: 700 !important; font-size: 16px !important; font-family: Arial, sans-serif !important;">Complete Account Setup</a>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <!-- Checklist -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                          <tr>
+                            <td bgcolor="#f8fafc" style="padding: 20px 24px; background-color: #f8fafc !important; border: 1px solid #e5e7eb;">
+                              <p style="margin: 0 0 12px 0 !important; padding: 0 !important; font-size: 15px !important; font-weight: 600 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Getting started:</p>
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                  <td style="padding-bottom: 10px; font-size: 14px !important; color: #475569 !important; font-family: Arial, sans-serif !important;">
+                                    <span style="display: inline-block; width: 20px; height: 20px; background-color: #4b5563 !important; color: #ffffff !important; font-weight: 700 !important; font-size: 12px !important; text-align: center; margin-right: 10px; font-family: Arial, sans-serif !important;">1</span>
+                                    Set up your account password securely.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding-bottom: 10px; font-size: 14px !important; color: #475569 !important; font-family: Arial, sans-serif !important;">
+                                    <span style="display: inline-block; width: 20px; height: 20px; background-color: #4b5563 !important; color: #ffffff !important; font-weight: 700 !important; font-size: 12px !important; text-align: center; margin-right: 10px; font-family: Arial, sans-serif !important;">2</span>
+                                    Complete your profile information.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding-bottom: 0; font-size: 14px !important; color: #475569 !important; font-family: Arial, sans-serif !important;">
+                                    <span style="display: inline-block; width: 20px; height: 20px; background-color: #4b5563 !important; color: #ffffff !important; font-weight: 700 !important; font-size: 12px !important; text-align: center; margin-right: 10px; font-family: Arial, sans-serif !important;">3</span>
+                                    Access all platform features based on your role.
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
+                    <!-- Footer -->
                     <tr>
-                      <td class="footer">
-                        <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
+                      <td bgcolor="#1f2937" style="padding: 24px; text-align: center; background-color: #1f2937 !important;">
+                        <!--[if mso]>
+                        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
+                        <v:textbox inset="0,0,0,0">
+                        <![endif]-->
+                        <p style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
+                        <p style="margin: 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color: #9ca3af !important; text-decoration: underline !important; font-family: Arial, sans-serif !important;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a></p>
+                        <!--[if mso]>
+                        </v:textbox>
+                        </v:rect>
+                        <![endif]-->
                       </td>
                     </tr>
                   </table>
