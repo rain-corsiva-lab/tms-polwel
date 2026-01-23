@@ -322,11 +322,11 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
           )}
 
           {/* Reporting - Standalone Menu Item */}
-          {/* {postRunManagementVisible && (
+          {postRunManagementVisible && (
             <Can I="view" a="Reporting">
               <NavItem to="/reporting" icon={BarChart3} label="Reporting" />
             </Can>
-          )} */}
+          )}
         </TooltipProvider>
       </nav>
 

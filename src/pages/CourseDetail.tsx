@@ -292,12 +292,11 @@ const CourseDetail = () => {
           {/* Export Course Run History */}
           <Card>
             <CardHeader>
-              <CardTitle>Export Course Run History</CardTitle>
+              <CardTitle>Course Masterlist</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Export all course run data including learners, trainers, fees, and billing information to an Excel file. Each course run will be in a separate
-                sheet.
+                Export all course run data including learners, trainers, fees, and billing information to an Excel file.
               </p>
               <Button onClick={handleExportRunHistory} disabled={exporting} className="w-full">
                 <Download className="mr-2 h-4 w-4" />
