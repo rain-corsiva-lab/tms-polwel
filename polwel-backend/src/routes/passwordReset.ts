@@ -54,9 +54,17 @@ router.post('/forgot-password', async (req, res) => {
 
       // Send password reset email
       // Ensure we only use the first URL if multiple are provided (fix for production)
-      const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
-      const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+      const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      console.log(`🔍 DEBUG - Raw FRONTEND_URL from env: "${rawFrontendUrl}"`);
+      console.log(`🔍 DEBUG - FRONTEND_URL length: ${rawFrontendUrl.length}`);
+      console.log(`🔍 DEBUG - Contains comma: ${rawFrontendUrl.includes(',')}`);
       
+      // Clean and split the URL, take only the first one
+      const frontendUrlParts = rawFrontendUrl.split(',');
+      const frontendUrl = (frontendUrlParts[0] || 'http://localhost:5173').trim();
+      console.log(`🔍 DEBUG - Cleaned frontend URL: "${frontendUrl}"`);
+      
+      const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
       console.log(`🔗 Generated password reset URL: ${resetUrl}`);
       
       try {
