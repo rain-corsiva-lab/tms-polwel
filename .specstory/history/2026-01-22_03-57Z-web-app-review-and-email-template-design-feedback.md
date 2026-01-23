@@ -5373,7 +5373,7 @@ If it has multiple URLs, update it to use only the production URL.
 
 ---
 
-_**User (2026-01-23 11:44Z)**_
+_**User (2026-01-23 11:46Z)**_
 
 the reset password link is still like that , i have check the production env is like this : 
 
@@ -5532,6 +5532,195 @@ Read [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/routes/userSetu
 
 ---
 
+<tool-use data-tool-type="unknown" data-tool-name="run_in_terminal">
+<details>
+<summary>Tool use: **run_in_terminal**</summary>
+
+
+Parameters:
+
+```json
+{
+  "kind": "terminal",
+  "terminalToolSessionId": "48719d2f-f9f1-4779-b980-daa1de21f594",
+  "terminalCommandId": "tool-c7acac64-303d-419d-908d-2ef41dc24deb",
+  "commandLine": {
+    "original": "cd /home/kukuh/webprojects/polwel/polwel-backend &amp;&amp; npm run build",
+    "toolEdited": " npm run build"
+  },
+  "language": "sh",
+  "autoApproveInfo": {
+    "value": "Auto approved by rule [&#96;npm run build (user)&#96;](command:workbench.action.terminal.chat.openTerminalSettingsLink?%255B3%255D \"View rule in settings\")",
+    "isTrusted": {
+      "enabledCommands": [
+        "workbench.action.terminal.chat.openTerminalSettingsLink"
+      ]
+    },
+    "supportThemeIcons": false,
+    "supportHtml": false,
+    "supportAlertSyntax": false
+  },
+  "terminalCommandState": {
+    "exitCode": 1,
+    "timestamp": 1769168723688,
+    "duration": 7291
+  },
+  "terminalCommandUri": {
+    "$mid": 1,
+    "path": "/1c9be1ab538c89691cf01db25c3bbe5c/7",
+    "scheme": "vscode-terminal",
+    "query": "command=tool-c7acac64-303d-419d-908d-2ef41dc24deb"
+  },
+  "terminalCommandOutput": {
+    "text": "\r\n&gt; polwel-backend@1.0.0 build\r\n&gt; tsc\r\n\r\n\u001b[96msrc/routes/passwordReset.ts\u001b[0m:\u001b[93m63\u001b[0m:\u001b[93m27\u001b[0m - \u001b[91merror\u001b[90m TS2532: \u001b[0mObject is possibly 'undefined'.\r\n\r\n\u001b[7m63\u001b[0m       const frontendUrl = rawFrontendUrl.split(',')[0].trim();\r\n\u001b[7m  \u001b[0m \u001b[91m                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n\r\n\r\n\u001b[0mFound 1 error in src/routes/passwordReset.ts\u001b[90m:63\u001b[0m\u001b[?2004h",
+    "lineCount": 12
+  },
+  "terminalTheme": {
+    "background": "#181818",
+    "foreground": "#cccccc"
+  }
+}
+```
+Additional data:
+
+```json
+{
+  "vscodeToolId": "run_in_terminal",
+  "isHidden": false
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Run in Terminal\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "",
+  "textEditContent": "",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="copilot_replaceString">
+<details>
+<summary>Tool use: **copilot_replaceString**</summary>
+
+Additional data:
+
+```json
+{
+  "vscodeToolId": "copilot_replaceString",
+  "isHidden": true
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Replace String in File\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "&#96;&#96;&#96;typescript\nParts = rawFrontendUrl.split(',');\n      const frontendUrl = (frontendUrlParts[0] || 'http://localhost:5173')\n&#96;&#96;&#96;\n\n",
+  "textEditContent": "Parts = rawFrontendUrl.split(',');\n      const frontendUrl = (frontendUrlParts[0] || 'http://localhost:5173')",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="run_in_terminal">
+<details>
+<summary>Tool use: **run_in_terminal**</summary>
+
+
+Parameters:
+
+```json
+{
+  "kind": "terminal",
+  "terminalToolSessionId": "3a38930b-344c-49e0-8fff-f09e83580ecc",
+  "terminalCommandId": "tool-7939c040-f80d-4e13-a46e-d2cb2f250fd6",
+  "commandLine": {
+    "original": "cd /home/kukuh/webprojects/polwel/polwel-backend &amp;&amp; npm run build",
+    "toolEdited": " npm run build"
+  },
+  "language": "sh",
+  "autoApproveInfo": {
+    "value": "Auto approved by rule [&#96;npm run build (user)&#96;](command:workbench.action.terminal.chat.openTerminalSettingsLink?%255B3%255D \"View rule in settings\")",
+    "isTrusted": {
+      "enabledCommands": [
+        "workbench.action.terminal.chat.openTerminalSettingsLink"
+      ]
+    },
+    "supportThemeIcons": false,
+    "supportHtml": false,
+    "supportAlertSyntax": false
+  },
+  "terminalCommandState": {
+    "exitCode": 0,
+    "timestamp": 1769168747523,
+    "duration": 8777
+  },
+  "terminalCommandUri": {
+    "$mid": 1,
+    "path": "/1c9be1ab538c89691cf01db25c3bbe5c/7",
+    "scheme": "vscode-terminal",
+    "query": "command=tool-7939c040-f80d-4e13-a46e-d2cb2f250fd6"
+  },
+  "terminalCommandOutput": {
+    "text": "\r\n&gt; polwel-backend@1.0.0 build\r\n&gt; tsc\u001b[?2004h",
+    "lineCount": 4
+  },
+  "terminalTheme": {
+    "background": "#181818",
+    "foreground": "#cccccc"
+  }
+}
+```
+Additional data:
+
+```json
+{
+  "vscodeToolId": "run_in_terminal",
+  "isHidden": false
+}
+```
+Result:
+
+```json
+{
+  "invocationMessage": "Using \"Run in Terminal\"",
+  "isConfirmed": {
+    "type": 1
+  },
+  "content": "",
+  "textEditContent": "",
+  "toolCallResult": null
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
 The user is saying the reset password link is still malformed even after the fix. Let me check what might be wrong.
 
 Looking at the environment variables:
@@ -5550,7 +5739,189 @@ Let me check the fix I applied and see if there's anything else that could be wr
 3. Check if the backend server needs to be restarted
 4. Make sure we're trimming whitespace properly
 
-Let me read the current code to see what's there:Looking at your environment variables, `FRONTEND_URL=https://tms.polwel.org.sg` looks correct with no commas. However, the backend server needs to be restarted after code changes. Let me add more robust debugging and verification: The code looks correct. The issue is likely that the backend server hasn't been restarted after the deployment, or there's an issue with how the environment variable is being read. Let me add more comprehensive debugging: Now let me check if there are any other places where password reset URLs might be generated: Let me check the `userSetup.ts` file as well - it might also have setup URL generation that needs fixing: 
+Let me read the current code to see what's there:Looking at your environment variables, `FRONTEND_URL=https://tms.polwel.org.sg` looks correct with no commas. However, the backend server needs to be restarted after code changes. Let me add more robust debugging and verification: The code looks correct. The issue is likely that the backend server hasn't been restarted after the deployment, or there's an issue with how the environment variable is being read. Let me add more comprehensive debugging: Now let me check if there are any other places where password reset URLs might be generated: Let me check the `userSetup.ts` file as well - it might also have setup URL generation that needs fixing: Good, `userSetup.ts` doesn't generate URLs - those are generated in the controllers that call the email service. Now let me rebuild and check if there are any other places generating these URLs: Let me fix the TypeScript error: Perfect! Now the build is successful. The issue is that **the production backend server needs to be restarted** to load the new code. Here's what you need to do:
+
+## 🔧 Steps to Fix the Issue
+
+### 1. **Restart the Production Backend Server**
+
+The code changes won't take effect until you restart the Node.js process running your backend. Depending on your setup:
+
+```bash
+# If using PM2:
+pm2 restart polwel-backend
+
+# Or if using systemd:
+sudo systemctl restart polwel-backend
+
+# Or if running directly:
+# Stop the current process and restart with:
+cd /home/kukuh/webprojects/polwel/polwel-backend
+npm start
+```
+
+### 2. **Test Password Reset Again**
+
+After restarting:
+1. Go to login page and click "Forgot Password"
+2. Enter your email
+3. Check the backend logs for the debug output:
+   ```
+   🔍 DEBUG - Raw FRONTEND_URL from env: "https://tms.polwel.org.sg"
+   🔍 DEBUG - FRONTEND_URL length: 29
+   🔍 DEBUG - Contains comma: false
+   🔍 DEBUG - Cleaned frontend URL: "https://tms.polwel.org.sg"
+   🔗 Generated password reset URL: https://tms.polwel.org.sg/reset-password/TOKEN
+   ```
+
+### 3. **Check Backend Logs**
+
+```bash
+# If using PM2:
+pm2 logs polwel-backend --lines 50
+
+# Or check systemd logs:
+sudo journalctl -u polwel-backend -n 50 -f
+
+# Or if running in terminal, check the console output
+```
+
+The logs will show you exactly what URL is being generated and help identify if there's any issue.
+
+### 4. **Verify Environment Variable**
+
+On the production server, double-check the env variable:
+```bash
+cd /home/kukuh/webprojects/polwel/polwel-backend
+grep FRONTEND_URL .env
+```
+
+It should show: `FRONTEND_URL=https://tms.polwel.org.sg`
+
+---
+
+**The problem is**: Your code changes were deployed but the running Node.js process is still using the old code. You must restart the backend service to load the new code with the fix! 🔄
+
+---
+
+_**User (2026-01-23 11:55Z)**_
+
+also in #file:CourseRuns.tsx table data , i cant see in progress course runs , we need to fix it so we able to show course runs with in progress status , plesae fix it 
+
+another thing: training coordinator account not showing confirmed course runs that his learner is enrolled into , see pasted image #file:OrganizationDashboard.tsx 
+
+please develop all of these  front end , backend, database carefully without broke anything , ensure all working properly without any issue , use your best practice. 
+
+---
+
+_**Agent (model copilot/claude-sonnet-4.5)**_
+
+<tool-use data-tool-type="search" data-tool-name="copilot_findTextInFiles">
+<details>
+<summary>Tool use: **copilot_findTextInFiles** • Searching for text `getCoordinatorCourseRuns` (`**/polwel-backend/src/**/*.ts`)</summary>
+
+
+Searched for text `getCoordinatorCourseRuns` (`**/polwel-backend/src/**/*.ts`), 3 results
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="copilot_findTextInFiles">
+<details>
+<summary>Tool use: **copilot_findTextInFiles** • Searching for text `coordinator/course-runs` (`**/polwel-backend/src/**/*.ts`)</summary>
+
+
+Searched for text `coordinator/course-runs` (`**/polwel-backend/src/**/*.ts`), 1 result
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="copilot_readFile">
+<details>
+<summary>Tool use: **copilot_readFile** • Reading [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/clientOrganizationsController.ts#1215-1215), lines 1215 to 1350</summary>
+
+
+Read [](file:///home/kukuh/webprojects/polwel/polwel-backend/src/controllers/clientOrganizationsController.ts#1215-1215), lines 1215 to 1350
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="copilot_readFile">
+<details>
+<summary>Tool use: **copilot_readFile** • Reading [](file:///home/kukuh/webprojects/polwel/src/pages/CourseRuns.tsx#305-305), lines 305 to 400</summary>
+
+
+Read [](file:///home/kukuh/webprojects/polwel/src/pages/CourseRuns.tsx#305-305), lines 305 to 400
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="copilot_findTextInFiles">
+<details>
+<summary>Tool use: **copilot_findTextInFiles** • Searching for text `export const getAllCourseRuns` (`**/polwel-backend/src/controllers/courseRunsController.ts`)</summary>
+
+
+No results found
+</details>
+</tool-use>
+
+---
+
+The user has two issues:
+
+1. In CourseRuns.tsx - can't see "in progress" course runs in the table
+2. In OrganizationDashboard.tsx - training coordinator account not showing confirmed course runs that their learner is enrolled into (the image shows 0 courses in both In Progress and Completed sections)
+
+Let me analyze the code:
+
+**Issue 1 - CourseRuns.tsx:**
+Looking at the code, I need to check:
+- How the status filter works
+- What statuses are considered "in progress"
+- If there's any filtering that's excluding in-progress runs
+
+From the code, I can see:
+- There's a `statusFilter` state
+- There's filtering logic in `fetchCourseRuns`
+- The `formatStatusLabel` function maps statuses
+
+The issue might be:
+- The status filter is excluding IN_PROGRESS status
+- The backend query isn't returning IN_PROGRESS runs
+- The status mapping is incorrect
+
+**Issue 2 - OrganizationDashboard.tsx:**
+Looking at the coordinator dashboard:
+- It fetches course runs via `clientOrganizationsApi.getCoordinatorCourseRuns(organizationId)`
+- It splits runs into "inProgress" and "completed" based on status
+- The logic filters: completed includes "completed" and "pending_billing"
+- In progress includes everything else that's NOT completed/pending_billing
+
+The problem might be:
+- The backend isn't returning course runs that the coordinator's learners are enrolled in
+- The query might be filtering by organization but not considering learner enrollments
+- The backend might need to check course_run_learners table to see if any learners from this organization are enrolled
+
+Let me check what needs to be fixed:
+
+1. Backend - need to check the coordinator course runs query
+2. Frontend - verify the status filtering and display logic
+
+Let me start by examining the backend API for coordinator course runs.Looking at the two issues, I need to:
+1. Check why IN_PROGRESS course runs aren't showing in the CourseRuns table
+2. Fix the coordinator dashboard to show course runs where their learners are enrolled
+
+Let me first check the backend API for coordinator course runs: I found the issue! The coordinator course runs query has a logic problem. On line 1287, it only adds runs to `inProgress` or `completed` arrays, but runs that don't meet either condition (like CONFIRMED status) are skipped. Let me check the CourseRuns issue first, then fix both: I see the problem! On line 375 in CourseRuns.tsx, there's a filter that removes PENDING_BILLING and COMPLETED, but the comment says "backend also filters these now". However, this filter is too aggressive - it's filtering the data AFTER receiving it from backend, which means if the user wants to see IN_PROGRESS runs, they're getting filtered out somewhere.
+
+Let me check the backend course runs query: 
 
 ---
 

@@ -324,41 +324,39 @@ const CourseRuns: React.FC = () => {
         throw new Error(response.error || response.message || "Failed to load course runs");
       }
 
-      const transformed: CourseRunUI[] = (response.courseRuns || [])
-        .map((run) => {
-          const start = run.startDatetime ? new Date(run.startDatetime) : null;
-          const end = run.endDatetime ? new Date(run.endDatetime) : null;
-          const workflowAvailable = Array.isArray(run.workflow?.availableActions) ? (run.workflow?.availableActions as WorkflowActionSummary[]) : [];
-          const statusEvaluatedAt = run.workflow?.statusLastEvaluatedAt || run.statusLastEvaluatedAt;
+      const transformed: CourseRunUI[] = (response.courseRuns || []).map((run) => {
+        const start = run.startDatetime ? new Date(run.startDatetime) : null;
+        const end = run.endDatetime ? new Date(run.endDatetime) : null;
+        const workflowAvailable = Array.isArray(run.workflow?.availableActions) ? (run.workflow?.availableActions as WorkflowActionSummary[]) : [];
+        const statusEvaluatedAt = run.workflow?.statusLastEvaluatedAt || run.statusLastEvaluatedAt;
 
-          return {
-            id: run.id,
-            title: run.course?.title || "Untitled Course",
-            code: run.serialNumber || run.course?.courseCode || "-",
-            courseType: run.courseRunType || run.course?.category || "-",
-            venueName: run.venue?.name || "—",
-            venueLocation: run.venue?.address || run.specifiedLocation || "—",
-            start,
-            end,
-            status: run.status,
-            learnerEmailStatus: run.learnerEmailStatus || run.workflow?.learnerEmailStatus,
-            enrolled: run.currentParticipants ?? 0,
-            minSize: run.minClassSize ?? null,
-            maxSize: run.maxClassSize ?? null,
-            createdAt: new Date(run.createdAt),
-            cancelReason: run.cancelReason ?? null,
-            cancelledAt: run.cancelledAt ? new Date(run.cancelledAt) : null,
+        return {
+          id: run.id,
+          title: run.course?.title || "Untitled Course",
+          code: run.serialNumber || run.course?.courseCode || "-",
+          courseType: run.courseRunType || run.course?.category || "-",
+          venueName: run.venue?.name || "—",
+          venueLocation: run.venue?.address || run.specifiedLocation || "—",
+          start,
+          end,
+          status: run.status,
+          learnerEmailStatus: run.learnerEmailStatus || run.workflow?.learnerEmailStatus,
+          enrolled: run.currentParticipants ?? 0,
+          minSize: run.minClassSize ?? null,
+          maxSize: run.maxClassSize ?? null,
+          createdAt: new Date(run.createdAt),
+          cancelReason: run.cancelReason ?? null,
+          cancelledAt: run.cancelledAt ? new Date(run.cancelledAt) : null,
+          statusLastEvaluatedAt: statusEvaluatedAt ? new Date(statusEvaluatedAt) : null,
+          hasTrainerAssignmentEmailSent: run.hasTrainerAssignmentEmailSent ?? false,
+          workflow: {
+            availableActions: workflowAvailable,
+            learnerEmailStatus: run.workflow?.learnerEmailStatus || run.learnerEmailStatus,
             statusLastEvaluatedAt: statusEvaluatedAt ? new Date(statusEvaluatedAt) : null,
-            hasTrainerAssignmentEmailSent: run.hasTrainerAssignmentEmailSent ?? false,
-            workflow: {
-              availableActions: workflowAvailable,
-              learnerEmailStatus: run.workflow?.learnerEmailStatus || run.learnerEmailStatus,
-              statusLastEvaluatedAt: statusEvaluatedAt ? new Date(statusEvaluatedAt) : null,
-            },
-          };
-        })
-        // Filter out PENDING_BILLING and COMPLETED from main list (backend also filters these now)
-        .filter((run) => run.status !== "PENDING_BILLING" && run.status !== "COMPLETED");
+          },
+        };
+      });
+      // Backend handles status filtering - do NOT filter here or it will prevent users from viewing specific statuses
       // Sorting is now handled by backend via sortBy/sortOrder parameters
 
       setCourseRuns(transformed);
@@ -1430,7 +1428,7 @@ const CourseRuns: React.FC = () => {
                             <button
                               onClick={() => openTrainerApprovalDialog(courseRun)}
                               className={`${getStatusChipClass(
-                                courseRun.status
+                                courseRun.status,
                               )} inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-all hover:scale-110 cursor-pointer self-center text-center`}
                             >
                               {/* {courseRun.status
