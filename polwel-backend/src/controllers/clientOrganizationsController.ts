@@ -1277,10 +1277,17 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
         status: run.status,
       };
 
-      const isCompleted = run.status === 'COMPLETED' || run.status === 'INCOMPLETED' || (end && end < now);
-      const isOngoing = run.status === 'IN_PROGRESS' || run.status === 'ACTIVE' || (start && start <= now && (!end || end >= now));
-      if (isCompleted) completed.push(item);
-      else if (isOngoing) inProgress.push(item);
+      // Categorize based on status
+      const completedStatuses = ['COMPLETED', 'INCOMPLETED', 'PENDING_BILLING'];
+      const isCompleted = completedStatuses.includes(run.status) || (end && end < now && !['DRAFT', 'CANCELLED'].includes(run.status));
+      
+      if (isCompleted) {
+        completed.push(item);
+      } else {
+        // All other statuses go to in-progress: DRAFT, PENDING, CONFIRMED, CONFIRMED_PENDING_TA_APPROVAL,
+        // CONFIRMED_PENDING_CONFIRMATION_EMAILS, ACTIVE, IN_PROGRESS, and future courses
+        inProgress.push(item);
+      }
     });
 
     return res.json({ inProgress, completed });
