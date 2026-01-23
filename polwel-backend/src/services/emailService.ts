@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import type { SentMessageInfo, Transport, TransportOptions } from 'nodemailer';
+import type MailMessage from 'nodemailer/lib/mailer/mail-message';
 
 interface EmailConfig {
   host: string;
@@ -14,13 +16,326 @@ interface EmailConfig {
   };
 }
 
+interface AzureTransportOptions extends TransportOptions {
+  clientId: string;
+  clientSecret: string;
+  tenantId: string;
+  fromEmail: string;
+  saveToSentItems?: boolean;
+}
+
+interface AccessTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+/**
+ * Custom Nodemailer Transport for Microsoft Graph API
+ * Based on: https://dev.to/gevik/sending-emails-via-outlook-with-nodemailer-and-microsoft-graph-b74
+ */
+class AzureTransport implements Transport<SentMessageInfo> {
+  name: string;
+  version: string;
+
+  private config: AzureTransportOptions;
+  private graphEndpoint: string;
+  private accessToken: string | null = null;
+  private tokenExpiresAt: number = 0;
+
+  public constructor(config: AzureTransportOptions) {
+    this.name = 'Azure';
+    this.version = '0.1';
+    this.config = config;
+    this.graphEndpoint = 'https://graph.microsoft.com';
+  }
+
+  /**
+   * Check if the access token is expired
+   */
+  private isTokenExpired(): boolean {
+    if (!this.tokenExpiresAt) return true;
+    // Refresh 5 minutes before expiry
+    return Date.now() > this.tokenExpiresAt - 300000;
+  }
+
+  /**
+   * Get an access token from Azure AD using Client Credentials flow
+   */
+  private async getAccessToken(): Promise<string> {
+    if (this.accessToken && !this.isTokenExpired()) {
+      return this.accessToken;
+    }
+
+    const tokenUrl = `https://login.microsoftonline.com/${this.config.tenantId}/oauth2/v2.0/token`;
+
+    const params = new URLSearchParams({
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+      scope: `${this.graphEndpoint}/.default`,
+      grant_type: 'client_credentials',
+    });
+
+    try {
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get access token: ${response.status} ${errorText}`);
+      }
+
+      const data = (await response.json()) as AccessTokenResponse;
+      this.accessToken = data.access_token;
+      // Set expiry time (subtract 5 minutes for safety)
+      this.tokenExpiresAt = Date.now() + (data.expires_in - 300) * 1000;
+
+      return this.accessToken;
+    } catch (error) {
+      console.error('❌ Error acquiring Azure AD token:', error);
+      throw new Error('Could not retrieve an access token.');
+    }
+  }
+
+  /**
+   * Send an email using Microsoft Graph API
+   */
+  public async send(
+    mail: MailMessage<SentMessageInfo>,
+    callback: (err: Error | null, info: SentMessageInfo | null) => void
+  ): Promise<void> {
+    try {
+      const mailData = mail.data || {};
+      const { subject, from, to, text, html, cc, bcc, attachments = [] } = mailData;      
+
+      if (!from || !to) {
+        throw new Error("Missing 'from' or 'to' email address.");
+      }
+
+      const accessToken = await this.getAccessToken();
+
+      // Prepare recipients
+      const toRecipients = Array.isArray(to)
+        ? to.map((recipient) => ({ emailAddress: { address: recipient } }))
+        : [{ emailAddress: { address: to } }];
+
+      const message: any = {
+        message: {
+          subject: subject || '',
+          // Note: Do NOT include 'from' field when using Client Credentials flow
+          // Graph API will automatically use the email from the URL endpoint
+          toRecipients: toRecipients,
+          body: {
+            content: html || text || '',
+            contentType: html ? 'HTML' : 'Text',
+          },
+        },
+        saveToSentItems: this.config.saveToSentItems ?? true,
+      };
+
+      // Add CC if provided
+      if (cc) {
+        const ccRecipients = Array.isArray(cc)
+          ? cc.map((recipient) => ({ emailAddress: { address: recipient } }))
+          : [{ emailAddress: { address: cc } }];
+        message.message.ccRecipients = ccRecipients;
+      }
+
+      // Add BCC if provided
+      if (bcc) {
+        const bccRecipients = Array.isArray(bcc)
+          ? bcc.map((recipient) => ({ emailAddress: { address: recipient } }))
+          : [{ emailAddress: { address: bcc } }];
+        message.message.bccRecipients = bccRecipients;
+      }
+
+      // Add attachments if provided
+      if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+        message.message.attachments = [];
+
+        for (const attachment of attachments) {
+          try {
+            let contentBytes: string;
+            let contentType: string = attachment.contentType || 'application/octet-stream';
+            let name: string = attachment.filename || 'attachment';
+
+            // Handle different attachment formats
+            if (attachment.path) {
+              // File path - read file and convert to base64
+              const fs = require('fs');
+              const fileContent = fs.readFileSync(attachment.path);
+              contentBytes = fileContent.toString('base64');
+              if (!attachment.contentType) {
+                const path = require('path');
+                const ext = path.extname(attachment.path).toLowerCase();
+                // Basic content type detection
+                if (ext === '.pdf') contentType = 'application/pdf';
+                else if (ext === '.doc' || ext === '.docx') contentType = 'application/msword';
+                else if (ext === '.xls' || ext === '.xlsx') contentType = 'application/vnd.ms-excel';
+                else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+                else if (ext === '.png') contentType = 'image/png';
+              }
+            } else if (attachment.content) {
+              // Direct content
+              if (typeof attachment.content === 'string') {
+                // Assume base64 if it's a string
+                contentBytes = attachment.content;
+              } else if (Buffer.isBuffer(attachment.content)) {
+                // Buffer - convert to base64
+                contentBytes = attachment.content.toString('base64');
+              } else {
+                // Try to convert to Buffer
+                try {
+                  const buffer = Buffer.from(attachment.content as any);
+                  contentBytes = buffer.toString('base64');
+                } catch (buffErr) {
+                  console.warn('Cannot convert attachment content to buffer:', (buffErr as any)?.message);
+                  continue;
+                }
+              }
+            } else {
+              console.warn('Skipping attachment: no path or content provided');
+              continue;
+            }
+
+            message.message.attachments.push({
+              '@odata.type': '#microsoft.graph.fileAttachment',
+              name: name,
+              contentBytes: contentBytes,
+              contentType: contentType,
+            });
+          } catch (attErr) {
+            console.warn('Error processing attachment:', (attErr as any)?.message || attErr);
+          }
+        }
+      }
+
+      // Send email via Graph API
+      // Use fromEmail from config, or fallback to mail.from
+      // Extract email string from Address object if needed
+      let senderEmail: string;
+      if (this.config.fromEmail) {
+        senderEmail = this.config.fromEmail;
+      } else if (typeof from === 'string') {
+        senderEmail = from;
+      } else if (from && typeof from === 'object' && 'address' in from) {
+        senderEmail = (from as any).address;
+      } else {
+        throw new Error('Cannot determine sender email address');
+      }
+      const graphUrl = `${this.graphEndpoint}/v1.0/users/${encodeURIComponent(senderEmail)}/sendMail`;
+
+      const response = await fetch(graphUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to send email. Status: ${response.status} - ${errorText}`);
+      }
+
+      // Graph API returns 202 Accepted on success (no body)
+      const responseData = await response.text().catch(() => '');
+      callback(null, {
+        messageId: `graph-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        response: responseData || '202 Accepted',
+      } as SentMessageInfo);
+    } catch (error: any) {
+      console.error('❌ Error sending email via Graph API:', error);
+      callback(error, null);
+    }
+  }
+
+  /**
+   * Verify connection (required by Nodemailer Transport interface)
+   */
+  public verify(): Promise<true>;
+  public verify(callback: (err: Error | null, success: true) => void): void;
+  public verify(callback?: (err: Error | null, success: true) => void): void | Promise<true> {
+    const verifyPromise = this.getAccessToken()
+      .then(() => {
+        return true as const;
+      })
+      .catch((error) => {
+        throw error;
+      });
+
+    if (callback) {
+      verifyPromise
+        .then(() => {
+          callback(null, true);
+        })
+        .catch((error) => {
+          callback(error as Error, true);
+        });
+      return;
+    }
+
+    return verifyPromise;
+  }
+
+  /**
+   * Close connection (required by Nodemailer Transport interface)
+   */
+  public close(): void {
+    this.accessToken = null;
+    this.tokenExpiresAt = 0;
+  }
+}
+
 class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
   private static isInitialized: boolean = false;
 
   private static getTransporter() {
     if (!this.isInitialized) {
-      // Use SMTP configuration from environment variables
+      // Check if Microsoft Graph API is configured
+      const graphClientId = process.env.GRAPH_CLIENT_ID;
+      const graphClientSecret = process.env.GRAPH_CLIENT_SECRET;
+      const graphTenantId = process.env.GRAPH_TENANT_ID;
+      const graphFromEmail = process.env.MAIL_FROM_ADDRESS;
+
+      if (graphClientId && graphClientSecret && graphTenantId && graphFromEmail) {
+        // Use Microsoft Graph API
+        console.log('📧 Initializing email service with Microsoft Graph API');
+        console.log('   Tenant ID:', graphTenantId.substring(0, 8) + '***');
+        console.log('   Client ID:', graphClientId.substring(0, 8) + '***');
+        console.log('   From Email:', graphFromEmail);
+
+        const azureTransport = new AzureTransport({
+          clientId: graphClientId,
+          clientSecret: graphClientSecret,
+          tenantId: graphTenantId,
+          fromEmail: graphFromEmail,
+          saveToSentItems: true,
+        });
+
+        this.transporter = nodemailer.createTransport(azureTransport);
+        this.isInitialized = true;
+
+        // Verify connection
+        this.transporter.verify((error, success) => {
+          if (error) {
+            console.error('❌ Graph API connection verification failed:', error.message);
+          } else {
+            console.log('✅ Graph API connection verified successfully');
+          }
+        });
+
+        return this.transporter;
+      }
+
+      // Fallback to SMTP configuration
       const encryption = process.env.MAIL_ENCRYPTION || 'TLS';
       const isSSL = encryption === 'SSL';
       const isSTARTTLS = encryption === 'STARTTLS';
@@ -44,13 +359,15 @@ class EmailService {
 
       // For development, create a test account if SMTP not configured
       if (!config.auth.user || !config.auth.pass) {
-        console.log('⚠️  SMTP not configured, emails will be logged to console only');
-        console.log('📧 To enable emails, set MAIL_USERNAME and MAIL_PASSWORD in .env file');
+        console.log('⚠️  Email service not configured (neither Graph API nor SMTP)');
+        console.log('📧 To enable emails, configure either:');
+        console.log('   - Microsoft Graph API: GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET, GRAPH_TENANT_ID, MAIL_FROM_ADDRESS');
+        console.log('   - SMTP: MAIL_USERNAME and MAIL_PASSWORD');
         this.isInitialized = true;
         return null;
       }
 
-      console.log('📧 Initializing email service with:', {
+      console.log('📧 Initializing email service with SMTP:', {
         host: config.host,
         port: config.port,
         secure: config.secure,
