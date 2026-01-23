@@ -53,7 +53,11 @@ router.post('/forgot-password', async (req, res) => {
       });
 
       // Send password reset email
-      const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+      // Ensure we only use the first URL if multiple are provided (fix for production)
+      const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
+      const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+      
+      console.log(`🔗 Generated password reset URL: ${resetUrl}`);
       
       try {
         await EmailService.sendPasswordResetEmail(

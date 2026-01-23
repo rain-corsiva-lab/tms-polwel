@@ -413,65 +413,77 @@ class EmailService {
           <head>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <!--[if mso]>
+            <noscript>
+              <xml>
+                <o:OfficeDocumentSettings>
+                  <o:PixelsPerInch>96</o:PixelsPerInch>
+                </o:OfficeDocumentSettings>
+              </xml>
+            </noscript>
+            <![endif]-->
             <title>POLWEL Trainer Setup</title>
-            <style>
-              body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
-              .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
-              .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
-              .content { padding: 32px 28px; }
-              .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #e5e7eb; color: #1f2937; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #d1d5db; }
-              .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
-              .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
-              .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
-              .checklist ul { padding: 0; margin: 0; list-style: none; }
-              .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
-              .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
-              .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
-              @media (max-width: 600px) {
-                .outer { margin: 0 12px; }
-                .content { padding: 28px 22px; }
-              }
-            </style>
           </head>
-          <body>
-            <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0; background-color: #0f172a;" bgcolor="#0f172a">
               <tr>
-                <td align="center">
-                  <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
+                <td align="center" style="padding: 32px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
+                    <!-- Header -->
                     <tr>
-                      <td class="header">
-                        <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">&#127919; Welcome to POLWEL!</h1>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #f3f4f6 !important;">Complete Your Trainer Account Setup</p>
+                      <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
+                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">🏆 Welcome to POLWEL!</h1>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">Complete Your Trainer Account Setup</p>
                       </td>
                     </tr>
+                    <!-- Content -->
                     <tr>
-                      <td class="content">
-                        <p class="greeting">Hello ${name},</p>
-                        <p class="meta">Welcome to the POLWEL Training Management System! We're excited to have you join our team of trainers. Click the button below to complete your account setup and get started.</p>
-                        <div class="button-card">
-                          <a href="${setupUrl}" class="button">Complete Trainer Setup</a>
-                        </div>
-                        <div class="checklist">
-                          <p>What's next:</p>
-                          <ul>
-                            <li><span>1</span><div>Create a secure password for your account.</div></li>
-                            <li><span>2</span><div>Set up your profile and verify your details.</div></li>
-                            <li><span>3</span><div>Start managing your training sessions.</div></li>
-                          </ul>
-                        </div>
+                      <td style="padding: 32px 28px; background-color: #ffffff;" bgcolor="#ffffff">
+                        <p style="font-size: 16px; margin: 0 0 16px 0; color: #1f2937 !important; font-family: Arial, sans-serif;">Hello ${name},</p>
+                        <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151 !important; line-height: 1.7; font-family: Arial, sans-serif;">Welcome to the POLWEL Training Management System! We're excited to have you join our team of trainers. Click the button below to complete your account setup and get started.</p>
+                        <!-- Button Card -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                          <tr>
+                            <td style="padding: 24px; background-color: #f8fafc; border: 1px solid #e5e7eb;" bgcolor="#f8fafc" align="center">
+                              <a href="${setupUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; font-family: Arial, sans-serif;" bgcolor="#3b82f6">Complete Trainer Setup</a>
+                            </td>
+                          </tr>
+                        </table>
+                        <!-- Checklist -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0; background-color: #f8fafc; border: 1px solid #e2e8f0;" bgcolor="#f8fafc">
+                          <tr>
+                            <td style="padding: 20px 24px;">
+                              <p style="margin: 0 0 12px 0; font-size: 14px; color: #1f2937 !important; font-weight: 600; font-family: Arial, sans-serif;">What's next:</p>
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">1</span>
+                                    Create a secure password for your account.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">2</span>
+                                    Set up your profile and verify your details.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">3</span>
+                                    Start managing your training sessions.
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
+                    <!-- Footer -->
                     <tr>
-                      <td class="footer">
-                        <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af !important; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
+                      <td style="padding: 24px 28px 30px; text-align: center; background-color: #0f172a;" bgcolor="#0f172a">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8 !important; font-family: Arial, sans-serif;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
+                        <p style="margin: 18px 0 0 0; font-size: 12px; color: #cbd5e1 !important; font-family: Arial, sans-serif;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color: #9ca3af !important; text-decoration: none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a></p>
                       </td>
                     </tr>
                   </table>
@@ -520,69 +532,79 @@ class EmailService {
           <head>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <!--[if mso]>
+            <noscript>
+              <xml>
+                <o:OfficeDocumentSettings>
+                  <o:PixelsPerInch>96</o:PixelsPerInch>
+                </o:OfficeDocumentSettings>
+              </xml>
+            </noscript>
+            <![endif]-->
             <title>POLWEL Coordinator Setup</title>
-            <style>
-              body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#525252 100%); padding: 32px 16px; }
-              .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #0f172a); color: #ffffff; text-align: left; }
-              .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: #f3f4f6; }
-              .content { padding: 32px 28px; }
-              .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #e5e7eb; color: #1f2937; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #d1d5db; }
-              .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
-              .org-badge { display: inline-block; background: #f8fafc; border: 1px solid #e5e7eb; color: #374151; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin: 12px 0; }
-              .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
-              .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; }
-              .checklist ul { padding: 0; margin: 0; list-style: none; }
-              .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #525252; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
-              .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
-              .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
-              @media (max-width: 600px) {
-                .outer { margin: 0 12px; }
-                .content { padding: 28px 22px; }
-              }
-            </style>
           </head>
-          <body>
-            <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0; background-color: #0f172a;" bgcolor="#0f172a">
               <tr>
-                <td align="center">
-                  <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
+                <td align="center" style="padding: 32px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
-                      <td class="header">
-                        <h1 style="margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; color: #ffffff !important;">&#128203; Welcome to POLWEL!</h1>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #f3f4f6 !important;">Complete Your Training Coordinator Setup</p>
+                      <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
+                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">📋 Welcome to POLWEL!</h1>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">Complete Your Training Coordinator Setup</p>
                       </td>
                     </tr>
                     <tr>
-                      <td class="content">
-                        <p class="greeting">Hello ${name},</p>
-                        <p class="meta">Welcome to the POLWEL Training Management System! You've been added as a Training Coordinator for:</p>
-                        <div style="text-align: center;">
-                          <span class="org-badge">&#127970; ${organizationName}</span>
-                        </div>
-                        <div class="button-card">
-                          <a href="${setupUrl}" class="button">Complete Coordinator Setup</a>
-                        </div>
-                        <div class="checklist">
-                          <p>Your coordinator access includes:</p>
-                          <ul>
-                            <li><span>1</span><div>Manage training bookings and course runs.</div></li>
-                            <li><span>2</span><div>Coordinate learner enrollments and attendance.</div></li>
-                            <li><span>3</span><div>Access organization-specific reports and data.</div></li>
-                          </ul>
-                        </div>
+                      <td style="padding: 32px 28px; background-color: #ffffff;" bgcolor="#ffffff">
+                        <p style="font-size: 16px; margin: 0 0 16px 0; color: #1f2937 !important; font-family: Arial, sans-serif;">Hello ${name},</p>
+                        <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151 !important; line-height: 1.7; font-family: Arial, sans-serif;">Welcome to the POLWEL Training Management System! You've been added as a Training Coordinator for:</p>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td align="center" style="padding: 12px 0;">
+                              <span style="display: inline-block; background-color: #f8fafc; border: 1px solid #e5e7eb; color: #374151 !important; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-family: Arial, sans-serif;" bgcolor="#f8fafc">🏢 ${organizationName}</span>
+                            </td>
+                          </tr>
+                        </table>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                          <tr>
+                            <td style="padding: 24px; background-color: #f8fafc; border: 1px solid #e5e7eb;" bgcolor="#f8fafc" align="center">
+                              <a href="${setupUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; font-family: Arial, sans-serif;" bgcolor="#3b82f6">Complete Coordinator Setup</a>
+                            </td>
+                          </tr>
+                        </table>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0; background-color: #f8fafc; border: 1px solid #e2e8f0;" bgcolor="#f8fafc">
+                          <tr>
+                            <td style="padding: 20px 24px;">
+                              <p style="margin: 0 0 12px 0; font-size: 14px; color: #1f2937 !important; font-weight: 600; font-family: Arial, sans-serif;">Your coordinator access includes:</p>
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">1</span>
+                                    Manage training bookings and course runs.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">2</span>
+                                    Coordinate learner enrollments and attendance.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">3</span>
+                                    Access organization-specific reports and data.
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
                     <tr>
-                      <td class="footer">
-                        <span style="color: #94a3b8 !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</span>
-                        <div class="support" style="margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92) !important;">Need help? Email <a href="mailto:pdcs@polwel.org.sg" style="color:#9ca3af !important; text-decoration:none;">pdcs@polwel.org.sg</a>.</div>
+                      <td style="padding: 24px 28px 30px; text-align: center; background-color: #0f172a;" bgcolor="#0f172a">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8 !important; font-family: Arial, sans-serif;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
+                        <p style="margin: 18px 0 0 0; font-size: 12px; color: #cbd5e1 !important; font-family: Arial, sans-serif;">Need help? Email <a href="mailto:pdcs@polwel.org.sg" style="color: #9ca3af !important; text-decoration: none;">pdcs@polwel.org.sg</a></p>
                       </td>
                     </tr>
                   </table>
@@ -631,67 +653,79 @@ class EmailService {
           <head>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <!--[if mso]>
+            <noscript>
+              <xml>
+                <o:OfficeDocumentSettings>
+                  <o:PixelsPerInch>96</o:PixelsPerInch>
+                </o:OfficeDocumentSettings>
+              </xml>
+            </noscript>
+            <![endif]-->
             <title>POLWEL Password Reset</title>
-            <style>
-              body { margin: 0; padding: 0; background: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
-              .wrapper { width: 100%; table-layout: fixed; background: linear-gradient(135deg,#0f172a 0%,#374151 100%); padding: 32px 16px; }
-              .outer { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 55px rgba(15,23,42,0.22); }
-              .header { padding: 32px 28px 24px; background: radial-gradient(circle at top, #1f2937, #111827); color: #f8fafc; text-align: left; }
-              .header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; }
-              .header p { margin: 4px 0 0; font-size: 14px; color: rgba(254,242,242,0.85); }
-              .content { padding: 32px 28px; }
-              .greeting { font-size: 16px; margin: 0 0 16px; color: #1f2937; }
-              .button-card { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
-              .button { display: inline-block; background-color: #e5e7eb; color: #374151; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 12px 0; }
-              .button:hover { background-color: #d1d5db; }
-              .meta { margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.7; }
-              .checklist { background: #f8fafc; border-radius: 12px; padding: 20px 24px; border: 1px solid #e2e8f0; }
-              .checklist p { margin: 0 0 12px; font-size: 14px; color: #1f2937; font-weight: 600; }
-              .checklist ul { padding: 0; margin: 0; list-style: none; }
-              .checklist li { display: flex; align-items: flex-start; font-size: 13px; color: #475569; margin-bottom: 10px; }
-              .checklist span { display: inline-block; min-width: 18px; height: 18px; border-radius: 9999px; background: #374151; color: #f8fafc; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; margin-right: 10px; }
-              .warning { margin: 24px 0 0; padding: 18px 22px; border-radius: 12px; background: #f3f4f6; border: 1px solid #9ca3af; font-size: 13px; color: #6b7280; line-height: 1.6; }
-              .footer { padding: 24px 28px 30px; text-align: center; font-size: 12px; color: #94a3b8; background: #0f172a; }
-              .support { margin-top: 18px; font-size: 12px; color: rgba(226,232,240,0.92); }
-              @media (max-width: 600px) {
-                .outer { margin: 0 12px; }
-                .content { padding: 28px 22px; }
-              }
-            </style>
           </head>
-          <body>
-            <table role="presentation" cellspacing="0" cellpadding="0" class="wrapper">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0; background-color: #0f172a;" bgcolor="#0f172a">
               <tr>
-                <td align="center">
-                  <table role="presentation" cellspacing="0" cellpadding="0" class="outer">
+                <td align="center" style="padding: 32px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
-                      <td class="header">
-                        <h1>&#128274; Password Reset Request</h1>
-                        <p>POLWEL Training Management System</p>
+                      <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
+                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">🔒 Password Reset Request</h1>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">POLWEL Training Management System</p>
                       </td>
                     </tr>
                     <tr>
-                      <td class="content">
-                        <p class="greeting">Hello ${name},</p>
-                        <p class="meta">We received a request to reset your password for your POLWEL account. Click the button below to create a new password. This link will expire in <strong>1 hour</strong> for security purposes.</p>
-                        <div class="button-card">
-                          <a href="${resetUrl}" class="button">Reset Your Password</a>
-                        </div>
-                        <div class="checklist">
-                          <p>Security guidelines:</p>
-                          <ul>
-                            <li><span>1</span><div>Only click this button if you requested a password reset.</div></li>
-                            <li><span>2</span><div>Choose a strong password with at least 8 characters, including uppercase, lowercase, and numbers.</div></li>
-                            <li><span>3</span><div>Never share your password with anyone. POLWEL will never ask for it.</div></li>
-                          </ul>
-                        </div>
-                        <div class="warning">&#9888; <strong>Didn&#39;t request this?</strong> If you didn&#39;t request a password reset, please ignore this email or contact our support team immediately to secure your account. Your current password remains unchanged.</div>
+                      <td style="padding: 32px 28px; background-color: #ffffff;" bgcolor="#ffffff">
+                        <p style="font-size: 16px; margin: 0 0 16px 0; color: #1f2937 !important; font-family: Arial, sans-serif;">Hello ${name},</p>
+                        <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151 !important; line-height: 1.7; font-family: Arial, sans-serif;">We received a request to reset your password for your POLWEL account. Click the button below to create a new password. This link will expire in <strong style="color: #1f2937 !important;">1 hour</strong> for security purposes.</p>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                          <tr>
+                            <td style="padding: 24px; background-color: #f8fafc; border: 1px solid #e5e7eb;" bgcolor="#f8fafc" align="center">
+                              <a href="${resetUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; font-family: Arial, sans-serif;" bgcolor="#3b82f6">Reset Your Password</a>
+                            </td>
+                          </tr>
+                        </table>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0; background-color: #f8fafc; border: 1px solid #e2e8f0;" bgcolor="#f8fafc">
+                          <tr>
+                            <td style="padding: 20px 24px;">
+                              <p style="margin: 0 0 12px 0; font-size: 14px; color: #1f2937 !important; font-weight: 600; font-family: Arial, sans-serif;">Security guidelines:</p>
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #374151; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#374151">1</span>
+                                    Only click this button if you requested a password reset.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #374151; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#374151">2</span>
+                                    Choose a strong password with at least 8 characters, including uppercase, lowercase, and numbers.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #374151; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#374151">3</span>
+                                    Never share your password with anyone. POLWEL will never ask for it.
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0; background-color: #fef3c7; border: 1px solid #fbbf24;" bgcolor="#fef3c7">
+                          <tr>
+                            <td style="padding: 18px 22px;">
+                              <p style="margin: 0; font-size: 13px; color: #92400e !important; line-height: 1.6; font-family: Arial, sans-serif;">⚠️ <strong style="color: #78350f !important;">Didn't request this?</strong> If you didn't request a password reset, please ignore this email or contact our support team immediately to secure your account. Your current password remains unchanged.</p>
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
                     <tr>
-                      <td class="footer">
-                        &copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.
-                        <div class="support">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color:#9ca3af; text-decoration:none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a>.</div>
+                      <td style="padding: 24px 28px 30px; text-align: center; background-color: #0f172a;" bgcolor="#0f172a">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8 !important; font-family: Arial, sans-serif;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
+                        <p style="margin: 18px 0 0 0; font-size: 12px; color: #cbd5e1 !important; font-family: Arial, sans-serif;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color: #9ca3af !important; text-decoration: none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a></p>
                       </td>
                     </tr>
                   </table>
@@ -1093,121 +1127,110 @@ class EmailService {
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Training Assignment & Course Confirmation</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-          .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
-          .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #4b5563 0%, #374151 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
-          .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
-          .an1 {
-            vertical-align: middle;
-            place-self: center;
-            position: relative;
-            left: 10px;
-          }
-          .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
-          .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
-          .content { padding: 32px 24px; color: #333333; }
-          .greeting { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
-          .intro-text { font-size: 14px; color: #1f2937; line-height: 1.6; margin-bottom: 24px; }
-          .section-title { font-size: 15px; font-weight: 600; color: #1f2937; margin: 20px 0 12px 0; }
-          .course-table { width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; margin-bottom: 20px; }
-          .course-table td { padding: 12px 16px; border: 1px solid #d1d5db; font-size: 14px; vertical-align: top; }
-          .course-table td:first-child { background-color: #f9fafb; font-weight: 500; color: #374151; width: 30%; }
-          .course-table td:last-child { color: #1f2937; }
-          .venue-address { display: block; margin-top: 4px; font-size: 13px; color: #6b7280; line-height: 1.5; }
-          .fee-box { background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
-          .fee-label { font-size: 14px; color: #374151; font-weight: 500; margin-bottom: 8px; }
-          .fee-value { font-size: 18px; color: #1f2937; font-weight: 600; }
-          .additional-section { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
-          .additional-content { font-size: 14px; color: #1f2937; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word; }
-          .additional-content img { max-width: 100% !important; height: auto !important; display: block; margin: 12px 0; border-radius: 4px; border: 1px solid #e5e7eb; }
-          .additional-content p { margin: 8px 0; line-height: 1.6; }
-          .additional-content strong { font-weight: 600; color: #1f2937; }
-          .additional-content em { font-style: italic; }
-          .additional-content u { text-decoration: underline; }
-          .additional-content ul, .additional-content ol { margin: 8px 0; padding-left: 24px; }
-          .additional-content li { margin: 4px 0; line-height: 1.5; }
-          .additional-content a { color: #3b82f6; text-decoration: underline; }
-          .additional-content blockquote { border-left: 4px solid #d1d5db; padding-left: 16px; margin: 12px 0; color: #6b7280; font-style: italic; }
-          .additional-content pre { background-color: #f3f4f6; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px; }
-          .additional-content code { background-color: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 13px; }
-          .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
-          .signature { margin-top: 16px; font-size: 14px; color: #4b5563; line-height: 1.8; }
-          .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-          .footer-text { margin: 4px 0; }
-          @media only screen and (max-width: 600px) {
-            .email-container { padding: 20px 10px; }
-            .content { padding: 24px 16px; }
-            .header { padding: 24px 16px; }
-            .course-table td:first-child { width: 40%; }
-          }
+        <!--[if mso]>
+        <style type="text/css">
+          table { border-collapse: collapse; }
+          td { padding: 0; }
         </style>
+        <![endif]-->
       </head>
-      <body>
-        <div class="email-container">
-          <div class="email-wrapper">
-              <div class="header">
-              <div class="header-icon an1">📧</div>
-              <div class="header-title">Training Assignment & Course Confirmation</div>
-              <div class="header-subtitle">${courseRunDetails.course || 'Training Course'}</div>
-            </div>
-            <div class="content">
-              <div class="greeting">Hi ${name},</div>
-              <div class="intro-text">
-                Please refer to the attached documents and details below for the upcoming course <strong>${courseRunDetails.course || 'N/A'}</strong>:
-              </div>
-              
-              <div class="section-title">Course details – The course details are as follows:</div>
-              <table class="course-table">
+      <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#0f172a" style="background-color: #0f172a !important;">
+          <tr>
+            <td align="center" style="padding: 32px 16px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff !important;">
+                <!-- Header -->
                 <tr>
-                  <td>Day & Date</td>
-                  <td>${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}</td>
+                  <td style="padding: 32px 28px 24px; background-color: #1f2937 !important;" bgcolor="#1f2937" align="center">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td align="center">
+                          <div style="font-size: 32px; margin-bottom: 12px;">📧</div>
+                          <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Training Assignment & Course Confirmation</h1>
+                          <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">${courseRunDetails.course || 'Training Course'}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
                 </tr>
+                <!-- Content -->
                 <tr>
-                  <td>Time</td>
-                  <td>${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}</td>
+                  <td style="padding: 32px 28px; background-color: #ffffff !important;" bgcolor="#ffffff">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td>
+                          <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Hi ${name},</p>
+                          <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                            Please refer to the attached documents and details below for the upcoming course <strong>${courseRunDetails.course || 'N/A'}</strong>:
+                          </p>
+                          
+                          <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
+                          
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="1" width="100%" style="border: 1px solid #d1d5db; border-collapse: collapse; margin-bottom: 20px;">
+                            <tr>
+                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; width: 30%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Day & Date</td>
+                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Time</td>
+                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue</td>
+                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
+                                ${courseRunDetails.venue || 'TBD'}
+                                ${courseRunDetails.venueAddress ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">${courseRunDetails.venueAddress}</span>` : ''}
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td style="padding: 16px; background-color: #f8fafc !important; border: 1px solid #e5e7eb; margin: 20px 0;" bgcolor="#f8fafc">
+                                <p style="margin: 0 0 8px 0; color: #374151 !important; font-size: 14px; font-weight: 500; font-family: Arial, sans-serif !important;">Professional Fees:</p>
+                                <p style="margin: 0; color: #1f2937 !important; font-size: 18px; font-weight: 600; font-family: Arial, sans-serif !important;">${formatCurrency(professionalFees)}</p>
+                              </td>
+                            </tr>
+                          </table>
+
+                          ${additionalBody ? `
+                          <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Additional Information</p>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td style="padding: 16px; background-color: #f9fafb !important; border: 1px solid #e5e7eb; margin: 20px 0;" bgcolor="#f9fafb">
+                                <div style="color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalBody}</div>
+                              </td>
+                            </tr>
+                          </table>
+                          ` : ''}
+
+                          <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                            Thank you.
+                          </p>
+                          <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                            Regards,
+                          </p>
+                          <p style="margin: 16px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.8; font-family: Arial, sans-serif !important;">
+                            <strong>Professional Development & Career Services Division</strong><br/>
+                            POLWEL Co-operative Society Limited<br/>
+                            Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
+                            Stay connected with POLWEL on and view our professional development courses on HRP!
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
                 </tr>
+                <!-- Footer -->
                 <tr>
-                  <td>Venue</td>
-                  <td>
-                    ${courseRunDetails.venue || 'TBD'}
-                    ${courseRunDetails.venueAddress ? `<span class="venue-address">${courseRunDetails.venueAddress}</span>` : ''}
+                  <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
+                    <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
                   </td>
                 </tr>
               </table>
-
-              <div class="fee-box">
-                <div class="fee-label">Professional Fees:</div>
-                <div class="fee-value">${formatCurrency(professionalFees)}</div>
-              </div>
-
-              ${additionalBody ? `
-              <div class="section-title">Additional Information</div>
-              <div class="additional-section">
-                <div class="additional-content">${additionalBody}</div>
-              </div>
-              ` : ''}
-
-              <div class="closing-text">
-                Thank you.
-              </div>
-              <div class="closing-text" style="margin-top: 12px;">
-                Regards,
-              </div>
-              <div class="signature">
-                <strong>Professional Development & Career Services Division</strong><br/>
-                POLWEL Co-operative Society Limited<br/>
-                Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
-                Stay connected with POLWEL on and view our professional development courses on HRP!
-              </div>
-            </div>
-            <div class="footer">
-              <div class="footer-text">© ${new Date().getFullYear()} POLWEL. All rights reserved.</div>
-            </div>
-          </div>
-        </div>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>`;
 
@@ -1370,138 +1393,130 @@ class EmailService {
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <title>Course Confirmation</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-              .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
-              .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              .header { background: linear-gradient(135deg, #4b5563 0%, #374151 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
-              .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
-              .an1 {
-                vertical-align: middle;
-                place-self: center;
-                position: relative;
-                left: 10px;
-              }
-              .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
-              .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
-              .content { padding: 32px 24px; color: #333333; }
-              .greeting { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
-              .intro-text { font-size: 14px; color: #1f2937; line-height: 1.6; margin-bottom: 24px; }
-              .section-title { font-size: 15px; font-weight: 600; color: #1f2937; margin: 20px 0 12px 0; }
-              .course-table { width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; margin-bottom: 20px; }
-              .course-table td { padding: 12px 16px; border: 1px solid #d1d5db; font-size: 14px; vertical-align: top; }
-              .course-table td:first-child { background-color: #f9fafb; font-weight: 500; color: #374151; width: 30%; }
-              .course-table td:last-child { color: #1f2937; }
-              .venue-address { display: block; margin-top: 4px; font-size: 13px; color: #6b7280; line-height: 1.5; }
-              .info-box { background-color: #f3f4f6; border-left: 4px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .info-box-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
-              .info-box-content { color: #6b7280; font-size: 13px; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word; }
-              .info-box-content img { max-width: 100% !important; height: auto !important; display: block; margin: 12px 0; border-radius: 4px; border: 1px solid #e5e7eb; }
-              .info-box-content p { margin: 8px 0; line-height: 1.6; }
-              .info-box-content strong { font-weight: 600; color: #374151; }
-              .info-box-content em { font-style: italic; }
-              .info-box-content u { text-decoration: underline; }
-              .info-box-content ul, .info-box-content ol { margin: 8px 0; padding-left: 24px; }
-              .info-box-content li { margin: 4px 0; line-height: 1.5; }
-              .info-box-content a { color: #3b82f6; text-decoration: underline; }
-              .info-box-content blockquote { border-left: 4px solid #d1d5db; padding-left: 16px; margin: 12px 0; color: #6b7280; font-style: italic; }
-              .info-box-content pre { background-color: #f9fafb; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px; }
-              .info-box-content code { background-color: #f9fafb; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; }
-              .info-box-blue { background-color: #f8fafc; border-left: 4px solid #6b7280; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .info-box-blue-title { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
-              .info-box-blue-content { color: #1f2937; font-size: 13px; line-height: 1.6; }
-              .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
-              .signature { margin-top: 16px; font-size: 14px; color: #4b5563; line-height: 1.8; }
-              .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-              .footer-text { margin: 4px 0; }
-              @media only screen and (max-width: 600px) {
-                .email-container { padding: 20px 10px; }
-                .content { padding: 24px 16px; }
-                .header { padding: 24px 16px; }
-                .course-table td:first-child { width: 40%; }
-              }
+            <!--[if mso]>
+            <style type="text/css">
+              table { border-collapse: collapse; }
+              td { padding: 0; }
             </style>
+            <![endif]-->
           </head>
-          <body>
-            <div class="email-container">
-              <div class="email-wrapper">
-                  <div class="header">
-                    <div class="header-icon an1">📋</div>
-                  <div class="header-title">Course Confirmation</div>
-                  <div class="header-subtitle">Registration Confirmed</div>
-                </div>
-                <div class="content">
-                  <div class="greeting">Dear Participants,</div>
-                  <div class="intro-text">
-                    Please refer to the attached documents and details below for the upcoming course <strong>${courseTitle}</strong>:
-                  </div>
-                  
-                  <div class="section-title">Course details – The course details are as follows:</div>
-                  <table class="course-table">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#0f172a" style="background-color: #0f172a !important;">
+              <tr>
+                <td align="center" style="padding: 32px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff !important;">
+                    <!-- Header -->
                     <tr>
-                      <td>Day & Date</td>
-                      <td>${formatDateWithDay(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' to ' + formatDateWithDay(endDate) : ''}</td>
-                    </tr>
-                    <tr>
-                      <td>Time</td>
-                      <td>${formatTime(startDate, endDate)}</td>
-                    </tr>
-                    <tr>
-                      <td>Venue</td>
-                      <td>
-                        ${venueName || 'To be confirmed'}
-                        ${venueAddress ? `<span class="venue-address">${venueAddress}</span>` : ''}
+                      <td style="padding: 32px 28px 24px; background-color: #1f2937 !important;" bgcolor="#1f2937" align="center">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td align="center">
+                              <div style="font-size: 32px; margin-bottom: 12px;">📋</div>
+                              <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Confirmation</h1>
+                              <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">Registration Confirmed</p>
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
+                    <!-- Content -->
                     <tr>
-                      <td>Note</td>
-                      <td>
-                        For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
+                      <td style="padding: 32px 28px; background-color: #ffffff !important;" bgcolor="#ffffff">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td>
+                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Participants,</p>
+                              <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Please refer to the attached documents and details below for the upcoming course <strong>${courseTitle}</strong>:
+                              </p>
+                              
+                              <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
+                              
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="1" width="100%" style="border: 1px solid #d1d5db; border-collapse: collapse; margin-bottom: 20px;">
+                                <tr>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; width: 30%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Day & Date</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatDateWithDay(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' to ' + formatDateWithDay(endDate) : ''}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Time</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatTime(startDate, endDate)}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
+                                    ${venueName || 'To be confirmed'}
+                                    ${venueAddress ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">${venueAddress}</span>` : ''}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Note</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
+                                    For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
+                                  </td>
+                                </tr>
+                              </table>
+
+                              ${additionalNotes ? `
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                  <td style="padding: 16px; background-color: #f3f4f6 !important; border-left: 4px solid #d1d5db;" bgcolor="#f3f4f6">
+                                    <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalNotes}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                              ` : ''}
+
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                  <td style="padding: 16px; background-color: #f3f4f6 !important; border-left: 4px solid #d1d5db;" bgcolor="#f3f4f6">
+                                    <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Withdrawal Policy</p>
+                                    <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                      • <strong>More than 10 working days before the course commencement date:</strong> 0% of the total course fees will be chargeable (i.e. 100% refundable)<br/><br/>
+                                      • <strong>Within 10 working days before the course commencement date:</strong> 50% of the total course fees will be chargeable (i.e. 50% refundable)<br/><br/>
+                                      • <strong>Absence on the day of the confirmed course:</strong> Will be deemed as no-show in which 100% of the total course fees will be chargeable (i.e. non-refundable).
+                                    </div>
+                                  </td>
+                                </tr>
+                              </table>
+
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                  <td style="padding: 16px; background-color: #f3f4f6 !important; border-left: 4px solid #d1d5db;" bgcolor="#f3f4f6">
+                                    <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Photos & Videography</p>
+                                    <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org/privacy-policy" style="color: #4b5563 !important; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
+                                    </div>
+                                  </td>
+                                </tr>
+                              </table>
+
+                              <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Thank you.
+                              </p>
+                              <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Regards,
+                              </p>
+                              <p style="margin: 16px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.8; font-family: Arial, sans-serif !important;">
+                                <strong>Professional Development & Career Services Division</strong><br/>
+                                POLWEL Co-operative Society Limited<br/>
+                                Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
+                                Stay connected with POLWEL on and view our professional development courses on HRP!
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
+                        <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
                       </td>
                     </tr>
                   </table>
-
-                  ${additionalNotes ? `
-                  <div class="info-box">
-                    <div class="info-box-content">${additionalNotes}</div>
-                  </div>
-                  ` : ''}
-
-                  <div class="info-box">
-                    <div class="info-box-title">Withdrawal Policy</div>
-                    <div class="info-box-content">
-                      • <strong>More than 10 working days before the course commencement date:</strong> 0% of the total course fees will be chargeable (i.e. 100% refundable)<br/><br/>
-                      • <strong>Within 10 working days before the course commencement date:</strong> 50% of the total course fees will be chargeable (i.e. 50% refundable)<br/><br/>
-                      • <strong>Absence on the day of the confirmed course:</strong> Will be deemed as no-show in which 100% of the total course fees will be chargeable (i.e. non-refundable).
-                    </div>
-                  </div>
-
-                  <div class="info-box">
-                    <div class="info-box-title">Photos & Videography</div>
-                    <div class="info-box-content">
-                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org/privacy-policy" style="color: #4b5563; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
-                    </div>
-                  </div>
-
-                  <div class="closing-text">
-                    Thank you.
-                  </div>
-                  <div class="closing-text" style="margin-top: 12px;">
-                    Regards,
-                  </div>
-                  <div class="signature">
-                    <strong>Professional Development & Career Services Division</strong><br/>
-                    POLWEL Co-operative Society Limited<br/>
-                    Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
-                    Stay connected with POLWEL on and view our professional development courses on HRP!
-                  </div>
-                </div>
-                <div class="footer">
-                  <div class="footer-text">© ${new Date().getFullYear()} POLWEL. All rights reserved.</div>
-                </div>
-              </div>
-            </div>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `,
@@ -1606,113 +1621,114 @@ class EmailService {
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <title>Course Cancellation Notice</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-              .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
-              .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              .header { background: linear-gradient(135deg, #374151 0%, #374151 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
-              .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
-              .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
-              .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
-              .content { padding: 32px 24px; color: #333333; }
-              .greeting { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
-              .intro-text { font-size: 14px; color: #1f2937; line-height: 1.6; margin-bottom: 24px; }
-              .section-title { font-size: 16px; font-weight: 600; color: #1f2937; margin: 24px 0 12px 0; }
-              .details-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-              .details-table td { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-              .details-table td:first-child { font-weight: 500; color: #6b7280; width: 30%; }
-              .details-table td:last-child { color: #1f2937; }
-              .details-table tr:last-child td { border-bottom: none; }
-              .alert-box { background-color: #f3f4f6; border-left: 4px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .alert-box-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
-              .alert-box-content { color: #6b7280; font-size: 13px; line-height: 1.6; }
-              .alert-box-content ul { margin: 8px 0 0 0; padding-left: 20px; }
-              .alert-box-content li { margin: 4px 0; }
-              .alternative-section { background-color: #f8fafc; border: 1px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 8px; }
-              .alternative-title { font-weight: 600; color: #4b5563; margin-bottom: 8px; font-size: 14px; }
-              .alternative-content { color: #4b5563; font-size: 13px; line-height: 1.6; }
-              .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
-              .signature { margin-top: 16px; font-size: 14px; color: #1f2937; font-weight: 500; }
-              .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-              .footer-text { margin: 4px 0; }
-              @media only screen and (max-width: 600px) {
-                .email-container { padding: 20px 10px; }
-                .content { padding: 24px 16px; }
-                .header { padding: 24px 16px; }
-                .details-table td:first-child { width: 40%; }
-              }
+            <!--[if mso]>
+            <style type="text/css">
+              table { border-collapse: collapse; }
+              td { padding: 0; }
             </style>
+            <![endif]-->
           </head>
-          <body>
-            <div class="email-container">
-              <div class="email-wrapper">
-                <div class="header">
-                  <div class="header-icon an1">⚠️</div>
-                  <div class="header-title">Course Cancellation Notice</div>
-                  <div class="header-subtitle">Important Update Regarding Your Course</div>
-                </div>
-                <div class="content">
-                  <div class="greeting">Dear Participants,</div>
-                  <div class="intro-text">
-                    We regret to inform you that the following course has been <strong>cancelled</strong> due to ${cancellationReason || 'unforeseen circumstances'}.
-                  </div>
-                  
-                  <div class="section-title">Cancelled Course Details</div>
-                  <table class="details-table">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#0f172a" style="background-color: #0f172a !important;">
+              <tr>
+                <td align="center" style="padding: 32px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff !important;">
+                    <!-- Header -->
                     <tr>
-                      <td>Course Name:</td>
-                      <td>${courseTitle}</td>
+                      <td style="padding: 32px 28px 24px; background-color: #1f2937 !important;" bgcolor="#1f2937" align="center">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td align="center">
+                              <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
+                              <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Cancellation Notice</h1>
+                              <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">Important Update Regarding Your Course</p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
                     </tr>
+                    <!-- Content -->
                     <tr>
-                      <td>Date:</td>
-                      <td>${formatDate(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' - ' + formatDate(endDate) : ''}</td>
+                      <td style="padding: 32px 28px; background-color: #ffffff !important;" bgcolor="#ffffff">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td>
+                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Participants,</p>
+                              <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                We regret to inform you that the following course has been <strong>cancelled</strong> due to ${cancellationReason || 'unforeseen circumstances'}.
+                              </p>
+                              
+                              <p style="margin: 24px 0 12px 0; color: #1f2937 !important; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif !important;">Cancelled Course Details</p>
+                              
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#f9fafb" style="background-color: #f9fafb !important; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+                                <tr>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; width: 30%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Course Name:</td>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${courseTitle}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Date:</td>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' - ' + formatDate(endDate) : ''}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Time:</td>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatTime()}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 12px 16px; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue:</td>
+                                  <td style="padding: 12px 16px; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${venueName || 'TBD'}</td>
+                                </tr>
+                              </table>
+
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                  <td style="padding: 16px; background-color: #f3f4f6 !important; border-left: 4px solid #d1d5db;" bgcolor="#f3f4f6">
+                                    <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Important Information</p>
+                                    <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                      • All registrations for this course have been cancelled<br/>
+                                      • No further action is required from you at this time<br/>
+                                      • If applicable, refunds will be processed within 14 working days
+                                    </div>
+                                  </td>
+                                </tr>
+                              </table>
+
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                  <td style="padding: 16px; background-color: #f8fafc !important; border: 1px solid #d1d5db;" bgcolor="#f8fafc">
+                                    <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Alternative Options</p>
+                                    <div style="color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                      We will notify you once a new course run has been scheduled. In the meantime, you may wish to explore other available courses on our training calendar.<br/><br/>
+                                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563 !important; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563 !important; text-decoration: none;">6431 9973</a>.
+                                    </div>
+                                  </td>
+                                </tr>
+                              </table>
+
+                              <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                We sincerely apologize for any inconvenience this may cause. We understand the importance of this training to your professional development and appreciate your understanding.
+                              </p>
+                              <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Thank you for your understanding and continued support. We look forward to serving you in future training programmes.
+                              </p>
+                              <p style="margin: 16px 0 0 0; color: #1f2937 !important; font-size: 14px; font-weight: 500; font-family: Arial, sans-serif !important;">
+                                Best regards,<br/>
+                                <strong>POLWEL Training System Team</strong>
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
                     </tr>
+                    <!-- Footer -->
                     <tr>
-                      <td>Time:</td>
-                      <td>${formatTime()}</td>
-                    </tr>
-                    <tr>
-                      <td>Venue:</td>
-                      <td>${venueName || 'TBD'}</td>
+                      <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
+                        <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
+                      </td>
                     </tr>
                   </table>
-
-                  <div class="alert-box">
-                    <div class="alert-box-title">Important Information</div>
-                    <div class="alert-box-content">
-                      <ul>
-                        <li>All registrations for this course have been cancelled</li>
-                        <li>No further action is required from you at this time</li>
-                        <li>If applicable, refunds will be processed within 14 working days</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="alternative-section">
-                    <div class="alternative-title">Alternative Options</div>
-                    <div class="alternative-content">
-                      We will notify you once a new course run has been scheduled. In the meantime, you may wish to explore other available courses on our training calendar.<br/><br/>
-                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563; text-decoration: none;">6431 9973</a>.
-                    </div>
-                  </div>
-
-                  <div class="closing-text">
-                    We sincerely apologize for any inconvenience this may cause. We understand the importance of this training to your professional development and appreciate your understanding.
-                  </div>
-                  <div class="closing-text">
-                    Thank you for your understanding and continued support. We look forward to serving you in future training programmes.
-                  </div>
-                  <div class="closing-text" style="margin-top: 16px;">
-                    Best regards,<br/>
-                    <strong>POLWEL Training System Team</strong>
-                  </div>
-                </div>
-                <div class="footer">
-                  <div class="footer-text">© ${new Date().getFullYear()} POLWEL. All rights reserved.</div>
-                </div>
-              </div>
-            </div>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `,
@@ -1782,125 +1798,123 @@ class EmailService {
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <title>Course Completion</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-              .email-container { width: 100%; background-color: #f5f5f5; padding: 40px 20px; }
-              .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              .header { background: linear-gradient(135deg, #6b7280 0%, #525252 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
-              .header-icon { width: 48px; height: 48px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
-              .header-title { font-size: 20px; font-weight: 600; margin: 8px 0 4px 0; color: #ffffff; }
-              .header-subtitle { font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 400; }
-              .content { padding: 32px 24px; color: #333333; }
-              .greeting { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
-              .intro-text { font-size: 14px; color: #1f2937; line-height: 1.6; margin-bottom: 24px; }
-              .section-title { font-size: 16px; font-weight: 600; color: #1f2937; margin: 24px 0 12px 0; }
-              .details-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-              .details-table td { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-              .details-table td:first-child { font-weight: 500; color: #6b7280; width: 35%; }
-              .details-table td:last-child { color: #1f2937; }
-              .details-table tr:last-child td { border-bottom: none; }
-              .certificate-box { background: linear-gradient(135deg, #f3f4f6 0%, #d1d5db 100%); border: 2px solid #6b7280; padding: 24px; margin: 24px 0; border-radius: 12px; text-align: center; }
-              .certificate-icon { width: 80px; height: 80px; background-color: #ffffff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-              .certificate-title { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 8px; }
-              .certificate-subtitle { font-size: 13px; color: #525252; margin-bottom: 16px; }
-              .download-button { display: inline-block; background-color: #6b7280; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; margin-top: 8px; transition: background-color 0.3s; }
-              .download-button:hover { background-color: #525252; }
-              .info-box { background-color: #f8fafc; border-left: 4px solid #6b7280; padding: 16px; margin: 20px 0; border-radius: 4px; }
-              .info-box-title { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
-              .info-box-content { color: #1f2937; font-size: 13px; line-height: 1.6; }
-              .info-box-content ul { margin: 8px 0 0 0; padding-left: 20px; }
-              .info-box-content li { margin: 4px 0; }
-              .closing-text { font-size: 14px; color: #4b5563; line-height: 1.6; margin-top: 24px; }
-              .signature { margin-top: 16px; font-size: 14px; color: #1f2937; font-weight: 500; }
-              .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-              .footer-text { margin: 4px 0; }
-              @media only screen and (max-width: 600px) {
-                .email-container { padding: 20px 10px; }
-                .content { padding: 24px 16px; }
-                .header { padding: 24px 16px; }
-                .details-table td:first-child { width: 40%; }
-              }
+            <!--[if mso]>
+            <style type="text/css">
+              table { border-collapse: collapse; }
+              td { padding: 0; }
             </style>
+            <![endif]-->
           </head>
-          <body>
-            <div class="email-container">
-              <div class="email-wrapper">
-                <div class="header">
-                  <div class="header-icon an1">🎓</div>
-                  <div class="header-title">Congratulations!</div>
-                  <div class="header-subtitle">You've Successfully Completed the Course</div>
-                </div>
-                <div class="content">
-                  <div class="greeting">Dear ${learnerName},</div>
-                  <div class="intro-text">
-                    Congratulations on successfully completing the course! We are pleased to present you with your Certificate of Completion.
-                  </div>
-                  
-                  <div class="section-title">Course Completed</div>
-                  <table class="details-table">
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#0f172a" style="background-color: #0f172a !important;">
+              <tr>
+                <td align="center" style="padding: 32px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff !important;">
+                    <!-- Header -->
                     <tr>
-                      <td>Course Name:</td>
-                      <td>${courseTitle}</td>
+                      <td style="padding: 32px 28px 24px; background-color: #1f2937 !important;" bgcolor="#1f2937" align="center">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td align="center">
+                              <div style="font-size: 32px; margin-bottom: 12px;">🎓</div>
+                              <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Congratulations!</h1>
+                              <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">You've Successfully Completed the Course</p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
                     </tr>
+                    <!-- Content -->
                     <tr>
-                      <td>Date:</td>
-                      <td>${formatDate(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' - ' + formatDate(endDate) : ''}</td>
+                      <td style="padding: 32px 28px; background-color: #ffffff !important;" bgcolor="#ffffff">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td>
+                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear ${learnerName},</p>
+                              <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Congratulations on successfully completing the course! We are pleased to present you with your Certificate of Completion.
+                              </p>
+                              
+                              <p style="margin: 24px 0 12px 0; color: #1f2937 !important; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Completed</p>
+                              
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#f9fafb" style="background-color: #f9fafb !important; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+                                <tr>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; width: 35%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Course Name:</td>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${courseTitle}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Date:</td>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' - ' + formatDate(endDate) : ''}</td>
+                                </tr>
+                                ${trainerName ? `<tr>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Trainer:</td>
+                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${trainerName}</td>
+                                </tr>` : ''}
+                                <tr>
+                                  <td style="padding: 12px 16px; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Completion Date:</td>
+                                  <td style="padding: 12px 16px; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(completionDate || endDate)}</td>
+                                </tr>
+                              </table>
+
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                                <tr>
+                                  <td style="padding: 24px; background-color: #f3f4f6 !important; border: 2px solid #6b7280; text-align: center;" bgcolor="#f3f4f6" align="center">
+                                    <div style="font-size: 40px; margin-bottom: 16px;">🏆</div>
+                                    <p style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif !important;">Certificate of Completion</p>
+                                    <p style="margin: 0 0 16px 0; color: #525252 !important; font-size: 13px; font-family: Arial, sans-serif !important;">Awarded to: ${learnerName}</p>
+                                    <a href="${certificateDownloadUrl}" style="display: inline-block; background-color: #6b7280 !important; color: #ffffff !important; padding: 12px 32px; text-decoration: none; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#6b7280">⬇ Download Certificate</a>
+                                  </td>
+                                </tr>
+                              </table>
+
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                  <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
+                                    <p style="margin: 0 0 8px 0; color: #374151 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Certificate Information</p>
+                                    <div style="color: #1f2937 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                      • Your certificate is digitally signed and verified<br/>
+                                      • Please keep a copy for your professional records<br/>
+                                      • This certificate can be used for CPD (Continuing Professional Development) credits
+                                    </div>
+                                  </td>
+                                </tr>
+                              </table>
+
+                              <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                We hope that you found this programme enriching and valuable for your personal and professional development!
+                              </p>
+                              <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                We look forward to welcoming you to future training programmes!
+                              </p>
+                              
+                              <p style="margin: 20px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Thank you.
+                              </p>
+                              <p style="margin: 16px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Regards,
+                              </p>
+                              
+                              <p style="margin: 16px 0 0 0; color: #1f2937 !important; font-size: 14px; font-weight: 500; font-family: Arial, sans-serif !important;">
+                                <strong>Professional Development & Career Services Division</strong><br/>
+                                POLWEL Co-operative Society Limited<br/>
+                                Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
+                                Stay connected with POLWEL on <a href="https://www.facebook.com/polwelsg" style="color: #4b5563 !important; text-decoration: none;">Facebook</a> and view our professional development courses on <a href="https://hrp.gov.sg/" style="color: #4b5563 !important; text-decoration: none;">HRP</a>!
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
                     </tr>
-                    ${trainerName ? `<tr>
-                      <td>Trainer:</td>
-                      <td>${trainerName}</td>
-                    </tr>` : ''}
+                    <!-- Footer -->
                     <tr>
-                      <td>Completion Date:</td>
-                      <td>${formatDate(completionDate || endDate)}</td>
+                      <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
+                        <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
+                      </td>
                     </tr>
                   </table>
-
-                  <div class="certificate-box">
-                    <div class="certificate-icon">🏆</div>
-                    <div class="certificate-title">Certificate of Completion</div>
-                    <div class="certificate-subtitle">Awarded to: ${learnerName}</div>
-                    <a href="${certificateDownloadUrl}" class="download-button">⬇ Download Certificate</a>
-                  </div>
-
-                  <div class="info-box">
-                    <div class="info-box-title">Certificate Information</div>
-                    <div class="info-box-content">
-                      <ul>
-                        <li>Your certificate is digitally signed and verified</li>
-                        <li>Please keep a copy for your professional records</li>
-                        <li>This certificate can be used for CPD (Continuing Professional Development) credits</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="closing-text">
-                    We hope that you found this programme enriching and valuable for your personal and professional development!
-                  </div>
-                  <div class="closing-text">
-                    We look forward to welcoming you to future training programmes!
-                  </div>
-                  
-                  <div class="closing-text" style="margin-top: 20px;">
-                    Thank you.
-                  </div>
-                  <div class="closing-text" style="margin-top: 16px;">
-                    Regards,
-                  </div>
-                  
-                  <div class="signature">
-                    <strong>Professional Development & Career Services Division</strong><br/>
-                    POLWEL Co-operative Society Limited<br/>
-                    Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
-                    Stay connected with POLWEL on <a href="https://www.facebook.com/polwelsg" style="color: #4b5563; text-decoration: none;">Facebook</a> and view our professional development courses on <a href="https://hrp.gov.sg/" style="color: #4b5563; text-decoration: none;">HRP</a>!
-                  </div>
-                </div>
-                <div class="footer">
-                  <div class="footer-text">© ${new Date().getFullYear()} POLWEL. All rights reserved.</div>
-                </div>
-              </div>
-            </div>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `,
