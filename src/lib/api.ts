@@ -1409,6 +1409,56 @@ export const coursesApi = {
   getStatistics: async () => {
     return apiRequest('/courses/statistics');
   },
+
+  // Export course run history as Excel
+  exportRunHistory: async (id: string | number) => {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/courses/${id}/runs/export`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to export course run history' }));
+      throw new Error(errorData.message || 'Failed to export course run history');
+    }
+
+    // Get filename from Content-Disposition header
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = `Course_Run_History_${id}.xlsx`;
+    
+    if (contentDisposition) {
+      const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+      if (matches != null && matches[1]) {
+        filename = matches[1].replace(/['"]/g, '');
+      }
+    }
+
+    // Get the blob data
+    const blob = await response.blob();
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    return { success: true, message: 'Export successful' };
+  },
 };
 
 // Course Runs API
