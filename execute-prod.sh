@@ -36,8 +36,11 @@ echo "📦 Installing backend dependencies..."
 cd $PROJECT_DIR/polwel-backend
 npm install
 
+echo "🔧 Applying Prisma migrations..."
+npm run db:deploy
+
 echo "🔧 Generating Prisma client..."
-npx prisma generate
+npm run db:generate
 
 echo "📦 Building backend..."
 npm run build
