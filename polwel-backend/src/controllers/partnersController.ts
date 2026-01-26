@@ -35,11 +35,18 @@ type PartnerRecord = {
   contactDesignation: string | null;
   onboardingDate: Date | null;
   notes: string | null;
-  partnerOrganization: string | null;
   bio: string | null;
   experience: string | null;
   createdAt: Date;
   updatedAt: Date;
+  partnerTrainers?: Array<{
+    id: string;
+    trainerInformation: string | null;
+    trainerName: string;
+    trainerWriteUp: string | null;
+    trainerEmail: string;
+    deletedAt: Date | null;
+  }>;
 };
 
 const transformPartner = (partner: PartnerRecord) => ({
@@ -55,14 +62,28 @@ const transformPartner = (partner: PartnerRecord) => ({
   contactDesignation: partner.contactDesignation || '',
   onboardingDate: partner.onboardingDate ? partner.onboardingDate.toISOString().split('T')[0] : undefined,
   notes: partner.notes || undefined,
-  partnerOrganization: partner.partnerOrganization || undefined,
   bio: partner.bio || undefined,
   experience: partner.experience || undefined,
   createdAt: partner.createdAt,
   updatedAt: partner.updatedAt,
+  trainers: partner.partnerTrainers?.filter(t => !t.deletedAt).map(t => ({
+    id: t.id,
+    trainerInformation: t.trainerInformation || '',
+    trainerName: t.trainerName,
+    trainerWriteUp: t.trainerWriteUp || '',
+    trainerEmail: t.trainerEmail,
+  })) || [],
 });
 
 // Zod schemas for partner create/update validation
+const PartnerTrainerSchema = z.object({
+  id: z.string().optional(),
+  trainerInformation: z.string().optional(),
+  trainerName: z.string().min(1, 'Trainer name is required'),
+  trainerWriteUp: z.string().optional(),
+  trainerEmail: z.string().email('Valid email required'),
+});
+
 const PartnerCreateSchema = z.object({
   partnerName: z.string().min(1, 'Partner name is required'),
   email: z.string().email().optional(),
@@ -75,9 +96,9 @@ const PartnerCreateSchema = z.object({
   onboardingDate: z.string().optional(),
   status: z.nativeEnum(UserStatus).optional(),
   notes: z.string().optional(),
-  partnerOrganization: z.string().optional(),
   bio: z.string().optional(),
   experience: z.string().optional(),
+  trainers: z.array(PartnerTrainerSchema).optional(),
 });
 
 const PartnerUpdateSchema = PartnerCreateSchema.partial();
@@ -149,11 +170,23 @@ export const getPartners = async (req: AuthenticatedRequest, res: Response) => {
           contactDesignation: true,
           onboardingDate: true,
           notes: true,
-          partnerOrganization: true,
           bio: true,
           experience: true,
           createdAt: true,
           updatedAt: true,
+          partnerTrainers: {
+            where: {
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+              trainerInformation: true,
+              trainerName: true,
+              trainerWriteUp: true,
+              trainerEmail: true,
+              deletedAt: true,
+            },
+          },
         },
         ...(skip !== undefined ? { skip } : {}),
         ...(take !== undefined ? { take } : {}),
@@ -206,11 +239,23 @@ export const getPartnerById = async (req: AuthenticatedRequest, res: Response) =
         contactDesignation: true,
         onboardingDate: true,
         notes: true,
-        partnerOrganization: true,
         bio: true,
         experience: true,
         createdAt: true,
         updatedAt: true,
+        partnerTrainers: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            trainerInformation: true,
+            trainerName: true,
+            trainerWriteUp: true,
+            trainerEmail: true,
+            deletedAt: true,
+          },
+        },
       },
     });
 
@@ -236,7 +281,7 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
 
-    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
+    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, bio, experience, trainers } = validation.data;
 
     const normalizedName = partnerName.trim();
 
@@ -261,9 +306,18 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         contactDesignation: normalizeString(contactDesignation),
         onboardingDate: parsedOnboardingDate,
         notes: normalizeString(notes),
-        partnerOrganization: normalizeString(partnerOrganization),
         bio: normalizeString(bio),
         experience: normalizeString(experience),
+        ...(trainers && trainers.length > 0 ? {
+          partnerTrainers: {
+            create: trainers.map(t => ({
+              trainerInformation: normalizeString(t.trainerInformation),
+              trainerName: t.trainerName.trim(),
+              trainerWriteUp: normalizeString(t.trainerWriteUp),
+              trainerEmail: t.trainerEmail.trim(),
+            })),
+          },
+        } : {}),
       },
       select: {
         id: true,
@@ -278,11 +332,23 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
         contactDesignation: true,
         onboardingDate: true,
         notes: true,
-        partnerOrganization: true,
         bio: true,
         experience: true,
         createdAt: true,
         updatedAt: true,
+        partnerTrainers: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            trainerInformation: true,
+            trainerName: true,
+            trainerWriteUp: true,
+            trainerEmail: true,
+            deletedAt: true,
+          },
+        },
       },
     });
 
@@ -342,7 +408,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
 
-    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, partnerOrganization, bio, experience } = validation.data;
+    const { partnerName, email, coursesAssigned, pointOfContact, pointOfContactDepartment, pointOfContactEmail, contactNumber, contactDesignation, onboardingDate, status, notes, bio, experience, trainers } = validation.data;
 
     if (!id) {
       return res.status(400).json({ error: 'Partner ID is required' });
@@ -350,7 +416,12 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
 
     // Check if partner exists
     const existingPartner = await prisma.partner.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        partnerTrainers: {
+          where: { deletedAt: null },
+        },
+      },
     });
 
     if (!existingPartner) {
@@ -375,6 +446,45 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
       }
     }
 
+    // Handle trainer updates
+    const trainerUpdates: any = {};
+    if (trainers !== undefined) {
+      const existingTrainerIds = existingPartner.partnerTrainers.map(t => t.id);
+      const incomingTrainerIds = trainers.filter(t => t.id).map(t => t.id);
+      
+      // Delete trainers not in the incoming list
+      const trainersToDelete = existingTrainerIds.filter(id => !incomingTrainerIds.includes(id));
+      
+      // Create, update trainers
+      const trainersToCreate = trainers.filter(t => !t.id);
+      const trainersToUpdate = trainers.filter(t => t.id);
+
+      trainerUpdates.partnerTrainers = {
+        // Soft delete removed trainers
+        updateMany: trainersToDelete.map(trainerId => ({
+          where: { id: trainerId },
+          data: { deletedAt: new Date() },
+        })),
+        // Create new trainers
+        create: trainersToCreate.map(t => ({
+          trainerInformation: normalizeString(t.trainerInformation),
+          trainerName: t.trainerName.trim(),
+          trainerWriteUp: normalizeString(t.trainerWriteUp),
+          trainerEmail: t.trainerEmail.trim(),
+        })),
+        // Update existing trainers
+        update: trainersToUpdate.map(t => ({
+          where: { id: t.id },
+          data: {
+            trainerInformation: normalizeString(t.trainerInformation),
+            trainerName: t.trainerName.trim(),
+            trainerWriteUp: normalizeString(t.trainerWriteUp),
+            trainerEmail: t.trainerEmail.trim(),
+          },
+        })),
+      };
+    }
+
     const partner = await prisma.partner.update({
       where: { id: existingPartner.id },
       data: {
@@ -389,9 +499,9 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         ...(contactDesignation !== undefined && { contactDesignation: normalizeString(contactDesignation) }),
         ...(onboardingDate !== undefined && { onboardingDate: onboardingDateUpdate ?? null }),
         ...(notes !== undefined && { notes: normalizeString(notes) }),
-        ...(partnerOrganization !== undefined && { partnerOrganization: normalizeString(partnerOrganization) }),
         ...(bio !== undefined && { bio: normalizeString(bio) }),
         ...(experience !== undefined && { experience: normalizeString(experience) }),
+        ...trainerUpdates,
       },
       select: {
         id: true,
@@ -406,11 +516,23 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
         contactDesignation: true,
         onboardingDate: true,
         notes: true,
-        partnerOrganization: true,
         bio: true,
         experience: true,
         createdAt: true,
         updatedAt: true,
+        partnerTrainers: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            trainerInformation: true,
+            trainerName: true,
+            trainerWriteUp: true,
+            trainerEmail: true,
+            deletedAt: true,
+          },
+        },
       },
     });
 
@@ -560,12 +682,24 @@ export const getDeletedPartners = async (req: AuthenticatedRequest, res: Respons
         contactDesignation: true,
         onboardingDate: true,
         notes: true,
-        partnerOrganization: true,
         bio: true,
         experience: true,
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
+        partnerTrainers: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            trainerInformation: true,
+            trainerName: true,
+            trainerWriteUp: true,
+            trainerEmail: true,
+            deletedAt: true,
+          },
+        },
       },
       orderBy: { deletedAt: 'desc' },
     });

@@ -3007,6 +3007,18 @@ export const courseRunController = {
               },
             },
           },
+          courseRunPartners: {
+            include: {
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  pointOfContactEmail: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -3113,6 +3125,45 @@ export const courseRunController = {
       });
 
       await Promise.all(emailTasks);
+
+      // Send emails to partners using their TC Email (pointOfContactEmail)
+      const partnerEmailTasks = (courseRun.courseRunPartners || []).map(async (partnerAssignment) => {
+        const partner = partnerAssignment.partner;
+        const partnerEmail = partner?.pointOfContactEmail?.trim() || partner?.email?.trim();
+        const partnerName = partner?.name || 'Training Partner';
+
+        if (!partnerEmail) {
+          console.warn(`Partner ${partner?.name} (${partner?.id}) has no TC Email or email address. Skipping email.`);
+          return { success: false, error: 'Partner email address is missing' };
+        }
+
+        const courseDetails: Parameters<typeof EmailService.sendTrainerAssignmentEmail>[2] = {};
+        if (courseRun.course?.title) {
+          courseDetails.course = courseRun.course.title;
+        }
+        if (courseRun.serialNumber) {
+          courseDetails.serialNumber = courseRun.serialNumber;
+        }
+        courseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
+        courseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
+        courseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+        courseDetails.venueAddress = courseRun.venue?.address || null;
+
+        const result = await EmailService.sendTrainerAssignmentEmail(
+          partnerEmail,
+          partnerName,
+          courseDetails,
+          0, // No base fee for partners
+          0, // No additional cost for partners
+          ccList.length > 0 ? ccList : null,
+          additionalBody || null,
+          attachments.length > 0 ? attachments : null
+        );
+
+        return result;
+      });
+
+      await Promise.all(partnerEmailTasks);
 
       // Check if confirmation emails have already been sent
       // If yes and we just sent trainer emails, update status to CONFIRMED
@@ -3376,13 +3427,7 @@ export const courseRunController = {
         return;
       }
 
-      if (courseRun.status !== 'CONFIRMED_PENDING_CONFIRMATION_EMAILS') {
-        res.status(400).json({
-          success: false,
-          error: `Cannot send confirmation emails. Current status is ${courseRun.status}`,
-        });
-        return;
-      }
+      // Remove status restriction - allow sending confirmation emails even after course is confirmed
 
       // For TALKS: Check if trainer assignment email has been sent
       // If yes, block sending course confirmation email
@@ -3669,6 +3714,18 @@ export const courseRunController = {
               trainer: true,
             },
           },
+          courseRunPartners: {
+            include: {
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  pointOfContactEmail: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -3680,13 +3737,7 @@ export const courseRunController = {
         return;
       }
 
-      if (courseRun.status !== 'CONFIRMED_PENDING_CONFIRMATION_EMAILS') {
-        res.status(400).json({
-          success: false,
-          error: `Cannot send training assignment emails. Current status is ${courseRun.status}`,
-        });
-        return;
-      }
+      // Remove status restriction - allow sending training assignment emails even after course is confirmed
 
       let learnerSuccess = 0;
       let learnerFailed = 0;
@@ -3853,6 +3904,54 @@ export const courseRunController = {
         }
       }
 
+      // Send emails to partners using their TC Email (pointOfContactEmail)
+      let partnerSuccess = 0;
+      let partnerFailed = 0;
+
+      for (const partnerAssignment of courseRun.courseRunPartners || []) {
+        const partner = partnerAssignment.partner;
+        const partnerEmail = partner?.pointOfContactEmail?.trim() || partner?.email?.trim();
+        const partnerName = partner?.name || 'Training Partner';
+
+        if (!partnerEmail) {
+          partnerFailed += 1;
+          console.warn(`Partner ${partner?.name} (${partner?.id}) has no TC Email or email address. Skipping email.`);
+          continue;
+        }
+
+        try {
+          const partnerCourseDetails: Parameters<typeof EmailService.sendTrainerAssignmentEmail>[2] = {};
+          if (courseRun.course?.title) {
+            partnerCourseDetails.course = courseRun.course.title;
+          }
+          if (courseRun.serialNumber) {
+            partnerCourseDetails.serialNumber = courseRun.serialNumber;
+          }
+          partnerCourseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
+          partnerCourseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
+          partnerCourseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+
+          const result = await EmailService.sendTrainerAssignmentEmail(
+            partnerEmail,
+            partnerName,
+            partnerCourseDetails,
+            0, // No base fee for partners
+            0, // No additional cost for partners
+            null,
+            null,
+          );
+
+          if (result.success) {
+            partnerSuccess += 1;
+          } else {
+            partnerFailed += 1;
+          }
+        } catch (err) {
+          partnerFailed += 1;
+          console.error(`Failed to send email to partner ${partnerAssignment.partnerId}:`, err);
+        }
+      }
+
       // Update course run status to CONFIRMED after all emails sent
       await prisma.courseRun.update({
         where: { id: id },
@@ -3868,10 +3967,12 @@ export const courseRunController = {
         emailsSent: {
           learners: learnerSuccess,
           trainers: trainerSuccess,
+          partners: partnerSuccess,
         },
         failures: {
           learners: learnerFailed,
           trainers: trainerFailed,
+          partners: partnerFailed,
         },
       });
     } catch (error) {
