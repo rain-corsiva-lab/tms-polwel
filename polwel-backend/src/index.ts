@@ -139,15 +139,36 @@ const corsOptions: CorsOptions = {
 };
 
 // Middleware
-// Configure Helmet with lenient settings to avoid blocking legitimate requests
+// Configure Helmet with security headers
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP if causing issues, can be enabled later with proper policy
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow inline scripts for React/Vite
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles
+      imgSrc: ["'self'", "data:", "https:"], // Allow images from self, data URIs, and HTTPS
+      fontSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", "https:"], // Allow API calls to same origin and HTTPS
+      frameSrc: ["'none'"], // Disable iframes
+      objectSrc: ["'none'"], // Disable plugins
+      upgradeInsecureRequests: [], // Upgrade HTTP to HTTPS
+    },
+  },
   frameguard: { action: 'deny' },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: { maxAge: 31536000, includeSubDomains: true },
   noSniff: true,
   xssFilter: true,
 }));
+
+// Set Permissions-Policy header (not directly supported by Helmet v8)
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), fullscreen=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()'
+  );
+  next();
+});
 app.use(limiter);
 
 // CORS middleware - validation is done inside corsOptions
