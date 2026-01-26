@@ -18,6 +18,11 @@ import {
   getCoordinatorCourseRunsSelf,
   getOrganizationLearnersSelf,
 } from '../controllers/clientOrganizationsController';
+import {
+  getCoursesByLearnersRanking,
+  getDivisionsByLearnersRanking,
+  getCoordinatorResources,
+} from '../controllers/organizationAnalyticsController';
 
 const router = express.Router();
 
@@ -49,5 +54,12 @@ router.get('/:organizationId/learners', authorizeRoles('POLWEL', 'TRAINING_COORD
 // Training Coordinator self-scoped views
 router.get('/:organizationId/coordinator/course-runs', authorizeRoles('TRAINING_COORDINATOR'), authorizeOrganization, getCoordinatorCourseRunsSelf);
 router.get('/:organizationId/coordinator/learners', authorizeRoles('TRAINING_COORDINATOR'), authorizeOrganization, getOrganizationLearnersSelf);
+
+// Resource Library for Training Coordinators
+router.get('/:organizationId/resources', authorizeRoles('TRAINING_COORDINATOR'), authorizeOrganization, getCoordinatorResources);
+
+// Analytics routes for Training Coordinators
+router.get('/:organizationId/analytics/courses-by-learners', authorizeRoles('TRAINING_COORDINATOR'), authorizeOrganization, getCoursesByLearnersRanking);
+router.get('/:organizationId/analytics/divisions-by-learners', authorizeRoles('TRAINING_COORDINATOR'), authorizeOrganization, getDivisionsByLearnersRanking);
 
 export default router;

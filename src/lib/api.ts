@@ -1281,6 +1281,23 @@ export const clientOrganizationsApi = {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return apiRequest(`/course-runs/${courseRunId}/learners${queryString}`);
   },
+
+  // ============ COORDINATOR ANALYTICS & RESOURCES ============
+  
+  // Get resource library items for coordinator
+  getResources: async (organizationId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/resources`);
+  },
+
+  // Get courses ranked by number of learners
+  getCoursesByLearnersRanking: async (organizationId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/analytics/courses-by-learners`);
+  },
+
+  // Get divisions ranked by number of learners
+  getDivisionsByLearnersRanking: async (organizationId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/analytics/divisions-by-learners`);
+  },
 };
 
 // Organizations API (general)

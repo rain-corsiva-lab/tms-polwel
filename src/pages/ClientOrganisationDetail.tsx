@@ -10,7 +10,24 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import PaginationControls from "@/components/ui/pagination";
-import { ArrowLeft, Building2, Users, UserCheck, Calendar, Clock, MapPin, Plus, Ban, Upload, MoreHorizontal, Edit, Mail, Loader2, Trash2, Eye } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Users,
+  UserCheck,
+  Calendar,
+  Clock,
+  MapPin,
+  Plus,
+  Ban,
+  Upload,
+  MoreHorizontal,
+  Edit,
+  Mail,
+  Loader2,
+  Trash2,
+  Eye,
+} from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { EditCoordinatorDialog } from "@/components/EditCoordinatorDialog";
@@ -374,7 +391,7 @@ const ClientOrganisationDetail = () => {
 
   const handleCoordinatorEdit = async (
     coordinatorId: string,
-    coordinatorData: { name?: string; email?: string; contactNumber?: string | null; designation?: string; status?: string; isPrimary?: boolean }
+    coordinatorData: { name?: string; email?: string; contactNumber?: string | null; designation?: string; status?: string; isPrimary?: boolean },
   ) => {
     if (!id) return;
 
@@ -394,8 +411,8 @@ const ClientOrganisationDetail = () => {
                 status: updatedCoordinator.status ?? coord.status,
                 isPrimaryCoordinator: updatedCoordinator.isPrimaryCoordinator ?? coord.isPrimaryCoordinator,
               }
-            : coord
-        )
+            : coord,
+        ),
       );
 
       // Also refresh from server for consistency
