@@ -4,7 +4,11 @@ import { authenticateToken, requirePermissions } from '../middleware/auth';
 
 const router = Router();
 
-// Apply authentication middleware to all routes
+// PUBLIC ROUTES - Must be defined BEFORE authenticateToken middleware
+// GET /api/course-runs/certificates/download/:learnerId/:courseRunId - Public certificate download (no auth required)
+router.get('/certificates/download/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
+
+// Apply authentication middleware to all other routes
 router.use(authenticateToken);
 
 // GET /api/course-runs/post-management - Dedicated endpoint for Post Run Management page
@@ -120,8 +124,5 @@ router.post('/:id/certificates/bulk-zip', requirePermissions('post-course-run.vi
 
 // POST /api/course-runs/:id/certificates/send - Send certificates via email to selected learners
 router.post('/:id/certificates/send', requirePermissions('post-course-run.edit'), courseRunController.sendCertificatesToLearners);
-
-// GET /api/course-runs/certificates/download/:learnerId/:courseRunId - Public certificate download (no auth required)
-router.get('/certificates/download/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
 
 export default router;

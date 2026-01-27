@@ -6,12 +6,20 @@ import DateInput from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Building2, Edit } from "lucide-react";
+import { Plus, Building2, Edit, UserPlus, Trash2 } from "lucide-react";
 import { digitsOnly } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { isValidEmail } from "@/lib/validators";
 import { partnersApi } from "@/lib/api";
 import { errorHandlers } from "@/lib/errorHandler";
+
+interface PartnerTrainer {
+  id?: string;
+  trainerInformation: string;
+  trainerName: string;
+  trainerWriteUp: string;
+  trainerEmail: string;
+}
 
 interface PartnerData {
   id?: string;
@@ -19,6 +27,7 @@ interface PartnerData {
   email?: string;
   contactNumber: string;
   onboardingDate?: string;
+  trainers?: PartnerTrainer[];
 }
 
 interface AddPartnerDialogProps {
@@ -35,7 +44,6 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
   const [formData, setFormData] = useState({
     partnerName: "",
     email: "",
-    partnerOrganization: "",
     contactNumber: "",
     onboardingDate: "",
     bio: "",
@@ -47,6 +55,8 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
     contactDesignation: "",
   });
 
+  const [trainers, setTrainers] = useState<PartnerTrainer[]>([]);
+
   const { toast } = useToast();
   const isEditMode = mode === "edit";
 
@@ -56,7 +66,6 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       setFormData({
         partnerName: partner.partnerName || "",
         email: partner.email || "",
-        partnerOrganization: (partner as any).partnerOrganization || "",
         contactNumber: digitsOnly(partner.contactNumber || ""),
         onboardingDate: partner.onboardingDate || "",
         bio: (partner as any).bio || "",
@@ -67,8 +76,40 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
         pointOfContactEmail: (partner as any).pointOfContactEmail || "",
         contactDesignation: (partner as any).contactDesignation || "",
       });
+
+      // Initialize trainers from partner data
+      if (partner.trainers && partner.trainers.length > 0) {
+        setTrainers(partner.trainers);
+      } else {
+        setTrainers([]);
+      }
+    } else {
+      // Reset for create mode
+      setTrainers([]);
     }
-  }, [isEditMode, partner]);
+  }, [isEditMode, partner, open]);
+
+  const handleAddTrainer = () => {
+    setTrainers([
+      ...trainers,
+      {
+        trainerInformation: "",
+        trainerName: "",
+        trainerWriteUp: "",
+        trainerEmail: "",
+      },
+    ]);
+  };
+
+  const handleRemoveTrainer = (index: number) => {
+    setTrainers(trainers.filter((_, i) => i !== index));
+  };
+
+  const handleTrainerChange = (index: number, field: keyof PartnerTrainer, value: string) => {
+    const updated = [...trainers];
+    updated[index] = { ...updated[index], [field]: value };
+    setTrainers(updated);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +131,18 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       newErrors.pointOfContactEmail = "Please enter a valid email address (name@email.com)";
     }
 
+    // Validate trainers
+    trainers.forEach((trainer, index) => {
+      if (!trainer.trainerName) {
+        newErrors[`trainer_${index}_name`] = "Trainer name is required";
+      }
+      if (!trainer.trainerEmail) {
+        newErrors[`trainer_${index}_email`] = "Trainer email is required";
+      } else if (!isValidEmail(trainer.trainerEmail)) {
+        newErrors[`trainer_${index}_email`] = "Invalid email format";
+      }
+    });
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       const firstError = Object.values(newErrors)[0];
@@ -105,41 +158,31 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
 
     setLoading(true);
     try {
+      const payload = {
+        partnerName: formData.partnerName,
+        email: formData.email,
+        pointOfContact: formData.pointOfContact || undefined,
+        pointOfContactDepartment: formData.pointOfContactDepartment || undefined,
+        pointOfContactEmail: formData.pointOfContactEmail || undefined,
+        contactNumber: formData.contactNumber || undefined,
+        contactDesignation: formData.contactDesignation || undefined,
+        onboardingDate: formData.onboardingDate ? new Date(formData.onboardingDate).toISOString() : undefined,
+        bio: formData.bio || undefined,
+        experience: formData.experience || undefined,
+        status: formData.status,
+        trainers: trainers.length > 0 ? trainers : undefined,
+      };
+
       if (isEditMode && partner?.id) {
         // Update existing partner
-        await partnersApi.update(partner.id, {
-          partnerName: formData.partnerName,
-          email: formData.email,
-          partnerOrganization: formData.partnerOrganization || undefined,
-          pointOfContact: formData.pointOfContact || undefined,
-          pointOfContactDepartment: formData.pointOfContactDepartment || undefined,
-          pointOfContactEmail: formData.pointOfContactEmail || undefined,
-          contactNumber: formData.contactNumber || undefined,
-          contactDesignation: formData.contactDesignation || undefined,
-          onboardingDate: formData.onboardingDate ? new Date(formData.onboardingDate).toISOString() : undefined,
-          bio: formData.bio || undefined,
-          experience: formData.experience || undefined,
-          status: formData.status,
-        });
+        await partnersApi.update(partner.id, payload);
         toast({
           title: "Partner Updated",
           description: `Partner "${formData.partnerName}" has been updated successfully.`,
         });
       } else {
         // Create new partner
-        await partnersApi.create({
-          partnerName: formData.partnerName,
-          email: formData.email,
-          partnerOrganization: formData.partnerOrganization || undefined,
-          pointOfContact: formData.pointOfContact || undefined,
-          pointOfContactDepartment: formData.pointOfContactDepartment || undefined,
-          pointOfContactEmail: formData.pointOfContactEmail || undefined,
-          contactNumber: formData.contactNumber || undefined,
-          contactDesignation: formData.contactDesignation || undefined,
-          onboardingDate: formData.onboardingDate ? new Date(formData.onboardingDate).toISOString() : undefined,
-          bio: formData.bio || undefined,
-          experience: formData.experience || undefined,
-        });
+        await partnersApi.create(payload);
         toast({
           title: "Partner Created",
           description: `Partner "${formData.partnerName}" has been created successfully.`,
@@ -150,7 +193,6 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       setFormData({
         partnerName: "",
         email: "",
-        partnerOrganization: "",
         contactNumber: "",
         onboardingDate: "",
         bio: "",
@@ -161,6 +203,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
         pointOfContactEmail: "",
         contactDesignation: "",
       });
+      setTrainers([]);
       setErrors({});
       setOpen(false);
 
@@ -178,12 +221,16 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      setOpen(isOpen);
-      if (!isOpen) {
-        setErrors({});
-      }
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+          setErrors({});
+          setTrainers([]);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         {isEditMode ? (
           <Button variant="ghost" size="sm">
@@ -196,7 +243,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
@@ -240,20 +287,10 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
               {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
             </div>
 
-            <div>
-              <Label htmlFor="partnerOrganization">Partner Organization</Label>
-              <Input
-                id="partnerOrganization"
-                value={formData.partnerOrganization}
-                onChange={(e) => setFormData((prev) => ({ ...prev, partnerOrganization: e.target.value }))}
-                placeholder="Enter partner organization name"
-              />
-            </div>
-
             {/* Point-of-Contact Section */}
             <div className="space-y-4 border-t pt-4 mt-4">
               <h3 className="text-sm font-semibold text-gray-700">Point-of-Contact Details</h3>
-              
+
               <div>
                 <Label htmlFor="pointOfContact">Point-of-Contact Name</Label>
                 <Input
@@ -285,7 +322,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
               </div>
 
               <div>
-                <Label htmlFor="pointOfContactEmail">Email</Label>
+                <Label htmlFor="pointOfContactEmail">TC Email</Label>
                 <Input
                   id="pointOfContactEmail"
                   type="email"
@@ -335,6 +372,82 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
                 </Select>
               </div>
             )}
+
+            {/* Trainers Section */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-semibold text-gray-700">Associate Trainers</h3>
+                <Button type="button" onClick={handleAddTrainer} variant="outline" size="sm">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Trainer
+                </Button>
+              </div>
+
+              {trainers.length === 0 && <p className="text-sm text-gray-500 italic">No trainers added yet. Click "Add Trainer" to begin.</p>}
+
+              <div className="space-y-4">
+                {trainers.map((trainer, index) => (
+                  <div key={index} className="border rounded-lg p-4 bg-gray-50 relative">
+                    <Button
+                      type="button"
+                      onClick={() => handleRemoveTrainer(index)}
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Trainer {index + 1}</h4>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Trainer Name *</Label>
+                        <Input
+                          value={trainer.trainerName}
+                          onChange={(e) => handleTrainerChange(index, "trainerName", e.target.value)}
+                          placeholder="Enter trainer name"
+                          className={errors[`trainer_${index}_name`] ? "border-red-500" : ""}
+                        />
+                        {errors[`trainer_${index}_name`] && <p className="text-sm text-red-500">{errors[`trainer_${index}_name`]}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm">Trainer Email Address *</Label>
+                        <Input
+                          type="email"
+                          value={trainer.trainerEmail}
+                          onChange={(e) => handleTrainerChange(index, "trainerEmail", e.target.value)}
+                          placeholder="Enter trainer email"
+                          className={errors[`trainer_${index}_email`] ? "border-red-500" : ""}
+                        />
+                        {errors[`trainer_${index}_email`] && <p className="text-sm text-red-500">{errors[`trainer_${index}_email`]}</p>}
+                      </div>
+
+                      <div className="space-y-2 col-span-2">
+                        <Label className="text-sm">Trainer Information</Label>
+                        <Textarea
+                          value={trainer.trainerInformation}
+                          onChange={(e) => handleTrainerChange(index, "trainerInformation", e.target.value)}
+                          placeholder="Brief information about the trainer"
+                          rows={2}
+                        />
+                      </div>
+
+                      <div className="space-y-2 col-span-2">
+                        <Label className="text-sm">Trainer Write-up</Label>
+                        <Textarea
+                          value={trainer.trainerWriteUp}
+                          onChange={(e) => handleTrainerChange(index, "trainerWriteUp", e.target.value)}
+                          placeholder="Detailed write-up about the trainer's expertise"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             <div>
               <Label htmlFor="bio">Bio</Label>

@@ -498,7 +498,7 @@ const CourseRunDetail: React.FC = () => {
     if (selectedParticipants.size === 0 || !courseRun || !id) return;
 
     const confirmed = window.confirm(
-      `Delete ${selectedParticipants.size} participant${selectedParticipants.size !== 1 ? "s" : ""} from this course? This action cannot be undone.`
+      `Delete ${selectedParticipants.size} participant${selectedParticipants.size !== 1 ? "s" : ""} from this course? This action cannot be undone.`,
     );
     if (!confirmed) return;
 
@@ -925,7 +925,7 @@ const CourseRunDetail: React.FC = () => {
       toast.success(
         `Exported ${enrolledLearners.length} participant${enrolledLearners.length === 1 ? "" : "s"}${
           withdrawnLearners.length > 0 ? ` and ${withdrawnLearners.length} withdrawn` : ""
-        }`
+        }`,
       );
     } catch (error: any) {
       console.error("Export participant list error", error);
@@ -1098,8 +1098,8 @@ const CourseRunDetail: React.FC = () => {
       ...prev,
       [trainerId]: {
         selected: !prev[trainerId]?.selected,
-        baseFee: prev[trainerId]?.baseFee === undefined ? null : prev[trainerId]?.baseFee ?? null,
-        additionalCost: prev[trainerId]?.additionalCost === undefined ? null : prev[trainerId]?.additionalCost ?? null,
+        baseFee: prev[trainerId]?.baseFee === undefined ? null : (prev[trainerId]?.baseFee ?? null),
+        additionalCost: prev[trainerId]?.additionalCost === undefined ? null : (prev[trainerId]?.additionalCost ?? null),
       },
     }));
   };
@@ -1845,12 +1845,16 @@ const CourseRunDetail: React.FC = () => {
                     <Download className="h-4 w-4 mr-2" />
                     Import CSV
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setAttendanceDialogOpen(true)}
                     disabled={!isCourseStarted()}
-                    title={!isCourseStarted() ? "Attendance can only be marked from the course start date onwards. Use withdrawal if needed before the course starts." : ""}
+                    title={
+                      !isCourseStarted()
+                        ? "Attendance can only be marked from the course start date onwards. Use withdrawal if needed before the course starts."
+                        : ""
+                    }
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Attendance/Class List
@@ -1882,12 +1886,16 @@ const CourseRunDetail: React.FC = () => {
                           <Mail className="h-4 w-4 mr-2" />
                           Send Confirmation Email
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleBulkChangeStatus()} 
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleBulkChangeStatus()}
                           disabled={selectedParticipants.size === 0 || isCourseStarted()}
-                          title={isCourseStarted() ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent." : ""}
+                          title={
+                            isCourseStarted()
+                              ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent."
+                              : ""
+                          }
                         >
                           Change Status to Withdrawn
                         </Button>
@@ -1951,10 +1959,10 @@ const CourseRunDetail: React.FC = () => {
                                         learnerRecord.confirmationEmailStatus === "SENT"
                                           ? "default"
                                           : learnerRecord.confirmationEmailStatus === "FAILED"
-                                          ? "destructive"
-                                          : learnerRecord.confirmationEmailStatus === "SENDING"
-                                          ? "secondary"
-                                          : "outline"
+                                            ? "destructive"
+                                            : learnerRecord.confirmationEmailStatus === "SENDING"
+                                              ? "secondary"
+                                              : "outline"
                                       }
                                     >
                                       {learnerRecord.confirmationEmailStatus}
@@ -1996,7 +2004,11 @@ const CourseRunDetail: React.FC = () => {
                                         }}
                                         disabled={isCourseStarted()}
                                         className={isCourseStarted() ? "opacity-50 cursor-not-allowed" : ""}
-                                        title={isCourseStarted() ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent." : ""}
+                                        title={
+                                          isCourseStarted()
+                                            ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent."
+                                            : ""
+                                        }
                                       >
                                         Mark as Withdrawn
                                       </DropdownMenuItem>
@@ -2236,26 +2248,45 @@ const CourseRunDetail: React.FC = () => {
                     <div className="space-y-3">
                       {availablePartners.map((partner) => {
                         const isSelected = partnerAssignments[partner.id]?.selected || false;
+                        const partnerTrainers = (partner as any).partnerTrainers || [];
 
                         return (
                           <Card key={partner.id} className={`p-4 ${isSelected ? "border-green-500 border-2" : ""}`}>
                             <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 flex-1">
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => togglePartnerSelection(partner.id)}
                                   className="rounded h-5 w-5 mt-1"
                                 />
-                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                                   <Building className="h-5 w-5 text-green-600" />
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                   <h4 className="font-medium">{partner.name}</h4>
                                   <p className="text-sm text-gray-500">{partner.email}</p>
+
+                                  {/* Show partner trainers when selected */}
+                                  {isSelected && partnerTrainers.length > 0 && (
+                                    <div className="mt-3 pl-4 border-l-2 border-green-200 space-y-2">
+                                      <p className="text-xs font-semibold text-gray-600 uppercase">Associated Trainers:</p>
+                                      {partnerTrainers.map((trainer: any) => (
+                                        <div key={trainer.id} className="flex items-center gap-2 text-sm">
+                                          <input type="checkbox" checked={true} disabled className="rounded h-4 w-4 opacity-50 cursor-not-allowed" />
+                                          <div>
+                                            <div className="font-medium text-gray-700">{trainer.trainerName}</div>
+                                            <div className="text-xs text-gray-500">{trainer.trainerEmail}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              <Badge variant={isSelected ? "default" : "secondary"}>{isSelected ? "Selected" : "Available"}</Badge>
+                              <Badge variant={isSelected ? "default" : "secondary"} className="flex-shrink-0">
+                                {isSelected ? "Selected" : "Available"}
+                              </Badge>
                             </div>
                           </Card>
                         );
@@ -2288,6 +2319,18 @@ const CourseRunDetail: React.FC = () => {
                 <h3 className="text-lg font-medium">Revenue & Expenses</h3>
               </div>
 
+              {/* Lock message when course is IN_PROGRESS or later */}
+              {courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status) && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600" />
+                    <p className="text-sm text-yellow-800 font-medium">
+                      Revenue & Expenses cannot be modified once the course is in progress or completed.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-6">
                 {/* REVENUE SECTION */}
                 <Card>
@@ -2300,10 +2343,10 @@ const CourseRunDetail: React.FC = () => {
                       <Input
                         type="number"
                         step="0.01"
-                        value={isEditing ? editData?.baseCourseFee : courseRun.baseCourseFee ?? ""}
-                        disabled={!isEditing}
+                        value={isEditing ? editData?.baseCourseFee : (courseRun.baseCourseFee ?? "")}
+                        disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                         onChange={(e) => handleEditField("baseCourseFee", e.target.value)}
-                        className={isEditing ? "" : "bg-gray-50"}
+                        className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                       />
                       <p className="text-xs text-gray-500">Fee charged to participants/client per pax or per run</p>
                     </div>
@@ -2321,8 +2364,8 @@ const CourseRunDetail: React.FC = () => {
                             checked={
                               (isEditing ? editData?.courseRunFeeType : courseRun.courseRunFeeType) === "PER_RUN" || (!courseRun.courseRunFeeType && !isEditing)
                             }
-                            onChange={(e) => isEditing && handleEditField("courseRunFeeType", e.target.value)}
-                            disabled={!isEditing}
+                            onChange={(e) => isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) && handleEditField("courseRunFeeType", e.target.value)}
+                            disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                             className="cursor-pointer"
                           />
                           <Label htmlFor="fee-per-run" className="text-sm font-normal cursor-pointer">
@@ -2336,8 +2379,8 @@ const CourseRunDetail: React.FC = () => {
                             name="courseRunFeeType"
                             value="PER_HEAD"
                             checked={(isEditing ? editData?.courseRunFeeType : courseRun.courseRunFeeType) === "PER_HEAD"}
-                            onChange={(e) => isEditing && handleEditField("courseRunFeeType", e.target.value)}
-                            disabled={!isEditing}
+                            onChange={(e) => isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) && handleEditField("courseRunFeeType", e.target.value)}
+                            disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                             className="cursor-pointer"
                           />
                           <Label htmlFor="fee-per-head" className="text-sm font-normal cursor-pointer">
@@ -2358,11 +2401,31 @@ const CourseRunDetail: React.FC = () => {
                   <CardContent className="space-y-4">
                     {/* Contract Fees & Additional Cost - 2x2 Grid Row 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Contract Fees - Always Disabled (Auto-calculated from trainer fees) */}
+                      {/* Contract Fees - Editable for training partners, auto-calculated for trainers */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Contract Fees ($)</Label>
-                        <Input type="number" step="0.01" min="0" value={courseRun.contractFees ?? ""} disabled={true} className="bg-gray-50" />
-                        <p className="text-xs text-gray-500">Auto-calculated from trainer assignments (read-only)</p>
+                        {(() => {
+                          const hasTrainingPartners = courseRun.courseRunPartners && courseRun.courseRunPartners.length > 0;
+                          const isLocked = courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status);
+                          const isContractFeesEditable = isEditing && hasTrainingPartners && !isLocked;
+
+                          return (
+                            <>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={isEditing ? (editData?.contractFees ?? "") : (courseRun.contractFees ?? "")}
+                                disabled={!isContractFeesEditable}
+                                onChange={(e) => handleEditField("contractFees", e.target.value)}
+                                className={isContractFeesEditable ? "" : "bg-gray-50"}
+                              />
+                              <p className="text-xs text-gray-500">
+                                {hasTrainingPartners ? "Editable for training partners" : "Auto-calculated from trainer assignments (read-only)"}
+                              </p>
+                            </>
+                          );
+                        })()}
                       </div>
 
                       {/* Additional Cost Exceeding Capacity */}
@@ -2372,10 +2435,10 @@ const CourseRunDetail: React.FC = () => {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={isEditing ? editData?.additionalCostExceedingCapacity : courseRun.additionalCostExceedingCapacity ?? ""}
-                          disabled={!isEditing}
+                          value={isEditing ? editData?.additionalCostExceedingCapacity : (courseRun.additionalCostExceedingCapacity ?? "")}
+                          disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                           onChange={(e) => handleEditField("additionalCostExceedingCapacity", e.target.value)}
-                          className={isEditing ? "" : "bg-gray-50"}
+                          className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                         />
                         {/* Display trainer remarks from course_trainers table */}
                         {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
@@ -2405,7 +2468,7 @@ const CourseRunDetail: React.FC = () => {
                       {/* Venue Fee Type */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Venue Fee Type</Label>
-                        {isEditing ? (
+                        {isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? (
                           <Select value={editData?.feeType || ""} onValueChange={(v) => handleEditField("feeType", v)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select fee type" />
@@ -2429,10 +2492,10 @@ const CourseRunDetail: React.FC = () => {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={isEditing ? editData?.venueFee : courseRun.venueFee ?? ""}
-                          disabled={!isEditing}
+                          value={isEditing ? editData?.venueFee : (courseRun.venueFee ?? "")}
+                          disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                           onChange={(e) => handleEditField("venueFee", e.target.value)}
-                          className={isEditing ? "" : "bg-gray-50"}
+                          className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                         />
                         <p className="text-xs text-gray-500">Base venue rental fee</p>
                       </div>
@@ -2446,10 +2509,10 @@ const CourseRunDetail: React.FC = () => {
                           <Input
                             type="number"
                             min="1"
-                            value={isEditing ? editData?.venueMaxParticipant : courseRun.venueMaxParticipant ?? ""}
-                            disabled={!isEditing}
+                            value={isEditing ? editData?.venueMaxParticipant : (courseRun.venueMaxParticipant ?? "")}
+                            disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                             onChange={(e) => handleEditField("venueMaxParticipant", e.target.value)}
-                            className={isEditing ? "" : "bg-gray-50"}
+                            className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                           />
                           <p className="text-xs text-gray-500">Maximum participants before per-head charges apply</p>
                         </div>
@@ -2459,10 +2522,10 @@ const CourseRunDetail: React.FC = () => {
                             type="number"
                             step="0.01"
                             min="0"
-                            value={isEditing ? editData?.perHeadFeeIfMaxExceed : courseRun.perHeadFeeIfMaxExceed ?? ""}
-                            disabled={!isEditing}
+                            value={isEditing ? editData?.perHeadFeeIfMaxExceed : (courseRun.perHeadFeeIfMaxExceed ?? "")}
+                            disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                             onChange={(e) => handleEditField("perHeadFeeIfMaxExceed", e.target.value)}
-                            className={isEditing ? "" : "bg-gray-50"}
+                            className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                           />
                           <p className="text-xs text-gray-500">Additional per-head fee beyond max participants</p>
                         </div>
@@ -2476,10 +2539,10 @@ const CourseRunDetail: React.FC = () => {
                         <Input
                           type="number"
                           step="0.01"
-                          value={isEditing ? editData?.otherFee : courseRun.otherFee ?? ""}
-                          disabled={!isEditing}
+                          value={isEditing ? editData?.otherFee : (courseRun.otherFee ?? "")}
+                          disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                           onChange={(e) => handleEditField("otherFee", e.target.value)}
-                          className={isEditing ? "" : "bg-gray-50"}
+                          className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2487,10 +2550,10 @@ const CourseRunDetail: React.FC = () => {
                         <Input
                           type="number"
                           step="0.01"
-                          value={isEditing ? editData?.adminFee : courseRun.adminFee ?? ""}
-                          disabled={!isEditing}
+                          value={isEditing ? editData?.adminFee : (courseRun.adminFee ?? "")}
+                          disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                           onChange={(e) => handleEditField("adminFee", e.target.value)}
-                          className={isEditing ? "" : "bg-gray-50"}
+                          className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2498,10 +2561,10 @@ const CourseRunDetail: React.FC = () => {
                         <Input
                           type="number"
                           step="0.01"
-                          value={isEditing ? editData?.contingencyFee : courseRun.contingencyFee ?? ""}
-                          disabled={!isEditing}
+                          value={isEditing ? editData?.contingencyFee : (courseRun.contingencyFee ?? "")}
+                          disabled={!isEditing || (courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status))}
                           onChange={(e) => handleEditField("contingencyFee", e.target.value)}
-                          className={isEditing ? "" : "bg-gray-50"}
+                          className={isEditing && !(courseRun.status && ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INCOMPLETED'].includes(courseRun.status)) ? "" : "bg-gray-50"}
                         />
                       </div>
                     </div>
@@ -2526,21 +2589,21 @@ const CourseRunDetail: React.FC = () => {
                       const feeTypeVal = isEditing ? editData?.feeType || courseRun.feeType : courseRun.feeType;
 
                       const baseFee = safeNumber(
-                        isEditing ? editData?.venueFee ?? courseRun.venueFee ?? courseRun.venue?.fee : courseRun.venueFee ?? courseRun.venue?.fee,
-                        0
+                        isEditing ? (editData?.venueFee ?? courseRun.venueFee ?? courseRun.venue?.fee) : (courseRun.venueFee ?? courseRun.venue?.fee),
+                        0,
                       );
 
                       const maxP = isEditing
                         ? editData?.venueMaxParticipant !== "" && editData?.venueMaxParticipant !== undefined
                           ? Number(editData.venueMaxParticipant)
-                          : courseRun.venueMaxParticipant ?? courseRun.venue?.maxParticipants ?? 0
-                        : courseRun.venueMaxParticipant ?? courseRun.venue?.maxParticipants ?? 0;
+                          : (courseRun.venueMaxParticipant ?? courseRun.venue?.maxParticipants ?? 0)
+                        : (courseRun.venueMaxParticipant ?? courseRun.venue?.maxParticipants ?? 0);
 
                       const perHeadExceed = safeNumber(
                         isEditing
-                          ? editData?.perHeadFeeIfMaxExceed ?? editData?.venuePerHeadIfExceed
-                          : courseRun.perHeadFeeIfMaxExceed ?? courseRun.venue?.perHeadPriceIfMaxExceed,
-                        0
+                          ? (editData?.perHeadFeeIfMaxExceed ?? editData?.venuePerHeadIfExceed)
+                          : (courseRun.perHeadFeeIfMaxExceed ?? courseRun.venue?.perHeadPriceIfMaxExceed),
+                        0,
                       );
 
                       // compute final fee locally for preview

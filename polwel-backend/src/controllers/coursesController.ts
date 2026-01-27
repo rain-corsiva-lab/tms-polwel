@@ -196,7 +196,20 @@ export const coursesController = {
                   id: true,
                   name: true,
                   email: true,
-                  status: true
+                  status: true,
+                  pointOfContactEmail: true,
+                  partnerTrainers: {
+                    where: {
+                      deletedAt: null
+                    },
+                    select: {
+                      id: true,
+                      trainerName: true,
+                      trainerEmail: true,
+                      trainerInformation: true,
+                      trainerWriteUp: true
+                    }
+                  }
                 }
               }
             }
