@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X, Edit, Plus } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { X, Edit, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isValidEmail } from "@/lib/validators";
-import { trainersApi } from "@/lib/api";
-import { digitsOnly } from "@/lib/utils";
+import { trainersApi, referencesApi } from "@/lib/api";
+import { digitsOnly, cn } from "@/lib/utils";
 import { errorHandlers } from "@/lib/errorHandler";
 
 interface Trainer {
@@ -41,6 +43,8 @@ interface EditTrainerDialogProps {
 export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   // Map enum values to display values
   const [formData, setFormData] = useState({
@@ -56,10 +60,31 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
     experience: trainer.experience || "",
   });
 
-  const [newSpecialization, setNewSpecialization] = useState("");
   const [newCertification, setNewCertification] = useState("");
 
   const { toast } = useToast();
+
+  // Load categories when dialog opens
+  useEffect(() => {
+    if (open) {
+      const loadCategories = async () => {
+        try {
+          setLoadingCategories(true);
+          const response = await referencesApi.getCategories();
+          const categoriesData = response?.success && response?.data?.categories 
+            ? response.data.categories 
+            : [];
+          setCategories(categoriesData);
+        } catch (error) {
+          console.error("Error loading categories:", error);
+          setCategories([]);
+        } finally {
+          setLoadingCategories(false);
+        }
+      };
+      loadCategories();
+    }
+  }, [open]);
 
   const sanitizeSGPhone = (value: string | undefined) => {
     if (!value) return undefined;
@@ -111,29 +136,39 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    const nextValue = field === "contactNumber" ? digitsOnly(value) : value;
-    setFormData((prev) => ({
-      ...prev,
-      [field]: nextValue,
-    }));
-  };
-
-  const addSpecialization = () => {
-    if (newSpecialization.trim() && !formData.specializations.includes(newSpecialization.trim())) {
+  const handleInputChange = (field: string, value: string | string[]) => {
+    if (field === "contactNumber") {
+      const nextValue = digitsOnly(value as string);
       setFormData((prev) => ({
         ...prev,
-        specializations: [...prev.specializations, newSpecialization.trim()],
+        [field]: nextValue,
       }));
-      setNewSpecialization("");
+    } else if (field === "specializations") {
+      setFormData((prev) => ({
+        ...prev,
+        specializations: value as string[],
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
     }
   };
 
-  const removeSpecialization = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      specializations: prev.specializations.filter((_, i) => i !== index),
-    }));
+  const toggleSpecialization = (subcategory: string) => {
+    const currentSpecs = formData.specializations;
+    const isSelected = currentSpecs.includes(subcategory);
+    
+    if (isSelected) {
+      handleInputChange("specializations", currentSpecs.filter((spec) => spec !== subcategory));
+    } else {
+      handleInputChange("specializations", [...currentSpecs, subcategory]);
+    }
+  };
+
+  const removeSpecialization = (spec: string) => {
+    handleInputChange("specializations", formData.specializations.filter((s) => s !== spec));
   };
 
   const addCertification = () => {
@@ -237,27 +272,115 @@ export function EditTrainerDialog({ trainer, onTrainerUpdated }: EditTrainerDial
 
             <div className="space-y-2">
               <Label>Specializations</Label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  value={newSpecialization}
-                  onChange={(e) => setNewSpecialization(e.target.value)}
-                  placeholder="Add specialization"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecialization())}
-                />
-                <Button type="button" onClick={addSpecialization} size="icon">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.specializations.map((spec, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {spec}
-                    <Button type="button" variant="ghost" size="sm" className="h-auto p-0 ml-1" onClick={() => removeSpecialization(index)}>
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                ))}
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between min-h-10 h-auto py-2">
+                    {formData.specializations.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 flex-1 mr-2">
+                        {formData.specializations.length <= 3 ? (
+                          formData.specializations.map((spec) => (
+                            <Badge
+                              key={spec}
+                              variant="secondary"
+                              className="text-xs flex items-center gap-1 pr-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeSpecialization(spec);
+                              }}
+                            >
+                              {spec}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="p-0 w-3 h-3 hover:bg-transparent"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeSpecialization(spec);
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </Badge>
+                          ))
+                        ) : (
+                          <>
+                            {formData.specializations.slice(0, 2).map((spec) => (
+                              <Badge
+                                key={spec}
+                                variant="secondary"
+                                className="text-xs flex items-center gap-1 pr-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeSpecialization(spec);
+                                }}
+                              >
+                                {spec}
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-0 w-3 h-3 hover:bg-transparent"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeSpecialization(spec);
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </Badge>
+                            ))}
+                            <Badge variant="secondary" className="text-xs">
+                              ... +{formData.specializations.length - 2} more
+                            </Badge>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground flex-1 text-left">
+                        {loadingCategories ? "Loading..." : "Select specializations..."}
+                      </span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search specializations..." />
+                    <CommandList>
+                      {loadingCategories && (
+                        <CommandEmpty>Loading categories...</CommandEmpty>
+                      )}
+                      {!loadingCategories && categories.length === 0 && (
+                        <CommandEmpty>No categories available</CommandEmpty>
+                      )}
+                      {!loadingCategories &&
+                        categories.length > 0 &&
+                        categories.map((group: any) => {
+                          const label = group?.name || "Categories";
+                          const subcategories = Array.isArray(group?.subcategories) ? group.subcategories : [];
+                          return (
+                            <CommandGroup key={label} heading={label}>
+                              {subcategories.map((subcategory: string) => {
+                                const isSelected = formData.specializations.includes(subcategory);
+                                return (
+                                  <CommandItem
+                                    key={`${label}-${subcategory}`}
+                                    value={subcategory}
+                                    onSelect={() => toggleSpecialization(subcategory)}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                                    {subcategory}
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          );
+                        })}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
