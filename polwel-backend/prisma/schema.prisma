@@ -87,7 +87,6 @@ model Partner {
   coursesAssigned     Json?
   onboardingDate      DateTime?
   notes               String?            @db.Text
-  partnerOrganization String?
   bio                 String?            @db.Text
   experience          String?            @db.Text
   createdAt           DateTime           @default(now())
@@ -95,6 +94,7 @@ model Partner {
   deletedAt           DateTime?
   coursePartners      CoursePartner[]
   courseRunPartners   CourseRunPartner[]
+  partnerTrainers     PartnerTrainer[]
 
   @@map("partners")
 }
@@ -846,4 +846,21 @@ model ResourceLibrary {
   publishedAt     DateTime?
 
   @@map("resource_library")
+}
+
+model PartnerTrainer {
+  id                  String    @id @default(cuid())
+  partnerId           String
+  trainerInformation  String?   @db.Text
+  trainerName         String
+  trainerWriteUp      String?   @db.Text
+  trainerEmail        String    @db.VarChar(255)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+  
+  partner             Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@map("partner_trainers")
+  @@index([partnerId])
 }
