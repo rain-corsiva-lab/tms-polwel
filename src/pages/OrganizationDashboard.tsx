@@ -426,11 +426,39 @@ const OrganizationDashboard = () => {
                       <div className="flex items-center space-x-2">
                         <Button
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => {
-                            const url = resource.fileUrl.startsWith("http")
-                              ? resource.fileUrl
-                              : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${resource.fileUrl}`;
-                            window.open(url, "_blank");
+                          onClick={async () => {
+                            try {
+                              const url = resource.fileUrl.startsWith("http")
+                                ? resource.fileUrl
+                                : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${resource.fileUrl}`;
+                              
+                              // Fetch file as blob
+                              const token = localStorage.getItem("polwel_access_token");
+                              const response = await fetch(url, {
+                                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                              });
+                              
+                              if (!response.ok) {
+                                throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+                              }
+                              
+                              const blob = await response.blob();
+                              const downloadUrl = window.URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = downloadUrl;
+                              a.download = resource.fileName || "resource.pdf";
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(downloadUrl);
+                              document.body.removeChild(a);
+                            } catch (error: any) {
+                              console.error("Download error:", error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to download file",
+                                variant: "destructive",
+                              });
+                            }
                           }}
                         >
                           <Download className="h-4 w-4 mr-2" />
@@ -844,15 +872,15 @@ const OrganizationDashboard = () => {
 
       {/* Resource Preview Dialog */}
       <Dialog open={!!previewResource} onOpenChange={() => setPreviewResource(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
             <DialogTitle>{previewResource?.title}</DialogTitle>
             <DialogDescription>{previewResource?.description ? stripHtmlTags(previewResource.description) : "Resource preview"}</DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-6 pb-6">
             {previewResource && (
-              <div className="space-y-4">
-                <div className="border rounded-lg p-4 bg-muted/30">
+              <div className="flex flex-col h-full space-y-4">
+                <div className="border rounded-lg p-4 bg-muted/30 flex-shrink-0">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium">File Name:</span>
@@ -875,14 +903,39 @@ const OrganizationDashboard = () => {
                       </div>
                     )}
                   </div>
-                  <div className="mt-4 pt-4 border-t">
+                  <div className="mt-4 pt-4 border-t flex gap-2">
                     <Button
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => {
-                        const url = previewResource.fileUrl.startsWith("http")
-                          ? previewResource.fileUrl
-                          : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${previewResource.fileUrl}`;
-                        window.open(url, "_blank");
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={async () => {
+                        try {
+                          const url = previewResource.fileUrl.startsWith("http")
+                            ? previewResource.fileUrl
+                            : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${previewResource.fileUrl}`;
+                          
+                          // Fetch file as blob
+                          const token = localStorage.getItem("polwel_access_token");
+                          const response = await fetch(url, {
+                            headers: token ? { Authorization: `Bearer ${token}` } : {},
+                          });
+                          
+                          if (!response.ok) throw new Error("Failed to download file");
+                          
+                          const blob = await response.blob();
+                          const downloadUrl = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = downloadUrl;
+                          a.download = previewResource.fileName || "resource.pdf";
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(downloadUrl);
+                          document.body.removeChild(a);
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to download file",
+                            variant: "destructive",
+                          });
+                        }
                       }}
                     >
                       <Download className="h-4 w-4 mr-2" />
@@ -892,21 +945,57 @@ const OrganizationDashboard = () => {
                 </div>
 
                 {previewResource.mimeType === "application/pdf" ? (
-                  <div className="border rounded-lg overflow-hidden" style={{ height: "60vh" }}>
+                  <div className="border rounded-lg overflow-hidden bg-gray-100 flex-1 min-h-[500px] flex flex-col">
                     <iframe
                       src={
                         previewResource.fileUrl.startsWith("http")
                           ? previewResource.fileUrl
-                          : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${previewResource.fileUrl}`
+                          : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${previewResource.fileUrl}`
                       }
-                      className="w-full h-full"
+                      className="w-full h-full flex-1 border-0"
                       title={previewResource.title}
+                      style={{ minHeight: '500px' }}
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-8">
+                  <div className="text-center py-8 border rounded-lg flex-shrink-0">
                     <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground mb-4">Preview not available for this file type</p>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const url = previewResource.fileUrl.startsWith("http")
+                            ? previewResource.fileUrl
+                            : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${previewResource.fileUrl}`;
+                          
+                          const token = localStorage.getItem("polwel_access_token");
+                          const response = await fetch(url, {
+                            headers: token ? { Authorization: `Bearer ${token}` } : {},
+                          });
+                          
+                          if (!response.ok) throw new Error("Failed to download file");
+                          
+                          const blob = await response.blob();
+                          const downloadUrl = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = downloadUrl;
+                          a.download = previewResource.fileName || "resource";
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(downloadUrl);
+                          document.body.removeChild(a);
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to download file",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download File
+                    </Button>
                   </div>
                 )}
               </div>
