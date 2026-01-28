@@ -854,7 +854,7 @@ model PartnerTrainer {
   trainerInformation  String?   @db.Text
   trainerName         String
   trainerWriteUp      String?   @db.Text
-  trainerEmail        String    @db.VarChar(255)
+  trainerEmail        String?   @db.VarChar(255)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   deletedAt           DateTime?
