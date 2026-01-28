@@ -315,14 +315,15 @@ model CourseRunTrainer {
 }
 
 model CourseRunPartner {
-  id          String    @id @default(cuid())
-  courseRunId String
-  partnerId   String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  courseRun   CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
-  partner     Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  courseRunId       String
+  partnerId         String
+  selectedTrainerIds Json?    // Array of trainer IDs selected for this partner
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+  courseRun         CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  partner           Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@unique([courseRunId, partnerId])
   @@index([courseRunId])
