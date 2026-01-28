@@ -136,9 +136,8 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       if (!trainer.trainerName) {
         newErrors[`trainer_${index}_name`] = "Trainer name is required";
       }
-      if (!trainer.trainerEmail) {
-        newErrors[`trainer_${index}_email`] = "Trainer email is required";
-      } else if (!isValidEmail(trainer.trainerEmail)) {
+      // Email is optional, but if provided, must be valid format
+      if (trainer.trainerEmail && !isValidEmail(trainer.trainerEmail)) {
         newErrors[`trainer_${index}_email`] = "Invalid email format";
       }
     });
@@ -413,12 +412,12 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm">Trainer Email Address *</Label>
+                        <Label className="text-sm">Trainer Email Address</Label>
                         <Input
                           type="email"
                           value={trainer.trainerEmail}
                           onChange={(e) => handleTrainerChange(index, "trainerEmail", e.target.value)}
-                          placeholder="Enter trainer email"
+                          placeholder="Enter trainer email (optional)"
                           className={errors[`trainer_${index}_email`] ? "border-red-500" : ""}
                         />
                         {errors[`trainer_${index}_email`] && <p className="text-sm text-red-500">{errors[`trainer_${index}_email`]}</p>}
