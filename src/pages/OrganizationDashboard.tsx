@@ -872,19 +872,19 @@ const OrganizationDashboard = () => {
 
       {/* Resource Preview Dialog */}
       <Dialog open={!!previewResource} onOpenChange={() => setPreviewResource(null)}>
-        <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0">
-          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
+        <DialogContent className="max-w-6xl max-h-[95vh] min-w-[90vw] md:min-w-[800px] p-0 overflow-y-auto">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle>{previewResource?.title}</DialogTitle>
             <DialogDescription>{previewResource?.description ? stripHtmlTags(previewResource.description) : "Resource preview"}</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-6 pb-6">
+          <div className="px-6 py-4">
             {previewResource && (
-              <div className="flex flex-col h-full space-y-4">
+              <div className="flex flex-col space-y-4">
                 <div className="border rounded-lg p-4 bg-muted/30 flex-shrink-0">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium">File Name:</span>
-                      <p className="text-muted-foreground">{previewResource.fileName}</p>
+                      <p className="text-muted-foreground break-words">{previewResource.fileName}</p>
                     </div>
                     <div>
                       <span className="font-medium">Published:</span>
@@ -945,16 +945,15 @@ const OrganizationDashboard = () => {
                 </div>
 
                 {previewResource.mimeType === "application/pdf" ? (
-                  <div className="border rounded-lg overflow-hidden bg-gray-100 flex-1 min-h-[500px] flex flex-col">
+                  <div className="border rounded-lg overflow-hidden bg-gray-100" style={{ minHeight: '600px', height: '1200px', }}>
                     <iframe
                       src={
                         previewResource.fileUrl.startsWith("http")
                           ? previewResource.fileUrl
                           : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${previewResource.fileUrl}`
                       }
-                      className="w-full h-full flex-1 border-0"
+                      className="w-full h-full border-0"
                       title={previewResource.title}
-                      style={{ minHeight: '500px' }}
                     />
                   </div>
                 ) : (
