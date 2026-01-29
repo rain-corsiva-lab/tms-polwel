@@ -1232,7 +1232,7 @@ const TrainersAndPartners = () => {
                             </div>
                           </TableHead>
                           <TableHead onClick={() => handlePartnerSort("email")} className="cursor-pointer hover:bg-muted transition-colors">
-                            Email {renderPartnerSortIcon("email")}
+                            Point of Contact Email {renderPartnerSortIcon("email")}
                           </TableHead>
                           <TableHead onClick={() => handlePartnerSort("contactNumber")} className="cursor-pointer hover:bg-muted transition-colors">
                             Contact Info {renderPartnerSortIcon("contactNumber")}
