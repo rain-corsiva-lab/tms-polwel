@@ -1524,7 +1524,7 @@ const CourseRuns: React.FC = () => {
                               </>
                             )}
 
-                            {/* CONFIRMED_PENDING_CONFIRMATION_EMAILS: Show email action buttons */}
+                            {/* CONFIRMED_PENDING_CONFIRMATION_EMAILS: Show all email action buttons */}
                             {courseRun.status === "CONFIRMED_PENDING_CONFIRMATION_EMAILS" && (
                               <>
                                 {/* <DropdownMenuSeparator /> */}
@@ -1536,6 +1536,18 @@ const CourseRuns: React.FC = () => {
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem onClick={() => handleSendTrainingAssignmentEmail(courseRun)}>Send Training Assignment Email</DropdownMenuItem>
+                              </>
+                            )}
+
+                            {/* CONFIRMED: Show only "Send Course Confirmation Email" */}
+                            {courseRun.status === "CONFIRMED" && (
+                              <>
+                                {/* For TALKS: Hide "Send Course Confirmation Email" if trainer assignment email has been sent */}
+                                {!(courseRun.courseType === "TALKS" && courseRun.hasTrainerAssignmentEmailSent) && (
+                                  <DropdownMenuItem onClick={() => openEmailDialog(courseRun, "course_confirmation")}>
+                                    Send Course Confirmation Email
+                                  </DropdownMenuItem>
+                                )}
                               </>
                             )}
 
