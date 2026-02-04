@@ -149,12 +149,13 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"], // Allow images from self, data URIs, and HTTPS
       fontSrc: ["'self'", "data:"],
       connectSrc: ["'self'", "https:"], // Allow API calls to same origin and HTTPS
-      frameSrc: ["'none'"], // Disable iframes
+      frameSrc: ["'self'"], // Allow iframes from same origin
+      frameAncestors: ["'self'"], // Allow frames from same origin
       objectSrc: ["'none'"], // Disable plugins
       upgradeInsecureRequests: [], // Upgrade HTTP to HTTPS
     },
   },
-  frameguard: { action: 'deny' },
+  frameguard: { action: 'sameorigin' },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: { maxAge: 31536000, includeSubDomains: true },
   noSniff: true,

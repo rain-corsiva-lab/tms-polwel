@@ -72,6 +72,7 @@ interface Trainer {
 interface Partner {
   id: string;
   partnerName: string;
+  email?: string;
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "LOCKED";
   coursesAssigned: string[];
   pointOfContact: string;
@@ -1230,6 +1231,9 @@ const TrainersAndPartners = () => {
                               </Popover>
                             </div>
                           </TableHead>
+                          <TableHead onClick={() => handlePartnerSort("email")} className="cursor-pointer hover:bg-muted transition-colors">
+                            Point of Contact Email {renderPartnerSortIcon("email")}
+                          </TableHead>
                           <TableHead onClick={() => handlePartnerSort("contactNumber")} className="cursor-pointer hover:bg-muted transition-colors">
                             Contact Info {renderPartnerSortIcon("contactNumber")}
                           </TableHead>
@@ -1239,13 +1243,13 @@ const TrainersAndPartners = () => {
                       <TableBody>
                         {partnersLoading ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8">
+                            <TableCell colSpan={5} className="text-center py-8">
                               Loading partners...
                             </TableCell>
                           </TableRow>
                         ) : partners.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8">
+                            <TableCell colSpan={5} className="text-center py-8">
                               No partners found
                             </TableCell>
                           </TableRow>
@@ -1272,6 +1276,9 @@ const TrainersAndPartners = () => {
                                 >
                                   {partner.status}
                                 </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {partner.email || "-"}
                               </TableCell>
                               <TableCell>
                                 <div className="text-sm">
