@@ -1730,7 +1730,7 @@ export const courseRunsApi = {
   // Send course confirmation email to learners
   sendCourseConfirmationEmail: async (
     courseRunId: string,
-    payload: { ccEmails?: string[]; additionalBody?: string; attachmentIds?: string[] }
+    payload: { learnerIds?: string[]; ccEmails?: string[]; additionalBody?: string; attachmentIds?: string[] }
   ) => {
     return apiRequest(`/course-runs/${courseRunId}/send-course-confirmation-email`, {
       method: 'POST',

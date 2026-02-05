@@ -20,7 +20,7 @@ import {
   CourseRunWorkflowError,
 } from '../services/courseRunWorkflowService';
 import EmailService from '../services/emailService';
-import { buildCertificatePDFBuffer, buildCertificatesZipBuffer } from '../services/certificateService';
+import { buildCertificatePDFBuffer, buildCertificatesZipBuffer, generateCertificateHTML } from '../services/certificateService';
 
 const prisma = new PrismaClient();
 
@@ -3374,7 +3374,7 @@ export const courseRunController = {
   async sendCourseConfirmationEmail(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { ccEmails, additionalBody, attachmentIds } = req.body;
+      const { ccEmails, additionalBody, attachmentIds, learnerIds } = req.body;
 
       if (!id) {
         res.status(400).json({
@@ -3409,7 +3409,14 @@ export const courseRunController = {
           course: true,
           venue: true,
           courseRunLearners: {
-            where: { deletedAt: null, enrollmentStatus: 'ENROLLED' },
+            where: { 
+              deletedAt: null, 
+              enrollmentStatus: 'ENROLLED',
+              // Filter by learnerIds if provided
+              ...(learnerIds && Array.isArray(learnerIds) && learnerIds.length > 0
+                ? { id: { in: learnerIds } }
+                : {}),
+            },
             include: {
               learner: {
                 include: {
