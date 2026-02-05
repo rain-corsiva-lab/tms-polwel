@@ -105,7 +105,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       width: 11in;
       height: 8.5in;
       position: relative;
-      font-family: 'Constan', 'Arial', sans-serif;
+      font-family: 'Calibri', 'Arial', sans-serif;
       background: white;
       overflow: hidden;
     }
