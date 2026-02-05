@@ -64,7 +64,7 @@ export function generateCertificateHTML(data: CertificateData): string {
   <title>Certificate</title>
   <style>
     @page {
-      size: A4 landscape;
+      size: Letter landscape;
       margin: 0;
     }
     
@@ -75,10 +75,10 @@ export function generateCertificateHTML(data: CertificateData): string {
     }
     
     body {
-      width: 297mm;
-      height: 210mm;
+      width: 11in;
+      height: 8.5in;
       position: relative;
-      font-family: 'Helvetica', 'Arial', sans-serif;
+      font-family: 'Calibri', 'Arial', sans-serif;
       background: white;
       overflow: hidden;
     }
@@ -92,11 +92,11 @@ export function generateCertificateHTML(data: CertificateData): string {
     
     .border-outer {
       position: absolute;
-      top: 30px;
-      left: 30px;
-      right: 30px;
-      bottom: 30px;
-      border: 8px solid #252c63;
+      top: 40px;
+      left: 50px;
+      right: 50px;
+      bottom: 40px;
+      border: 10px solid #252c63;
       z-index: 1;
     }
     
@@ -108,7 +108,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding: 30px 50px;
+      padding: 36px 50px;
       z-index: 10;
     }
     
@@ -116,7 +116,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
+      margin-bottom: 8px;
     }
     
     .logo-icon {
@@ -132,7 +132,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       text-align: center;
       margin-top: 0;
       margin-bottom: 16px;
-      letter-spacing: 3px;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
     }
     
@@ -142,7 +142,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 24px;
+      margin-bottom: 36px;
     }
     
     .learner-name {
@@ -150,7 +150,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
       text-transform: uppercase;
     }
     
@@ -160,7 +160,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #595959;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 8px;
+      margin-bottom: 2px;
     }
     
     .course-name {
@@ -172,6 +172,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       margin-bottom: 25px;
       max-width: 85%;
       line-height: 1.4;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
     }
     
@@ -181,19 +182,17 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #595959;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 20px;
       text-transform: uppercase;
     }
     
     .signature-section {
-      margin-top: auto;
+      margin-top: 24px;
       margin-bottom: 20px;
       text-align: center;
       width: 100%;
     }
     
     .signature-image {
-      // width: 100px;
       height: 80px;
       object-fit: contain;
       display: block;
@@ -201,10 +200,10 @@ export function generateCertificateHTML(data: CertificateData): string {
     }
     
     .signature-line {
-      width: 480px;
+      width: 400px;
       height: 1px;
       background-color: #252c63;
-      margin: 10px auto 6px;
+      margin: 10px auto 0px;
     }
     
     .signature-name {
@@ -212,7 +211,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-weight: bold;
       color: #252c63;
       margin-top: 0;
-      margin-bottom: 8px;
+      margin-bottom: 2px;
     }
     
     .signature-title {
@@ -220,7 +219,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-weight: normal;
       color: #595959;
       margin-top: 0;
-      margin-bottom: 6px;
+      margin-bottom: 2px;
     }
     
     .signature-org {
@@ -251,7 +250,7 @@ export function generateCertificateHTML(data: CertificateData): string {
         Having successfully completed the ${escapeHtml(durationText)} course
       </div>
       
-      <div class="course-name">${escapeHtml(data.courseName)}</div>
+      <div class="course-name">EFFECTIVE COACHING FOR LEADERS</div>
       
       <div class="date">${escapeHtml(formattedEndDate)}</div>
       
@@ -294,7 +293,7 @@ export async function buildCertificatePDFBuffer(data: CertificateData): Promise<
     await page.setContent(html, { waitUntil: 'networkidle0' });
     
     const pdfBuffer = await page.pdf({
-      format: 'A4',
+      format: 'Letter',
       landscape: true,
       printBackground: true,
       margin: {
