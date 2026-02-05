@@ -39,6 +39,17 @@ function imageToBase64(imagePath: string): string {
   }
 }
 
+// Helper function to load font and convert to base64
+function loadFontBase64(fontPath: string): string {
+  try {
+    const fontBuffer = fs.readFileSync(fontPath);
+    console.log('fontPath', fontPath);
+    return `data:font/truetype;charset=utf-8;base64,${fontBuffer.toString('base64')}`;
+  } catch (error) {
+    console.warn(`Font not found: ${fontPath}`);
+    return '';
+  }
+}
 // Generate HTML from template
 export function generateCertificateHTML(data: CertificateData): string {
   const durationText = `${data.duration} ${data.durationType}`.trim();
@@ -63,6 +74,19 @@ export function generateCertificateHTML(data: CertificateData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Certificate</title>
   <style>
+    @font-face {
+      font-family: 'Calibri';
+      src: url('${loadFontBase64(path.join(__dirname, './cert-fonts/calibri.ttf'))}') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Calibri';
+      src: url('${loadFontBase64(path.join(__dirname, './cert-fonts/calibrib.ttf'))}') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }
+    
     @page {
       size: Letter landscape;
       margin: 0;
