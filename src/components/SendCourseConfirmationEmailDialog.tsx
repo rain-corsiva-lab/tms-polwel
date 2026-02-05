@@ -109,7 +109,11 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
         }
       }
 
+      // Extract learnerIds from the learners prop (these are already filtered by parent)
+      const learnerIds = learners.map(l => l.id);
+
       const response = await courseRunsApi.sendCourseConfirmationEmail(courseRunId, {
+        learnerIds: learnerIds,
         ...(ccList.length ? { ccEmails: ccList } : {}),
         additionalBody: additionalBody.trim() ? additionalBody.trim() : undefined,
         ...(uploadedAttachmentIds.length ? { attachmentIds: uploadedAttachmentIds } : {}),
