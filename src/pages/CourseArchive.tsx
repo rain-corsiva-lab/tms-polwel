@@ -278,7 +278,6 @@ const CourseArchive = () => {
   const handleExport = async () => {
     try {
       setExporting(true);
-      toast.loading("Exporting courses...");
 
       const dataToExport = filteredCourses.map((course) => ({
         Title: course.title,
@@ -292,7 +291,11 @@ const CourseArchive = () => {
       }));
 
       if (dataToExport.length === 0) {
-        toast.error("No courses to export");
+        toast({
+          title: "No courses to export",
+          description: "There are no courses available to export",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -300,10 +303,17 @@ const CourseArchive = () => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Courses");
       XLSX.writeFile(wb, `courses-${new Date().toISOString().split("T")[0]}.xlsx`);
-      toast.success(`Exported ${dataToExport.length} course${dataToExport.length === 1 ? "" : "s"} successfully`);
+      toast({
+        title: "Export Successful",
+        description: `Exported ${dataToExport.length} course${dataToExport.length === 1 ? "" : "s"} successfully`,
+      });
     } catch (error) {
       console.error("Export error:", error);
-      toast.error("Failed to export courses");
+      toast({
+        title: "Export Failed",
+        description: getErrorMessage(error, "Failed to export courses"),
+        variant: "destructive",
+      });
     } finally {
       setExporting(false);
     }
