@@ -143,7 +143,7 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
               {quarter} {year} - Course Runs & Billing Details
             </DialogTitle>
             {!loading && runs.length > 0 && (
-              <Button onClick={handleExportExcel} variant="outline" size="sm">
+              <Button onClick={handleExportExcel} size="sm" className="mr-6">
                 <Download className="w-4 h-4 mr-2" />
                 Export to Excel
               </Button>
