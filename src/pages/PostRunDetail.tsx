@@ -329,10 +329,21 @@ const PostRunDetail = () => {
       return;
     }
 
-    setBillingForm((prev) => ({
-      ...prev,
-      entries: prev.entries.filter((_, i) => i !== index),
-    }));
+    setBillingForm((prev) => {
+      const updatedEntries = prev.entries.filter((_, i) => i !== index);
+      // Recalculate total invoice amount and auto-update Value of Work Done
+      const totalInvoiceAmount = updatedEntries.reduce((sum, entry) => {
+        const amount = parseFloat(entry.invoiceAmount) || 0;
+        return sum + amount;
+      }, 0);
+
+      return {
+        ...prev,
+        entries: updatedEntries,
+        // Auto-update Value of Work Done when entry is removed
+        valueOfWorkDone: totalInvoiceAmount > 0 ? totalInvoiceAmount.toFixed(2) : prev.valueOfWorkDone,
+      };
+    });
   };
 
   const handleEntryChange = (index: number, field: keyof BillingEntry, value: any) => {
@@ -364,9 +375,17 @@ const PostRunDetail = () => {
         updatedEntries[index].invoiceAmount = calculatedAmount;
       }
 
+      // Calculate total invoice amount and auto-update Value of Work Done
+      const totalInvoiceAmount = updatedEntries.reduce((sum, entry) => {
+        const amount = parseFloat(entry.invoiceAmount) || 0;
+        return sum + amount;
+      }, 0);
+
       return {
         ...prev,
         entries: updatedEntries,
+        // Auto-update Value of Work Done when invoice amounts change
+        valueOfWorkDone: totalInvoiceAmount > 0 ? totalInvoiceAmount.toFixed(2) : prev.valueOfWorkDone,
       };
     });
     if (field === "learnerIds") {
@@ -395,6 +414,15 @@ const PostRunDetail = () => {
       return sum + (baseAmount - discountAmount);
     }, 0);
     return totalAmount.toFixed(2);
+  };
+
+  // Calculate total invoice amount from all entries
+  const calculateTotalInvoiceAmount = (): string => {
+    const total = billingForm.entries.reduce((sum, entry) => {
+      const amount = parseFloat(entry.invoiceAmount) || 0;
+      return sum + amount;
+    }, 0);
+    return total.toFixed(2);
   };
 
   const handleSaveBilling = async () => {

@@ -180,10 +180,10 @@ const CourseRunDetail: React.FC = () => {
   // Partner Assignment State (always loaded, no edit mode)
   const [availablePartners, setAvailablePartners] = useState<any[]>([]);
   const [partnerAssignments, setPartnerAssignments] = useState<{
-    [partnerId: string]: { selected: boolean };
+    [partnerId: string]: { selected: boolean; selectedTrainerIds?: string[] };
   }>({});
   const [initialPartnerAssignments, setInitialPartnerAssignments] = useState<{
-    [partnerId: string]: { selected: boolean };
+    [partnerId: string]: { selected: boolean; selectedTrainerIds?: string[] };
   }>({});
 
   // Withdrawal Dialog State
@@ -984,10 +984,13 @@ const CourseRunDetail: React.FC = () => {
       }
 
       // Initialize partner assignments from current courseRunPartners
-      const partnerAssigns: { [key: string]: { selected: boolean } } = {};
+      const partnerAssigns: { [key: string]: { selected: boolean; selectedTrainerIds?: string[] } } = {};
       if (courseRun.courseRunPartners) {
         courseRun.courseRunPartners.forEach((crp: any) => {
-          partnerAssigns[crp.partner.id] = { selected: true };
+          partnerAssigns[crp.partner.id] = {
+            selected: true,
+            selectedTrainerIds: Array.isArray(crp.selectedTrainerIds) ? crp.selectedTrainerIds : [],
+          };
         });
       }
 
@@ -1017,8 +1020,9 @@ const CourseRunDetail: React.FC = () => {
       // Prepare partner assignments data
       const selectedPartners = Object.entries(partnerAssignments)
         .filter(([_, data]) => data.selected)
-        .map(([partnerId, _]) => ({
+        .map(([partnerId, data]) => ({
           partnerId,
+          selectedTrainerIds: Array.isArray(data.selectedTrainerIds) ? data.selectedTrainerIds : [],
         }));
 
       // Calculate total trainer fees
@@ -1105,12 +1109,37 @@ const CourseRunDetail: React.FC = () => {
   };
 
   const togglePartnerSelection = (partnerId: string) => {
-    setPartnerAssignments((prev) => ({
-      ...prev,
-      [partnerId]: {
-        selected: !prev[partnerId]?.selected,
-      },
-    }));
+    setPartnerAssignments((prev) => {
+      const current = prev[partnerId] || { selected: false };
+      const newSelected = !current.selected;
+      
+      return {
+        ...prev,
+        [partnerId]: {
+          selected: newSelected,
+          // Reset selectedTrainerIds when unselecting partner
+          selectedTrainerIds: newSelected ? (current.selectedTrainerIds || []) : [],
+        },
+      };
+    });
+  };
+
+  const togglePartnerTrainerSelection = (partnerId: string, trainerId: string) => {
+    setPartnerAssignments((prev) => {
+      const current = prev[partnerId] || { selected: false, selectedTrainerIds: [] };
+      const currentTrainerIds = current.selectedTrainerIds || [];
+      const isSelected = currentTrainerIds.includes(trainerId);
+      
+      return {
+        ...prev,
+        [partnerId]: {
+          ...current,
+          selectedTrainerIds: isSelected
+            ? currentTrainerIds.filter((id) => id !== trainerId)
+            : [...currentTrainerIds, trainerId],
+        },
+      };
+    });
   };
 
   const updateTrainerFee = (trainerId: string, field: "baseFee" | "additionalCost", value: number | null) => {
@@ -2271,15 +2300,23 @@ const CourseRunDetail: React.FC = () => {
                                   {isSelected && partnerTrainers.length > 0 && (
                                     <div className="mt-3 pl-4 border-l-2 border-green-200 space-y-2">
                                       <p className="text-xs font-semibold text-gray-600 uppercase">Associated Trainers:</p>
-                                      {partnerTrainers.map((trainer: any) => (
-                                        <div key={trainer.id} className="flex items-center gap-2 text-sm">
-                                          <input type="checkbox" checked={true} disabled className="rounded h-4 w-4 opacity-50 cursor-not-allowed" />
-                                          <div>
-                                            <div className="font-medium text-gray-700">{trainer.trainerName}</div>
-                                            <div className="text-xs text-gray-500">{trainer.trainerEmail}</div>
+                                      {partnerTrainers.map((trainer: any) => {
+                                        const isTrainerSelected = partnerAssignments[partner.id]?.selectedTrainerIds?.includes(trainer.id) || false;
+                                        return (
+                                          <div key={trainer.id} className="flex items-center gap-2 text-sm">
+                                            <input
+                                              type="checkbox"
+                                              checked={isTrainerSelected}
+                                              onChange={() => togglePartnerTrainerSelection(partner.id, trainer.id)}
+                                              className="rounded h-4 w-4"
+                                            />
+                                            <div>
+                                              <div className="font-medium text-gray-700">{trainer.trainerName}</div>
+                                              <div className="text-xs text-gray-500">{trainer.trainerEmail}</div>
+                                            </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   )}
                                 </div>

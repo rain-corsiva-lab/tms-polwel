@@ -85,55 +85,50 @@ const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 
 
 console.log('🔐 CORS configured for origins:', allowedOrigins);
 
+// Extract allowed domains (hostname only) for subdomain matching
+const allowedDomains = allowedOrigins.map(o => {
+  try {
+    const url = new URL(o);
+    return url.hostname;
+  } catch {
+    return null;
+  }
+}).filter(Boolean) as string[];
+
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
-    console.log('🔍 CORS check for origin:', origin);
-    console.log('📋 Current allowed origins:', allowedOrigins);
-    
-    // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
-    if (!origin) {
-      console.log('✅ Allowing request with no origin');
-      return callback(null, true);
+    if (!origin) return callback(null, true);
+
+    // SECURITY: Reject if origin contains spaces (prevents "https://tms.polwel.org.sg http://evil.com/")
+    if (origin.includes(' ') || origin.includes('\t') || origin.includes('\n')) {
+      return callback(new Error(`CORS policy violation: Invalid origin format`));
     }
-    
-    // Allow configured origins (exact match)
+
+    // 1. Exact match check (Recommended)
     if (allowedOrigins.includes(origin)) {
-      console.log('✅ Origin found in allowed list (exact match)');
       return callback(null, true);
     }
-    
-    // Allow both HTTP and HTTPS versions of configured domains
-    const originWithoutProtocol = origin.replace(/^https?:\/\//, '');
-    const allowedDomains = allowedOrigins.map(o => o.replace(/^https?:\/\//, ''));
-    if (allowedDomains.includes(originWithoutProtocol)) {
-      console.log('✅ Origin found in allowed list (protocol flexible match)');
+
+    // 2. Check for localhost (should only be allowed in development)
+    const isLocalhost = origin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/);
+    if (isLocalhost) {
       return callback(null, true);
     }
-    
-    // Allow any localhost origin in dev and staging
-    if (origin.startsWith('http://localhost') || origin.startsWith('https://localhost') || 
-        origin.startsWith('http://127.0.0.1') || origin.startsWith('https://127.0.0.1')) {
-      console.log('✅ Allowing localhost origin');
+
+    // 3. To safely support subdomains (e.g., *.polwel.org.sg)
+    // Instead of using .includes(), use regex to ensure the domain ends exactly as expected
+    const isSubdomain = allowedDomains.some(domain => {
+      // Escape dots to avoid regex errors, then match domain at the end of the string
+      const escapedDomain = domain.replace(/\./g, '\\.');
+      const regex = new RegExp(`^https?://([^/]+\\.)?${escapedDomain}$`);
+      return regex.test(origin);
+    });
+
+    if (isSubdomain) {
       return callback(null, true);
     }
-    
-    // In staging/production, be more permissive with the main domain
-    const currentEnv = process.env.NODE_ENV || 'development';
-    if (currentEnv !== 'development') {
-      // Check if origin matches any part of allowed domains (for subdomains, etc)
-      const isAllowedDomain = allowedDomains.some(domain => 
-        originWithoutProtocol.includes(domain) || domain.includes(originWithoutProtocol)
-      );
-      if (isAllowedDomain) {
-        console.log('✅ Origin matches allowed domain pattern');
-        return callback(null, true);
-      }
-    }
-    
-    console.error('❌ CORS blocked origin:', origin);
-    console.error('📋 Allowed origins:', allowedOrigins);
-    console.error('🌐 Environment:', currentEnv);
-    return callback(new Error(`CORS policy violation: Origin ${origin} not allowed`));
+
+    return callback(new Error(`CORS policy violation`));
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
@@ -144,18 +139,40 @@ const corsOptions: CorsOptions = {
 };
 
 // Middleware
-// Configure Helmet with lenient settings to avoid blocking legitimate requests
+// Configure Helmet with security headers
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP if causing issues, can be enabled later with proper policy
-  frameguard: { action: 'deny' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow inline scripts for React/Vite
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles
+      imgSrc: ["'self'", "data:", "https:"], // Allow images from self, data URIs, and HTTPS
+      fontSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", "https:"], // Allow API calls to same origin and HTTPS
+      frameSrc: ["'self'"], // Allow iframes from same origin
+      frameAncestors: ["'self'"], // Allow frames from same origin
+      objectSrc: ["'none'"], // Disable plugins
+      upgradeInsecureRequests: [], // Upgrade HTTP to HTTPS
+    },
+  },
+  frameguard: { action: 'sameorigin' },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: { maxAge: 31536000, includeSubDomains: true },
   noSniff: true,
   xssFilter: true,
 }));
+
+// Set Permissions-Policy header (not directly supported by Helmet v8)
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), fullscreen=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()'
+  );
+  next();
+});
 app.use(limiter);
 
-// CORS must be applied before other middleware
+// CORS middleware - validation is done inside corsOptions
 app.use(cors(corsOptions));
 
 // Handle preflight requests - don't use app.options('*') as it causes routing errors

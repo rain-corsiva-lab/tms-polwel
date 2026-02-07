@@ -44,7 +44,7 @@ type PartnerRecord = {
     trainerInformation: string | null;
     trainerName: string;
     trainerWriteUp: string | null;
-    trainerEmail: string;
+    trainerEmail: string | null;
     deletedAt: Date | null;
   }>;
 };
@@ -71,7 +71,7 @@ const transformPartner = (partner: PartnerRecord) => ({
     trainerInformation: t.trainerInformation || '',
     trainerName: t.trainerName,
     trainerWriteUp: t.trainerWriteUp || '',
-    trainerEmail: t.trainerEmail,
+    trainerEmail: t.trainerEmail || '',
   })) || [],
 });
 
@@ -81,7 +81,10 @@ const PartnerTrainerSchema = z.object({
   trainerInformation: z.string().optional(),
   trainerName: z.string().min(1, 'Trainer name is required'),
   trainerWriteUp: z.string().optional(),
-  trainerEmail: z.string().email('Valid email required'),
+  trainerEmail: z.string().optional().refine(
+    (val) => !val || val.trim() === '' || z.string().email().safeParse(val).success,
+    { message: 'Valid email required' }
+  ),
 });
 
 const PartnerCreateSchema = z.object({
@@ -314,7 +317,7 @@ export const createPartner = async (req: AuthenticatedRequest, res: Response) =>
               trainerInformation: normalizeString(t.trainerInformation),
               trainerName: t.trainerName.trim(),
               trainerWriteUp: normalizeString(t.trainerWriteUp),
-              trainerEmail: t.trainerEmail.trim(),
+              trainerEmail: normalizeString(t.trainerEmail),
             })),
           },
         } : {}),
@@ -470,7 +473,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
           trainerInformation: normalizeString(t.trainerInformation),
           trainerName: t.trainerName.trim(),
           trainerWriteUp: normalizeString(t.trainerWriteUp),
-          trainerEmail: t.trainerEmail.trim(),
+          trainerEmail: normalizeString(t.trainerEmail),
         })),
         // Update existing trainers
         update: trainersToUpdate.map(t => ({
@@ -479,7 +482,7 @@ export const updatePartner = async (req: AuthenticatedRequest, res: Response) =>
             trainerInformation: normalizeString(t.trainerInformation),
             trainerName: t.trainerName.trim(),
             trainerWriteUp: normalizeString(t.trainerWriteUp),
-            trainerEmail: t.trainerEmail.trim(),
+            trainerEmail: normalizeString(t.trainerEmail),
           },
         })),
       };

@@ -296,43 +296,46 @@ class AzureTransport implements Transport<SentMessageInfo> {
 class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
   private static isInitialized: boolean = false;
+  private static mailFromAddress: string = process.env.NODE_ENV === "Production" ? process.env.GRAPH_MAIL_FROM_ADDRESS || 'noreply@polwel.org' : process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org';
 
   private static getTransporter() {
     if (!this.isInitialized) {
-      // Check if Microsoft Graph API is configured
-      const graphClientId = process.env.GRAPH_CLIENT_ID;
-      const graphClientSecret = process.env.GRAPH_CLIENT_SECRET;
-      const graphTenantId = process.env.GRAPH_TENANT_ID;
-      const graphFromEmail = process.env.MAIL_FROM_ADDRESS;
-
-      if (graphClientId && graphClientSecret && graphTenantId && graphFromEmail) {
-        // Use Microsoft Graph API
-        console.log('📧 Initializing email service with Microsoft Graph API');
-        console.log('   Tenant ID:', graphTenantId.substring(0, 8) + '***');
-        console.log('   Client ID:', graphClientId.substring(0, 8) + '***');
-        console.log('   From Email:', graphFromEmail);
-
-        const azureTransport = new AzureTransport({
-          clientId: graphClientId,
-          clientSecret: graphClientSecret,
-          tenantId: graphTenantId,
-          fromEmail: graphFromEmail,
-          saveToSentItems: true,
-        });
-
-        this.transporter = nodemailer.createTransport(azureTransport);
-        this.isInitialized = true;
-
-        // Verify connection
-        this.transporter.verify((error, success) => {
-          if (error) {
-            console.error('❌ Graph API connection verification failed:', error.message);
-          } else {
-            console.log('✅ Graph API connection verified successfully');
-          }
-        });
-
-        return this.transporter;
+      // Check if Microsoft Graph API is configured      
+      if (process.env.NODE_ENV === "Production") {
+        const graphClientId = process.env.GRAPH_CLIENT_ID;
+        const graphClientSecret = process.env.GRAPH_CLIENT_SECRET;
+        const graphTenantId = process.env.GRAPH_TENANT_ID;
+        const graphFromEmail = process.env.GRAPH_MAIL_FROM_ADDRESS;
+  
+        if (graphClientId && graphClientSecret && graphTenantId && graphFromEmail) {
+          // Use Microsoft Graph API
+          console.log('📧 Initializing email service with Microsoft Graph API');
+          console.log('   Tenant ID:', graphTenantId.substring(0, 8) + '***');
+          console.log('   Client ID:', graphClientId.substring(0, 8) + '***');
+          console.log('   From Email:', graphFromEmail);
+  
+          const azureTransport = new AzureTransport({
+            clientId: graphClientId,
+            clientSecret: graphClientSecret,
+            tenantId: graphTenantId,
+            fromEmail: graphFromEmail,
+            saveToSentItems: true,
+          });
+  
+          this.transporter = nodemailer.createTransport(azureTransport);
+          this.isInitialized = true;
+  
+          // Verify connection
+          this.transporter.verify((error, success) => {
+            if (error) {
+              console.error('❌ Graph API connection verification failed:', error.message);
+            } else {
+              console.log('✅ Graph API connection verified successfully');
+            }
+          });
+  
+          return this.transporter;
+        }
       }
 
       // Fallback to SMTP configuration
@@ -361,7 +364,7 @@ class EmailService {
       if (!config.auth.user || !config.auth.pass) {
         console.log('⚠️  Email service not configured (neither Graph API nor SMTP)');
         console.log('📧 To enable emails, configure either:');
-        console.log('   - Microsoft Graph API: GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET, GRAPH_TENANT_ID, MAIL_FROM_ADDRESS');
+        console.log('   - Microsoft Graph API: GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET, GRAPH_TENANT_ID, GRAPH_MAIL_FROM_ADDRESS');
         console.log('   - SMTP: MAIL_USERNAME and MAIL_PASSWORD');
         this.isInitialized = true;
         return null;
@@ -390,7 +393,7 @@ class EmailService {
       });
     }
     return this.transporter;
-  }
+    }
 
   static generateResetToken(): string {
     return crypto.randomBytes(32).toString('hex');
@@ -404,7 +407,7 @@ class EmailService {
   const transporter = this.getTransporter();
 
   const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Trainer Account Setup',
       html: `
@@ -523,7 +526,7 @@ class EmailService {
     const transporter = this.getTransporter();
 
     const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Training Coordinator Setup',
       html: `
@@ -644,7 +647,7 @@ class EmailService {
     const transporter = this.getTransporter();
 
     const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: 'POLWEL - Password Reset Request',
       html: `
@@ -782,7 +785,7 @@ class EmailService {
     );
 
     const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: 'Your POLWEL security code',
       html: `
@@ -938,7 +941,7 @@ class EmailService {
     const transporter = this.getTransporter();
 
     const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Account Setup',
       html: `
@@ -1229,7 +1232,7 @@ class EmailService {
     </html>`;
 
     const mailOptions: any = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: `Trainer Assignment: ${courseRunDetails.serialNumber || ''}`,
       text: textBody,
@@ -1376,7 +1379,7 @@ class EmailService {
 
     const subjectDate = formatDateForSubject(startDate);
     const mailOptions: any = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: `Course Confirmation — ${courseTitle}${subjectDate ? ` (${subjectDate})` : ''}`,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
@@ -1608,7 +1611,7 @@ class EmailService {
     };
 
     const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: `Course Cancellation Notice - ${courseTitle}`,
       html: `
@@ -1785,7 +1788,7 @@ class EmailService {
     };
 
     const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org',
+      from: this.mailFromAddress,
       to: email,
       subject: `Congratulations! Certificate of Completion - ${courseTitle}`,
       html: `

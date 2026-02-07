@@ -32,7 +32,6 @@ const NotFound = () => {
                 <Home className="mr-2" /> Go Home
               </Button>
             </div>
-            <div className="text-xs text-muted-foreground mt-4">Error 404 • {location.pathname}</div>
           </div>
         </CardContent>
       </Card>

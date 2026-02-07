@@ -126,19 +126,13 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
       newErrors.email = "Please enter a valid email address (name@email.com)";
     }
 
-    // Validate point-of-contact email if provided
-    if (formData.pointOfContactEmail && !isValidEmail(formData.pointOfContactEmail)) {
-      newErrors.pointOfContactEmail = "Please enter a valid email address (name@email.com)";
-    }
-
     // Validate trainers
     trainers.forEach((trainer, index) => {
       if (!trainer.trainerName) {
         newErrors[`trainer_${index}_name`] = "Trainer name is required";
       }
-      if (!trainer.trainerEmail) {
-        newErrors[`trainer_${index}_email`] = "Trainer email is required";
-      } else if (!isValidEmail(trainer.trainerEmail)) {
+      // Email is optional, but if provided, must be valid format
+      if (trainer.trainerEmail && !isValidEmail(trainer.trainerEmail)) {
         newErrors[`trainer_${index}_email`] = "Invalid email format";
       }
     });
@@ -272,7 +266,7 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
             </div>
 
             <div>
-              <Label htmlFor="email">Email Address * (Must be unique)</Label>
+              <Label htmlFor="email">Point of Contact Email Address *</Label>
               <Input
                 id="email"
                 type="email"
@@ -319,22 +313,6 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
                   onChange={(e) => setFormData((prev) => ({ ...prev, contactDesignation: e.target.value }))}
                   placeholder="Enter designation"
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="pointOfContactEmail">TC Email</Label>
-                <Input
-                  id="pointOfContactEmail"
-                  type="email"
-                  value={formData.pointOfContactEmail}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, pointOfContactEmail: e.target.value }));
-                    if (errors.pointOfContactEmail) setErrors((prev) => ({ ...prev, pointOfContactEmail: "" }));
-                  }}
-                  placeholder="Enter point-of-contact email"
-                  className={errors.pointOfContactEmail ? "border-red-500" : ""}
-                />
-                {errors.pointOfContactEmail && <p className="text-sm text-red-500 mt-1">{errors.pointOfContactEmail}</p>}
               </div>
 
               <div>
@@ -413,12 +391,12 @@ export function AddPartnerDialog({ onPartnerCreated, onSuccess, mode = "create",
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm">Trainer Email Address *</Label>
+                        <Label className="text-sm">Trainer Email Address</Label>
                         <Input
                           type="email"
                           value={trainer.trainerEmail}
                           onChange={(e) => handleTrainerChange(index, "trainerEmail", e.target.value)}
-                          placeholder="Enter trainer email"
+                          placeholder="Enter trainer email (optional)"
                           className={errors[`trainer_${index}_email`] ? "border-red-500" : ""}
                         />
                         {errors[`trainer_${index}_email`] && <p className="text-sm text-red-500">{errors[`trainer_${index}_email`]}</p>}
