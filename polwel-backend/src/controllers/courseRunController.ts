@@ -2827,6 +2827,7 @@ export const courseRunController = {
               trainerId: t.trainerId,
               trainerBaseAmount: t.trainerBaseAmount || 0,
               additionalCost: t.additionalCost || 0,
+              additionalCostUnit: t.additionalCostUnit || 'PER_CLASS',
               remarks: t.remarks || null,
             })),
           });
@@ -3150,6 +3151,7 @@ export const courseRunController = {
         courseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
         courseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
         courseDetails.venueAddress = courseRun.venue?.address || null;
+        courseDetails.specifiedLocation = courseRun.specifiedLocation || null;
 
         const result = await EmailService.sendTrainerAssignmentEmail(
           partnerEmail,
@@ -3544,6 +3546,10 @@ export const courseRunController = {
             emailPayload.venueAddress = courseRun.venue.address;
           }
 
+          if (courseRun.specifiedLocation) {
+            emailPayload.specifiedLocation = courseRun.specifiedLocation;
+          }
+
           if (additionalNotes) {
             emailPayload.additionalNotes = additionalNotes;
           }
@@ -3860,6 +3866,8 @@ export const courseRunController = {
           trainerCourseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
           trainerCourseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
           trainerCourseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+          trainerCourseDetails.venueAddress = courseRun.venue?.address || null;
+          trainerCourseDetails.specifiedLocation = courseRun.specifiedLocation || null;
 
           const result = await EmailService.sendTrainerAssignmentEmail(
             trainerEmail,
@@ -3939,6 +3947,8 @@ export const courseRunController = {
           partnerCourseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
           partnerCourseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
           partnerCourseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+          partnerCourseDetails.venueAddress = courseRun.venue?.address || null;
+          partnerCourseDetails.specifiedLocation = courseRun.specifiedLocation || null;
 
           const result = await EmailService.sendTrainerAssignmentEmail(
             partnerEmail,

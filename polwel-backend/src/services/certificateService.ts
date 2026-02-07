@@ -277,7 +277,7 @@ export function generateCertificateHTML(data: CertificateData): string {
         Having successfully completed the ${escapeHtml(durationText)} course
       </div>
       
-      <div class="course-name">EFFECTIVE COACHING FOR LEADERS</div>
+      <div class="course-name">${escapeHtml(data.courseName.toUpperCase())}</div>
       
       <div class="date">${escapeHtml(formattedEndDate)}</div>
       

@@ -42,3 +42,7 @@
 button.relative.flex.items-center.rounded-sm{
   width: 100%;
 }
+
+nav a[aria-current="page"], nav [class*="isActive"] {
+    color: rgb(0 26 69 / var(--tw-bg-opacity, 1))!important;
+}

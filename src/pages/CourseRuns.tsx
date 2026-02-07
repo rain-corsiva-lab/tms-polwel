@@ -826,15 +826,15 @@ const CourseRuns: React.FC = () => {
     try {
       // Fetch full course run details with trainers
       const details = await courseRunsApi.getById(courseRun.id);
-      
+
       // Fetch course data to get partner trainers information
       let partnerTrainersMap: { [partnerId: string]: Array<{ id: string; trainerName: string; trainerEmail: string }> } = {};
-      
+
       if (details.courseRun?.course?.id) {
         try {
           const courseResponse = await coursesApi.getById(details.courseRun.course.id);
           const course = courseResponse?.data?.course || courseResponse?.data || courseResponse;
-          
+
           // Build map of partner trainers
           if (course && Array.isArray(course.coursePartners)) {
             course.coursePartners.forEach((cp: any) => {
@@ -853,26 +853,25 @@ const CourseRuns: React.FC = () => {
           // Continue without partner trainers - will show partner name only
         }
       }
-      
+
       // Enrich courseRunPartners with trainer information
       const enrichedCourseRunDetails = {
         ...details.courseRun,
-        courseRunPartners: details.courseRun?.courseRunPartners?.map((crp: any) => {
-          const selectedTrainerIds = Array.isArray(crp.selectedTrainerIds) ? crp.selectedTrainerIds : [];
-          const partnerTrainers = partnerTrainersMap[crp.partner?.id] || [];
-          
-          // Match selectedTrainerIds with partnerTrainers
-          const associatedTrainers = selectedTrainerIds
-            .map((trainerId: string) => partnerTrainers.find((pt) => pt.id === trainerId))
-            .filter(Boolean);
-          
-          return {
-            ...crp,
-            associatedTrainers,
-          };
-        }) || [],
+        courseRunPartners:
+          details.courseRun?.courseRunPartners?.map((crp: any) => {
+            const selectedTrainerIds = Array.isArray(crp.selectedTrainerIds) ? crp.selectedTrainerIds : [];
+            const partnerTrainers = partnerTrainersMap[crp.partner?.id] || [];
+
+            // Match selectedTrainerIds with partnerTrainers
+            const associatedTrainers = selectedTrainerIds.map((trainerId: string) => partnerTrainers.find((pt) => pt.id === trainerId)).filter(Boolean);
+
+            return {
+              ...crp,
+              associatedTrainers,
+            };
+          }) || [],
       };
-      
+
       setTrainerApprovalDialog((prev) => ({
         ...prev,
         courseRunDetails: enrichedCourseRunDetails,
@@ -1540,16 +1539,16 @@ const CourseRuns: React.FC = () => {
                             )}
 
                             {/* CONFIRMED: Show only "Send Course Confirmation Email" */}
-                            {courseRun.status === "CONFIRMED" && (
+                            {/* {courseRun.status === "CONFIRMED" && (
                               <>
-                                {/* For TALKS: Hide "Send Course Confirmation Email" if trainer assignment email has been sent */}
+                               
                                 {!(courseRun.courseType === "TALKS" && courseRun.hasTrainerAssignmentEmailSent) && (
                                   <DropdownMenuItem onClick={() => openEmailDialog(courseRun, "course_confirmation")}>
                                     Send Course Confirmation Email
                                   </DropdownMenuItem>
                                 )}
                               </>
-                            )}
+                            )} */}
 
                             {(courseRun.workflow?.availableActions?.length ?? 0) > 0 && (
                               <>
@@ -1732,7 +1731,8 @@ const CourseRuns: React.FC = () => {
                   <div className="flex items-center justify-center py-8">
                     <div className="text-sm text-gray-500">Loading trainer details...</div>
                   </div>
-                ) : (trainerApprovalDialog.courseRunDetails?.courseRunTrainers && trainerApprovalDialog.courseRunDetails.courseRunTrainers.length > 0 || trainerApprovalDialog.courseRunDetails?.courseRunPartners && trainerApprovalDialog.courseRunDetails.courseRunPartners.length > 0) ? (
+                ) : (trainerApprovalDialog.courseRunDetails?.courseRunTrainers && trainerApprovalDialog.courseRunDetails.courseRunTrainers.length > 0) ||
+                  (trainerApprovalDialog.courseRunDetails?.courseRunPartners && trainerApprovalDialog.courseRunDetails.courseRunPartners.length > 0) ? (
                   <div className="space-y-3">
                     {trainerApprovalDialog.courseRunDetails.courseRunTrainers.map((crt: any) => (
                       <div key={crt.id} className="flex items-start justify-between border-b pb-3 last:border-b-0">
@@ -1769,11 +1769,9 @@ const CourseRuns: React.FC = () => {
                         .map((t: any) => t.trainerName)
                         .filter(Boolean)
                         .join(", ");
-                      
-                      const displayName = trainerNames 
-                        ? `${crp.partner?.name || "Unknown Partner"} - ${trainerNames}`
-                        : crp.partner?.name || "Unknown Partner";
-                      
+
+                      const displayName = trainerNames ? `${crp.partner?.name || "Unknown Partner"} - ${trainerNames}` : crp.partner?.name || "Unknown Partner";
+
                       return (
                         <div key={crp.id} className="flex items-start justify-between border-b pb-3 last:border-b-0">
                           <div className="flex items-start gap-3">

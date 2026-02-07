@@ -50,6 +50,9 @@ interface Learner {
   status: string;
   enrolledCourses: number;
   completedCourses: number;
+  courseName?: string;
+  courseStartDate?: string | Date;
+  courseEndDate?: string | Date;
 }
 
 const OrganizationDashboard = () => {
@@ -431,17 +434,17 @@ const OrganizationDashboard = () => {
                               const url = resource.fileUrl.startsWith("http")
                                 ? resource.fileUrl
                                 : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${resource.fileUrl}`;
-                              
+
                               // Fetch file as blob
                               const token = localStorage.getItem("polwel_access_token");
                               const response = await fetch(url, {
                                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                               });
-                              
+
                               if (!response.ok) {
                                 throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
                               }
-                              
+
                               const blob = await response.blob();
                               const downloadUrl = window.URL.createObjectURL(blob);
                               const a = document.createElement("a");
@@ -486,10 +489,10 @@ const OrganizationDashboard = () => {
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Organisation Information</CardTitle>
-              {/* <CardDescription>Basic details and contact information for the Organisation</CardDescription> */}
+             
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -506,7 +509,7 @@ const OrganizationDashboard = () => {
                   <p className="mt-1">{organization.organizationType || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Registration Number</p>
+                  <p className="text-sm font-medium text-muted-foreground">ULTF Number</p>
                   <p className="mt-1">{organization.buNumber || "N/A"}</p>
                 </div>
                 <div>
@@ -535,7 +538,7 @@ const OrganizationDashboard = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Analytics Tables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -779,6 +782,7 @@ const OrganizationDashboard = () => {
                         <TableHead>End Date</TableHead>
                         <TableHead>Participants</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -789,6 +793,20 @@ const OrganizationDashboard = () => {
                           <TableCell>{formatDate(run.endDate)}</TableCell>
                           <TableCell>{run.participants}</TableCell>
                           <TableCell>{getStatusBadge(run.status)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              onClick={() => {
+                                setSelectedCourseRun(run);
+                                setViewLearnersOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                              View Participants
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -829,8 +847,9 @@ const OrganizationDashboard = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Designation</TableHead>
-                        <TableHead>Enrolled</TableHead>
-                        <TableHead>Completed</TableHead>
+                        <TableHead>Course Name</TableHead>
+                        <TableHead>Course Start Date</TableHead>
+                        <TableHead>Course End Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -838,9 +857,10 @@ const OrganizationDashboard = () => {
                         <TableRow key={learner.id}>
                           <TableCell className="font-medium">{learner.name}</TableCell>
                           <TableCell>{learner.email}</TableCell>
-                          <TableCell>{learner.designation}</TableCell>
-                          <TableCell>{learner.enrolledCourses}</TableCell>
-                          <TableCell>{learner.completedCourses}</TableCell>
+                          <TableCell>{learner.designation || "N/A"}</TableCell>
+                          <TableCell>{learner.courseName || "N/A"}</TableCell>
+                          <TableCell>{learner.courseStartDate ? formatDate(learner.courseStartDate) : "N/A"}</TableCell>
+                          <TableCell>{learner.courseEndDate ? formatDate(learner.courseEndDate) : "N/A"}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -911,15 +931,15 @@ const OrganizationDashboard = () => {
                           const url = previewResource.fileUrl.startsWith("http")
                             ? previewResource.fileUrl
                             : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${previewResource.fileUrl}`;
-                          
+
                           // Fetch file as blob
                           const token = localStorage.getItem("polwel_access_token");
                           const response = await fetch(url, {
                             headers: token ? { Authorization: `Bearer ${token}` } : {},
                           });
-                          
+
                           if (!response.ok) throw new Error("Failed to download file");
-                          
+
                           const blob = await response.blob();
                           const downloadUrl = window.URL.createObjectURL(blob);
                           const a = document.createElement("a");
@@ -945,7 +965,7 @@ const OrganizationDashboard = () => {
                 </div>
 
                 {previewResource.mimeType === "application/pdf" ? (
-                  <div className="border rounded-lg overflow-hidden bg-gray-100" style={{ minHeight: '600px', height: '1200px', }}>
+                  <div className="border rounded-lg overflow-hidden bg-gray-100" style={{ minHeight: "600px", height: "1200px" }}>
                     <iframe
                       src={
                         previewResource.fileUrl.startsWith("http")
@@ -966,14 +986,14 @@ const OrganizationDashboard = () => {
                           const url = previewResource.fileUrl.startsWith("http")
                             ? previewResource.fileUrl
                             : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${previewResource.fileUrl}`;
-                          
+
                           const token = localStorage.getItem("polwel_access_token");
                           const response = await fetch(url, {
                             headers: token ? { Authorization: `Bearer ${token}` } : {},
                           });
-                          
+
                           if (!response.ok) throw new Error("Failed to download file");
-                          
+
                           const blob = await response.blob();
                           const downloadUrl = window.URL.createObjectURL(blob);
                           const a = document.createElement("a");

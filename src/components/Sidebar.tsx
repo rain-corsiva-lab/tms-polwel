@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import * as React from "react";
 import {
   Users,
   GraduationCap,
@@ -12,7 +13,6 @@ import {
   ClipboardList,
   FileText,
   LayoutDashboard,
-  AlertCircle,
   FileWarning,
   PanelLeftClose,
   PanelLeftOpen,
@@ -49,6 +49,55 @@ const courseManagementItems: MenuItem[] = [
   { name: "Course Runs", href: "/course-runs", icon: Calendar, subject: "CourseRun" },
 ];
 
+// Separate component for collapsed menu items to avoid hooks in loops
+const CollapsedMenuItem = ({ item }: { item: MenuItem }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <NavLink to={item.href}>
+          {({ isActive }) => (
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                padding: "0",
+                margin: "12px auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: isActive ? "#001A45" : isHovered ? "rgba(0, 26, 69, 0.1)" : "transparent",
+                color: isActive ? "#fff" : "#001A45",
+                border: "none",
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                transform: isHovered ? "scale(1.05)" : "scale(1)",
+                boxShadow: isActive ? "0 2px 8px rgba(0, 26, 69, 0.3)" : isHovered ? "0 2px 4px rgba(0, 26, 69, 0.15)" : "none",
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              <item.icon
+                className="flex-shrink-0"
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  color: isActive ? "#fff" : "#001A45",
+                  transition: "color 0.2s ease",
+                }}
+              />
+            </div>
+          )}
+        </NavLink>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="z-[9999]">
+        {item.name}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => {
   const location = useLocation();
   const isCourseManagementRoute = courseManagementItems.some((item) => location.pathname.startsWith(item.href));
@@ -59,20 +108,50 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
 
   // Helper component for nav items with tooltip support
   const NavItem = ({ to, icon: Icon, label, end = false }: { to: string; icon: any; label: string; end?: boolean }) => {
+    const [isHovered, setIsHovered] = React.useState(false);
+
     const content = (
-      <NavLink
-        to={to}
-        end={end}
-        className={({ isActive }) =>
-          cn(
-            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]",
-            isCollapsed && "justify-center",
-          )
-        }
-      >
-        <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-        {!isCollapsed && label}
+      <NavLink to={to} end={end}>
+        {({ isActive }) => (
+          <>
+            <div
+              className={cn(
+                "flex items-center text-sm font-medium rounded-lg transition-all duration-200",
+                isCollapsed ? "" : "px-3 py-2.5",
+                isActive && !isCollapsed ? "bg-[#001A45] text-white shadow-md" : "",
+                !isActive && !isCollapsed ? "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45] hover:shadow-sm" : "",
+              )}
+              style={
+                isCollapsed
+                  ? {
+                      width: "28px",
+                      height: "28px",
+                      padding: "0",
+                      margin: "12px auto",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: isActive ? "#001A45" : isHovered ? "rgba(0, 26, 69, 0.1)" : "transparent",
+                      color: isActive ? "#fff" : "#001A45",
+                      border: "none",
+                      borderRadius: "8px",
+                      transition: "all 0.2s ease",
+                      transform: isHovered ? "scale(1.05)" : "scale(1)",
+                      boxShadow: isActive ? "0 2px 8px rgba(0, 26, 69, 0.3)" : isHovered ? "0 2px 4px rgba(0, 26, 69, 0.15)" : "none",
+                    }
+                  : undefined
+              }
+              onMouseEnter={() => isCollapsed && setIsHovered(true)}
+              onMouseLeave={() => isCollapsed && setIsHovered(false)}
+            >
+              <Icon
+                className={cn("flex-shrink-0", isCollapsed ? "" : "h-4 w-4", !isCollapsed && "mr-3")}
+                style={isCollapsed ? { width: "28px", height: "28px", color: isActive ? "#fff" : "#001A45", transition: "color 0.2s ease" } : undefined}
+              />
+              {!isCollapsed && <span>{label}</span>}
+            </div>
+          </>
+        )}
       </NavLink>
     );
 
@@ -80,7 +159,9 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
       return (
         <Tooltip>
           <TooltipTrigger asChild>{content}</TooltipTrigger>
-          <TooltipContent side="right">{label}</TooltipContent>
+          <TooltipContent side="right" className="z-[9999]">
+            {label}
+          </TooltipContent>
         </Tooltip>
       );
     }
@@ -89,15 +170,29 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
   };
 
   // Local helper that uses the CASL ability from AuthProvider
-  const can = (action: string, subject: Subject) => {
-    try {
-      return Boolean(ability?.can(action as any, subject));
-    } catch (e) {
-      // If ability is not ready or invalid, default to false
-      return false;
-    }
-  };
-
+  const can = useCallback(
+    (action: string, subject: Subject) => {
+      try {
+        return Boolean(ability?.can(action as any, subject));
+      } catch (e) {
+        // If ability is not ready or invalid, default to false
+        return false;
+      }
+    },
+    [ability],
+  );
+  // useEffect(() => {
+  //   const style = document.createElement("style");
+  //   style.textContent = `
+  //     .collapsed-nav{
+  //        margin-bottom:10px;
+  //     }
+  //   `;
+  //   document.head.appendChild(style);
+  //   return () => {
+  //     document.head.removeChild(style);
+  //   };
+  // }, []);
   // Explicit role checks
   const isPolwelUser = user?.role === "POLWEL";
   const isTrainer = user?.role === "TRAINER";
@@ -124,7 +219,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
       console.log("Is Trainer:", isTrainer);
       console.log("Permissions:", user?.permissions);
       console.log("---");
-      console.log("Ability Rules:", ability.rules);
+      console.log("Ability Rules:", ability?.rules ?? []);
       console.log("---");
       console.log("User Management Visible:", userManagementVisible);
       console.log("  can('view', 'User'):", can("view", "User"));
@@ -146,17 +241,19 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
         paddingTop: "var(--header-height)",
       }}
     >
-      <div className={cn("p-6 flex items-center", isCollapsed ? "justify-center" : "space-x-2")}>
+      <div className={cn("p-6 flex items-center transition-all duration-300", isCollapsed ? "justify-center p-3" : "space-x-2")}>
         {!isCollapsed ? (
           <>
-            <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-12 w-auto" />
+            <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-12 w-auto transition-all duration-300" />
           </>
         ) : (
-          <img src="/images/POLWEL Logo_Horizontal.png" alt="POLWEL Logo" className="h-10 w-auto" />
+          <div className="flex items-center justify-center transition-all duration-300">
+            <img src="/images/POLWEL Logo_Vertical.png" alt="POLWEL Logo" className="h-10 w-auto" />
+          </div>
         )}
       </div>
 
-      <nav className="flex-1 px-4 space-y-1">
+      <nav className="flex-1 px-4 space-y-2">
         <TooltipProvider delayDuration={0}>
           {/* Dashboard - Only for POLWEL users */}
           {isPolwelUser && <NavItem to="/" icon={LayoutDashboard} label="Dashboard" end />}
@@ -204,22 +301,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
             <>
               {userManagementItems.map((item) => (
                 <Can key={item.name} I="view" a={item.subject}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <NavLink
-                        to={item.href}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
-                          )
-                        }
-                      >
-                        <item.icon className="h-5 w-5" />
-                      </NavLink>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{item.name}</TooltipContent>
-                  </Tooltip>
+                  <CollapsedMenuItem item={item} />
                 </Can>
               ))}
             </>
@@ -265,22 +347,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
             <>
               {courseManagementItems.map((item) => (
                 <Can key={item.name} I="view" a={item.subject}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <NavLink
-                        to={item.href}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive ? "bg-[#001A45] text-white" : "text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]",
-                          )
-                        }
-                      >
-                        <item.icon className="h-5 w-5" />
-                      </NavLink>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{item.name}</TooltipContent>
-                  </Tooltip>
+                  <CollapsedMenuItem item={item} />
                 </Can>
               ))}
             </>
@@ -333,18 +400,24 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
       {/* Toggle Button */}
       {onToggle && (
         <div className="p-4 border-t border-border">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onToggle}
-                className="w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
-              >
-                {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-                {!isCollapsed && <span className="ml-3">Collapse</span>}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">{isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}</TooltipContent>
-          </Tooltip>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onToggle}
+                  className="w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:bg-[#001A45]/20 hover:text-[#001A45]"
+                >
+                  {isCollapsed ? (
+                    <PanelLeftOpen style={{ width: "28px", height: "28px", minWidth: "28px", minHeight: "28px" }} />
+                  ) : (
+                    <PanelLeftClose style={{ width: "28px", height: "28px", minWidth: "28px", minHeight: "28px" }} />
+                  )}
+                  {!isCollapsed && <span className="ml-3">Collapse</span>}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
     </aside>

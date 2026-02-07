@@ -18,7 +18,7 @@ export default function Reporting() {
     {
       id: "runs-by-organisation",
       title: "Runs by Organisation",
-      description: "View all course runs grouped by client organization",
+      description: "View all course runs grouped by client organisation",
       icon: Building2,
       path: "/reporting/runs-by-organisation",
       color: "from-purple-500 to-purple-600",
@@ -62,7 +62,7 @@ export default function Reporting() {
       <div className="container mx-auto py-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Reporting Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Access comprehensive reports and analytics for course runs, trainers, and organizations</p>
+          <p className="text-muted-foreground mt-2">Access comprehensive reports and analytics for course runs, trainers, and organisations</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
