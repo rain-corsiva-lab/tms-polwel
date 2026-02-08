@@ -1,6 +1,24 @@
 import { PrismaClient, Prisma, CourseStatus, CourseRunType, LearnerEmailStatus, ConfirmationEmailStatus } from '@prisma/client';
 import EmailService from './emailService';
 
+// Helper function to format status labels for user-friendly display
+function formatStatusLabel(status: string): string {
+  const statusLabels: Record<string, string> = {
+    'DRAFT': 'Draft',
+    'PENDING': 'Pending',
+    'CONFIRMED_PENDING_TA_APPROVAL': 'Confirmed Pending TA Approval',
+    'CONFIRMED_PENDING_CONFIRMATION_EMAILS': 'Confirmed Pending Confirmation Emails',
+    'CONFIRMED': 'Confirmed',
+    'ACTIVE': 'Active',
+    'IN_PROGRESS': 'In Progress',
+    'PENDING_BILLING': 'Pending Billing',
+    'COMPLETED': 'Completed',
+    'CANCELLED': 'Cancelled',
+    'INCOMPLETED': 'Incompleted',
+  };
+  return statusLabels[status] || status;
+}
+
 export type CourseRunWorkflowAction =
   | 'SUBMIT'
   | 'APPROVE'
@@ -530,6 +548,39 @@ export const courseRunWorkflowService = {
     const todayMidnight = new Date(now);
     todayMidnight.setHours(0, 0, 0, 0);
 
+    // NEW: Mark courses as INCOMPLETED if their start date has passed and they haven't been activated
+    // This applies to courses in pre-activation statuses: DRAFT, PENDING, CONFIRMED_PENDING_TA_APPROVAL, CONFIRMED_PENDING_CONFIRMATION_EMAILS
+    const incompletedRuns = await prisma.courseRun.findMany({
+      where: {
+        deletedAt: null,
+        startDatetime: {
+          lt: now, // Start date has passed
+        },
+        status: {
+          in: ['DRAFT', 'PENDING', 'CONFIRMED_PENDING_TA_APPROVAL', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    // Update each course run individually to set appropriate cancel reason
+    let incompletedCount = 0;
+    for (const run of incompletedRuns) {
+      await prisma.courseRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'INCOMPLETED',
+          cancelReason: `Course run automatically marked as incompleted by the system. Start date has passed without activation. Former status: ${formatStatusLabel(run.status)}.`,
+          cancelledAt: now,
+          statusLastEvaluatedAt: now,
+        },
+      });
+      incompletedCount++;
+    }
+
     // Transition CONFIRMED-like statuses to IN_PROGRESS when start datetime is reached
     const started = await prisma.courseRun.updateMany({
       where: {
@@ -585,6 +636,7 @@ export const courseRunWorkflowService = {
     // });
 
     return {
+      incompleted: incompletedCount,
       started: started.count,
       pendingBilling: pendingBilling.count,
       // completed: completed.count,

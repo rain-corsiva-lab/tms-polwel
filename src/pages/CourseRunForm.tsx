@@ -76,6 +76,7 @@ interface CourseRunFormData {
 
   // New fields
   additionalCostExceedingCapacity?: number;
+  courseRunFeeType?: string;
 }
 
 const CourseRunForm: React.FC = () => {
@@ -118,6 +119,7 @@ const CourseRunForm: React.FC = () => {
     additionalCosts: undefined,
 
     additionalCostExceedingCapacity: undefined,
+    courseRunFeeType: "PER_HEAD", // Default to PER_HEAD
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -374,7 +376,7 @@ const CourseRunForm: React.FC = () => {
             filtered.map(async (trainer) => ({
               trainer,
               available: await checkTrainerAvailability(trainer.id, formData.startDate, formData.endDate),
-            }))
+            })),
           );
 
           filtered = availabilityChecks.filter((check) => check.available).map((check) => check.trainer);
@@ -548,8 +550,12 @@ const CourseRunForm: React.FC = () => {
       // Get venue fee and fee type from selected venue
       const selectedVenue = venues.find((v) => v.id === formData.venueId);
       const venueFee = selectedVenue?.fee ?? null;
-      // Convert venue fee type to uppercase enum value
-      const venueFeeType = selectedVenue?.feeType ? String(selectedVenue.feeType).toUpperCase() : null;
+      // Use courseRunFeeType from form, fallback to venue fee type
+      const courseRunFeeType = formData.courseRunFeeType
+        ? String(formData.courseRunFeeType).toUpperCase()
+        : selectedVenue?.feeType
+          ? String(selectedVenue.feeType).toUpperCase()
+          : "PER_HEAD";
 
       // Prepare trainer assignments
       const trainerAssignments = formData.selectedTrainers.map((trainerId) => ({
@@ -566,7 +572,8 @@ const CourseRunForm: React.FC = () => {
         endDatetime,
         venueId: formData.venueId || null,
         venueFee: venueFee,
-        feeType: venueFeeType, // Include fee type from venue
+        feeType: courseRunFeeType, // Use courseRunFeeType from form with fallback
+        courseRunFeeType: courseRunFeeType, // Add explicit courseRunFeeType field
         venueMaxParticipant: formData.venueMaxParticipants ?? null,
         perHeadFeeIfMaxExceed: formData.perHeadFeeIfMaxExceed ?? null,
         venueType: formData.venueType || null, // Send null instead of empty string

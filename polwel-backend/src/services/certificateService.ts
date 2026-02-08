@@ -42,13 +42,16 @@ function imageToBase64(imagePath: string): string {
 
 const regularFontPath = path.join(__dirname, './cert-fonts/calibri.ttf');
 const boldFontPath = path.join(__dirname, './cert-fonts/calibrib.ttf');
+const bitterFontPath = path.join(__dirname, './cert-fonts/Bitter-Regular.ttf');
 
 let fontRegularBase64 = '';
 let fontBoldBase64 = '';
+let fontBitterBase64 = '';
 
 try {
   fontRegularBase64 = `data:font/ttf;base64,${fs.readFileSync(regularFontPath).toString('base64')}`;
   fontBoldBase64 = `data:font/ttf;base64,${fs.readFileSync(boldFontPath).toString('base64')}`;
+  fontBitterBase64 = `data:font/ttf;base64,${fs.readFileSync(bitterFontPath).toString('base64')}`;
 } catch (error) {
   console.error("Critical: Could not load font file", error);
 }
@@ -87,6 +90,12 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-family: 'Calibri';
       src: url('${fontBoldBase64}') format('truetype');
       font-weight: bold;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Bitter';
+      src: url('${fontBitterBase64}') format('truetype');
+      font-weight: normal;
       font-style: normal;
     }
     
@@ -173,12 +182,15 @@ export function generateCertificateHTML(data: CertificateData): string {
     }
     
     .learner-name {
-      font-size: 30pt;
+      font-family: 'Bitter', serif;
+      font-size: 42pt;
+      font-weight: 300;
       color: #252c63;
       text-align: center;
       margin-top: 0;
       margin-bottom: 20px;
       text-transform: uppercase;
+      // letter-spacing: 1px;
     }
     
     .course-completion {

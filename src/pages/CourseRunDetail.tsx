@@ -281,6 +281,7 @@ const CourseRunDetail: React.FC = () => {
       adminFee: cr.adminFee ?? "",
       contingencyFee: cr.contingencyFee ?? "",
       feeType: cr.feeType || "",
+      courseRunFeeType: cr.courseRunFeeType || cr.feeType || "",
     });
   }, []);
 

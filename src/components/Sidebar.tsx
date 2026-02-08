@@ -67,8 +67,8 @@ const CollapsedMenuItem = ({ item }: { item: MenuItem }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: isActive ? "#001A45" : isHovered ? "rgba(0, 26, 69, 0.1)" : "transparent",
-                color: isActive ? "#fff" : "#001A45",
+                backgroundColor: isActive ? "#001A45  " : isHovered ? "rgba(0, 26, 69, 0.1)" : "transparent",
+                color: isActive ? "#fff" : "#001A4566",
                 border: "none",
                 borderRadius: "8px",
                 transition: "all 0.2s ease",
@@ -83,7 +83,7 @@ const CollapsedMenuItem = ({ item }: { item: MenuItem }) => {
                 style={{
                   width: "28px",
                   height: "28px",
-                  color: isActive ? "#fff" : "#001A45",
+                  color: isActive ? "#fff" : "#001A4566",
                   transition: "color 0.2s ease",
                 }}
               />
@@ -132,7 +132,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
                       alignItems: "center",
                       justifyContent: "center",
                       backgroundColor: isActive ? "#001A45" : isHovered ? "rgba(0, 26, 69, 0.1)" : "transparent",
-                      color: isActive ? "#fff" : "#001A45",
+                      color: isActive ? "#fff" : "#001A4566",
                       border: "none",
                       borderRadius: "8px",
                       transition: "all 0.2s ease",
@@ -146,7 +146,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
             >
               <Icon
                 className={cn("flex-shrink-0", isCollapsed ? "" : "h-4 w-4", !isCollapsed && "mr-3")}
-                style={isCollapsed ? { width: "28px", height: "28px", color: isActive ? "#fff" : "#001A45", transition: "color 0.2s ease" } : undefined}
+                style={isCollapsed ? { width: "28px", height: "28px", color: isActive ? "#fff" : "#001A4566", transition: "color 0.2s ease" } : undefined}
               />
               {!isCollapsed && <span>{label}</span>}
             </div>
