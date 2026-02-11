@@ -115,9 +115,9 @@ const WORKFLOW_ACTIONS: Record<CourseRunWorkflowAction, WorkflowActionDefinition
   COMPLETE: {
     key: 'COMPLETE',
     label: 'Complete Run',
-    description: 'Confirm that the run has completed successfully.',
-    from: ['CONFIRMED', 'IN_PROGRESS', 'PENDING_BILLING', 'ACTIVE', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],
-    to: 'COMPLETED',
+    description: 'Mark the run as complete and ready for billing.',
+    from: ['CONFIRMED', 'IN_PROGRESS', 'ACTIVE', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],
+    to: 'PENDING_BILLING',
   },
   ARCHIVE: {
     key: 'ARCHIVE',
@@ -488,7 +488,11 @@ export const courseRunWorkflowService = {
         ['ENROLLED'].includes(String(learner.enrollmentStatus || 'ENROLLED'))
       );
 
-      const baseUrl = process.env.FRONTEND_URL || 'https://tms.polwel.org';
+      // Use backend URL for certificate downloads - use localhost for development
+      const backendUrl = process.env.NODE_ENV === 'production'
+        ? (process.env.BACKEND_URL || process.env.API_URL || 'https://api.polwel.org')
+        : 'http://localhost:3001';
+      const baseUrl = backendUrl.replace(/\/api$/, ''); // Remove /api suffix if present
 
       for (const enrollment of enrolledLearners) {
         const learner = enrollment.learner;
@@ -502,7 +506,7 @@ export const courseRunWorkflowService = {
             .filter(Boolean)
             .join(', ');
 
-          const certificateDownloadUrl = `${baseUrl}/api/course-runs/certificates/download/${learner?.id}/${courseRunId}`;
+          const certificateDownloadUrl = `${baseUrl}/cert/${learner?.id}/${courseRunId}`;
 
           const emailParams: any = {
             email,

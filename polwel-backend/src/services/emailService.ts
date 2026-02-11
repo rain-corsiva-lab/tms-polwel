@@ -1792,6 +1792,10 @@ class EmailService {
       from: this.mailFromAddress,
       to: email,
       subject: `Congratulations! Certificate of Completion - ${courseTitle}`,
+      headers: {
+        'X-Mailjet-TrackClick': '0',
+        'X-Mailjet-TrackOpen': '0',
+      },
       html: `
         <!DOCTYPE html>
         <html lang="en">

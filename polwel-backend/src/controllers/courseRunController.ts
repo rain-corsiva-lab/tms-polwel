@@ -5149,7 +5149,12 @@ export const courseRunController = {
         return;
       }
 
-      const baseUrl = process.env.FRONTEND_URL || 'https://tms.polwel.org';
+      // Use backend URL for certificate downloads - use localhost for development
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || process.env.API_URL || 'https://api.polwel.org')
+        : 'http://localhost:3001';
+      const baseUrl = backendUrl.replace(/\/api$/, ''); // Remove /api suffix if present
+      
       const trainerNames = courseRun.courseRunTrainers
         .map((ct: any) => ct.trainer?.name)
         .filter(Boolean)
@@ -5176,7 +5181,7 @@ export const courseRunController = {
         }
 
         try {
-          const certificateDownloadUrl = `${baseUrl}/api/course-runs/certificates/download/${learner?.id}/${id}`;
+          const certificateDownloadUrl = `${baseUrl}/cert/${learner?.id}/${id}`;
 
           const emailParams: any = {
             email,
