@@ -153,7 +153,7 @@ export function RunDetailsDialog({ runId, open, onOpenChange }: RunDetailsDialog
                 <p className="text-xs text-muted-foreground">{details.course?.code || "N/A"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Organization</p>
+                <p className="text-sm text-muted-foreground">Organisation</p>
                 <p className="font-semibold">{details.clientOrganization?.organizationName || "N/A"}</p>
               </div>
             </div>

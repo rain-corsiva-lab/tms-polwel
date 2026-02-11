@@ -320,7 +320,7 @@ const VenueForm = () => {
             {/* Conditional fields for per_venue fee type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="maxParticipants">Max Participants</Label>
+                <Label htmlFor="maxParticipants">Maximum Capacity for Venue</Label>
                 <Input
                   id="maxParticipants"
                   type="number"
@@ -333,7 +333,7 @@ const VenueForm = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="perHeadPriceIfMaxExceed">Per Head Price if Max Exceeded ($)</Label>
+                <Label htmlFor="perHeadPriceIfMaxExceed">Per Head Charge for Exceeding Capacity</Label>
                 <Input
                   id="perHeadPriceIfMaxExceed"
                   type="number"

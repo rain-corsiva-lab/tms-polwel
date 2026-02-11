@@ -39,6 +39,8 @@ interface CourseRunApiRecord {
   maxClassSize?: number | null;
   currentParticipants?: number | null;
   status: string;
+  cancelReason?: string | null;
+  cancelledAt?: string | null;
 }
 
 interface CourseRunRow {
@@ -54,6 +56,8 @@ interface CourseRunRow {
   minSize: number | null;
   maxSize: number | null;
   status: string;
+  cancelReason?: string | null;
+  cancelledAt?: Date | null;
 }
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
@@ -75,6 +79,8 @@ interface CourseRunBucketState {
 const statusChipClassMap: Record<string, string> = {
   PENDING_BILLING: "bg-amber-100 text-amber-800",
   COMPLETED: "bg-emerald-600 text-white",
+  CANCELLED: "bg-red-100 text-red-800",
+  INCOMPLETED: "bg-orange-100 text-orange-800",
 };
 
 const statusChipBaseClass = "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold";
@@ -148,6 +154,7 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
 const mapCourseRun = (run: CourseRunApiRecord): CourseRunRow => {
   const start = run.startDatetime ? new Date(run.startDatetime) : null;
   const end = run.endDatetime ? new Date(run.endDatetime) : null;
+  const cancelledAt = run.cancelledAt ? new Date(run.cancelledAt) : null;
 
   return {
     id: run.id,
@@ -162,6 +169,8 @@ const mapCourseRun = (run: CourseRunApiRecord): CourseRunRow => {
     minSize: typeof run.minClassSize === "number" ? run.minClassSize : null,
     maxSize: typeof run.maxClassSize === "number" ? run.maxClassSize : null,
     status: run.status,
+    cancelReason: run.cancelReason,
+    cancelledAt,
   };
 };
 
@@ -289,8 +298,8 @@ const PostRunManagement: React.FC = () => {
 
   // Pending Billing shows only PENDING_BILLING status (IN_PROGRESS is shown in active course runs)
   const pendingBucket = useCourseRunBucket(["PENDING_BILLING"]);
-  // Completed includes COMPLETED and CANCELLED statuses
-  const completedBucket = useCourseRunBucket(["COMPLETED", "CANCELLED"]);
+  // Completed includes COMPLETED, CANCELLED, and INCOMPLETED statuses
+  const completedBucket = useCourseRunBucket(["COMPLETED", "CANCELLED", "INCOMPLETED"]);
 
   // Excel-style filters
   const [filters, setFilters] = useState<Record<string, string[]>>({
@@ -306,14 +315,14 @@ const PostRunManagement: React.FC = () => {
     (run: CourseRunRow) => {
       navigate(`/post-run/${run.id}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleViewAdministrative = useCallback(
     (run: CourseRunRow) => {
       navigate(`/course-runs/${run.id}`, { state: { focusSection: "administrative" } });
     },
-    [navigate]
+    [navigate],
   );
 
   const handleGenerateBillingReport = useCallback(
@@ -339,7 +348,7 @@ const PostRunManagement: React.FC = () => {
         });
       }
     },
-    [toast]
+    [toast],
   );
 
   const handleGenerateBilling = useCallback(
@@ -352,7 +361,7 @@ const PostRunManagement: React.FC = () => {
       refetchCompleted();
       refetchPending();
     },
-    [navigate, refetchCompleted, refetchPending, toast]
+    [navigate, refetchCompleted, refetchPending, toast],
   );
 
   const renderStatus = (status: string) => {
@@ -538,7 +547,26 @@ const PostRunManagement: React.FC = () => {
                   <div className="text-sm font-medium text-foreground">{run.enrolled}</div>
                   <div className="text-xs text-muted-foreground">{run.maxSize ? `Capacity ${run.maxSize}` : "Capacity TBD"}</div>
                 </TableCell>
-                <TableCell>{renderStatus(run.status)}</TableCell>
+                <TableCell>
+                  {renderStatus(run.status)}
+                  {(run.status === "CANCELLED" || run.status === "INCOMPLETED") && run.cancelReason && (
+                    <div className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded border border-border">
+                      <strong className="block mb-1">Reason:</strong>
+                      <span>{run.cancelReason}</span>
+                      {run.cancelledAt && (
+                        <div className="mt-1 text-xs opacity-70">
+                          {run.cancelledAt.toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   <SafeDropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -585,7 +613,7 @@ const PostRunManagement: React.FC = () => {
       setPendingPerPage(value);
       setPendingPage(1);
     },
-    [setPendingPerPage, setPendingPage]
+    [setPendingPerPage, setPendingPage],
   );
 
   const handleCompletedPerPageChange = useCallback(
@@ -593,7 +621,7 @@ const PostRunManagement: React.FC = () => {
       setCompletedPerPage(value);
       setCompletedPage(1);
     },
-    [setCompletedPerPage, setCompletedPage]
+    [setCompletedPerPage, setCompletedPage],
   );
 
   return (

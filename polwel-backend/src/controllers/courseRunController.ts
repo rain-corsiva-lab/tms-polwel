@@ -693,25 +693,25 @@ export const courseRunController = {
               in: statusArray as CourseStatus[],
             };
           } else {
-            // Invalid statuses provided, default to exclude PENDING_BILLING and COMPLETED
+            // Invalid statuses provided, default to exclude PENDING_BILLING, COMPLETED, INCOMPLETED, and CANCELLED
             where.status = {
-              notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED],
+              notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED, CourseStatus.INCOMPLETED, CourseStatus.CANCELLED],
             };
           }
         } else if (ALLOWED_COURSE_STATUSES.includes(normalizedStatus as CourseStatus)) {
           // Single status filter
           where.status = normalizedStatus as CourseStatus;
         } else {
-          // Invalid single status, default to exclude PENDING_BILLING and COMPLETED
+          // Invalid single status, default to exclude PENDING_BILLING, COMPLETED, INCOMPLETED, and CANCELLED
           where.status = {
-            notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED],
+            notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED, CourseStatus.INCOMPLETED, CourseStatus.CANCELLED],
             };
         }
       } else {
-        // When no specific status filter is provided, exclude PENDING_BILLING and COMPLETED
+        // When no specific status filter is provided, exclude PENDING_BILLING, COMPLETED, INCOMPLETED, and CANCELLED
         // These are shown in separate views, not in the main course runs list
         where.status = {
-          notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED],
+          notIn: [CourseStatus.PENDING_BILLING, CourseStatus.COMPLETED, CourseStatus.INCOMPLETED, CourseStatus.CANCELLED],
         };
       }
       
@@ -2827,6 +2827,7 @@ export const courseRunController = {
               trainerId: t.trainerId,
               trainerBaseAmount: t.trainerBaseAmount || 0,
               additionalCost: t.additionalCost || 0,
+              additionalCostUnit: t.additionalCostUnit || 'PER_CLASS',
               remarks: t.remarks || null,
             })),
           });
@@ -3150,6 +3151,7 @@ export const courseRunController = {
         courseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
         courseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
         courseDetails.venueAddress = courseRun.venue?.address || null;
+        courseDetails.specifiedLocation = courseRun.specifiedLocation || null;
 
         const result = await EmailService.sendTrainerAssignmentEmail(
           partnerEmail,
@@ -3544,6 +3546,10 @@ export const courseRunController = {
             emailPayload.venueAddress = courseRun.venue.address;
           }
 
+          if (courseRun.specifiedLocation) {
+            emailPayload.specifiedLocation = courseRun.specifiedLocation;
+          }
+
           if (additionalNotes) {
             emailPayload.additionalNotes = additionalNotes;
           }
@@ -3860,6 +3866,8 @@ export const courseRunController = {
           trainerCourseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
           trainerCourseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
           trainerCourseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+          trainerCourseDetails.venueAddress = courseRun.venue?.address || null;
+          trainerCourseDetails.specifiedLocation = courseRun.specifiedLocation || null;
 
           const result = await EmailService.sendTrainerAssignmentEmail(
             trainerEmail,
@@ -3939,6 +3947,8 @@ export const courseRunController = {
           partnerCourseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
           partnerCourseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
           partnerCourseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+          partnerCourseDetails.venueAddress = courseRun.venue?.address || null;
+          partnerCourseDetails.specifiedLocation = courseRun.specifiedLocation || null;
 
           const result = await EmailService.sendTrainerAssignmentEmail(
             partnerEmail,
@@ -5475,14 +5485,15 @@ export const courseRunController = {
         };
       }
       
-      // Add search if provided
+      // Add search if provided - search across multiple fields
+      // MySQL string comparisons are case-insensitive by default with utf8_general_ci collation
       if (typeof search === 'string' && search.trim()) {
         const searchTerm = search.trim();
         where.OR = [
-          { serialNumber: { contains: searchTerm, mode: 'insensitive' } },
-          { course: { is: { title: { contains: searchTerm, mode: 'insensitive' } } } },
-          { course: { is: { courseCode: { contains: searchTerm, mode: 'insensitive' } } } },
-          { venue: { is: { name: { contains: searchTerm, mode: 'insensitive' } } } },
+          { serialNumber: { contains: searchTerm } },
+          { course: { title: { contains: searchTerm } } },
+          { course: { courseCode: { contains: searchTerm } } },
+          { venue: { name: { contains: searchTerm } } },
         ];
       }
       
@@ -5549,6 +5560,8 @@ export const courseRunController = {
         maxClassSize: run.maxClassSize,
         currentParticipants: (run as any)._count?.courseRunLearners || 0,
         status: run.status,
+        cancelReason: run.cancelReason,
+        cancelledAt: run.cancelledAt,
         baseCourseFee: run.baseCourseFee,
         courseRunFeeType: run.courseRunFeeType,
       }));
