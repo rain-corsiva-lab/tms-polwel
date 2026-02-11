@@ -53,7 +53,46 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
       return;
     }
 
-    setAttachmentFiles((prev) => [...prev, ...files]);
+    // Check for valid file types (allow all common formats including zips)
+    const allowedTypes = [
+      "application/pdf",
+      "application/zip",
+      "application/x-zip-compressed",
+      "application/x-compressed",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "text/plain",
+    ];
+
+    const invalidTypes = files.filter((file) => {
+      // Allow zip files by extension check as well
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      return !isZip && !allowedTypes.includes(file.type);
+    });
+
+    if (invalidTypes.length > 0) {
+      toast.error(`${invalidTypes.length} file(s) have unsupported file types`);
+      console.warn(
+        "Unsupported files:",
+        invalidTypes.map((f) => ({ name: f.name, type: f.type })),
+      );
+    }
+
+    // Add only valid files
+    const validFiles = files.filter((file) => {
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      return isZip || allowedTypes.includes(file.type);
+    });
+
+    if (validFiles.length > 0) {
+      setAttachmentFiles((prev) => [...prev, ...validFiles]);
+    }
+
     // Reset input
     e.target.value = "";
   };
@@ -110,7 +149,7 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
       }
 
       // Extract learnerIds from the learners prop (these are already filtered by parent)
-      const learnerIds = learners.map(l => l.id);
+      const learnerIds = learners.map((l) => l.id);
 
       const response = await courseRunsApi.sendCourseConfirmationEmail(courseRunId, {
         learnerIds: learnerIds,
@@ -179,9 +218,9 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
                     <div key={learner.id} className="flex justify-between items-center text-xs py-1 border-b last:border-b-0">
                       <div className="flex flex-col">
                         <span className="font-medium">{learner.name}</span>
-                        <span className="text-gray-500">{learner.email}</span>
+                        <span className="text-gray-500">{learner.email || "No email"}</span>
                       </div>
-                      <span className="text-gray-600 text-right">{learner.organizationName}</span>
+                      {/* <span className="text-gray-600 text-right">{learner.organizationName || "Not specified"}</span> */}
                     </div>
                   ))}
                 </div>

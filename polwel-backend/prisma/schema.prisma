@@ -294,19 +294,20 @@ model CourseRunBillingEntry {
 }
 
 model CourseRunTrainer {
-  id                           String    @id @default(cuid())
+  id                           String                    @id @default(cuid())
   courseRunId                  String
   trainerId                    String
-  trainerBaseAmount            Decimal?  @db.Decimal(10, 2)
-  additionalCost               Decimal?  @db.Decimal(10, 2)
-  remarks                      String?   @db.Text
+  trainerBaseAmount            Decimal?                  @db.Decimal(10, 2)
+  additionalCost               Decimal?                  @db.Decimal(10, 2)
+  additionalCostUnit           AdditionalCostUnit?       @default(PER_CLASS)
+  remarks                      String?                   @db.Text
   trainerAssignmentEmailStatus String?
-  emailStatus                  String?   @default("PENDING")
-  createdAt                    DateTime  @default(now())
-  updatedAt                    DateTime  @updatedAt
+  emailStatus                  String?                   @default("PENDING")
+  createdAt                    DateTime                  @default(now())
+  updatedAt                    DateTime                  @updatedAt
   deletedAt                    DateTime?
-  courseRun                    CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
-  trainer                      User      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  courseRun                    CourseRun                 @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  trainer                      User                      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@unique([courseRunId, trainerId])
   @@index([courseRunId])
@@ -827,6 +828,11 @@ enum ResourceLibraryStatus {
 enum ResourceLibraryAudience {
   TRAINING_COORDINATORS
   ALL_USERS
+}
+
+enum AdditionalCostUnit {
+  PER_PAX
+  PER_CLASS
 }
 
 model ResourceLibrary {

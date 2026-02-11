@@ -1079,6 +1079,7 @@ class EmailService {
       endDate?: string | null;
       venue?: string | null;
       venueAddress?: string | null;
+      specifiedLocation?: string | null;
     },
     baseFee: number,
     additionalCost: number,
@@ -1122,7 +1123,7 @@ class EmailService {
 
     const professionalFees = baseFee + (additionalCost || 0);
 
-    const textBody = `Dear ${name},\n\nPlease refer to the attached documents and the details below regarding the upcoming course, ${courseRunDetails.course || 'N/A'}, for your organisation's reference.\n\nWe appreciate your assistance in disseminating these details to the relevant participants.\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Day & Date: ${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}\n- Time: ${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}${courseRunDetails.venueAddress ? '\n  ' + courseRunDetails.venueAddress : ''}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Thank you.\n\nRegards,\n\nProfessional Development & Career Services Division\nPOLWEL Co-operative Society Limited\nMain: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares\nStay connected with POLWEL on and view our professional development courses on HRP!`;
+    const textBody = `Dear ${name},\n\nPlease refer to the attached documents and the details below regarding the upcoming course, ${courseRunDetails.course || 'N/A'}, for your organisation's reference.\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Day & Date: ${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}\n- Time: ${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}${courseRunDetails.venueAddress ? '\n  ' + courseRunDetails.venueAddress : ''}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Thank you.\n\nRegards,\n\nProfessional Development & Career Services Division\nPOLWEL Co-operative Society Limited\nMain: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares\nStay connected with POLWEL on and view our professional development courses on HRP!`;
 
     const html = `<!DOCTYPE html>
     <html lang="en">
@@ -1166,9 +1167,7 @@ class EmailService {
                           <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                             Please refer to the attached documents and the details below regarding the upcoming course, <strong>${courseRunDetails.course || 'N/A'}</strong>, for your organisation's reference.
                           </p>
-                          <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                            We appreciate your assistance in disseminating these details to the relevant participants.
-                          </p>
+                          
                           
                           <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
                           
@@ -1184,8 +1183,9 @@ class EmailService {
                             <tr>
                               <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue</td>
                               <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
-                                ${courseRunDetails.venue || 'TBD'}
+                                ${courseRunDetails.venue || courseRunDetails.specifiedLocation || 'TBD'}
                                 ${courseRunDetails.venueAddress ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">${courseRunDetails.venueAddress}</span>` : ''}
+                                ${courseRunDetails.specifiedLocation && courseRunDetails.venue ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">Specified Location: ${courseRunDetails.specifiedLocation}</span>` : ''}
                               </td>
                             </tr>
                           </table>
@@ -1297,6 +1297,7 @@ class EmailService {
     endDate?: Date;
     venueName?: string;
     venueAddress?: string;
+    specifiedLocation?: string;
     additionalNotes?: string;
     cc?: string[] | string | null;
     attachments?: any[] | null;
@@ -1311,6 +1312,7 @@ class EmailService {
       endDate,
       venueName,
       venueAddress,
+      specifiedLocation,
       additionalNotes,
       cc,
       attachments,
@@ -1426,9 +1428,7 @@ class EmailService {
                               <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Please refer to the attached documents and the details below regarding the upcoming course, <strong>${courseTitle}</strong>, for your organisation's reference.
                               </p>
-                              <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                We appreciate your assistance in disseminating these details to the relevant participants.
-                              </p>
+                              
                               
                               <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
                               
@@ -1444,8 +1444,9 @@ class EmailService {
                                 <tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
-                                    ${venueName || 'To be confirmed'}
+                                    ${venueName || specifiedLocation || 'To be confirmed'}
                                     ${venueAddress ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">${venueAddress}</span>` : ''}
+                                    ${specifiedLocation && venueName ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">Specified Location: ${specifiedLocation}</span>` : ''}
                                   </td>
                                 </tr>
                                 <tr>

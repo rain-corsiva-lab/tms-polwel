@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { reportingApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -55,13 +56,99 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
   const totalRevenue = runs.reduce((sum, run) => sum + run.revenue, 0);
   const totalLearners = runs.reduce((sum, run) => sum + run.learners, 0);
 
+  const handleExportExcel = () => {
+    try {
+      if (!runs || runs.length === 0) {
+        toast({
+          title: "No data to export",
+          description: "There are no course runs to export.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Import XLSX dynamically
+      import("xlsx").then((XLSX) => {
+        // Prepare data for export
+        const exportData = runs.map((run) => ({
+          "Run Code": run.courseRunCode || "",
+          "Course Name": run.courseName || "",
+          "Organization": run.organization || "N/A",
+          "Start Date": run.startDate ? new Date(run.startDate).toLocaleDateString("en-GB") : "",
+          "End Date": run.endDate ? new Date(run.endDate).toLocaleDateString("en-GB") : "",
+          "Status": run.status ? run.status.replace(/_/g, " ") : "N/A",
+          "Participants": run.learners || 0,
+          "Revenue": `$${(run.revenue || 0).toFixed(2)}`,
+        }));
+
+        // Add summary row - TOTAL nằm dưới cột Status
+        exportData.push({
+          "Run Code": "",
+          "Course Name": "",
+          "Organization": "",
+          "Start Date": "",
+          "End Date": "",
+          "Status": "TOTAL",
+          "Participants": totalLearners,
+          "Revenue": `$${totalRevenue.toFixed(2)}`,
+        });
+
+        // Create worksheet
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Set column widths
+        const colWidths = [
+          { wch: 15 }, // Run Code
+          { wch: 30 }, // Course Name
+          { wch: 25 }, // Organization
+          { wch: 12 }, // Start Date
+          { wch: 12 }, // End Date
+          { wch: 20 }, // Status
+          { wch: 12 }, // Participants
+          { wch: 15 }, // Revenue
+        ];
+        ws["!cols"] = colWidths;
+
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Quarter Details");
+
+        // Generate filename
+        const filename = `${quarter}_${year}_Course_Runs_Details.xlsx`;
+
+        // Save file
+        XLSX.writeFile(wb, filename);
+
+        toast({
+          title: "Export successful",
+          description: `Quarter details exported to ${filename}`,
+        });
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export quarter details. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {quarter} {year} - Course Runs & Billing Details
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>
+              {quarter} {year} - Course Runs & Billing Details
+            </DialogTitle>
+            {!loading && runs.length > 0 && (
+              <Button onClick={handleExportExcel} size="sm" className="mr-6">
+                <Download className="w-4 h-4 mr-2" />
+                Export to Excel
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {loading ? (

@@ -149,7 +149,7 @@ export default function RunsByOrganisation() {
       const exportData = allRuns.map((run: CourseRun) => ({
         "Run Code": run.courseRunCode,
         "Course Name": run.course.name,
-        Organization: run.clientOrganization?.organizationName || "N/A",
+        Organisation: run.clientOrganization?.organizationName || "N/A",
         "Start Date": new Date(run.startDate).toLocaleDateString(),
         "End Date": new Date(run.endDate).toLocaleDateString(),
         Status: run.status,
@@ -185,7 +185,7 @@ export default function RunsByOrganisation() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Runs by Organisation</h1>
-              <p className="text-muted-foreground">View all course runs grouped by client organization</p>
+              <p className="text-muted-foreground">View all course runs grouped by client organisation</p>
             </div>
           </div>
           <Button onClick={handleExportToExcel} disabled={runs.length === 0}>
@@ -220,10 +220,10 @@ export default function RunsByOrganisation() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Organizations" />
+                  <SelectValue placeholder="All Organisations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
+                  <SelectItem value="all">All Organisations</SelectItem>
                   {filterOptions.organizations.map((org) => (
                     <SelectItem key={org.id} value={org.id}>
                       {org.name}
@@ -269,7 +269,7 @@ export default function RunsByOrganisation() {
                     <TableRow>
                       <TableHead>Run Code</TableHead>
                       <TableHead>Course Name</TableHead>
-                      <TableHead>Organization</TableHead>
+                      <TableHead>Organisation</TableHead>
                       <TableHead>Start Date</TableHead>
                       <TableHead>End Date</TableHead>
                       <TableHead className="text-center">Status</TableHead>

@@ -47,7 +47,46 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
       return;
     }
 
-    setAttachmentFiles((prev) => [...prev, ...files]);
+    // Check for valid file types (allow all common formats including zips)
+    const allowedTypes = [
+      "application/pdf",
+      "application/zip",
+      "application/x-zip-compressed",
+      "application/x-compressed",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "text/plain",
+    ];
+
+    const invalidTypes = files.filter((file) => {
+      // Allow zip files by extension check as well
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      return !isZip && !allowedTypes.includes(file.type);
+    });
+
+    if (invalidTypes.length > 0) {
+      toast.error(`${invalidTypes.length} file(s) have unsupported file types`);
+      console.warn(
+        "Unsupported files:",
+        invalidTypes.map((f) => ({ name: f.name, type: f.type })),
+      );
+    }
+
+    // Add only valid files
+    const validFiles = files.filter((file) => {
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      return isZip || allowedTypes.includes(file.type);
+    });
+
+    if (validFiles.length > 0) {
+      setAttachmentFiles((prev) => [...prev, ...validFiles]);
+    }
+
     // Reset input
     e.target.value = "";
   };
