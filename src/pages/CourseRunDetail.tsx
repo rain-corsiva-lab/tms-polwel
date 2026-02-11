@@ -186,6 +186,10 @@ const CourseRunDetail: React.FC = () => {
   const [initialPartnerAssignments, setInitialPartnerAssignments] = useState<{
     [partnerId: string]: { selected: boolean; selectedTrainerIds?: string[] };
   }>({});
+  const [courseContractFees, setCourseContractFees] = useState<number>(0); // Store course contract fees for partner scenario
+  const [courseVenueFee, setCourseVenueFee] = useState<number>(0); // Store course venue fee for trainer scenario
+  const [courseVenueMaxParticipants, setCourseVenueMaxParticipants] = useState<number | null>(null); // Max participants from course
+  const [coursePerHeadIfMaxExceed, setCoursePerHeadIfMaxExceed] = useState<number | null>(null); // Per head fee if max exceeded
 
   // Withdrawal Dialog State
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
@@ -947,6 +951,31 @@ const CourseRunDetail: React.FC = () => {
       const courseResponse = await coursesApi.getById(courseRun.course?.id || "");
       const course = courseResponse?.data?.course || courseResponse?.data || courseResponse;
 
+      // Store course contract fees for partner scenario
+      if (course && course.contractFees !== undefined) {
+        setCourseContractFees(Number(course.contractFees) || 0);
+      }
+
+      // Store course venue fee for trainer scenario
+      if (course && course.venueFee !== undefined) {
+        setCourseVenueFee(Number(course.venueFee) || 0);
+      }
+
+      // Store course venue capacity and per head fee for exceeding capacity
+      if (course && course.venueMaxParticipants !== undefined) {
+        setCourseVenueMaxParticipants(Number(course.venueMaxParticipants) || null);
+      }
+      if (course && course.perHeadPriceIfMaxExceed !== undefined) {
+        setCoursePerHeadIfMaxExceed(Number(course.perHeadPriceIfMaxExceed) || null);
+      }
+
+      console.log("Course data loaded:", {
+        contractFees: course.contractFees,
+        venueFee: course.venueFee,
+        venueMaxParticipants: course.venueMaxParticipants,
+        perHeadPriceIfMaxExceed: course.perHeadPriceIfMaxExceed,
+      });
+
       // Store course trainers with their default fees
       const courseTrainersMap: { [trainerId: string]: { feePerRun: number } } = {};
       if (course && Array.isArray(course.courseTrainers)) {
@@ -1030,8 +1059,30 @@ const CourseRunDetail: React.FC = () => {
           selectedTrainerIds: Array.isArray(data.selectedTrainerIds) ? data.selectedTrainerIds : [],
         }));
 
-      // Calculate total trainer fees (dynamic calculation for PER_PAX)
-      const totalTrainerFees = calculateDynamicContractFees();
+      // Determine contract fees based on selected scenario:
+      // - If partners are selected: use course contract fees (includes trainer + venue)
+      // - If only trainers selected: use calculated trainer fees
+      const hasSelectedPartners = selectedPartners.length > 0;
+      const contractFeesToUse = hasSelectedPartners ? courseContractFees : calculateDynamicContractFees();
+
+      // Calculate additional cost exceeding capacity
+      const enrolledCount = courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length || 0;
+      let additionalCostExceedingCapacity = 0;
+
+      console.log("Capacity calculation:", {
+        enrolledCount,
+        courseVenueMaxParticipants,
+        coursePerHeadIfMaxExceed,
+      });
+
+      if (courseVenueMaxParticipants && coursePerHeadIfMaxExceed && enrolledCount > courseVenueMaxParticipants) {
+        const exceededCount = enrolledCount - courseVenueMaxParticipants;
+        additionalCostExceedingCapacity = exceededCount * coursePerHeadIfMaxExceed;
+        console.log("Capacity exceeded:", {
+          exceededCount,
+          additionalCostExceedingCapacity,
+        });
+      }
 
       // Call API to update trainer assignments
       await courseRunsApi.updateTrainerAssignments(courseRun.id, selectedTrainers);
@@ -1039,14 +1090,44 @@ const CourseRunDetail: React.FC = () => {
       // Call API to update partner assignments
       await courseRunsApi.updatePartnerAssignments(courseRun.id, selectedPartners);
 
-      // Update contract fees with total trainer fees
-      if (totalTrainerFees > 0) {
-        await courseRunsApi.update(courseRun.id, {
-          contractFees: totalTrainerFees,
-        });
+      // Prepare fee updates based on scenario
+      const feeUpdates: any = {
+        contractFees: contractFeesToUse,
+        additionalCostExceedingCapacity: additionalCostExceedingCapacity,
+      };
+
+      // Venue fee logic:
+      // - If partners selected: set to 0 (included in contract fees)
+      // - If trainers selected: restore from course data
+      if (hasSelectedPartners) {
+        feeUpdates.venueFee = 0;
+      } else {
+        // Restore venue fee from course for trainer scenario
+        feeUpdates.venueFee = courseVenueFee;
       }
 
-      toast.success("Trainer and partner assignments updated successfully!");
+      // Always sync capacity fields from course data (unless locked status)
+      const isLockedStatus = courseRun.status && ["CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status);
+      if (!isLockedStatus) {
+        if (courseVenueMaxParticipants !== null) {
+          feeUpdates.venueMaxParticipant = courseVenueMaxParticipants;
+        }
+        if (coursePerHeadIfMaxExceed !== null) {
+          feeUpdates.perHeadFeeIfMaxExceed = coursePerHeadIfMaxExceed;
+        }
+      }
+
+      console.log("Fee updates to be saved:", feeUpdates);
+
+      // Update all fees in one call
+      await courseRunsApi.update(courseRun.id, feeUpdates);
+
+      const feeMessage = hasSelectedPartners
+        ? "(Venue fee set to $0 - included in contract fees)"
+        : courseVenueFee > 0
+          ? `(Venue fee restored to $${courseVenueFee})`
+          : "";
+      toast.success(`Assignments and fees updated successfully! ${feeMessage}`);
 
       // Reset initial state to current state after successful save
       setInitialTrainerAssignments(JSON.parse(JSON.stringify(trainerAssignments)));
@@ -1180,6 +1261,18 @@ const CourseRunDetail: React.FC = () => {
       }, 0);
 
     return totalFees;
+  };
+
+  // Calculate additional cost exceeding capacity in real-time
+  const calculateAdditionalCostExceedingCapacity = () => {
+    const enrolledCount = courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length || 0;
+
+    if (courseVenueMaxParticipants && coursePerHeadIfMaxExceed && enrolledCount > courseVenueMaxParticipants) {
+      const exceededCount = enrolledCount - courseVenueMaxParticipants;
+      return exceededCount * coursePerHeadIfMaxExceed;
+    }
+
+    return 0;
   };
 
   const formatDateTimeOld = (dateTime: string | null) => {
@@ -2392,10 +2485,11 @@ const CourseRunDetail: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-medium text-green-800">Partner Assignment Summary</span>
                           <div className="text-right">
-                            <div className="text-xl font-bold text-green-800">
+                            <div className="text-sm text-green-600">
                               {Object.values(partnerAssignments).filter((a) => a.selected).length} partner(s) assigned
                             </div>
-                            <div className="text-sm text-green-600">No fees for partners</div>
+                            <div className="text-2xl font-bold text-green-800">{currency(courseContractFees)}</div>
+                            <div className="text-sm text-green-600">Contract Fees (includes trainer + venue)</div>
                           </div>
                         </div>
                       </CardContent>
@@ -2544,7 +2638,11 @@ const CourseRunDetail: React.FC = () => {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={isEditing ? editData?.additionalCostExceedingCapacity : (courseRun.additionalCostExceedingCapacity ?? "")}
+                          value={
+                            isEditing
+                              ? editData?.additionalCostExceedingCapacity
+                              : calculateAdditionalCostExceedingCapacity() || courseRun.additionalCostExceedingCapacity || ""
+                          }
                           disabled={!isEditing || (courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))}
                           onChange={(e) => handleEditField("additionalCostExceedingCapacity", e.target.value)}
                           className={
@@ -2553,6 +2651,11 @@ const CourseRunDetail: React.FC = () => {
                               : "bg-gray-50"
                           }
                         />
+                        <p className="text-xs text-gray-500">
+                          {calculateAdditionalCostExceedingCapacity() > 0
+                            ? `Auto-calculated: ${courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length || 0} enrolled exceeds ${courseVenueMaxParticipants} max capacity × $${coursePerHeadIfMaxExceed} per head`
+                            : "Calculated when enrolled participants exceed venue max capacity"}
+                        </p>
                         {/* Display trainer remarks from course_trainers table */}
                         {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
                           <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
