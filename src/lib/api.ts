@@ -1248,6 +1248,23 @@ export const clientOrganizationsApi = {
     return apiRequest(`/client-organizations/${organizationId}/learners?${queryParams}`);
   },
 
+  // Get organization enrollments (course run learners)
+  getEnrollments: async (organizationId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/organizations/${organizationId}/enrollments?${queryParams}`);
+  },
+
   // ============ COORDINATOR SELF-SERVICE ============
   
   // Get coordinator's course runs (filtered to their learners)

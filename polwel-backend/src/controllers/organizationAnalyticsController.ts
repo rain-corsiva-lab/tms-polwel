@@ -89,9 +89,7 @@ export const getCoursesByLearnersRanking = async (
         courseRunLearners: {
           some: {
             deletedAt: null,
-            learner: {
-              clientOrganizationId: organizationId
-            }
+            clientOrganizationId: organizationId
           }
         }
       },
@@ -108,9 +106,7 @@ export const getCoursesByLearnersRanking = async (
         courseRunLearners: {
           where: {
             deletedAt: null,
-            learner: {
-              clientOrganizationId: organizationId
-            }
+            clientOrganizationId: organizationId
           },
           select: {
             id: true
@@ -186,46 +182,50 @@ export const getDivisionsByLearnersRanking = async (
       return;
     }
 
-    // Get all learners from this organization with their enrollments
-    const learners = await prisma.learner.findMany({
+    // Get all enrollments for this organization
+    const enrollments = await prisma.courseRunLearner.findMany({
       where: {
         clientOrganizationId: organizationId,
-        deletedAt: null
+        deletedAt: null,
+        enrollmentStatus: 'ENROLLED'
       },
       select: {
         id: true,
         departmentName: true,
-        courseRunLearners: {
-          where: {
-            deletedAt: null,
-            enrollmentStatus: 'ENROLLED'
-          },
+        attendanceStatus: true,
+        learner: {
           select: {
             id: true,
-            attendanceStatus: true
+            deletedAt: true
           }
         }
       }
     });
 
     // Aggregate by department
-    const departmentMap = new Map<string, { totalLearners: number; completedCourses: number; totalEnrollments: number }>();
+    const departmentMap = new Map<string, { totalLearners: Set<string>; completedCourses: number; totalEnrollments: number }>();
 
-    learners.forEach(learner => {
-      const dept = learner.departmentName || 'Unassigned';
-      const completedCount = learner.courseRunLearners.filter((crl: { attendanceStatus: string | null }) => crl.attendanceStatus === 'PRESENT').length;
-      const totalEnrollments = learner.courseRunLearners.length;
+    enrollments.forEach(enrollment => {
+      const dept = enrollment.departmentName || 'Unassigned';
+      const isCompleted = enrollment.attendanceStatus === 'PRESENT' ? 1 : 0;
+      const isActiveLearner = !enrollment.learner?.deletedAt;
 
       if (departmentMap.has(dept)) {
         const existing = departmentMap.get(dept)!;
-        existing.totalLearners += 1;
-        existing.completedCourses += completedCount;
-        existing.totalEnrollments += totalEnrollments;
+        if (isActiveLearner) {
+          existing.totalLearners.add(enrollment.learner.id);
+        }
+        existing.completedCourses += isCompleted;
+        existing.totalEnrollments += 1;
       } else {
+        const learnerSet = new Set<string>();
+        if (isActiveLearner) {
+          learnerSet.add(enrollment.learner.id);
+        }
         departmentMap.set(dept, {
-          totalLearners: 1,
-          completedCourses: completedCount,
-          totalEnrollments: totalEnrollments
+          totalLearners: learnerSet,
+          completedCourses: isCompleted,
+          totalEnrollments: 1
         });
       }
     });
@@ -234,7 +234,7 @@ export const getDivisionsByLearnersRanking = async (
     const rankings = Array.from(departmentMap.entries())
       .map(([deptName, data]) => ({
         divisionDepartment: deptName,
-        numberOfLearners: data.totalLearners,
+        numberOfLearners: data.totalLearners.size,
         completionRate: data.totalEnrollments > 0 
           ? Math.round((data.completedCourses / data.totalEnrollments) * 100) 
           : 0

@@ -151,7 +151,6 @@ const loadCourseRunWithRelations = async (
             fullname: true;
             email: true;
             contact: true;
-            departmentName: true;
           };
         };
       };
@@ -184,7 +183,6 @@ const loadCourseRunWithRelations = async (
               fullname: true,
               email: true,
               contact: true,
-              departmentName: true,
             },
           },
         },

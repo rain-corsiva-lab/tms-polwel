@@ -367,7 +367,12 @@ export const getRunsByOrganisation = async (req: AuthenticatedRequest, res: Resp
     };
 
     if (organizationId && typeof organizationId === 'string') {
-      where.clientOrganizationId = organizationId;
+      where.courseRunLearners = {
+        some: {
+          clientOrganizationId: organizationId,
+          deletedAt: null
+        }
+      };
     }
 
     if (status && typeof status === 'string') {
@@ -595,7 +600,12 @@ export const getRunsByStatus = async (req: AuthenticatedRequest, res: Response) 
     }
 
     if (organizationId && typeof organizationId === 'string') {
-      where.clientOrganizationId = organizationId;
+      where.courseRunLearners = {
+        some: {
+          clientOrganizationId: organizationId,
+          deletedAt: null
+        }
+      };
     }
 
     if (trainerId && typeof trainerId === 'string') {
