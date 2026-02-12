@@ -12,7 +12,6 @@ interface Contact {
 
 interface VenueCreateRequest {
   name: string;
-  capacity?: string;
   address?: string;
   description?: string;
   facilities?: string[];
@@ -241,7 +240,6 @@ export const venuesController = {
 
       const dataToCreate = {
         name: venueData.name.trim(),
-        capacity: venueData.capacity || '',
         contacts: JSON.parse(JSON.stringify(validContacts)), // Serialize/deserialize to ensure JSON compatibility
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',
@@ -334,7 +332,6 @@ export const venuesController = {
 
       const dataToUpdate = {
         name: venueData.name.trim(),
-        capacity: venueData.capacity || '',
         contacts: JSON.parse(JSON.stringify(validContacts)), // Serialize/deserialize to ensure JSON compatibility
         fee: venueData.fee || 0,
         status: venueData.status || 'ACTIVE',

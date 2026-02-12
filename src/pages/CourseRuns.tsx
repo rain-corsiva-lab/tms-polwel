@@ -1965,6 +1965,14 @@ const CourseRuns: React.FC = () => {
               additionalCost: crt.additionalCost || 0,
             })) || []
           }
+          partners={
+            trainerEmailDialog.courseRunDetails?.courseRunPartners?.map((crp: any) => ({
+              id: crp.partner?.id || crp.partnerId,
+              name: crp.partner?.name || "Unknown",
+              email: crp.partner?.email || "",
+              pointOfContactEmail: crp.partner?.pointOfContactEmail || crp.partner?.email || "",
+            })) || []
+          }
           courseRunDetails={{
             serialNumber: trainerEmailDialog.courseRunDetails?.serialNumber || "",
             courseName: trainerEmailDialog.courseRunDetails?.course?.title || "",

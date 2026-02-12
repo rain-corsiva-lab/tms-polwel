@@ -2267,11 +2267,9 @@ export const courseRunController = {
       };
 
       // If coordinatorId is provided, filter learners by that training coordinator
-      // Only show learners assigned to this specific coordinator
+      // Only show enrollments assigned to this specific coordinator
       if (coordinatorId) {
-        where.learner = {
-          trainingCoordinatorId: coordinatorId,
-        };
+        where.trainingCoordinatorId = coordinatorId;
       }
 
       const enrollments = await prisma.courseRunLearner.findMany({
@@ -2348,6 +2346,71 @@ export const courseRunController = {
     } catch (error) {
       console.error('Error fetching course run learners:', error);
       res.status(500).json(buildErrorResponse('courseRunController.getLearners', 'Failed to fetch learners', error));
+    }
+  },
+
+  // Get latest enrollment for a learner (for auto-fill functionality)
+  async getLatestEnrollmentByLearner(req: Request, res: Response): Promise<void> {
+    try {
+      const { learnerId } = req.params;
+
+      if (!learnerId) {
+        res.status(400).json({
+          success: false,
+          error: 'Learner ID is required',
+        });
+        return;
+      }
+
+      // Find the most recent enrollment for this learner
+      const latestEnrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          learnerId: learnerId,
+          deletedAt: null,
+        },
+        include: {
+          clientOrganization: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          trainingCoordinator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      if (!latestEnrollment) {
+        res.json({
+          success: true,
+          data: null,
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          clientOrganizationId: latestEnrollment.clientOrganizationId,
+          clientOrganization: latestEnrollment.clientOrganization,
+          trainingCoordinatorId: latestEnrollment.trainingCoordinatorId,
+          trainingCoordinator: latestEnrollment.trainingCoordinator,
+          division: latestEnrollment.division,
+          departmentName: latestEnrollment.departmentName,
+          buNumber: latestEnrollment.buNumber,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching latest enrollment:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.getLatestEnrollmentByLearner', 'Failed to retrieve latest enrollment', error));
     }
   },
 
@@ -2996,17 +3059,22 @@ export const courseRunController = {
         return;
       }
 
-      if (!courseRun.courseRunTrainers || courseRun.courseRunTrainers.length === 0) {
+      // Check if there are trainers OR partners assigned
+      const hasTrainers = courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0;
+      const hasPartners = courseRun.courseRunPartners && courseRun.courseRunPartners.length > 0;
+
+      if (!hasTrainers && !hasPartners) {
         res.status(400).json({
           success: false,
-          error: 'No trainers assigned to this course run',
+          error: 'No trainers or partners assigned to this course run',
         });
         return;
       }
 
       const ccList = normalizeEmailList(ccEmails);
 
-      const emailTasks = courseRun.courseRunTrainers.map(async (assignment) => {
+      // Send emails to trainers if any are assigned
+      const emailTasks = (courseRun.courseRunTrainers || []).map(async (assignment) => {
         const trainerEmail = assignment.trainer?.email?.trim();
         const trainerName = assignment.trainer?.name || 'Trainer';
 
@@ -3165,10 +3233,16 @@ export const courseRunController = {
         console.log(`Trainer assignment emails sent for course run ${id}. Waiting for confirmation emails before moving to CONFIRMED status.`);
       }
 
+      const totalTrainers = (courseRun.courseRunTrainers || []).length;
+      const totalPartners = (courseRun.courseRunPartners || []).length;
+      const totalRecipients = totalTrainers + totalPartners;
+
       res.json({
         success: true,
         message: 'Trainer assignment emails sent successfully',
-        emailsSent: courseRun.courseRunTrainers.length,
+        emailsSent: totalRecipients,
+        trainersSent: totalTrainers,
+        partnersSent: totalPartners,
       });
     } catch (error) {
       console.error('Error sending trainer assignment emails:', error);
@@ -5918,10 +5992,77 @@ export const courseRunController = {
   async generateCertificates(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      // TODO: Implement certificate generation functionality
-      res.status(501).json({
-        success: false,
-        error: 'Certificate generation functionality not yet implemented',
+
+      // Fetch course run with course and learners
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id },
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              courseCode: true,
+              duration: true,
+              durationType: true,
+            },
+          },
+          courseRunLearners: {
+            include: {
+              learner: {
+                select: {
+                  id: true,
+                  fullname: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          venue: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      // Format course run info
+      const courseRunInfo = {
+        id: courseRun.id,
+        serialNumber: courseRun.serialNumber || '',
+        courseName: courseRun.course.title,
+        courseCode: courseRun.course.courseCode || '',
+        duration: courseRun.course.duration || 0,
+        durationType: courseRun.course.durationType || 'days',
+        startDate: courseRun.startDatetime?.toISOString() || '',
+        endDate: courseRun.endDatetime?.toISOString() || '',
+        venue: courseRun.venue?.name || courseRun.specifiedLocation || '',
+      };
+
+      // Format learners with attendance data
+      const learners = courseRun.courseRunLearners.map((enrollment) => ({
+        id: enrollment.id,
+        learnerId: enrollment.learner.id,
+        learnerName: enrollment.learner.fullname,
+        learnerEmail: enrollment.learner.email || '',
+        isPresent: enrollment.attendanceStatus === 'PRESENT',
+        totalDays: courseRun.course.duration || 0,
+        presentDays: enrollment.attendanceStatus === 'PRESENT' ? (courseRun.course.duration || 0) : 0,
+        waiverReason: enrollment.waiverReason || null,
+        waiverDocument: enrollment.waiverSupportingDocumentId || null,
+        waiverSubmittedAt: enrollment.waiverSubmittedAt || null,
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          courseRun: courseRunInfo,
+          learners,
+        },
       });
     } catch (error) {
       console.error('Error generating certificates:', error);
@@ -5933,10 +6074,27 @@ export const courseRunController = {
   async submitWaiverForm(req: Request, res: Response): Promise<void> {
     try {
       const { id, enrollmentId } = req.params;
-      // TODO: Implement waiver form submission functionality
-      res.status(501).json({
-        success: false,
-        error: 'Waiver form submission functionality not yet implemented',
+      const { waiverReason, waiverDocument } = req.body;
+
+      if (!waiverReason || !waiverReason.trim()) {
+        res.status(400).json({ success: false, error: 'Waiver reason is required' });
+        return;
+      }
+
+      // Update enrollment with waiver info
+      const enrollment = await prisma.courseRunLearner.update({
+        where: { id: enrollmentId },
+        data: {
+          waiverReason: waiverReason.trim(),
+          waiverSupportingDocumentId: waiverDocument || null,
+          waiverSubmittedAt: new Date(),
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Waiver form submitted successfully',
+        data: { enrollmentId: enrollment.id },
       });
     } catch (error) {
       console.error('Error submitting waiver form:', error);
@@ -5948,11 +6106,55 @@ export const courseRunController = {
   async generateCertificatePDF(req: Request, res: Response): Promise<void> {
     try {
       const { id, learnerId } = req.params;
-      // TODO: Implement certificate PDF generation functionality
-      res.status(501).json({
-        success: false,
-        error: 'Certificate PDF generation functionality not yet implemented',
+
+      // Fetch enrollment
+      const enrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          id: learnerId,
+          courseRunId: id,
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
       });
+
+      if (!enrollment) {
+        res.status(404).json({ success: false, error: 'Enrollment not found' });
+        return;
+      }
+
+      // Check if learner was present
+      if (enrollment.attendanceStatus !== 'PRESENT') {
+        res.status(400).json({ success: false, error: 'Certificate can only be generated for participants who were present' });
+        return;
+      }
+
+      // Prepare certificate data
+      const certificateData = {
+        learnerName: enrollment.learner.fullname,
+        courseName: enrollment.courseRun.course.title,
+        duration: enrollment.courseRun.course.duration || 0,
+        durationType: enrollment.courseRun.course.durationType || 'days',
+        endDate: enrollment.courseRun.endDatetime || new Date(),
+        courseCode: enrollment.courseRun.course.courseCode || '',
+      };
+
+      // Generate PDF
+      const pdfBuffer = await buildCertificatePDFBuffer(certificateData);
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="Certificate_${enrollment.learner.fullname.replace(/\s+/g, '_')}_${enrollment.courseRun.serialNumber || 'certificate'}.pdf"`
+      );
+
+      res.send(pdfBuffer);
     } catch (error) {
       console.error('Error generating certificate PDF:', error);
       res.status(500).json(buildErrorResponse('generateCertificatePDF', 'Failed to generate certificate PDF', error));
@@ -5963,11 +6165,56 @@ export const courseRunController = {
   async generateCertificatesZIP(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      // TODO: Implement bulk certificates ZIP generation functionality
-      res.status(501).json({
-        success: false,
-        error: 'Bulk certificates ZIP generation functionality not yet implemented',
+      const { learnerIds } = req.body;
+
+      if (!learnerIds || !Array.isArray(learnerIds) || learnerIds.length === 0) {
+        res.status(400).json({ success: false, error: 'Learner IDs array is required' });
+        return;
+      }
+
+      // Fetch enrollments
+      const enrollments = await prisma.courseRunLearner.findMany({
+        where: {
+          id: { in: learnerIds },
+          courseRunId: id,
+          attendanceStatus: 'PRESENT',
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
       });
+
+      if (enrollments.length === 0) {
+        res.status(404).json({ success: false, error: 'No eligible enrollments found' });
+        return;
+      }
+
+      // Prepare certificate data for all learners
+      const certificatesData = enrollments.map((enrollment) => ({
+        learnerName: enrollment.learner.fullname,
+        courseName: enrollment.courseRun.course.title,
+        duration: enrollment.courseRun.course.duration || 0,
+        durationType: enrollment.courseRun.course.durationType || 'days',
+        endDate: enrollment.courseRun.endDatetime || new Date(),
+        courseCode: enrollment.courseRun.course.courseCode || '',
+      }));
+
+      // Generate ZIP
+      const zipBuffer = await buildCertificatesZipBuffer(certificatesData);
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="Certificates_${enrollments[0].courseRun.serialNumber || 'bulk'}_${enrollments.length}learners.zip"`
+      );
+
+      res.send(zipBuffer);
     } catch (error) {
       console.error('Error generating certificates ZIP:', error);
       res.status(500).json(buildErrorResponse('generateCertificatesZIP', 'Failed to generate certificates ZIP', error));
@@ -5978,10 +6225,94 @@ export const courseRunController = {
   async sendCertificatesToLearners(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      // TODO: Implement send certificates functionality
-      res.status(501).json({
-        success: false,
-        error: 'Send certificates functionality not yet implemented',
+      const { learnerIds } = req.body;
+
+      if (!learnerIds || !Array.isArray(learnerIds) || learnerIds.length === 0) {
+        res.status(400).json({ success: false, error: 'Learner IDs array is required' });
+        return;
+      }
+
+      // Fetch enrollments with course run data
+      const enrollments = await prisma.courseRunLearner.findMany({
+        where: {
+          id: { in: learnerIds },
+          courseRunId: id,
+          attendanceStatus: 'PRESENT',
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
+      });
+
+      if (enrollments.length === 0) {
+        res.status(404).json({ success: false, error: 'No eligible enrollments found' });
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      // Send certificate to each learner
+      for (const enrollment of enrollments) {
+        try {
+          // Generate certificate PDF
+          const certificateData = {
+            learnerName: enrollment.learner.fullname,
+            courseName: enrollment.courseRun.course.title,
+            duration: enrollment.courseRun.course.duration || 0,
+            durationType: enrollment.courseRun.course.durationType || 'days',
+            endDate: enrollment.courseRun.endDatetime || new Date(),
+            courseCode: enrollment.courseRun.course.courseCode || '',
+          };
+
+          const pdfBuffer = await buildCertificatePDFBuffer(certificateData);
+
+          // Create attachment
+          const attachment = {
+            filename: `Certificate_${enrollment.learner.fullname.replace(/\s+/g, '_')}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          };
+
+          // Generate download URL (if needed in future)
+          const downloadUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/certificates/download/${enrollment.learner.id}/${enrollment.courseRun.id}`;
+
+          // Send email with certificate
+          const emailSent = await EmailService.sendCourseCompletionEmail({
+            email: enrollment.learner.email || '',
+            learnerName: enrollment.learner.fullname,
+            courseTitle: enrollment.courseRun.course.title,
+            courseCode: enrollment.courseRun.course.courseCode || '',
+            startDate: enrollment.courseRun.startDatetime || undefined,
+            endDate: enrollment.courseRun.endDatetime || undefined,
+            completionDate: enrollment.courseRun.endDatetime || undefined,
+            certificateDownloadUrl: downloadUrl,
+          });
+
+          if (emailSent) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to send certificate to ${enrollment.learner.fullname}:`, error);
+          failCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          total: enrollments.length,
+          success: successCount,
+          failed: failCount,
+        },
+        message: `Sent ${successCount} certificate(s) successfully${failCount > 0 ? `, ${failCount} failed` : ''}`,
       });
     } catch (error) {
       console.error('Error sending certificates:', error);

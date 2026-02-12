@@ -896,6 +896,38 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           };
         });
 
+        // Fetch latest enrollment to auto-fill organization and coordinator
+        courseRunsApi
+          .getLatestEnrollmentByLearner(learnerId)
+          .then((response) => {
+            if (response.success && response.data) {
+              const latest = response.data;
+
+              setSingleData((prev) => ({
+                ...prev,
+                division: latest.clientOrganizationId || prev.division,
+                trainingCoordinatorId: latest.trainingCoordinatorId || prev.trainingCoordinatorId,
+              }));
+
+              // Load coordinators if organization changed
+              if (latest.clientOrganizationId && latest.clientOrganizationId !== singleData.division) {
+                loadCoordinators(latest.clientOrganizationId);
+              }
+
+              // Show notification
+              if (latest.clientOrganization || latest.trainingCoordinator) {
+                toast({
+                  title: "Auto-filled from latest enrollment",
+                  description: `Organization: ${latest.clientOrganization?.name || "N/A"}`,
+                });
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("Failed to fetch latest enrollment:", error);
+            // Silently fail - user can fill manually
+          });
+
         // Load coordinators if learner has an organization
         if (learner.clientOrganizationId) {
           loadCoordinators(learner.clientOrganizationId);

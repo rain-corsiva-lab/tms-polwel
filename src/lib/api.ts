@@ -1646,6 +1646,11 @@ export const courseRunsApi = {
     return apiRequest(`/course-runs/${courseRunId}/learners`);
   },
 
+  // Get latest enrollment for a learner (for auto-fill)
+  getLatestEnrollmentByLearner: async (learnerId: string) => {
+    return apiRequest(`/course-runs/learners/${learnerId}/latest-enrollment`);
+  },
+
   // Get attendance snapshot for a course run
   getAttendance: async (courseRunId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/attendance`);

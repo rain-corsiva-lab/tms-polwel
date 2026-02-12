@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs';
 import type { SentMessageInfo, Transport, TransportOptions } from 'nodemailer';
 import type MailMessage from 'nodemailer/lib/mailer/mail-message';
 
@@ -297,6 +299,51 @@ class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
   private static isInitialized: boolean = false;
   private static mailFromAddress: string = process.env.NODE_ENV === "Production" ? process.env.GRAPH_MAIL_FROM_ADDRESS || 'noreply@polwel.org' : process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org';
+  private static polwelLogoBase64: string = '';
+
+  // Initialize POLWEL logo as base64 - loads once and caches
+  private static getLogoBase64(): string {
+    if (this.polwelLogoBase64) return this.polwelLogoBase64;
+    
+    try {
+      const possiblePaths = [
+        '/home/kukuh/webprojects/polwel/public/images/POLWEL Logo_Horizontal.png',
+        path.join(__dirname, '../../../public/images/POLWEL Logo_Horizontal.png'),
+        path.join(__dirname, '../../public/images/POLWEL Logo_Horizontal.png'),
+        path.join(process.cwd(), '../public/images/POLWEL Logo_Horizontal.png'),
+        path.join(process.cwd(), 'public/images/POLWEL Logo_Horizontal.png'),
+      ];
+      
+      console.log('🔍 Searching for POLWEL logo:');
+      console.log('   Current directory:', process.cwd());
+      console.log('   __dirname:', __dirname);
+      
+      for (const p of possiblePaths) {
+        const exists = fs.existsSync(p);
+        console.log(`   ${exists ? '✅' : '❌'} ${p}`);
+        if (exists) {
+          const imageBuffer = fs.readFileSync(p);
+          this.polwelLogoBase64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+          console.log('✅ POLWEL logo loaded successfully from:', p);
+          console.log('   Base64 size:', this.polwelLogoBase64.length, 'characters');
+          return this.polwelLogoBase64;
+        }
+      }
+      
+      console.error('❌ POLWEL logo not found in any location');
+      // Fallback to frontend URL
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+      this.polwelLogoBase64 = `${frontendUrl}/images/POLWEL Logo_Horizontal.png`;
+      console.log('⚠️  Using fallback logo URL:', this.polwelLogoBase64);
+      return this.polwelLogoBase64;
+    } catch (error) {
+      console.error('❌ Error loading POLWEL logo:', error);
+      // Fallback to frontend URL
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+      this.polwelLogoBase64 = `${frontendUrl}/images/POLWEL Logo_Horizontal.png`;
+      return this.polwelLogoBase64;
+    }
+  }
 
   private static getTransporter() {
     if (!this.isInitialized) {
@@ -405,8 +452,9 @@ class EmailService {
     setupUrl: string
   ): Promise<boolean> {
   const transporter = this.getTransporter();
+  const logoBase64 = this.getLogoBase64();
 
-  const mailOptions = {
+  const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Trainer Account Setup',
@@ -435,7 +483,8 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
-                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">🏆 Welcome to POLWEL!</h1>
+                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">Complete Your Trainer Account Setup</p>
                       </td>
                     </tr>
@@ -495,9 +544,8 @@ class EmailService {
             </table>
           </body>
         </html>
-      `
+      `,
     };
-
     try {
       if (transporter) {
         await transporter.sendMail(mailOptions);
@@ -524,8 +572,9 @@ class EmailService {
     organizationName: string
   ): Promise<boolean> {
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Training Coordinator Setup',
@@ -553,7 +602,8 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
-                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">📋 Welcome to POLWEL!</h1>
+                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">Complete Your Training Coordinator Setup</p>
                       </td>
                     </tr>
@@ -616,9 +666,8 @@ class EmailService {
             </table>
           </body>
         </html>
-      `
+      `,
     };
-
     try {
       if (transporter) {
         await transporter.sendMail(mailOptions);
@@ -645,8 +694,9 @@ class EmailService {
     resetUrl: string
   ): Promise<boolean> {
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: 'POLWEL - Password Reset Request',
@@ -674,7 +724,8 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
-                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">🔒 Password Reset Request</h1>
+                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">Password Reset Request</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">POLWEL Training Management System</p>
                       </td>
                     </tr>
@@ -737,9 +788,8 @@ class EmailService {
             </table>
           </body>
         </html>
-      `
+      `,
     };
-
     try {
       if (transporter) {
         const result = await transporter.sendMail(mailOptions);
@@ -769,6 +819,7 @@ class EmailService {
     expiresAt: Date
   ): Promise<boolean> {
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
     const friendlyName = name?.trim() ? name : email;
     const formattedExpiry = new Intl.DateTimeFormat('en-GB', {
@@ -784,7 +835,7 @@ class EmailService {
       Math.round((expiresAt.getTime() - Date.now()) / 60000)
     );
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: 'Your POLWEL security code',
@@ -817,7 +868,8 @@ class EmailService {
                         <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
                         <v:textbox inset="0,0,0,0">
                         <![endif]-->
-                        <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">🔒 Secure your login</h1>
+                        <div style="margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">Secure your login</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #e5e7eb !important; font-family: Arial, sans-serif !important;">POLWEL Training Management System</p>
                         <!--[if mso]>
                         </v:textbox>
@@ -939,8 +991,9 @@ class EmailService {
     setupUrl: string
   ): Promise<boolean> {
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Account Setup',
@@ -973,7 +1026,8 @@ class EmailService {
                         <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
                         <v:textbox inset="0,0,0,0">
                         <![endif]-->
-                        <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">👤 Welcome to POLWEL!</h1>
+                        <div style="margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">Welcome to POLWEL!</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #e5e7eb !important; font-family: Arial, sans-serif !important;">Complete Your Account Setup</p>
                         <!--[if mso]>
                         </v:textbox>
@@ -1047,9 +1101,8 @@ class EmailService {
             </table>
           </body>
         </html>
-      `
+      `,
     };
-
     try {
       if (transporter) {
         await transporter.sendMail(mailOptions);
@@ -1088,6 +1141,7 @@ class EmailService {
     attachments?: any[] | null
   ): Promise<{ success: boolean; info?: any; error?: string }> {
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(amount);
@@ -1149,7 +1203,7 @@ class EmailService {
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td align="center">
-                          <div style="font-size: 32px; margin-bottom: 12px;">📧</div>
+                          <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                           <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Training Assignment & Course Confirmation</h1>
                           <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">${courseRunDetails.course || 'Training Course'}</p>
                         </td>
@@ -1319,6 +1373,7 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
     const formatDateWithDay = (date?: Date) => {
       if (!date) return 'To be confirmed';
@@ -1410,7 +1465,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="font-size: 32px; margin-bottom: 12px;">📋</div>
+                              <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Confirmation</h1>
                               <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">Registration Confirmed</p>
                             </td>
@@ -1592,6 +1647,7 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
     const formatDate = (date?: Date) => {
       if (!date) return 'To be confirmed';
@@ -1611,7 +1667,7 @@ class EmailService {
       return '9:00 AM - 5:00 PM';
     };
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: `Course Cancellation Notice - ${courseTitle}`,
@@ -1640,7 +1696,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
+                              <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Cancellation Notice</h1>
                               <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">Important Update Regarding Your Course</p>
                             </td>
@@ -1773,6 +1829,7 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
+    const logoBase64 = this.getLogoBase64();
 
     const formatDate = (date?: Date) => {
       if (!date) return 'N/A';
@@ -1788,7 +1845,7 @@ class EmailService {
       }
     };
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: `Congratulations! Certificate of Completion - ${courseTitle}`,
@@ -1821,7 +1878,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="font-size: 32px; margin-bottom: 12px;">🎓</div>
+                              <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Congratulations!</h1>
                               <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">You've Successfully Completed the Course</p>
                             </td>

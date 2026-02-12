@@ -21,6 +21,12 @@ interface SendTrainerEmailDialogProps {
     baseFee: number;
     additionalCost: number;
   }>;
+  partners?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    pointOfContactEmail?: string;
+  }>;
   courseRunDetails: {
     serialNumber: string;
     courseName: string;
@@ -31,7 +37,15 @@ interface SendTrainerEmailDialogProps {
   onSuccess: () => void;
 }
 
-export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ open, onOpenChange, courseRunId, trainers, courseRunDetails, onSuccess }) => {
+export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
+  open,
+  onOpenChange,
+  courseRunId,
+  trainers,
+  partners,
+  courseRunDetails,
+  onSuccess,
+}) => {
   const [ccEmails, setCcEmails] = useState("");
   const [additionalBody, setAdditionalBody] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
@@ -173,6 +187,8 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
   };
 
   const totalFees = trainers.reduce((sum, t) => sum + t.baseFee + t.additionalCost, 0);
+  const hasPartners = partners && partners.length > 0;
+  const isPartnerScenario = hasPartners;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,6 +201,32 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Partner Information - Show if partners exist */}
+          {isPartnerScenario && (
+            <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+              <h3 className="font-semibold text-sm mb-3 text-blue-800">Partner Organization</h3>
+              <div className="space-y-3">
+                {partners!.map((partner) => (
+                  <div key={partner.id} className="bg-white p-3 rounded border border-blue-200">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-2">
+                        <span className="text-gray-600 min-w-[80px]">Organization:</span>
+                        <span className="font-semibold text-blue-900">{partner.name}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-gray-600 min-w-[80px]">Email To:</span>
+                        <span className="font-medium text-blue-700">{partner.pointOfContactEmail || partner.email}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="mt-2 p-2 bg-blue-100 rounded text-xs text-blue-800">
+                  <strong>Note:</strong> Email will be sent to the partner organization's contact email. Trainers listed below are for reference only.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Course Run Summary */}
           <div className="border rounded-lg p-4 bg-gray-50">
             <h3 className="font-semibold text-sm mb-3">Email Preview</h3>
@@ -208,20 +250,24 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ 
                 <span className="font-medium">{courseRunDetails.venue}</span>
               </div>
               <div className="mt-3 pt-3 border-t">
-                <div className="font-semibold mb-2">Trainers ({trainers.length}):</div>
+                <div className="font-semibold mb-2">{isPartnerScenario ? "Assigned Trainers (For Reference)" : `Trainers (${trainers.length})`}:</div>
                 <div className="space-y-1">
                   {trainers.map((t) => (
                     <div key={t.id} className="flex justify-between items-center text-xs">
-                      <span>{t.name}</span>
-                      <span className="text-gray-600">
-                        Base: {formatCurrency(t.baseFee)} + Additional: {formatCurrency(t.additionalCost)} = {formatCurrency(t.baseFee + t.additionalCost)}
-                      </span>
+                      <span className={isPartnerScenario ? "text-gray-600" : ""}>{t.name}</span>
+                      {!isPartnerScenario && (
+                        <span className="text-gray-600">
+                          Base: {formatCurrency(t.baseFee)} + Additional: {formatCurrency(t.additionalCost)} = {formatCurrency(t.baseFee + t.additionalCost)}
+                        </span>
+                      )}
                     </div>
                   ))}
-                  <div className="flex justify-between items-center font-semibold pt-2 border-t">
-                    <span>Total:</span>
-                    <span>{formatCurrency(totalFees)}</span>
-                  </div>
+                  {!isPartnerScenario && (
+                    <div className="flex justify-between items-center font-semibold pt-2 border-t">
+                      <span>Total:</span>
+                      <span>{formatCurrency(totalFees)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

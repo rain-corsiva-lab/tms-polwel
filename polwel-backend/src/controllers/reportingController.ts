@@ -845,7 +845,6 @@ export const getRunsByVenue = async (req: AuthenticatedRequest, res: Response) =
         id: run.venue.id,
         name: run.venue.name,
         location: run.venue.address || null,
-        capacity: run.venue.capacity,
       } : null,
       _count: {
         learners: run.courseRunLearners?.length || 0,

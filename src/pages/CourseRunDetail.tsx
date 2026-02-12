@@ -2656,18 +2656,17 @@ const CourseRunDetail: React.FC = () => {
                               : "bg-gray-50"
                           }
                         />
-                        <p className="text-xs text-gray-500">
+                        {/* <p className="text-xs text-gray-500">
                           {calculateAdditionalCostExceedingCapacity() > 0
                             ? `Auto-calculated: ${courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length || 0} enrolled exceeds ${courseVenueMaxParticipants} max capacity × $${coursePerHeadIfMaxExceed} per head`
                             : "Calculated when enrolled participants exceed venue max capacity"}
-                        </p>
+                        </p> */}
                         {/* Display trainer remarks from course_trainers table */}
-                        {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
+                        {/* {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
                           <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
                             <p className="font-medium">Trainer Remarks:</p>
                             <ul className="list-none space-y-1 ml-2">
                               {courseRun.courseRunTrainers.map((crt) => {
-                                // Find the matching course trainer record to get remarks from course_trainers table
                                 const courseTrainer = courseTrainersRemarks.find((ct: any) => ct.trainerId === crt.trainer.id);
                                 const remarks = courseTrainer?.remarks;
                                 return (
@@ -2680,7 +2679,7 @@ const CourseRunDetail: React.FC = () => {
                           </div>
                         ) : (
                           <p className="text-xs text-gray-500 pt-2">No trainers assigned yet</p>
-                        )}
+                        )} */}
                       </div>
                     </div>
 
@@ -3016,6 +3015,14 @@ const CourseRunDetail: React.FC = () => {
             email: crt.trainer.email,
             baseFee: crt.trainerBaseAmount || 0,
             additionalCost: crt.additionalCost || 0,
+          })) || []
+        }
+        partners={
+          courseRun.courseRunPartners?.map((crp) => ({
+            id: crp.partner.id,
+            name: crp.partner.name,
+            email: crp.partner.email || "",
+            pointOfContactEmail: (crp.partner as any).pointOfContactEmail || crp.partner.email || "",
           })) || []
         }
         courseRunDetails={{

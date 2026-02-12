@@ -351,3 +351,63 @@ button.relative.flex.items-center.rounded-sm{
   max-height: 180px;
   overflow-y: auto;
 }
+/* Fix for dialog scrolling issues when focusing on input fields */
+@layer utilities {
+  /* Allow scrolling inside dialog content areas */
+  [data-radix-dialog-content] {
+    display: grid !important;
+    max-height: 90vh !important;
+  }
+
+  /* Ensure scrollable areas inside dialogs work properly */
+  [data-radix-dialog-content] [class*="overflow-y-auto"],
+  [data-radix-dialog-content] [class*="overflow-auto"],
+  [data-radix-dialog-content] .scroll-container {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+  }
+
+  /* Prevent body scroll when dialog is open */
+  body:has([data-state="open"][data-radix-dialog-content]) {
+    overflow: hidden;
+  }
+
+  /* Make sure input fields inside dialogs don't break scrolling */
+  [data-radix-dialog-content] input,
+  [data-radix-dialog-content] textarea,
+  [data-radix-dialog-content] select {
+    touch-action: auto;
+  }
+
+  /* Custom scrollbar for scrollable areas inside dialogs */
+  [data-radix-dialog-content] [class*="overflow-y-auto"]::-webkit-scrollbar,
+  [data-radix-dialog-content] [class*="overflow-auto"]::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  [data-radix-dialog-content] [class*="overflow-y-auto"]::-webkit-scrollbar-track,
+  [data-radix-dialog-content] [class*="overflow-auto"]::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+  }
+
+  [data-radix-dialog-content] [class*="overflow-y-auto"]::-webkit-scrollbar-thumb,
+  [data-radix-dialog-content] [class*="overflow-auto"]::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+
+  [data-radix-dialog-content] [class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover,
+  [data-radix-dialog-content] [class*="overflow-auto"]::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  /* For Firefox */
+  [data-radix-dialog-content] [class*="overflow-y-auto"],
+  [data-radix-dialog-content] [class*="overflow-auto"] {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+  }
+}
