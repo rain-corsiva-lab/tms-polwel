@@ -299,11 +299,12 @@ class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
   private static isInitialized: boolean = false;
   private static mailFromAddress: string = process.env.NODE_ENV === "Production" ? process.env.GRAPH_MAIL_FROM_ADDRESS || 'noreply@polwel.org' : process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org';
-  private static polwelLogoBase64: string = '';
+  private static logoPath: string = '';
+  private static logoUrl: string = '';
 
-  // Initialize POLWEL logo as base64 - loads once and caches
-  private static getLogoBase64(): string {
-    if (this.polwelLogoBase64) return this.polwelLogoBase64;
+  // Get logo path for CID attachment (for SMTP)
+  private static getLogoPath(): string | null {
+    if (this.logoPath) return this.logoPath;
     
     try {
       const possiblePaths = [
@@ -314,7 +315,7 @@ class EmailService {
         path.join(process.cwd(), 'public/images/POLWEL Logo_Horizontal.png'),
       ];
       
-      console.log('🔍 Searching for POLWEL logo:');
+      console.log('🔍 Searching for POLWEL logo file:');
       console.log('   Current directory:', process.cwd());
       console.log('   __dirname:', __dirname);
       
@@ -322,27 +323,57 @@ class EmailService {
         const exists = fs.existsSync(p);
         console.log(`   ${exists ? '✅' : '❌'} ${p}`);
         if (exists) {
-          const imageBuffer = fs.readFileSync(p);
-          this.polwelLogoBase64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-          console.log('✅ POLWEL logo loaded successfully from:', p);
-          console.log('   Base64 size:', this.polwelLogoBase64.length, 'characters');
-          return this.polwelLogoBase64;
+          this.logoPath = p;
+          console.log('✅ POLWEL logo file found at:', p);
+          return this.logoPath;
         }
       }
       
-      console.error('❌ POLWEL logo not found in any location');
-      // Fallback to frontend URL
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
-      this.polwelLogoBase64 = `${frontendUrl}/images/POLWEL Logo_Horizontal.png`;
-      console.log('⚠️  Using fallback logo URL:', this.polwelLogoBase64);
-      return this.polwelLogoBase64;
+      console.error('❌ POLWEL logo file not found in any location');
+      return null;
     } catch (error) {
-      console.error('❌ Error loading POLWEL logo:', error);
-      // Fallback to frontend URL
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
-      this.polwelLogoBase64 = `${frontendUrl}/images/POLWEL Logo_Horizontal.png`;
-      return this.polwelLogoBase64;
+      console.error('❌ Error locating POLWEL logo:', error);
+      return null;
     }
+  }
+
+  // Get logo URL for use in emails (fallback when CID attachment can't be used)
+  private static getLogoUrl(): string {
+    if (this.logoUrl) return this.logoUrl;
+    
+    // Try to get from environment variable first
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    this.logoUrl = `${frontendUrl}/images/POLWEL Logo_Horizontal.png`;
+    console.log('📷 Using logo URL:', this.logoUrl);
+    return this.logoUrl;
+  }
+
+  // Get logo attachment for email (CID approach - works in all email clients)
+  private static getLogoAttachment(): any | null {
+    const logoPath = this.getLogoPath();
+    if (!logoPath) {
+      console.warn('⚠️  Logo file not found, will use URL fallback in email');
+      return null;
+    }
+    
+    return {
+      filename: 'polwel-logo.png',
+      path: logoPath,
+      cid: 'polwellogo' // Content-ID for referencing in email HTML
+    };
+  }
+
+  // Get logo source for use in HTML img tag
+  private static getLogoSrc(): string {
+    // First try CID approach (if we have the file)
+    const logoPath = this.getLogoPath();
+    if (logoPath) {
+      // For SMTP emails, we'll use CID and attach the file
+      return 'cid:polwellogo';
+    }
+    
+    // Fallback to external URL
+    return this.getLogoUrl();
   }
 
   private static getTransporter() {
@@ -452,7 +483,8 @@ class EmailService {
     setupUrl: string
   ): Promise<boolean> {
   const transporter = this.getTransporter();
-  const logoBase64 = this.getLogoBase64();
+  const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
   const mailOptions: any = {
       from: this.mailFromAddress,
@@ -483,7 +515,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
-                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">Complete Your Trainer Account Setup</p>
                       </td>
@@ -545,6 +577,7 @@ class EmailService {
           </body>
         </html>
       `,
+      attachments: logoAttachment ? [logoAttachment] : [],
     };
     try {
       if (transporter) {
@@ -572,7 +605,8 @@ class EmailService {
     organizationName: string
   ): Promise<boolean> {
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -602,7 +636,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
-                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">Complete Your Training Coordinator Setup</p>
                       </td>
@@ -667,6 +701,7 @@ class EmailService {
           </body>
         </html>
       `,
+      attachments: logoAttachment ? [logoAttachment] : [],
     };
     try {
       if (transporter) {
@@ -694,7 +729,8 @@ class EmailService {
     resetUrl: string
   ): Promise<boolean> {
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -724,7 +760,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #1f2937;" bgcolor="#1f2937">
-                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 16px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #ffffff !important; font-family: Arial, sans-serif;">Password Reset Request</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #f3f4f6 !important; font-family: Arial, sans-serif;">POLWEL Training Management System</p>
                       </td>
@@ -789,6 +825,7 @@ class EmailService {
           </body>
         </html>
       `,
+      attachments: logoAttachment ? [logoAttachment] : [],
     };
     try {
       if (transporter) {
@@ -819,7 +856,8 @@ class EmailService {
     expiresAt: Date
   ): Promise<boolean> {
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const friendlyName = name?.trim() ? name : email;
     const formattedExpiry = new Intl.DateTimeFormat('en-GB', {
@@ -868,7 +906,7 @@ class EmailService {
                         <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
                         <v:textbox inset="0,0,0,0">
                         <![endif]-->
-                        <div style="margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="margin-bottom: 16px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
                         <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">Secure your login</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #e5e7eb !important; font-family: Arial, sans-serif !important;">POLWEL Training Management System</p>
                         <!--[if mso]>
@@ -954,6 +992,7 @@ class EmailService {
           </body>
         </html>
       `,
+      attachments: logoAttachment ? [logoAttachment] : [],
     };
 
     try {
@@ -991,7 +1030,8 @@ class EmailService {
     setupUrl: string
   ): Promise<boolean> {
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -1026,7 +1066,7 @@ class EmailService {
                         <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
                         <v:textbox inset="0,0,0,0">
                         <![endif]-->
-                        <div style="margin-bottom: 16px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="margin-bottom: 16px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
                         <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #ffffff !important; font-family: Arial, sans-serif !important;">Welcome to POLWEL!</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #e5e7eb !important; font-family: Arial, sans-serif !important;">Complete Your Account Setup</p>
                         <!--[if mso]>
@@ -1102,6 +1142,7 @@ class EmailService {
           </body>
         </html>
       `,
+      attachments: logoAttachment ? [logoAttachment] : [],
     };
     try {
       if (transporter) {
@@ -1141,7 +1182,8 @@ class EmailService {
     attachments?: any[] | null
   ): Promise<{ success: boolean; info?: any; error?: string }> {
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(amount);
@@ -1203,7 +1245,7 @@ class EmailService {
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td align="center">
-                          <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                          <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                           <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Training Assignment & Course Confirmation</h1>
                           <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">${courseRunDetails.course || 'Training Course'}</p>
                         </td>
@@ -1304,6 +1346,11 @@ class EmailService {
       
       mailOptions.attachments = [];
       
+      // Add logo attachment first if available
+      if (logoAttachment) {
+        mailOptions.attachments.push(logoAttachment);
+      }
+      
       for (const attachment of attachments) {
         try {
           // Check if file exists
@@ -1319,6 +1366,9 @@ class EmailService {
           console.warn('Error adding attachment:', (fileErr as any)?.message);
         }
       }
+    } else if (logoAttachment) {
+      // If no custom attachments but logo exists, add it
+      mailOptions.attachments = [logoAttachment];
     }
 
     try {
@@ -1373,7 +1423,8 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const formatDateWithDay = (date?: Date) => {
       if (!date) return 'To be confirmed';
@@ -1465,7 +1516,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Confirmation</h1>
                               <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">Registration Confirmed</p>
                             </td>
@@ -1583,6 +1634,11 @@ class EmailService {
       const fs = require('fs');
       mailOptions.attachments = [];
 
+      // Add logo attachment first if available
+      if (logoAttachment) {
+        mailOptions.attachments.push(logoAttachment);
+      }
+
       for (const attachment of attachments) {
         try {
           // Check if file exists
@@ -1598,6 +1654,9 @@ class EmailService {
           console.warn('Error adding attachment:', (fileErr as any)?.message);
         }
       }
+    } else if (logoAttachment) {
+      // If no custom attachments but logo exists, add it
+      mailOptions.attachments = [logoAttachment];
     }
 
     try {
@@ -1647,7 +1706,8 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const formatDate = (date?: Date) => {
       if (!date) return 'To be confirmed';
@@ -1696,7 +1756,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Cancellation Notice</h1>
                               <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">Important Update Regarding Your Course</p>
                             </td>
@@ -1789,6 +1849,7 @@ class EmailService {
           </body>
         </html>
       `,
+      attachments: logoAttachment ? [logoAttachment] : [],
     };
 
     try {
@@ -1829,7 +1890,8 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
-    const logoBase64 = this.getLogoBase64();
+    const logoSrc = this.getLogoSrc();
+  const logoAttachment = this.getLogoAttachment();
 
     const formatDate = (date?: Date) => {
       if (!date) return 'N/A';
@@ -1878,7 +1940,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoBase64}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #ffffff !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Congratulations!</h1>
                               <p style="margin: 0; color: #e5e7eb !important; font-size: 14px; font-family: Arial, sans-serif !important;">You've Successfully Completed the Course</p>
                             </td>
@@ -1980,6 +2042,7 @@ class EmailService {
           </body>
         </html>
       `,
+      attachments: logoAttachment ? [logoAttachment] : [],
     };
 
     try {
