@@ -846,10 +846,7 @@ const OrganizationDashboard = () => {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Designation</TableHead>
-                        <TableHead>Course Name</TableHead>
-                        <TableHead>Course Start Date</TableHead>
-                        <TableHead>Course End Date</TableHead>
+                        <TableHead>Contact</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -857,10 +854,7 @@ const OrganizationDashboard = () => {
                         <TableRow key={learner.id}>
                           <TableCell className="font-medium">{learner.name}</TableCell>
                           <TableCell>{learner.email}</TableCell>
-                          <TableCell>{learner.designation || "N/A"}</TableCell>
-                          <TableCell>{learner.courseName || "N/A"}</TableCell>
-                          <TableCell>{learner.courseStartDate ? formatDate(learner.courseStartDate) : "N/A"}</TableCell>
-                          <TableCell>{learner.courseEndDate ? formatDate(learner.courseEndDate) : "N/A"}</TableCell>
+                          <TableCell>{(learner as any).contact || "N/A"}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

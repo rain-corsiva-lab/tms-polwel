@@ -14,7 +14,6 @@ import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 interface VenueFormData {
   name: string;
   address?: string;
-  capacity: string;
   fee: number | string;
   maxParticipants?: number | string;
   perHeadPriceIfMaxExceed?: number | string;
@@ -32,7 +31,6 @@ const VenueForm = () => {
   const [formData, setFormData] = useState<VenueFormData>({
     name: "",
     address: "",
-    capacity: "",
     fee: "",
     contacts: [{ id: "temp-1", name: "", number: "", email: "" }],
     remarks: "",
@@ -59,7 +57,6 @@ const VenueForm = () => {
         setFormData({
           name: venue.name,
           address: venue.address || "",
-          capacity: venue.capacity,
           fee: venue.fee,
           contacts: venue.contacts && venue.contacts.length > 0 ? venue.contacts : [{ id: "temp-1", name: "", number: "", email: "" }],
           remarks: venue.remarks || "",
@@ -128,15 +125,6 @@ const VenueForm = () => {
       return false;
     }
 
-    if (!formData.capacity.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Capacity is required",
-        variant: "destructive",
-      });
-      return false;
-    }
-
     // Allow zero fee, but not empty/undefined
     if (formData.fee === "" || formData.fee === undefined || formData.fee === null) {
       toast({
@@ -187,7 +175,6 @@ const VenueForm = () => {
       const venueData = {
         name: formData.name.trim(),
         ...(formData.address && { address: formData.address.trim() }),
-        capacity: formData.capacity.trim(),
         fee: typeof formData.fee === "string" ? parseFloat(formData.fee) : formData.fee,
         contacts: validContacts,
         remarks: formData.remarks.trim(),
@@ -270,17 +257,6 @@ const VenueForm = () => {
                   value={formData.address || ""}
                   onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="Enter venue address"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="capacity">Capacity *</Label>
-                <Input
-                  id="capacity"
-                  value={formData.capacity}
-                  onChange={(e) => handleInputChange("capacity", e.target.value)}
-                  placeholder="e.g., 50-60 pax"
-                  required
                 />
               </div>
 

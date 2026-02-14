@@ -11,6 +11,8 @@ import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import "@/styles/quill-custom.css";
+import { quillModules } from "@/utils/quillImageHandler";
 
 interface CourseInformationTabProps {
   formData: any;
@@ -112,19 +114,11 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
             value={formData.description}
             onChange={(value) => onInputChange("description", value)}
             placeholder="Enter course description and overview"
-            modules={{
-              toolbar: [
-                [{ header: [1, 2, 3, false] }],
-                ["bold", "italic", "underline", "strike"],
-                [{ list: "ordered" }, { list: "bullet" }],
-                ["link", "image"],
-                ["clean"],
-              ],
-            }}
+            modules={quillModules}
             style={{ height: "180px" }}
           />
         </div>
-        <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
+        <p className="text-[10px] text-muted-foreground">Rich text supported; images will be uploaded to server.</p>
       </div>
 
       <div className="space-y-2">
@@ -135,19 +129,11 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
             value={formData.learningObjectives || ""}
             onChange={(value) => onInputChange("learningObjectives", value)}
             placeholder="Enter learning objectives for this course"
-            modules={{
-              toolbar: [
-                [{ header: [1, 2, 3, false] }],
-                ["bold", "italic", "underline", "strike"],
-                [{ list: "ordered" }, { list: "bullet" }],
-                ["link", "image"],
-                ["clean"],
-              ],
-            }}
+            modules={quillModules}
             style={{ height: "180px" }}
           />
         </div>
-        <p className="text-[10px] text-muted-foreground">Rich text supported; images allowed.</p>
+        <p className="text-[10px] text-muted-foreground">Rich text supported; images will be uploaded to server.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -193,7 +179,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                               e.stopPropagation();
                               onInputChange(
                                 "trainer",
-                                formData.trainer.filter((id: string) => String(id) !== normalizedId)
+                                formData.trainer.filter((id: string) => String(id) !== normalizedId),
                               );
                             }}
                             onKeyDown={(e) => {
@@ -202,7 +188,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                                 e.stopPropagation();
                                 onInputChange(
                                   "trainer",
-                                  formData.trainer.filter((id: string) => String(id) !== normalizedId)
+                                  formData.trainer.filter((id: string) => String(id) !== normalizedId),
                                 );
                               }
                             }}
@@ -240,7 +226,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
                           onSelect={() => {
                             onInputChange(
                               "trainer",
-                              isSelected ? formData.trainer.filter((id: string) => id !== normalizedId) : [...formData.trainer, normalizedId]
+                              isSelected ? formData.trainer.filter((id: string) => id !== normalizedId) : [...formData.trainer, normalizedId],
                             );
                           }}
                         >
@@ -318,10 +304,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="venueType">Venue</Label>
-          <Select 
-            value={formData.venueType || ""} 
-            onValueChange={(value) => onInputChange("venueType", value)}
-          >
+          <Select value={formData.venueType || ""} onValueChange={(value) => onInputChange("venueType", value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select venue type" />
             </SelectTrigger>

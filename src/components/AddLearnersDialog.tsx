@@ -374,7 +374,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           name: org.name,
           buNumber: org.buNumber || "",
           organizationType: org.organizationType || "POLWEL",
-        }))
+        })),
       );
     } catch (error) {
       console.error("Failed to load organizations:", error);
@@ -740,7 +740,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
       });
 
       const missingHeaders = IMPORT_TEMPLATE_COLUMNS.filter((column) => column.required).filter(
-        (column) => !normalizedHeaders.has(column.header.toLowerCase())
+        (column) => !normalizedHeaders.has(column.header.toLowerCase()),
       );
 
       if (missingHeaders.length) {
@@ -785,7 +785,12 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
             paymentMethod: extractValue(["Payment Method", "paymentMethod", "Payment Mode", "paymentMode"]),
             trainingCoordinatorName: extractValue(["Training Coordinator Name", "trainingCoordinatorName", "Coordinator Name"]),
             trainingCoordinatorEmail: extractValue(["Training Coordinator Email", "trainingCoordinatorEmail", "Coordinator Email", "coordinatorEmail"]),
-            trainingCoordinatorContact: extractValue(["Training Coordinator Contact", "trainingCoordinatorContact", "Coordinator Contact", "Coordinator Phone"]),
+            trainingCoordinatorContact: extractValue([
+              "Training Coordinator Contact",
+              "trainingCoordinatorContact",
+              "Coordinator Contact",
+              "Coordinator Phone",
+            ]),
             discountName: extractValue(["Discount Name", "discountName"]),
             feesRemarks: extractValue(["Fees Remarks", "feesRemarks", "Fee Remarks"]),
             invoiceNumber: extractValue(["Invoice Number", "invoiceNumber", "Invoice Remarks", "invoiceRemarks"]),
@@ -812,7 +817,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         if (!row.clientOrganizationName) missingFields.push("Client Organisation Name");
         if (missingFields.length) {
           rowValidationIssues.push(
-            `Row ${index + 2}: Missing ${missingFields.join(", ")}. These participants will fail to import until the details are provided.`
+            `Row ${index + 2}: Missing ${missingFields.join(", ")}. These participants will fail to import until the details are provided.`,
           );
         }
       });
@@ -856,7 +861,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
                   email: "",
                   contactNumber: "",
                 }
-              : l
+              : l,
           ),
         }));
       }
@@ -891,6 +896,38 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           };
         });
 
+        // Fetch latest enrollment to auto-fill organization and coordinator
+        courseRunsApi
+          .getLatestEnrollmentByLearner(learnerId)
+          .then((response) => {
+            if (response.success && response.data) {
+              const latest = response.data;
+
+              setSingleData((prev) => ({
+                ...prev,
+                division: latest.clientOrganizationId || prev.division,
+                trainingCoordinatorId: latest.trainingCoordinatorId || prev.trainingCoordinatorId,
+              }));
+
+              // Load coordinators if organization changed
+              if (latest.clientOrganizationId && latest.clientOrganizationId !== singleData.division) {
+                loadCoordinators(latest.clientOrganizationId);
+              }
+
+              // Show notification
+              if (latest.clientOrganization || latest.trainingCoordinator) {
+                toast({
+                  title: "Auto-filled from latest enrollment",
+                  description: `Organization: ${latest.clientOrganization?.name || "N/A"}`,
+                });
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("Failed to fetch latest enrollment:", error);
+            // Silently fail - user can fill manually
+          });
+
         // Load coordinators if learner has an organization
         if (learner.clientOrganizationId) {
           loadCoordinators(learner.clientOrganizationId);
@@ -908,7 +945,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
                   email: learner.email || "",
                   contactNumber: learner.contact || "",
                 }
-              : l
+              : l,
           ),
         }));
       }
@@ -1415,7 +1452,9 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
   onDiscountChange,
 }) => {
   const isFieldDisabled = (field: string) => {
-    const disabledFields = ["fullName", "designation", "email", "contactNumber", "division"];
+    // Only disable personal information fields when an existing learner is selected
+    // Organization, division, and coordinator can be changed per course run
+    const disabledFields = ["fullName", "designation", "email", "contactNumber"];
     return data.selectedLearnerId && disabledFields.includes(field);
   };
 
@@ -1533,7 +1572,7 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
       {/* Organization Information */}
       <Card>
         <CardHeader>
-          <CardTitle>Organization Information</CardTitle>
+          <CardTitle>Organisation Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -1563,7 +1602,7 @@ const SingleRegistrationForm: React.FC<SingleRegistrationFormProps> = ({
                 onValueChange={onOrganizationChange}
                 options={organizationOptions}
                 placeholder={`Select ${getDivisionLabel().toLowerCase()}`}
-                disabled={!data.organizationType || isFieldDisabled("division")}
+                disabled={!data.organizationType}
                 emptyMessage={!data.organizationType ? "Select organisation type first" : `No ${getDivisionLabel().toLowerCase()}s found`}
               />
             </div>

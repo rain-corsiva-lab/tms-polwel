@@ -146,13 +146,13 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow inline scripts for React/Vite
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles
-      imgSrc: ["'self'", "data:", "https:"], // Allow images from self, data URIs, and HTTPS
+      imgSrc: ["'self'", "data:", "https:", "http:"], // Allow images from HTTP and HTTPS
       fontSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https:"], // Allow API calls to same origin and HTTPS
+      connectSrc: ["'self'", "https:", "http:"], // Allow API calls
       frameSrc: ["'self'"], // Allow iframes from same origin
       frameAncestors: ["'self'"], // Allow frames from same origin
       objectSrc: ["'none'"], // Disable plugins
-      upgradeInsecureRequests: [], // Upgrade HTTP to HTTPS
+      upgradeInsecureRequests: null, // Explicitly disable to allow HTTP in development
     },
   },
   frameguard: { action: 'sameorigin' },
@@ -160,6 +160,7 @@ app.use(helmet({
   hsts: { maxAge: 31536000, includeSubDomains: true },
   noSniff: true,
   xssFilter: true,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow cross-origin resource loading
 }));
 
 // Set Permissions-Policy header (not directly supported by Helmet v8)
@@ -213,9 +214,40 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from uploads directory
+// Serve static files from uploads directory with CORS enabled
 const uploadsPath = path.join(process.cwd(), 'uploads');
-app.use('/uploads', express.static(uploadsPath));
+app.use('/uploads', (req, res, next) => {
+  // Set CORS headers for uploaded files - must be set before static middleware
+  const origin = req.headers.origin;
+  
+  // Always set CORS headers for uploads (liberal policy for static assets)
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  
+  next();
+});
+
+app.use('/uploads', express.static(uploadsPath, {
+  setHeaders: (res, filePath) => {
+    // Additional headers for all static files
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+  }
+}));
 
 console.log(`📁 Static uploads directory configured: ${uploadsPath}`);
 
@@ -228,6 +260,10 @@ app.get('/health', (req, res) => {
     version: '1.0.0',
   });
 });
+
+// Short certificate download route (public, no auth required) - Direct to certificate controller
+import { courseRunController } from './controllers/courseRunController';
+app.get('/cert/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
 
 // API Routes
 app.use('/api/auth', authRoutes);

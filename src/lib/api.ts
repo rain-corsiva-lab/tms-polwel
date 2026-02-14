@@ -1248,6 +1248,23 @@ export const clientOrganizationsApi = {
     return apiRequest(`/client-organizations/${organizationId}/learners?${queryParams}`);
   },
 
+  // Get organization enrollments (course run learners)
+  getEnrollments: async (organizationId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    return apiRequest(`/organizations/${organizationId}/enrollments?${queryParams}`);
+  },
+
   // ============ COORDINATOR SELF-SERVICE ============
   
   // Get coordinator's course runs (filtered to their learners)
@@ -1627,6 +1644,11 @@ export const courseRunsApi = {
   // Get enrolled learners for a course run
   getLearners: async (courseRunId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/learners`);
+  },
+
+  // Get latest enrollment for a learner (for auto-fill)
+  getLatestEnrollmentByLearner: async (learnerId: string) => {
+    return apiRequest(`/course-runs/learners/${learnerId}/latest-enrollment`);
   },
 
   // Get attendance snapshot for a course run

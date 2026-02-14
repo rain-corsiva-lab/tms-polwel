@@ -13,6 +13,7 @@ const router = Router();
 // Configure multer for email attachments
 const attachmentsDir = path.join(process.cwd(), 'uploads/email-attachments');
 const resourceLibraryDir = path.join(process.cwd(), 'uploads/resource-library');
+const richTextImagesDir = path.join(process.cwd(), 'uploads/rich-text-images');
 
 // Ensure directories exist
 if (!fs.existsSync(attachmentsDir)) {
@@ -20,6 +21,9 @@ if (!fs.existsSync(attachmentsDir)) {
 }
 if (!fs.existsSync(resourceLibraryDir)) {
   fs.mkdirSync(resourceLibraryDir, { recursive: true });
+}
+if (!fs.existsSync(richTextImagesDir)) {
+  fs.mkdirSync(richTextImagesDir, { recursive: true });
 }
 
 const storageEmailAttachments = multer.diskStorage({
@@ -35,6 +39,16 @@ const storageEmailAttachments = multer.diskStorage({
 const storageResourceLibrary = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, resourceLibraryDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const storageRichTextImages = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, richTextImagesDir);
   },
   filename: (req, file, cb) => {
     const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
@@ -80,6 +94,22 @@ const uploadResourceLibrary = multer({
       cb(null, true);
     } else {
       cb(new Error('Only PDF files are allowed for Resource Library'));
+    }
+  },
+});
+
+const uploadRichTextImage = multer({
+  storage: storageRichTextImages,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB for images
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only image files
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, PNG, GIF, WebP) are allowed'));
     }
   },
 });
@@ -200,6 +230,57 @@ router.post(
       }
 
       res.status(500).json(buildErrorResponse('uploadsRoute.mediaUpload', 'Failed to upload file', error));
+    }
+  },
+);
+
+// POST /api/uploads/rich-text-image - Upload image for rich text editor
+router.post(
+  '/rich-text-image',
+  authenticateToken,
+  uploadRichTextImage.single('image'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          error: 'No image provided',
+        });
+        return;
+      }
+
+      // Build the URL for the uploaded image
+      const imageUrl = `/uploads/rich-text-images/${req.file.filename}`;
+
+      // Store file metadata in database
+      const media = await prisma.media.create({
+        data: {
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          path: imageUrl, // Store relative URL path
+          mimeType: req.file.mimetype,
+          size: req.file.size,
+        },
+      });
+
+      res.json({
+        success: true,
+        url: imageUrl,
+        fileId: media.id,
+      });
+    } catch (error) {
+      console.error('Error uploading rich text image:', error);
+
+      // Clean up uploaded file if there was an error
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (unlinkErr) {
+          console.error('Error deleting uploaded file:', unlinkErr);
+        }
+      }
+
+      res.status(500).json(buildErrorResponse('uploadsRoute.richTextImage', 'Failed to upload image', error));
     }
   },
 );

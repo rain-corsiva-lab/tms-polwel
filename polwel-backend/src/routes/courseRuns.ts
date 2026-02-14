@@ -59,6 +59,9 @@ router.post('/:id/import-learners', requirePermissions('course-run.edit'), cours
 // GET /api/course-runs/:id/learners - Get enrolled learners
 router.get('/:id/learners', requirePermissions('course-run.view'), courseRunController.getLearners);
 
+// GET /api/course-runs/learners/:learnerId/latest-enrollment - Get latest enrollment for a learner
+router.get('/learners/:learnerId/latest-enrollment', requirePermissions('course-run.view'), courseRunController.getLatestEnrollmentByLearner);
+
 // GET /api/course-runs/:id/attendance - Get attendance records for a course run
 router.get('/:id/attendance', requirePermissions('course-run.view'), courseRunController.getAttendance);
 

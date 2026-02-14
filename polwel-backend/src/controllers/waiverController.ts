@@ -41,9 +41,9 @@ export const waiverController = {
         whereClause.waiverStatus = status as WaiverStatus;
       }
 
-      // Filter by organization (learner's client organization)
+      // Filter by organization (from course run learner enrollment)
       if (organizationId) {
-        whereClause.learner = {
+        whereClause.courseRunLearner = {
           clientOrganizationId: organizationId as string,
         };
       }
@@ -63,7 +63,7 @@ export const waiverController = {
             { learner: { fullname: { contains: searchTerm } } },
             { learner: { email: { contains: searchTerm } } },
             { courseRun: { course: { title: { contains: searchTerm } } } },
-            { learner: { clientOrganization: { name: { contains: searchTerm } } } },
+            { clientOrganization: { name: { contains: searchTerm } } },
           ];
         }
       }
@@ -77,21 +77,26 @@ export const waiverController = {
           orderBy: { waiverSubmittedAt: 'desc' },
           include: {
             learner: {
-              include: {
-                clientOrganization: {
-                  select: {
-                    id: true,
-                    name: true,
-                    organizationType: true,
-                  },
-                },
-                trainingCoordinator: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                  },
-                },
+              select: {
+                id: true,
+                fullname: true,
+                email: true,
+                designation: true,
+                contact: true,
+              },
+            },
+            clientOrganization: {
+              select: {
+                id: true,
+                name: true,
+                organizationType: true,
+              },
+            },
+            trainingCoordinator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
             courseRun: {
@@ -161,10 +166,10 @@ export const waiverController = {
         learnerId: wr.learnerId,
         learnerName: wr.learner.fullname,
         learnerEmail: wr.learner.email,
-        organization: wr.learner.clientOrganization ? {
-          id: wr.learner.clientOrganization.id,
-          name: wr.learner.clientOrganization.name,
-          type: wr.learner.clientOrganization.organizationType,
+        organization: wr.clientOrganization ? {
+          id: wr.clientOrganization.id,
+          name: wr.clientOrganization.name,
+          type: wr.clientOrganization.organizationType,
         } : null,
         courseName: wr.courseRun.course.title,
         courseCode: wr.courseRun.course.courseCode,
@@ -181,10 +186,10 @@ export const waiverController = {
           name: wr.waiverReviewer.name,
           email: wr.waiverReviewer.email,
         } : null,
-        submittedBy: wr.learner.trainingCoordinator ? {
-          id: wr.learner.trainingCoordinator.id,
-          name: wr.learner.trainingCoordinator.name,
-          email: wr.learner.trainingCoordinator.email,
+        submittedBy: wr.trainingCoordinator ? {
+          id: wr.trainingCoordinator.id,
+          name: wr.trainingCoordinator.name,
+          email: wr.trainingCoordinator.email,
         } : null,
         supportingDocument: wr.waiverSupportingDocument ? {
           id: wr.waiverSupportingDocument.id,
@@ -237,27 +242,32 @@ export const waiverController = {
         },
         include: {
           learner: {
-            include: {
-              clientOrganization: {
-                select: {
-                  id: true,
-                  name: true,
-                  organizationType: true,
-                  address: true,
-                  contactEmail: true,
-                  contactPhone: true,
-                  contactPerson: true,
-                },
-              },
-              trainingCoordinator: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  contactNumber: true,
-                  designation: true,
-                },
-              },
+            select: {
+              id: true,
+              fullname: true,
+              email: true,
+              designation: true,
+              contact: true,
+            },
+          },
+          clientOrganization: {
+            select: {
+              id: true,
+              name: true,
+              organizationType: true,
+              address: true,
+              contactEmail: true,
+              contactPhone: true,
+              contactPerson: true,
+            },
+          },
+          trainingCoordinator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              contactNumber: true,
+              designation: true,
             },
           },
           courseRun: {
@@ -318,16 +328,16 @@ export const waiverController = {
           fullname: waiverRequest.learner.fullname,
           email: waiverRequest.learner.email,
           designation: waiverRequest.learner.designation,
-          departmentName: waiverRequest.learner.departmentName,
+          contact: waiverRequest.learner.contact,
         },
-        organization: waiverRequest.learner.clientOrganization ? {
-          id: waiverRequest.learner.clientOrganization.id,
-          name: waiverRequest.learner.clientOrganization.name,
-          type: waiverRequest.learner.clientOrganization.organizationType,
-          address: waiverRequest.learner.clientOrganization.address,
-          contactEmail: waiverRequest.learner.clientOrganization.contactEmail,
-          contactPhone: waiverRequest.learner.clientOrganization.contactPhone,
-          contactPerson: waiverRequest.learner.clientOrganization.contactPerson,
+        organization: waiverRequest.clientOrganization ? {
+          id: waiverRequest.clientOrganization.id,
+          name: waiverRequest.clientOrganization.name,
+          type: waiverRequest.clientOrganization.organizationType,
+          address: waiverRequest.clientOrganization.address,
+          contactEmail: waiverRequest.clientOrganization.contactEmail,
+          contactPhone: waiverRequest.clientOrganization.contactPhone,
+          contactPerson: waiverRequest.clientOrganization.contactPerson,
         } : null,
         courseRun: {
           id: waiverRequest.courseRun.id,
@@ -356,12 +366,12 @@ export const waiverController = {
           name: waiverRequest.waiverReviewer.name,
           email: waiverRequest.waiverReviewer.email,
         } : null,
-        submittedBy: waiverRequest.learner.trainingCoordinator ? {
-          id: waiverRequest.learner.trainingCoordinator.id,
-          name: waiverRequest.learner.trainingCoordinator.name,
-          email: waiverRequest.learner.trainingCoordinator.email,
-          contactNumber: waiverRequest.learner.trainingCoordinator.contactNumber,
-          designation: waiverRequest.learner.trainingCoordinator.designation,
+        trainingCoordinator: waiverRequest.trainingCoordinator ? {
+          id: waiverRequest.trainingCoordinator.id,
+          name: waiverRequest.trainingCoordinator.name,
+          email: waiverRequest.trainingCoordinator.email,
+          contactNumber: waiverRequest.trainingCoordinator.contactNumber,
+          designation: waiverRequest.trainingCoordinator.designation,
         } : null,
         supportingDocument: waiverRequest.waiverSupportingDocument ? {
           id: waiverRequest.waiverSupportingDocument.id,

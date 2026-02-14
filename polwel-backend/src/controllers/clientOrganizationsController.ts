@@ -123,7 +123,7 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
             select: {
               users: true,
               bookings: true,
-              learners: true
+              courseRunLearners: true
             }
           },
           users: {
@@ -150,10 +150,10 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
         createdAt: org.createdAt,
         updatedAt: org.updatedAt,
         coordinatorsCount: org.users.filter(u => u.role === 'TRAINING_COORDINATOR').length,
-        learnersCount: org._count.learners,
+        learnersCount: org._count.courseRunLearners,
         stats: {
           totalUsers: org._count.users,
-          totalLearners: org._count.learners,
+          totalLearners: org._count.courseRunLearners,
           totalBookings: org._count.bookings
         }
       })),
@@ -219,8 +219,23 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
       return errorResponse(res, 404, 'Organization not found');
     }
 
-    const totalLearnersPromise = prisma.learner.count({ where: { clientOrganizationId: id } });
-    const activeLearnersPromise = prisma.learner.count({ where: { clientOrganizationId: id, deletedAt: null } });
+    // Count unique learners from enrollments (CourseRunLearner)
+    const totalLearnersPromise = prisma.courseRunLearner.findMany({
+      where: { clientOrganizationId: id, deletedAt: null },
+      select: { learnerId: true },
+      distinct: ['learnerId'],
+    }).then(results => results.length);
+
+    const activeLearnersPromise = prisma.courseRunLearner.findMany({
+      where: { 
+        clientOrganizationId: id, 
+        deletedAt: null,
+        learner: { deletedAt: null }
+      },
+      select: { learnerId: true },
+      distinct: ['learnerId'],
+    }).then(results => results.length);
+
     const courseRunsPromise = prisma.courseRun.findMany({
       where: {
         deletedAt: null,
@@ -229,7 +244,7 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
             courseRunLearners: {
               some: {
                 deletedAt: null,
-                learner: { clientOrganizationId: id }
+                clientOrganizationId: id
               }
             }
           },
@@ -263,7 +278,7 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
         courseRunLearners: {
           where: {
             deletedAt: null,
-            learner: { clientOrganizationId: id }
+            clientOrganizationId: id
           },
           select: {
             id: true,
@@ -1010,91 +1025,118 @@ export const getAllLearners = async (req: AuthenticatedRequest, res: Response) =
     const rawStatus = typeof status === "string" ? status.trim().toUpperCase() : undefined;
     const rawOrganizationId = typeof organizationId === "string" ? organizationId.trim() : undefined;
 
-    const where: any = {};
-
-    if (rawOrganizationId) {
-      where.clientOrganizationId = rawOrganizationId;
-    }
+    // Build where clause for learners
+    const learnerWhere: any = {};
 
     if (normalizedSearch) {
-      where.OR = [
+      learnerWhere.OR = [
         { fullname: { contains: normalizedSearch, mode: "insensitive" } },
         { email: { contains: normalizedSearch, mode: "insensitive" } },
-        { departmentName: { contains: normalizedSearch, mode: "insensitive" } },
         { designation: { contains: normalizedSearch, mode: "insensitive" } },
-        { contact: { contains: normalizedSearch, mode: "insensitive" } },
+        { contactNumber: { contains: normalizedSearch, mode: "insensitive" } },
       ];
     }
 
     if (rawStatus === "ACTIVE") {
-      where.deletedAt = null;
+      learnerWhere.deletedAt = null;
     } else if (rawStatus === "INACTIVE") {
-      where.deletedAt = { not: null };
+      learnerWhere.deletedAt = { not: null };
+    }
+
+    // If filtering by organization, first get learner IDs from enrollments
+    if (rawOrganizationId) {
+      const enrollmentsForOrg = await prisma.courseRunLearner.findMany({
+        where: { clientOrganizationId: rawOrganizationId, deletedAt: null },
+        select: { learnerId: true },
+        distinct: ['learnerId']
+      });
+      const learnerIdsInOrg = enrollmentsForOrg.map(e => e.learnerId);
+      
+      if (learnerIdsInOrg.length === 0) {
+        return res.json({
+          learners: [],
+          pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 }
+        });
+      }
+      
+      learnerWhere.id = { in: learnerIdsInOrg };
     }
 
     const [learners, total] = await Promise.all([
       prisma.learner.findMany({
-        where,
+        where: learnerWhere,
         select: {
           id: true,
           fullname: true,
           email: true,
           designation: true,
-          departmentName: true,
           contact: true,
-          clientOrganizationId: true,
-          trainingCoordinatorId: true,
           createdAt: true,
           updatedAt: true,
           deletedAt: true,
-          clientOrganization: {
-            select: {
-              id: true,
-              name: true,
-              buNumber: true,
-            },
-          },
-          trainingCoordinator: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              contactNumber: true,
-            },
-          },
           courseRunLearners: {
-            where: { deletedAt: null },
+            where: { 
+              deletedAt: null,
+              ...(rawOrganizationId ? { clientOrganizationId: rawOrganizationId } : {})
+            },
             select: {
               id: true,
+              clientOrganizationId: true,
+              trainingCoordinatorId: true,
+              departmentName: true,
+              createdAt: true,
+              clientOrganization: {
+                select: {
+                  id: true,
+                  name: true,
+                  buNumber: true,
+                }
+              },
+              trainingCoordinator: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  contactNumber: true,
+                }
+              }
             },
+            orderBy: { createdAt: 'desc' },
+            take: 1, // Get most recent enrollment for display
           },
         },
         orderBy: { createdAt: "desc" },
         skip,
         take: limitNum,
       }),
-      prisma.learner.count({ where }),
+      prisma.learner.count({ where: learnerWhere }),
     ]);
 
-    const formattedLearners = learners.map((learner) => ({
-      id: learner.id,
-      fullname: learner.fullname,
-      email: learner.email,
-      designation: learner.designation || learner.departmentName || "",
-      departmentName: learner.departmentName,
-      contact: learner.contact,
-      clientOrganizationId: learner.clientOrganizationId,
-      clientOrganizationName: learner.clientOrganization?.name || null,
-      clientOrganizationBuNumber: learner.clientOrganization?.buNumber || null,
-      trainingCoordinatorId: learner.trainingCoordinatorId,
-      trainingCoordinatorName: learner.trainingCoordinator?.name || null,
-      trainingCoordinatorEmail: learner.trainingCoordinator?.email || null,
-      trainingCoordinatorPhone: learner.trainingCoordinator?.contactNumber || null,
-      status: learner.deletedAt ? "INACTIVE" : "ACTIVE",
-      enrolledCourses: learner.courseRunLearners.length,
-      createdAt: learner.createdAt,
-      updatedAt: learner.updatedAt,
-    }));
+    const formattedLearners = learners.map((learner) => {
+      // Use most recent enrollment for organization/coordinator display
+      const recentEnrollment = learner.courseRunLearners[0];
+      const totalEnrollments = learner.courseRunLearners.length;
+
+      return {
+        id: learner.id,
+        fullname: learner.fullname,
+        email: learner.email,
+        designation: learner.designation || "",
+        departmentName: recentEnrollment?.departmentName || "",
+        contact: learner.contact || "",
+        clientOrganizationId: recentEnrollment?.clientOrganizationId || null,
+        clientOrganizationName: recentEnrollment?.clientOrganization?.name || null,
+        clientOrganizationBuNumber: recentEnrollment?.clientOrganization?.buNumber || null,
+        trainingCoordinatorId: recentEnrollment?.trainingCoordinator || null,
+        trainingCoordinatorName: recentEnrollment?.trainingCoordinator?.name || null,
+        trainingCoordinatorEmail: recentEnrollment?.trainingCoordinator?.email || null,
+        trainingCoordinatorPhone: recentEnrollment?.trainingCoordinator?.contactNumber || null,
+        status: learner.deletedAt ? "INACTIVE" : "ACTIVE",
+        enrolledCourses: totalEnrollments,
+        createdAt: learner.createdAt,
+        updatedAt: learner.updatedAt,
+      };
+    });
 
     return res.json({
       learners: formattedLearners,
@@ -1131,41 +1173,53 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
     const normalizedSearch = rawSearch && rawSearch.length > 0 ? rawSearch.substring(0, 500) : undefined;
     const rawStatus = typeof status === 'string' ? status.trim().toUpperCase() : undefined;
 
-    const where: any = {
-      clientOrganizationId: organizationId
+    // Get unique learner IDs from enrollments for this organization
+    const enrollmentsForOrg = await prisma.courseRunLearner.findMany({
+      where: { clientOrganizationId: organizationId, deletedAt: null },
+      select: { learnerId: true },
+      distinct: ['learnerId']
+    });
+    const learnerIdsInOrg = enrollmentsForOrg.map(e => e.learnerId);
+
+    if (learnerIdsInOrg.length === 0) {
+      return res.json({
+        learners: [],
+        pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 }
+      });
+    }
+
+    const learnerWhere: any = {
+      id: { in: learnerIdsInOrg }
     };
 
     if (normalizedSearch) {
-      where.OR = [
+      learnerWhere.OR = [
         { fullname: { contains: normalizedSearch, mode: 'insensitive' } },
         { email: { contains: normalizedSearch, mode: 'insensitive' } },
-        { departmentName: { contains: normalizedSearch, mode: 'insensitive' } },
         { designation: { contains: normalizedSearch, mode: 'insensitive' } },
         { contact: { contains: normalizedSearch, mode: 'insensitive' } }
       ];
     }
 
     if (rawStatus === 'ACTIVE') {
-      where.deletedAt = null;
+      learnerWhere.deletedAt = null;
     } else if (rawStatus === 'INACTIVE') {
-      where.deletedAt = { not: null };
+      learnerWhere.deletedAt = { not: null };
     }
 
     const [learners, total] = await Promise.all([
       prisma.learner.findMany({
-        where,
+        where: learnerWhere,
         select: {
           id: true,
           fullname: true,
           email: true,
           designation: true,
-          departmentName: true,
-          clientOrganizationId: true,
           createdAt: true,
           updatedAt: true,
           deletedAt: true,
           courseRunLearners: {
-            where: { deletedAt: null },
+            where: { deletedAt: null, clientOrganizationId: organizationId },
             select: {
               enrollmentStatus: true
             }
@@ -1175,7 +1229,7 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
         take: limitNum,
         orderBy: { createdAt: 'desc' }
       }),
-      prisma.learner.count({ where })
+      prisma.learner.count({ where: learnerWhere })
     ]);
 
     const formattedLearners = learners.map(learner => {
@@ -1186,11 +1240,11 @@ export const getOrganizationLearners = async (req: AuthenticatedRequest, res: Re
         id: learner.id,
         name: learner.fullname,
         email: learner.email,
-        designation: learner.designation || learner.departmentName || 'N/A',
+        designation: learner.designation || 'N/A',
         status: learner.deletedAt ? 'INACTIVE' : 'ACTIVE',
         enrolledCourses,
         completedCourses,
-        organizationId: learner.clientOrganizationId,
+        organizationId: organizationId,
         createdAt: learner.createdAt,
         updatedAt: learner.updatedAt
       };
@@ -1232,10 +1286,8 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
             courseRunLearners: {
               some: {
                 deletedAt: null,
-                learner: {
-                  clientOrganizationId: organizationId,
-                  trainingCoordinatorId: coordinatorId,
-                },
+                clientOrganizationId: organizationId,
+                trainingCoordinatorId: coordinatorId,
               },
             },
           },
@@ -1251,7 +1303,8 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
         courseRunLearners: {
           where: {
             deletedAt: null,
-            learner: { clientOrganizationId: organizationId, trainingCoordinatorId: coordinatorId },
+            clientOrganizationId: organizationId,
+            trainingCoordinatorId: coordinatorId,
           },
           select: { id: true },
         },
@@ -1322,59 +1375,83 @@ export const getOrganizationLearnersSelf = async (req: AuthenticatedRequest, res
     const normalizedSearch = rawSearch && rawSearch.length > 0 ? rawSearch.substring(0, 500) : undefined;
     const rawStatus = typeof status === 'string' ? status.trim().toUpperCase() : undefined;
 
-    const where: any = {
+    // Query CourseRunLearner instead of Learner for organization-specific enrollments
+    const enrollmentWhere: any = {
       clientOrganizationId: organizationId,
       trainingCoordinatorId: coordinatorId,
+      deletedAt: null,
+    };
+
+    // Get unique learner IDs from enrollments
+    const enrollments = await prisma.courseRunLearner.findMany({
+      where: enrollmentWhere,
+      select: { learnerId: true },
+      distinct: ['learnerId'],
+    });
+
+    const learnerIds = enrollments.map(e => e.learnerId);
+
+    if (learnerIds.length === 0) {
+      return res.json({
+        learners: [],
+        pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 },
+      });
+    }
+
+    const learnerWhere: any = {
+      id: { in: learnerIds },
     };
 
     if (normalizedSearch) {
-      where.OR = [
+      learnerWhere.OR = [
         { fullname: { contains: normalizedSearch, mode: 'insensitive' } },
         { email: { contains: normalizedSearch, mode: 'insensitive' } },
-        { departmentName: { contains: normalizedSearch, mode: 'insensitive' } },
         { designation: { contains: normalizedSearch, mode: 'insensitive' } },
-        { contact: { contains: normalizedSearch, mode: 'insensitive' } },
+        { contactNumber: { contains: normalizedSearch, mode: 'insensitive' } },
       ];
     }
 
     if (rawStatus === 'ACTIVE') {
-      where.deletedAt = null;
+      learnerWhere.deletedAt = null;
     } else if (rawStatus === 'INACTIVE') {
-      where.deletedAt = { not: null };
+      learnerWhere.deletedAt = { not: null };
     }
 
     const [rows, total] = await Promise.all([
       prisma.learner.findMany({
-        where,
+        where: learnerWhere,
         select: {
           id: true,
           fullname: true,
           email: true,
           designation: true,
-          departmentName: true,
           createdAt: true,
           updatedAt: true,
           deletedAt: true,
           courseRunLearners: {
-            where: { deletedAt: null },
-            select: { id: true },
+            where: { 
+              deletedAt: null,
+              clientOrganizationId: organizationId,
+              trainingCoordinatorId: coordinatorId,
+            },
+            select: { id: true, enrollmentStatus: true, attendanceStatus: true },
           },
         },
         skip,
         take: limitNum,
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.learner.count({ where }),
+      prisma.learner.count({ where: learnerWhere }),
     ]);
 
     const learners = rows.map((l) => ({
       id: l.id,
       name: l.fullname,
       email: l.email,
-      designation: l.designation || l.departmentName || 'N/A',
+      designation: l.designation || 'N/A',
       status: l.deletedAt ? 'INACTIVE' : 'ACTIVE',
       enrolledCourses: l.courseRunLearners.length,
-      completedCourses: 0,
+      completedCourses: l.courseRunLearners.filter(crl => crl.attendanceStatus === 'PRESENT').length,
       createdAt: l.createdAt,
       updatedAt: l.updatedAt,
     }));

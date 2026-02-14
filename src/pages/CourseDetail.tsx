@@ -7,6 +7,7 @@ import { ArrowLeft, Edit, Clock, Users, MapPin, Award, Percent, GraduationCap, C
 import { coursesApi } from "@/lib/api";
 import { formatDate } from "../lib/date";
 import DOMPurify from "dompurify";
+import "@/styles/quill-custom.css";
 import { useToast } from "@/hooks/use-toast";
 
 const CourseDetail = () => {

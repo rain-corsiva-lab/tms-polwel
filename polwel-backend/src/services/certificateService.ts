@@ -43,22 +43,26 @@ function imageToBase64(imagePath: string): string {
 const regularFontPath = path.join(__dirname, './cert-fonts/calibri.ttf');
 const boldFontPath = path.join(__dirname, './cert-fonts/calibrib.ttf');
 const bitterFontPath = path.join(__dirname, './cert-fonts/Bitter-Regular.ttf');
+const bookAntiquaFontPath = path.join(__dirname, './cert-fonts/bookantiqua.ttf');
 
 let fontRegularBase64 = '';
 let fontBoldBase64 = '';
 let fontBitterBase64 = '';
+let fontBookAntiquaBase64 = '';
 
 try {
   fontRegularBase64 = `data:font/ttf;base64,${fs.readFileSync(regularFontPath).toString('base64')}`;
   fontBoldBase64 = `data:font/ttf;base64,${fs.readFileSync(boldFontPath).toString('base64')}`;
   fontBitterBase64 = `data:font/ttf;base64,${fs.readFileSync(bitterFontPath).toString('base64')}`;
+  fontBookAntiquaBase64 = `data:font/ttf;base64,${fs.readFileSync(bookAntiquaFontPath).toString('base64')}`;
 } catch (error) {
   console.error("Critical: Could not load font file", error);
 }
 
 // Generate HTML from template
 export function generateCertificateHTML(data: CertificateData): string {
-  const durationText = `${data.duration} ${data.durationType}`.trim();
+  // Format duration with hyphen: "4-days" instead of "4 days"
+  const durationText = `${data.duration}-${data.durationType}`.trim();
   
   const formattedEndDate = data.endDate.toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -95,6 +99,12 @@ export function generateCertificateHTML(data: CertificateData): string {
     @font-face {
       font-family: 'Bitter';
       src: url('${fontBitterBase64}') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Book Antiqua';
+      src: url('${fontBookAntiquaBase64}') format('truetype');
       font-weight: normal;
       font-style: normal;
     }
@@ -152,117 +162,118 @@ export function generateCertificateHTML(data: CertificateData): string {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
     
     .logo-icon {
-      width: 240px;
+      width: 220px;
       height: auto;
       object-fit: contain;
     }
     
     .main-title {
-      font-size: 26pt;
+      font-size: 24pt;
       font-weight: bold;
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 16px;
-      letter-spacing: 1.4px;
+      margin-bottom: 10px;
+      letter-spacing: 1.2px;
       text-transform: uppercase;
     }
     
     .awarded-to {
-      font-size: 16pt;
+      font-size: 15pt;
       font-weight: normal;
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 36px;
+      margin-bottom: 20px;
     }
     
     .learner-name {
-      font-family: 'Bitter', serif;
-      font-size: 42pt;
+      font-family: 'Book Antiqua', serif;
+      font-size: 38pt;
       font-weight: 300;
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
       text-transform: uppercase;
-      // letter-spacing: 1px;
     }
     
     .course-completion {
-      font-size: 16pt;
+      font-size: 14pt;
       font-weight: normal;
       color: #595959;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
     
     .course-name {
-      font-size: 26pt;
+      font-size: 22pt;
       font-weight: bold;
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 25px;
-      max-width: 85%;
-      line-height: 1.4;
-      letter-spacing: 1.4px;
+      margin-bottom: 68px;
+      max-width: 90%;
+      line-height: 1.3;
+      letter-spacing: 1.2px;
       text-transform: uppercase;
+      min-height: 80px;
     }
     
     .date {
-      font-size: 16pt;
+      font-size: 14pt;
       font-weight: normal;
       color: #595959;
       text-align: center;
       margin-top: 0;
+      margin-bottom: 8px;
       text-transform: uppercase;
     }
     
     .signature-section {
-      margin-top: 24px;
-      margin-bottom: 20px;
+      margin-top: 10px;
+      margin-bottom: 10px;
       text-align: center;
       width: 100%;
     }
     
     .signature-image {
-      height: 80px;
+      height: 70px;
       object-fit: contain;
       display: block;
-      margin: 0 auto;
+      margin: 0 auto 4px;
     }
     
     .signature-line {
-      width: 400px;
+      width: 380px;
       height: 1px;
       background-color: #252c63;
-      margin: 10px auto 0px;
+      margin: 6px auto 4px;
     }
     
     .signature-name {
-      font-size: 16pt;
+      font-size: 14pt;
       font-weight: bold;
       color: #252c63;
       margin-top: 0;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     
     .signature-title {
-      font-size: 16pt;
+      font-size: 13pt;
       font-weight: normal;
       color: #595959;
       margin-top: 0;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     
     .signature-org {
-      font-size: 16pt;
+      font-size: 13pt;
       font-weight: normal;
       color: #595959;
       margin-top: 0;
