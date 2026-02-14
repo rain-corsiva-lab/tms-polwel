@@ -61,12 +61,9 @@ export const exportCourseRunHistory = async (
             deletedAt: null
           },
           include: {
-            learner: {
-              include: {
-                clientOrganization: true,
-                trainingCoordinator: true
-              }
-            },
+            learner: true,
+            clientOrganization: true,
+            trainingCoordinator: true,
             courseRunBillingEntry: true
           }
         },
@@ -303,13 +300,13 @@ function addLearnersTable(
       });
     }
     
-    const organization = learner?.clientOrganization;
-    const trainingCoordinator = learner?.trainingCoordinator;
+    const organization = courseRunLearner?.clientOrganization;
+    const trainingCoordinator = courseRunLearner?.trainingCoordinator;
 
     const row = worksheet.getRow(currentRow);
     const rowData = [
       learner?.fullname || '',
-      organization?.name || learner?.departmentName || courseRunLearner?.departmentName || '',
+      organization?.name || courseRunLearner?.departmentName || '',
       learner?.designation || '',
       learner?.email || '',
       learner?.contact || '',

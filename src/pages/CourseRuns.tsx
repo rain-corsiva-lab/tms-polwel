@@ -659,8 +659,8 @@ const CourseRuns: React.FC = () => {
   };
 
   const openWorkflowDialog = (courseRun: CourseRunUI, action: WorkflowActionSummary) => {
-    // For SUBMIT action (Draft to Pending), skip dialog and directly submit
-    if (action.key === "SUBMIT") {
+    // For SUBMIT action (Draft to Pending) and COMPLETE action (to Pending Billing), skip dialog and directly submit
+    if (action.key === "SUBMIT" || action.key === "COMPLETE") {
       submitDirectWorkflowAction(courseRun, action);
       return;
     }
@@ -714,10 +714,10 @@ const CourseRuns: React.FC = () => {
     }
 
     try {
-      // For SUBMIT action, don't send emails
+      // For SUBMIT and COMPLETE actions, don't send emails
       await courseRunsApi.performWorkflowAction(courseRun.id, {
         action: action.key,
-        sendEmails: false, // No emails for SUBMIT action
+        sendEmails: false, // No emails for SUBMIT and COMPLETE actions
       });
 
       toast({
@@ -1963,6 +1963,14 @@ const CourseRuns: React.FC = () => {
               email: crt.trainer?.email || "",
               baseFee: crt.trainerBaseAmount || 0,
               additionalCost: crt.additionalCost || 0,
+            })) || []
+          }
+          partners={
+            trainerEmailDialog.courseRunDetails?.courseRunPartners?.map((crp: any) => ({
+              id: crp.partner?.id || crp.partnerId,
+              name: crp.partner?.name || "Unknown",
+              email: crp.partner?.email || "",
+              pointOfContactEmail: crp.partner?.pointOfContactEmail || crp.partner?.email || "",
             })) || []
           }
           courseRunDetails={{

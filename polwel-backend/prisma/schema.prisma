@@ -56,7 +56,7 @@ model User {
   courseRunLearnerAttendanceEdits CourseRunLearnerAttendance[]
   courseRunTrainers               CourseRunTrainer[]
   courseTrainers                  CourseTrainer[]                 @relation("CourseTrainers")
-  learnersAsTrainingCoordinator   Learner[]
+  courseRunLearnersAsCoordinator  CourseRunLearner[]              @relation("CourseRunLearnerCoordinator")
   trainerAssignmentEmailHistory   TrainerAssignmentEmailHistory[]
   trainerBlockouts                TrainerBlockout[]
   mfaChallenge                   MfaChallenge?
@@ -112,7 +112,7 @@ model Organization {
   updatedAt        DateTime         @updatedAt
   organizationType OrganizationType @default(POLWEL)
   bookings         Booking[]
-  learners         Learner[]
+  courseRunLearners CourseRunLearner[]
   users            User[]
   courseRuns       CourseRun[]
 
@@ -336,7 +336,6 @@ model Venue {
   id                      String      @id @default(cuid())
   name                    String
   address                 String?
-  capacity                String
   description             String?     @db.Text
   facilities              Json?
   contacts                Json?
@@ -492,19 +491,12 @@ model Learner {
   designation                 String?
   email                       String?
   contact                     String?
-  clientOrganizationId        String?
-  departmentName              String?
-  trainingCoordinatorId       String?
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
   deletedAt                   DateTime?
   courseRunLearnerAttendances CourseRunLearnerAttendance[]
   courseRunLearners           CourseRunLearner[]
-  clientOrganization          Organization?                @relation(fields: [clientOrganizationId], references: [id])
-  trainingCoordinator         User?                        @relation(fields: [trainingCoordinatorId], references: [id])
 
-  @@index([clientOrganizationId])
-  @@index([trainingCoordinatorId])
   @@map("learners")
 }
 
@@ -512,6 +504,12 @@ model CourseRunLearner {
   id                            String                     @id @default(cuid())
   courseRunId                   String
   learnerId                     String
+  clientOrganizationId          String?
+  trainingCoordinatorId         String?
+  departmentName                String?
+  division                      String?
+  buNumber                      String?
+  paymentMode                   PaymentMode?
   currentDefaultCourseFee       Decimal?                   @db.Decimal(10, 2)
   discountId                    String?
   discountPercentage            Decimal?                   @db.Decimal(5, 2)
@@ -538,14 +536,14 @@ model CourseRunLearner {
   createdAt                     DateTime                   @default(now())
   updatedAt                     DateTime                   @updatedAt
   deletedAt                     DateTime?
-  departmentName                String?
-  paymentMode                   PaymentMode?
   confirmationEmailStatus       ConfirmationEmailStatus    @default(PENDING)
   confirmationEmailLastSentAt   DateTime?
   confirmationEmailHistory      ConfirmationEmailHistory[]
   courseRunBillingEntry         CourseRunBillingEntry?     @relation(fields: [courseRunBillingEntryId], references: [id])
   courseRun                     CourseRun                  @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
   learner                       Learner                    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  clientOrganization            Organization?              @relation(fields: [clientOrganizationId], references: [id])
+  trainingCoordinator           User?                      @relation("CourseRunLearnerCoordinator", fields: [trainingCoordinatorId], references: [id])
   supportingDocumentWithdrawn   Media?                     @relation("WithdrawnDocument", fields: [supportingDocumentWithdrawnId], references: [id])
   waiverSupportingDocument      Media?                     @relation("WaiverDocument", fields: [waiverSupportingDocumentId], references: [id])
   waiverReviewer                User?                      @relation("WaiverReviewedBy", fields: [waiverReviewedBy], references: [id])
@@ -553,6 +551,8 @@ model CourseRunLearner {
   @@unique([courseRunId, learnerId])
   @@index([courseRunId])
   @@index([learnerId])
+  @@index([clientOrganizationId])
+  @@index([trainingCoordinatorId])
   @@index([courseRunBillingEntryId])
   @@index([supportingDocumentWithdrawnId], map: "course_run_learners_supportingDocumentWithdrawnId_fkey")
   @@index([waiverSupportingDocumentId])

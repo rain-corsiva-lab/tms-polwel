@@ -269,8 +269,8 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       const orgs = Array.isArray(response?.organizations)
         ? response.organizations
         : Array.isArray(response?.data?.organizations)
-        ? response.data.organizations
-        : [];
+          ? response.data.organizations
+          : [];
       const mapped: Organization[] = orgs.map((org: any) => ({
         id: org.id,
         name: org.name,
@@ -297,8 +297,8 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       const coordinatorList = Array.isArray(response?.coordinators)
         ? response.coordinators
         : Array.isArray(response?.data?.coordinators)
-        ? response.data.coordinators
-        : [];
+          ? response.data.coordinators
+          : [];
       const mapped = coordinatorList.map((coord: any) => ({
         id: coord.id,
         name: coord.name,
@@ -580,7 +580,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
 
             <Card>
               <CardHeader>
-                <CardTitle>Organization Information</CardTitle>
+                <CardTitle>Organisation Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">

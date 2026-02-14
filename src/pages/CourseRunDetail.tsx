@@ -132,18 +132,23 @@ interface CourseRunDetailData {
     withdrawnAt?: string;
     withdrawnBy?: string;
     paymentMode?: string;
+    clientOrganization?: {
+      id: string;
+      name: string;
+      organizationType?: string;
+    } | null;
+    trainingCoordinator?: {
+      id: string;
+      name: string;
+      email: string;
+      contactNumber?: string;
+    } | null;
     learner: {
       id: string;
       fullname: string;
       email: string;
       contactNumber?: string;
       designation?: string;
-      trainingCoordinator?: {
-        id: string;
-        name: string;
-        email: string;
-        contactNumber?: string;
-      } | null;
     };
   }>;
 }
@@ -718,9 +723,9 @@ const CourseRunDetail: React.FC = () => {
         row.getCell(12).value = "";
         row.getCell(13).value = "";
         row.getCell(14).value = courseRun.clientOrganization?.buNumber || "";
-        row.getCell(15).value = learner.trainingCoordinator?.name || "";
-        row.getCell(16).value = learner.trainingCoordinator?.email || "";
-        row.getCell(17).value = learner.trainingCoordinator?.contactNumber || "";
+        row.getCell(15).value = learnerRecord.trainingCoordinator?.name || "";
+        row.getCell(16).value = learnerRecord.trainingCoordinator?.email || "";
+        row.getCell(17).value = learnerRecord.trainingCoordinator?.contactNumber || "";
         row.getCell(18).value = "";
 
         // Style enrolled row
@@ -858,9 +863,9 @@ const CourseRunDetail: React.FC = () => {
           row.getCell(12).value = "";
           row.getCell(13).value = "";
           row.getCell(14).value = courseRun.clientOrganization?.buNumber || "";
-          row.getCell(15).value = learner.trainingCoordinator?.name || "";
-          row.getCell(16).value = learner.trainingCoordinator?.email || "";
-          row.getCell(17).value = learner.trainingCoordinator?.contactNumber || "";
+          row.getCell(15).value = learnerRecord.trainingCoordinator?.name || "";
+          row.getCell(16).value = learnerRecord.trainingCoordinator?.email || "";
+          row.getCell(17).value = learnerRecord.trainingCoordinator?.contactNumber || "";
           row.getCell(18).value = "";
 
           // Style withdrawn row
@@ -2651,18 +2656,17 @@ const CourseRunDetail: React.FC = () => {
                               : "bg-gray-50"
                           }
                         />
-                        <p className="text-xs text-gray-500">
+                        {/* <p className="text-xs text-gray-500">
                           {calculateAdditionalCostExceedingCapacity() > 0
                             ? `Auto-calculated: ${courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length || 0} enrolled exceeds ${courseVenueMaxParticipants} max capacity × $${coursePerHeadIfMaxExceed} per head`
                             : "Calculated when enrolled participants exceed venue max capacity"}
-                        </p>
+                        </p> */}
                         {/* Display trainer remarks from course_trainers table */}
-                        {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
+                        {/* {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
                           <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
                             <p className="font-medium">Trainer Remarks:</p>
                             <ul className="list-none space-y-1 ml-2">
                               {courseRun.courseRunTrainers.map((crt) => {
-                                // Find the matching course trainer record to get remarks from course_trainers table
                                 const courseTrainer = courseTrainersRemarks.find((ct: any) => ct.trainerId === crt.trainer.id);
                                 const remarks = courseTrainer?.remarks;
                                 return (
@@ -2675,7 +2679,7 @@ const CourseRunDetail: React.FC = () => {
                           </div>
                         ) : (
                           <p className="text-xs text-gray-500 pt-2">No trainers assigned yet</p>
-                        )}
+                        )} */}
                       </div>
                     </div>
 
@@ -3013,6 +3017,14 @@ const CourseRunDetail: React.FC = () => {
             additionalCost: crt.additionalCost || 0,
           })) || []
         }
+        partners={
+          courseRun.courseRunPartners?.map((crp) => ({
+            id: crp.partner.id,
+            name: crp.partner.name,
+            email: crp.partner.email || "",
+            pointOfContactEmail: (crp.partner as any).pointOfContactEmail || crp.partner.email || "",
+          })) || []
+        }
         courseRunDetails={{
           serialNumber: courseRun.serialNumber || "",
           courseName: courseRun.course?.title || "",
@@ -3115,7 +3127,7 @@ const CourseRunDetail: React.FC = () => {
                 id: l.id,
                 name: l.learner.fullname,
                 email: l.learner.email,
-                organizationName: l.learner.organization?.name || "N/A",
+                organizationName: l.clientOrganization?.name || "N/A",
               })) || []
           }
           courseRunDetails={{

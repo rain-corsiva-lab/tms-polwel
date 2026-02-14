@@ -64,6 +64,41 @@ interface Learner {
   updatedAt?: string;
 }
 
+interface Enrollment {
+  id: string;
+  learner: {
+    id: string;
+    fullname: string;
+    email: string;
+    contactNumber?: string;
+    designation?: string;
+  };
+  courseRun: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    venue?: string;
+    status: string;
+    course: {
+      id: string;
+      title: string;
+      code: string;
+    };
+  };
+  trainingCoordinator?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  clientOrganization: {
+    id: string;
+    name: string;
+    organizationType: string;
+  };
+  status: string;
+  createdAt: string;
+}
+
 interface Trainer {
   id: string;
   name: string;
@@ -173,6 +208,7 @@ const ClientOrganisationDetail = () => {
   const [organization, setOrganization] = useState<any>(null);
   const [coordinators, setCoordinators] = useState<TrainingCoordinator[]>([]);
   const [learners, setLearners] = useState<Learner[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [coordinatorsPagination, setCoordinatorsPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [coordinatorsPerPage, setCoordinatorsPerPage] = useState(10);
   const [learnersPagination, setLearnersPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
@@ -282,11 +318,11 @@ const ClientOrganisationDetail = () => {
 
     try {
       setLearnersLoading(true);
-      const response = await clientOrganizationsApi.getLearners(id, { page: learnersPagination.page, limit: learnersPerPage });
-      setLearners(response.learners || []);
+      const response = await clientOrganizationsApi.getEnrollments(id, { page: learnersPagination.page, limit: learnersPerPage });
+      setEnrollments(response.enrollments || []);
       setLearnersPagination(response.pagination || { ...learnersPagination, limit: learnersPerPage });
     } catch (error: any) {
-      console.error("Error fetching learners:", error);
+      console.error("Error fetching enrollments:", error);
       toast({
         title: "Error",
         description: getErrorMessage(error, "Failed to load participants. Please try again."),
@@ -313,7 +349,7 @@ const ClientOrganisationDetail = () => {
 
   // Load learners when learners tab is activated
   useEffect(() => {
-    if (activeTab === "learners" && learners.length === 0) {
+    if (activeTab === "learners" && enrollments.length === 0) {
       fetchLearners();
     }
   }, [activeTab, id]);
@@ -824,8 +860,9 @@ const ClientOrganisationDetail = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Designation</TableHead>
-                    <TableHead>Enrolled</TableHead>
-                    <TableHead>Completed</TableHead>
+                    <TableHead>Course</TableHead>
+                    <TableHead>Course Run</TableHead>
+                    <TableHead>Coordinator</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -833,45 +870,51 @@ const ClientOrganisationDetail = () => {
                 <TableBody>
                   {learnersLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={8} className="text-center py-8">
                         <div className="flex items-center justify-center space-x-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Loading participants...</span>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : learners.length === 0 ? (
+                  ) : enrollments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         No participants found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    learners.map((learner) => (
-                      <TableRow key={learner.id}>
-                        <TableCell className="font-medium">{learner.name}</TableCell>
-                        <TableCell>{learner.email}</TableCell>
-                        <TableCell>{learner.designation || "N/A"}</TableCell>
-                        <TableCell>{learner.enrolledCourses || 0}</TableCell>
-                        <TableCell>{learner.completedCourses || 0}</TableCell>
-                        <TableCell>{getStatusBadge(learner.status || "active")}</TableCell>
+                    enrollments.map((enrollment) => (
+                      <TableRow key={enrollment.id}>
+                        <TableCell className="font-medium">{enrollment.learner.fullname}</TableCell>
+                        <TableCell>{enrollment.learner.email}</TableCell>
+                        <TableCell>{enrollment.learner.designation || "N/A"}</TableCell>
                         <TableCell>
-                          <DropdownMenu open={openMenuId === learner.id} onOpenChange={(next) => handleMenuOpenChange(next, next ? learner.id : null)}>
+                          <Link to={`/courses/${enrollment.courseRun.course.id}`} className="text-blue-600 hover:underline">
+                            {enrollment.courseRun.course.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link to={`/course-runs/${enrollment.courseRun.id}`} className="text-blue-600 hover:underline">
+                            {formatDate(enrollment.courseRun.startDate)} - {formatDate(enrollment.courseRun.endDate)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{enrollment.trainingCoordinator?.name || "N/A"}</TableCell>
+                        <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
+                        <TableCell>
+                          <DropdownMenu open={openMenuId === enrollment.id} onOpenChange={(next) => handleMenuOpenChange(next, next ? enrollment.id : null)}>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <LearnerDetailsDialog
-                                learner={learner}
-                                trigger={
-                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Details
-                                  </DropdownMenuItem>
-                                }
-                              />
+                              <DropdownMenuItem asChild>
+                                <Link to={`/course-runs/${enrollment.courseRun.id}`}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Course Run
+                                </Link>
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

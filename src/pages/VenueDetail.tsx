@@ -140,14 +140,6 @@ const VenueDetail = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Capacity</h3>
-                <div className="flex items-center">
-                  <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span>{venue.capacity}</span>
-                </div>
-              </div>
-
-              <div>
                 <h3 className="font-semibold text-foreground mb-2">Pricing</h3>
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
