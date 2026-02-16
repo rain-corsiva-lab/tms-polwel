@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useContext } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { waiversApi, clientOrganizationsApi, coursesApi } from "@/lib/api";
 import { WaiverDetailsDialog } from "@/components/WaiverDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Search, FileText, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { Can } from "@/lib/casl/Can";
+import { AbilityContext } from "@/lib/casl/Can";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface WaiverRequest {
@@ -73,6 +73,10 @@ interface WaiverCounts {
 
 const WaiverRequests: React.FC = () => {
   const { toast } = useToast();
+  const ability = useContext(AbilityContext);
+
+  // Check if user has permission to access waiver requests (either view or approve)
+  const canAccessWaivers = ability.can("view", "Waiver") || ability.can("approve", "Waiver");
 
   // State
   const [waiverRequests, setWaiverRequests] = useState<WaiverRequest[]>([]);
@@ -124,7 +128,7 @@ const WaiverRequests: React.FC = () => {
             orgsResponse.organizations.map((org: any) => ({
               id: org.id,
               name: org.name,
-            }))
+            })),
           );
         }
 
@@ -134,7 +138,7 @@ const WaiverRequests: React.FC = () => {
               id: course.id,
               title: course.title,
               courseCode: course.courseCode,
-            }))
+            })),
           );
         }
       } catch (err) {
@@ -240,221 +244,220 @@ const WaiverRequests: React.FC = () => {
     return `WR${id.slice(-4).toUpperCase()}`;
   };
 
+  // Check permission and show access denied if user doesn't have view or approve permission
+  if (!canAccessWaivers) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>You don't have permission to access waiver requests. Please contact your administrator.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
-    <Can I="view" a="Waiver" passThrough>
-      {(allowed) =>
-        !allowed ? (
-          <div className="container mx-auto px-4 py-6">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>You don't have permission to view waiver requests. Please contact your administrator.</AlertDescription>
-            </Alert>
-          </div>
-        ) : (
-          <div className="container mx-auto px-4 py-6 space-y-6">
-            {/* Header */}
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Waiver Requests</h1>
+        {/* <p className="text-muted-foreground mt-1">Review and manage waiver requests for absent or withdrawn participants</p> */}
+      </div>
+
+      {/* Counter Boxes */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-l-4 border-l-amber-500">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
+                <p className="text-3xl font-bold text-amber-600">{counts.pending}</p>
+              </div>
+              <Clock className="h-8 w-8 text-amber-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Approved</p>
+                <p className="text-3xl font-bold text-green-600">{counts.approved}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Rejected</p>
+                <p className="text-3xl font-bold text-red-600">{counts.rejected}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Table Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Waiver Requests</h1>
-              {/* <p className="text-muted-foreground mt-1">Review and manage waiver requests for absent or withdrawn participants</p> */}
+              <CardTitle className="text-xl">Waiver Requests</CardTitle>
+              {/* <CardDescription>Search and filter waiver requests by learner, organization, or course</CardDescription> */}
             </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+              {/* Search */}
+              <div className="relative w-full sm:w-64">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search requests..." className="pl-9" />
+              </div>
 
-            {/* Counter Boxes */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-l-4 border-l-amber-500">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
-                      <p className="text-3xl font-bold text-amber-600">{counts.pending}</p>
-                    </div>
-                    <Clock className="h-8 w-8 text-amber-500 opacity-50" />
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Organization Filter */}
+              <Select value={organizationFilter} onValueChange={setOrganizationFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Organisations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Organizations</SelectItem>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <Card className="border-l-4 border-l-green-500">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Approved</p>
-                      <p className="text-3xl font-bold text-green-600">{counts.approved}</p>
-                    </div>
-                    <CheckCircle className="h-8 w-8 text-green-500 opacity-50" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-red-500">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-                      <p className="text-3xl font-bold text-red-600">{counts.rejected}</p>
-                    </div>
-                    <XCircle className="h-8 w-8 text-red-500 opacity-50" />
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Course Filter */}
+              <Select value={courseFilter} onValueChange={setCourseFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Courses</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Main Table Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-xl">Waiver Requests</CardTitle>
-                    {/* <CardDescription>Search and filter waiver requests by learner, organization, or course</CardDescription> */}
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                    {/* Search */}
-                    <div className="relative w-full sm:w-64">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search requests..." className="pl-9" />
-                    </div>
-
-                    {/* Organization Filter */}
-                    <Select value={organizationFilter} onValueChange={setOrganizationFilter}>
-                      <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="All Organisations" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All Organizations</SelectItem>
-                        {organizations.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
-                            {org.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Course Filter */}
-                    <Select value={courseFilter} onValueChange={setCourseFilter}>
-                      <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="All Courses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All Courses</SelectItem>
-                        {courses.map((course) => (
-                          <SelectItem key={course.id} value={course.id}>
-                            {course.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Tabs */}
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList>
-                    <TabsTrigger value="PENDING" className="gap-2">
-                      Pending
-                      <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800">
-                        {counts.pending}
-                      </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="APPROVED" className="gap-2">
-                      Approved
-                      <Badge variant="secondary" className="ml-1 bg-green-100 text-green-800">
-                        {counts.approved}
-                      </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="REJECTED" className="gap-2">
-                      Rejected
-                      <Badge variant="secondary" className="ml-1 bg-red-100 text-red-800">
-                        {counts.rejected}
-                      </Badge>
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value={activeTab} className="mt-4">
-                    {loading ? (
-                      <div className="flex items-center justify-center py-12 text-muted-foreground">
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading waiver requests...
-                      </div>
-                    ) : error ? (
-                      <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>
-                    ) : waiverRequests.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
-                        <FileText className="h-12 w-12 opacity-30" />
-                        <p>No {activeTab.toLowerCase()} waiver requests found</p>
-                        {(searchTerm || organizationFilter !== "ALL" || courseFilter !== "ALL") && (
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setSearchTerm("");
-                              setOrganizationFilter("ALL");
-                              setCourseFilter("ALL");
-                            }}
-                          >
-                            Clear filters
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[100px]">Course Run ID</TableHead>
-                              <TableHead className="min-w-[150px]"> Participant Name</TableHead>
-                              <TableHead className="min-w-[150px]">Organization</TableHead>
-                              <TableHead className="min-w-[180px]">Course Name</TableHead>
-                              <TableHead className="min-w-[150px]">Submitted By</TableHead>
-                              <TableHead className="w-[120px]">Submitted Date</TableHead>
-                              <TableHead className="w-[100px]">Status</TableHead>
-                              <TableHead className="w-[100px] text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {waiverRequests.map((waiver) => (
-                              <TableRow key={waiver.id}>
-                                <TableCell className="font-medium">{generateRequestId(waiver.id)}</TableCell>
-                                <TableCell>{waiver.learnerName}</TableCell>
-                                <TableCell>{waiver.organization?.name || "—"}</TableCell>
-                                <TableCell>{waiver.courseName}</TableCell>
-                                <TableCell>{waiver.submittedBy ? <span title={waiver.submittedBy.email}>{waiver.submittedBy.name}</span> : "—"}</TableCell>
-                                <TableCell>{formatDate(waiver.waiverSubmittedAt)}</TableCell>
-                                <TableCell>{getStatusBadge(waiver.waiverStatus)}</TableCell>
-                                <TableCell className="text-right">
-                                  <Button variant="ghost" size="sm" onClick={() => handleViewDetails(waiver)} className="flex items-center gap-1">
-                                    <FileText className="h-4 w-4" />
-                                    View Details
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-
-                    {/* Pagination */}
-                    {!loading && !error && waiverRequests.length > 0 && (
-                      <PaginationControls
-                        page={page}
-                        perPage={perPage}
-                        total={total}
-                        onPageChange={setPage}
-                        onPerPageChange={(value) => {
-                          setPerPage(value);
-                          setPage(1);
-                        }}
-                      />
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-
-            {/* Waiver Details Dialog */}
-            <WaiverDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} waiverId={selectedWaiver?.id || null} onAction={handleWaiverAction} />
           </div>
-        )
-      }
-    </Can>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="PENDING" className="gap-2">
+                Pending
+                <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800">
+                  {counts.pending}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="APPROVED" className="gap-2">
+                Approved
+                <Badge variant="secondary" className="ml-1 bg-green-100 text-green-800">
+                  {counts.approved}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="REJECTED" className="gap-2">
+                Rejected
+                <Badge variant="secondary" className="ml-1 bg-red-100 text-red-800">
+                  {counts.rejected}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={activeTab} className="mt-4">
+              {loading ? (
+                <div className="flex items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading waiver requests...
+                </div>
+              ) : error ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>
+              ) : waiverRequests.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
+                  <FileText className="h-12 w-12 opacity-30" />
+                  <p>No {activeTab.toLowerCase()} waiver requests found</p>
+                  {(searchTerm || organizationFilter !== "ALL" || courseFilter !== "ALL") && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setOrganizationFilter("ALL");
+                        setCourseFilter("ALL");
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Course Run ID</TableHead>
+                        <TableHead className="min-w-[150px]"> Participant Name</TableHead>
+                        <TableHead className="min-w-[150px]">Organization</TableHead>
+                        <TableHead className="min-w-[180px]">Course Name</TableHead>
+                        <TableHead className="min-w-[150px]">Submitted By</TableHead>
+                        <TableHead className="w-[120px]">Submitted Date</TableHead>
+                        <TableHead className="w-[100px]">Status</TableHead>
+                        <TableHead className="w-[100px] text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {waiverRequests.map((waiver) => (
+                        <TableRow key={waiver.id}>
+                          <TableCell className="font-medium">{generateRequestId(waiver.id)}</TableCell>
+                          <TableCell>{waiver.learnerName}</TableCell>
+                          <TableCell>{waiver.organization?.name || "—"}</TableCell>
+                          <TableCell>{waiver.courseName}</TableCell>
+                          <TableCell>{waiver.submittedBy ? <span title={waiver.submittedBy.email}>{waiver.submittedBy.name}</span> : "—"}</TableCell>
+                          <TableCell>{formatDate(waiver.waiverSubmittedAt)}</TableCell>
+                          <TableCell>{getStatusBadge(waiver.waiverStatus)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewDetails(waiver)} className="flex items-center gap-1">
+                              <FileText className="h-4 w-4" />
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {!loading && !error && waiverRequests.length > 0 && (
+                <PaginationControls
+                  page={page}
+                  perPage={perPage}
+                  total={total}
+                  onPageChange={setPage}
+                  onPerPageChange={(value) => {
+                    setPerPage(value);
+                    setPage(1);
+                  }}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Waiver Details Dialog */}
+      <WaiverDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} waiverId={selectedWaiver?.id || null} onAction={handleWaiverAction} />
+    </div>
   );
 };
 

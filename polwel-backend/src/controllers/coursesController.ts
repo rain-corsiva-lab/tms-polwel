@@ -287,6 +287,25 @@ export const coursesController = {
         });
       }
 
+      // Check for duplicate course title (case-insensitive)
+      // MySQL string comparisons are case-insensitive by default with utf8mb4_general_ci collation
+      const existingCourse = await prisma.course.findFirst({
+        where: {
+          title: data.title
+        }
+      });
+
+      if (existingCourse) {
+        return res.status(400).json({
+          success: false,
+          message: 'Duplicate course title',
+          errors: [{ 
+            path: ['title'], 
+            message: `A course with the title "${data.title}" already exists. Course titles must be unique (case-insensitive).` 
+          }]
+        });
+      }
+
       // Create course data object
       const courseData: any = {
         title: data.title,
@@ -471,6 +490,30 @@ export const coursesController = {
       }
 
       const data = validation.data;
+
+      // Check for duplicate course title (case-insensitive) if title is being updated
+      // MySQL string comparisons are case-insensitive by default with utf8mb4_general_ci collation
+      if (data.title && data.title !== existingCourse.title) {
+        const duplicateCourse = await prisma.course.findFirst({
+          where: {
+            title: data.title,
+            id: {
+              not: id  // Exclude current course from check
+            }
+          }
+        });
+
+        if (duplicateCourse) {
+          return res.status(400).json({
+            success: false,
+            message: 'Duplicate course title',
+            errors: [{ 
+              path: ['title'], 
+              message: `A course with the title "${data.title}" already exists. Course titles must be unique (case-insensitive).` 
+            }]
+          });
+        }
+      }
 
       // Additional business validations
       const validationErrors: string[] = [];

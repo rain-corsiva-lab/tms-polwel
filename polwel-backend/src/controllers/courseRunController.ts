@@ -514,7 +514,8 @@ const getCourseRunsSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
 });
 
-const createCourseRunSchema = z.object({
+// Base schema for course run data (used for both create and update)
+const courseRunBaseSchema = z.object({
   serialNumber: z.string().optional().nullable(),
   courseRunType: z.enum(['OPEN', 'DEDICATED', 'TALKS', 'CUSTOMIZED']).optional().nullable(),
   courseId: z.string().optional(),
@@ -551,6 +552,23 @@ const createCourseRunSchema = z.object({
     .optional()
     .nullable(),
 });
+
+// Create schema with date validation
+const createCourseRunSchema = courseRunBaseSchema.refine((data) => {
+  // Validate that endDatetime is not before startDatetime
+  if (data.startDatetime && data.endDatetime) {
+    const startDate = new Date(data.startDatetime);
+    const endDate = new Date(data.endDatetime);
+    return endDate >= startDate;
+  }
+  return true;
+}, {
+  message: "End date/time cannot be before start date/time",
+  path: ["endDatetime"],
+});
+
+// Update schema - partial of base schema
+const updateCourseRunSchema = courseRunBaseSchema.partial();
 
 const cancelCourseRunSchema = z
   .object({
@@ -1172,7 +1190,21 @@ export const courseRunController = {
         return;
       }
 
-      const data = createCourseRunSchema.partial().parse(req.body);
+      const data = updateCourseRunSchema.parse(req.body);
+
+      // Validate date order if both dates are provided
+      if (data.startDatetime && data.endDatetime) {
+        const startDate = new Date(data.startDatetime);
+        const endDate = new Date(data.endDatetime);
+        if (endDate < startDate) {
+          res.status(400).json({
+            success: false,
+            error: 'Validation failed',
+            message: 'End date/time cannot be before start date/time',
+          });
+          return;
+        }
+      }
 
       // Convert date strings to Date objects if provided
       const courseRunData: any = {
@@ -3457,11 +3489,8 @@ export const courseRunController = {
                 : {}),
             },
             include: {
-              learner: {
-                include: {
-                  trainingCoordinator: true,
-                },
-              },
+              learner: true,
+              trainingCoordinator: true,
             },
           },
         },
@@ -3511,13 +3540,12 @@ export const courseRunController = {
 
       let successCount = 0;
       let failedCount = 0;
-      const trainingCoordinatorsEmailed = new Set<string>();
 
       for (const enrollment of courseRun.courseRunLearners) {
         const now = new Date();
         const learnerEmail = enrollment.learner?.email?.trim();
         const learnerName = enrollment.learner?.fullname || 'Learner';
-        const trainingCoordinator = enrollment.learner?.trainingCoordinator;
+        const trainingCoordinator = enrollment.trainingCoordinator;
 
         if (!learnerEmail) {
           failedCount += 1;
@@ -3595,9 +3623,9 @@ export const courseRunController = {
           const emailCcList = [...ccList];
           if (trainingCoordinator?.email?.trim()) {
             const tcEmail = trainingCoordinator.email.trim();
-            if (!trainingCoordinatorsEmailed.has(tcEmail) && !emailCcList.includes(tcEmail) && tcEmail !== learnerEmail) {
+            // Add TC to CC list if not already there and different from learner
+            if (!emailCcList.includes(tcEmail) && tcEmail !== learnerEmail) {
               emailCcList.push(tcEmail);
-              trainingCoordinatorsEmailed.add(tcEmail);
             }
           }
 

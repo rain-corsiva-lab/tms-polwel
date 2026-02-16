@@ -544,11 +544,33 @@ export const courseRunWorkflowService = {
   async evaluateStatuses(prisma: PrismaClient) {
     const now = new Date();
     
+    // ===============================================
+    // TESTING MODE - 5 MINUTE DELAY (TEMPORARY)
+    // ===============================================
+    // For testing purposes: Course transitions to PENDING_BILLING 5 minutes after end time
+    // Example: Course ends Feb 16 10:00 → transitions at Feb 16 10:05
+    // 
+    // TO RESTORE PRODUCTION BEHAVIOR:
+    // 1. Comment out the "Testing Configuration" section below
+    // 2. Uncomment the "Production Configuration" section
+    // 3. The midnight logic will be restored
+    // ===============================================
+
+    // --- TESTING CONFIGURATION (5 MINUTE DELAY) ---
+    // Check if end date + 5 minutes has passed
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const billingTransitionTime = fiveMinutesAgo; // Use 5 minutes ago as threshold
+    // --- END TESTING CONFIGURATION ---
+
+    // --- PRODUCTION CONFIGURATION (MIDNIGHT TRANSITION) ---
+    // Uncomment these lines to restore original behavior:
     // Calculate midnight (00:00) of today
     // This is used to transition IN_PROGRESS to PENDING_BILLING
     // If end date is Dec 19 19:00, it should change to PENDING_BILLING at Dec 20 00:00
-    const todayMidnight = new Date(now);
-    todayMidnight.setHours(0, 0, 0, 0);
+    // const todayMidnight = new Date(now);
+    // todayMidnight.setHours(0, 0, 0, 0);
+    // const billingTransitionTime = todayMidnight; // Use midnight as threshold
+    // --- END PRODUCTION CONFIGURATION ---
 
     // NEW: Mark courses as INCOMPLETED if their start date has passed and they haven't been activated
     // This applies to courses in pre-activation statuses: DRAFT, PENDING, CONFIRMED_PENDING_TA_APPROVAL, CONFIRMED_PENDING_CONFIRMATION_EMAILS
@@ -603,14 +625,14 @@ export const courseRunWorkflowService = {
       },
     });
 
-    // Transition IN_PROGRESS to PENDING_BILLING at midnight the day after end date
-    // This runs at midnight (00:00) each day, so any course that ended before today's midnight
-    // should be transitioned to PENDING_BILLING
+    // Transition IN_PROGRESS to PENDING_BILLING
+    // TESTING MODE: 5 minutes after end time
+    // PRODUCTION MODE: Midnight the day after end date
     const pendingBilling = await prisma.courseRun.updateMany({
       where: {
         deletedAt: null,
         endDatetime: {
-          lt: todayMidnight, // End date is before today's midnight (ended yesterday or earlier)
+          lt: billingTransitionTime, // TESTING: 5 mins ago | PRODUCTION: today's midnight
         },
         status: 'IN_PROGRESS',
       },
@@ -620,28 +642,10 @@ export const courseRunWorkflowService = {
       },
     });
 
-    // Legacy: Keep completed transition for older statuses (if needed)
-    // const completed = await prisma.courseRun.updateMany({
-    //   where: {
-    //     deletedAt: null,
-    //     endDatetime: {
-    //       lt: fiveMinutesAgo,
-    //     },
-    //     status: {
-    //       in: ['CONFIRMED', 'ACTIVE', 'CONFIRMED_PENDING_CONFIRMATION_EMAILS'],
-    //     },
-    //   },
-    //   data: {
-    //     status: 'COMPLETED',
-    //     statusLastEvaluatedAt: now,
-    //   },
-    // });
-
     return {
       incompleted: incompletedCount,
       started: started.count,
       pendingBilling: pendingBilling.count,
-      // completed: completed.count,
       evaluatedAt: now,
     };
   },
