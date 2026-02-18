@@ -2057,7 +2057,7 @@ const CourseRunDetail: React.FC = () => {
                           title={courseRun.status === "DRAFT" ? "Cannot send confirmation emails while course run is in DRAFT status" : ""}
                         >
                           <Mail className="h-4 w-4 mr-2" />
-                          Send Confirmation Email
+                          Send Course Confirmation Email
                         </Button>
                         <Button
                           size="sm"
