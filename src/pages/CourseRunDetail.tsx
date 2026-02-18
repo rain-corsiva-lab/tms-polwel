@@ -1522,6 +1522,17 @@ const CourseRunDetail: React.FC = () => {
         return;
       }
 
+      // Validate end date is not before start date
+      if (editData.startDate && editData.endDate) {
+        const startDate = new Date(editData.startDate);
+        const endDate = new Date(editData.endDate);
+        if (endDate < startDate) {
+          toast.error("End date cannot be before start date");
+          setEditSubmitting(false);
+          return;
+        }
+      }
+
       // Required fields list (excluding optional ones specified by user)
       const requiredFields: { key: string; label: string }[] = [
         { key: "serialNumber", label: "Course Run Code" },

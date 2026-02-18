@@ -1991,15 +1991,23 @@ class EmailService {
                                 </tr>
                               </table>
 
+                              <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                We hope that you found this programme enriching and valuable for your personal and professional development!
+                              </p>
+                              
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
                                   <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
-                                    <p style="margin: 0 0 8px 0; color: #374151 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Certificate Information</p>
-                                    <div style="color: #1f2937 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                      • Your certificate is digitally signed and verified<br/>
-                                      • Please keep a copy for your professional records<br/>
-                                      • This certificate can be used for CPD (Continuing Professional Development) credits
+                                    <p style="margin: 0 0 12px 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                      If you are interested to know or register for our other course offerings, please refer to the link & QR code below:
+                                    </p>
+                                    <div style="text-align: center; margin: 16px 0;">
+                                      <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important; display: block; margin-bottom: 12px;">https://polwel.org.sg/courses/</a>
+                                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://polwel.org.sg/courses/" alt="QR Code for Course Offerings" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
                                     </div>
+                                    <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                      Once again, thank you for your support and hope to see you soon in our next workshop!
+                                    </p>
                                   </td>
                                 </tr>
                               </table>

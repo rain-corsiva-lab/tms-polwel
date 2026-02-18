@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { referencesApi, coursesApi, venuesApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errorHandler";
 import CourseInformationTab from "@/components/CourseFormTabs/CourseInformationTab";
 import FeesRevenueTab from "@/components/CourseFormTabs/FeesRevenueTab";
 import DiscountsTab from "@/components/CourseFormTabs/DiscountsTab";
@@ -394,36 +395,23 @@ const CourseForm: React.FC = () => {
       navigate("/courses");
     } catch (err: any) {
       console.error("Course save error:", err);
-      let title = "Error";
-      let msg = "Save failed";
 
-      // Handle validation errors
+      // Check for validation errors with detailed messages
+      let errorMessage = getErrorMessage(err, "Failed to save course");
+
+      // If there are specific field errors in the errors array, show them
       if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
-        title = "Validation Error";
-        const fieldErrors = err.response.data.errors.map((error: any) => error.message || error.msg).join(". ");
-        msg = fieldErrors;
-      } else if (err?.response?.data?.message) {
-        // Handle specific error messages from backend
-        const errorMessage = err.response.data.message;
-        if (errorMessage.toLowerCase().includes("unique") || errorMessage.toLowerCase().includes("coursecode")) {
-          title = "Duplicate Error";
-          msg = "Course code already exists";
-        } else if (errorMessage.toLowerCase().includes("validation")) {
-          title = "Validation Error";
-          msg = errorMessage;
-        } else if (errorMessage.toLowerCase().includes("required")) {
-          title = "Required Fields";
-          msg = errorMessage;
-        } else {
-          msg = errorMessage;
+        const fieldErrors = err.response.data.errors.map((error: any) => error.message || error.msg).filter(Boolean);
+        if (fieldErrors.length > 0) {
+          errorMessage = fieldErrors.join(". ");
         }
-      } else if (err?.response?.data?.error) {
-        msg = err.response.data.error;
-      } else if (err?.message) {
-        msg = err.message;
       }
 
-      toast({ title, description: msg, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading((l) => ({ ...l, submitting: false }));
     }
