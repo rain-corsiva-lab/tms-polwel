@@ -38,7 +38,15 @@ export const waiverController = {
 
       // Filter by waiver status
       if (status && status !== 'ALL') {
-        whereClause.waiverStatus = status as WaiverStatus;
+        // Handle PENDING status - includes both null and 'PENDING' values
+        if (status === 'PENDING') {
+          whereClause.OR = [
+            { waiverStatus: null },
+            { waiverStatus: 'PENDING' },
+          ];
+        } else {
+          whereClause.waiverStatus = status as WaiverStatus;
+        }
       }
 
       // Filter by organization (from course run learner enrollment)

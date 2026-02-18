@@ -421,6 +421,19 @@ const CourseRunForm: React.FC = () => {
 
     setFormData(newFormData);
 
+    // Validate start date is not after end date
+    if (date && formData.endDate) {
+      const startDate = new Date(date);
+      const endDate = new Date(formData.endDate);
+      if (endDate < startDate) {
+        setErrors({ ...errors, endDate: "End Date cannot be before Start Date" });
+      } else {
+        // Clear error if valid
+        const { endDate: _, ...rest } = errors;
+        setErrors(rest);
+      }
+    }
+
     // Re-filter trainers based on new date range if course is selected
     if (newFormData.courseId && newFormData.endDate) {
       filterTrainersByCourse(newFormData.courseId);
@@ -430,6 +443,19 @@ const CourseRunForm: React.FC = () => {
   // Handle end date change to re-filter trainers
   const handleEndDateChange = (date: string) => {
     setFormData({ ...formData, endDate: date });
+
+    // Validate end date is not before start date
+    if (formData.startDate && date) {
+      const startDate = new Date(formData.startDate);
+      const endDate = new Date(date);
+      if (endDate < startDate) {
+        setErrors({ ...errors, endDate: "End Date cannot be before Start Date" });
+      } else {
+        // Clear error if valid
+        const { endDate: _, ...rest } = errors;
+        setErrors(rest);
+      }
+    }
 
     // Re-filter trainers based on new date range if course is selected
     if (formData.courseId && formData.startDate) {
@@ -504,6 +530,16 @@ const CourseRunForm: React.FC = () => {
       if (!formData.courseId) newErrors.courseId = "Course is required";
       if (!formData.startDate) newErrors.startDate = "Start Date is required";
       if (!formData.endDate) newErrors.endDate = "End Date is required";
+
+      // Validate end date is not before start date
+      if (formData.startDate && formData.endDate) {
+        const startDate = new Date(formData.startDate);
+        const endDate = new Date(formData.endDate);
+        if (endDate < startDate) {
+          newErrors.endDate = "End Date cannot be before Start Date";
+        }
+      }
+
       if (!formData.venueType) newErrors.venueType = "Venue type is required";
       // Require organiser for DEDICATED, TALKS, or CUSTOMIZED
       if (

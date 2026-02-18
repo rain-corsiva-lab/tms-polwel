@@ -59,6 +59,7 @@ export const PERMISSIONS: Perm[] = [
   { name: 'waiver.create', description: 'Create waiver requests', module: 'Waiver Requests', action: 'create' },
   { name: 'waiver.edit', description: 'Edit waiver requests', module: 'Waiver Requests', action: 'update' },
   { name: 'waiver.delete', description: 'Delete waiver requests', module: 'Waiver Requests', action: 'delete' },
+  { name: 'waiver.approve', description: 'Approve/reject waiver requests', module: 'Waiver Requests', action: 'approve' },
 
   // Reporting module → reporting.* permissions
   { name: 'reporting.view', description: 'View reports', module: 'Reporting', action: 'read' },

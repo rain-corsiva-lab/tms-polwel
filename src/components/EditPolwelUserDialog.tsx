@@ -42,7 +42,7 @@ const moduleConfig: Record<ModuleKey, { label: string; supportsApprove?: boolean
   "course-run": { label: "Course Run", supportsApprove: true },
   "post-course-run": { label: "Post Course Run" },
   "billing-reports": { label: "Billing Reports" },
-  waiver: { label: "Waiver Requests" },
+  waiver: { label: "Waiver Requests", supportsApprove: true },
   "resource-library": { label: "Resource Library" },
   reporting: { label: "Reporting" },
 };
@@ -55,7 +55,7 @@ const createDefaultPermissions = (): UserPermissions => ({
   "course-run": { view: false, create: false, edit: false, delete: false, approve: false },
   "post-course-run": { view: false, create: false, edit: false, delete: false },
   "billing-reports": { view: false, create: false, edit: false, delete: false },
-  waiver: { view: false, create: false, edit: false, delete: false },
+  waiver: { view: false, create: false, edit: false, delete: false, approve: false },
   "resource-library": { view: false, create: false, edit: false, delete: false },
   reporting: { view: false, create: false, edit: false, delete: false },
 });
