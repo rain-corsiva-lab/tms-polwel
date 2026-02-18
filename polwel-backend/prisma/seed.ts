@@ -402,8 +402,7 @@ async function main() {
     data: {
       name: 'Orchard Hotel',
       address: '442 Orchard Road, Singapore 238879',
-      capacity: '70-80 pax',
-      description: 'Professional conference facility with modern amenities',
+      description: 'Professional conference facility with modern amenities. Capacity: 70-80 pax',
       facilities: ['projector', 'whiteboard', 'wifi', 'air-conditioning', 'sound-system'],
       contacts: [{
         id: '1',
@@ -422,8 +421,7 @@ async function main() {
     data: {
       name: 'POLWEL Learning Pod',
       address: 'POLWEL Training Center, Singapore',
-      capacity: '25 pax',
-      description: 'Intimate learning environment perfect for small group training',
+      description: 'Intimate learning environment perfect for small group training. Capacity: 25 pax',
       facilities: ['projector', 'whiteboard', 'wifi', 'flip-charts'],
       contacts: [{
         id: '1',
@@ -442,8 +440,7 @@ async function main() {
     data: {
       name: 'Marina Bay Conference Center',
       address: 'Marina Bay, Singapore',
-      capacity: '150 pax',
-      description: 'Premium conference facility with harbor views',
+      description: 'Premium conference facility with harbor views. Capacity: 150 pax',
       facilities: ['projector', 'sound-system', 'wifi', 'air-conditioning', 'catering'],
       contacts: [{
         id: '1',
@@ -2097,7 +2094,11 @@ async function main() {
       courseRunLearnersId: courseRunLearner1.id,
       courseRunId: leadershipRun1.id,
       remarks: 'Course confirmation email sent successfully',
-      attachmentId: media1.id,
+      attachments: {
+        create: [{
+          mediaId: media1.id,
+        }],
+      },
     },
   });
 
@@ -2106,7 +2107,11 @@ async function main() {
       courseRunLearnersId: courseRunLearner1.id,
       courseRunId: leadershipRun1.id,
       remarks: 'Course reminder email sent 1 week before',
-      attachmentId: media4.id,
+      attachments: {
+        create: [{
+          mediaId: media4.id,
+        }],
+      },
     },
   });
 
