@@ -36,6 +36,13 @@ echo "📦 Installing backend dependencies..."
 cd $PROJECT_DIR/polwel-backend
 npm install
 
+echo "🔧 Resolving any failed migrations..."
+# Temporarily disable exit-on-error to handle failed migrations
+set +e
+npx prisma migrate resolve --rolled-back "20260216000001_add_client_org_to_course_run_learners" 2>/dev/null
+set -e
+echo "✓ Migration status resolved"
+
 echo "🔧 Applying Prisma migrations..."
 npm run db:deploy
 
