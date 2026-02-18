@@ -1,220 +1,146 @@
 -- AlterTable: Move organization and coordinator fields from learners to course_run_learners
 -- This migration moves enrollment-specific data to the course_run_learners table
 
--- Step 1: Remove deprecated columns from learners table (if they exist)
--- Using stored procedure for compatibility with older MySQL versions
-DELIMITER $$
+-- Step 1: Add columns to course_run_learners first (before removing from learners)
+ALTER TABLE `course_run_learners` 
+  ADD COLUMN `clientOrganizationId` VARCHAR(191) NULL,
+  ADD COLUMN `trainingCoordinatorId` VARCHAR(191) NULL,
+  ADD COLUMN `buNumber` VARCHAR(191) NULL,
+  ADD COLUMN `division` VARCHAR(191) NULL;
 
-CREATE PROCEDURE DropLearnersColumnsIfExists()
-BEGIN
-    -- Drop indexes if they exist
-    IF EXISTS (
-        SELECT 1 FROM information_schema.STATISTICS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'learners'
-        AND INDEX_NAME = 'learners_clientOrganizationId_idx'
-    ) THEN
-        ALTER TABLE `learners` DROP INDEX `learners_clientOrganizationId_idx`;
-    END IF;
+-- Step 2: Add indexes
+CREATE INDEX `course_run_learners_clientOrganizationId_idx` ON `course_run_learners`(`clientOrganizationId`);
+CREATE INDEX `course_run_learners_trainingCoordinatorId_idx` ON `course_run_learners`(`trainingCoordinatorId`);
 
-    IF EXISTS (
-        SELECT 1 FROM information_schema.STATISTICS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'learners'
-        AND INDEX_NAME = 'learners_trainingCoordinatorId_idx'
-    ) THEN
-        ALTER TABLE `learners` DROP INDEX `learners_trainingCoordinatorId_idx`;
-    END IF;
+-- Step 3: Add foreign keys
+ALTER TABLE `course_run_learners` 
+  ADD CONSTRAINT `course_run_learners_clientOrganizationId_fkey` 
+  FOREIGN KEY (`clientOrganizationId`) REFERENCES `organizations`(`id`) 
+  ON DELETE SET NULL ON UPDATE CASCADE;
 
-    -- Drop foreign keys if they exist
-    IF EXISTS (
-        SELECT 1 FROM information_schema.TABLE_CONSTRAINTS 
-        WHERE CONSTRAINT_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'learners'
-        AND CONSTRAINT_NAME = 'learners_clientOrganizationId_fkey'
-    ) THEN
-        ALTER TABLE `learners` DROP FOREIGN KEY `learners_clientOrganizationId_fkey`;
-    END IF;
+ALTER TABLE `course_run_learners` 
+  ADD CONSTRAINT `course_run_learners_trainingCoordinatorId_fkey` 
+  FOREIGN KEY (`trainingCoordinatorId`) REFERENCES `users`(`id`) 
+  ON DELETE SET NULL ON UPDATE CASCADE;
 
-    IF EXISTS (
-        SELECT 1 FROM information_schema.TABLE_CONSTRAINTS 
-        WHERE CONSTRAINT_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'learners'
-        AND CONSTRAINT_NAME = 'learners_trainingCoordinatorId_fkey'
-    ) THEN
-        ALTER TABLE `learners` DROP FOREIGN KEY `learners_trainingCoordinatorId_fkey`;
-    END IF;
+-- Step 4: Remove deprecated columns from learners table (if they exist)
+-- Note: These will fail silently if columns don't exist, which is expected
+SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0;
 
-    -- Drop columns if they exist
-    IF EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'learners'
-        AND COLUMN_NAME = 'clientOrganizationId'
-    ) THEN
-        ALTER TABLE `learners` DROP COLUMN `clientOrganizationId`;
-    END IF;
+-- Drop foreign keys if they exist
+SET @drop_fk1 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.TABLE_CONSTRAINTS 
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'learners'
+    AND CONSTRAINT_NAME = 'learners_clientOrganizationId_fkey'
+  ),
+  'ALTER TABLE learners DROP FOREIGN KEY learners_clientOrganizationId_fkey',
+  'SELECT 1'
+));
+PREPARE stmt1 FROM @drop_fk1;
+EXECUTE stmt1;
+DEALLOCATE PREPARE stmt1;
 
-    IF EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'learners'
-        AND COLUMN_NAME = 'trainingCoordinatorId'
-    ) THEN
-        ALTER TABLE `learners` DROP COLUMN `trainingCoordinatorId`;
-    END IF;
+SET @drop_fk2 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.TABLE_CONSTRAINTS 
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'learners'
+    AND CONSTRAINT_NAME = 'learners_trainingCoordinatorId_fkey'
+  ),
+  'ALTER TABLE learners DROP FOREIGN KEY learners_trainingCoordinatorId_fkey',
+  'SELECT 1'
+));
+PREPARE stmt2 FROM @drop_fk2;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;
 
-    IF EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'learners'
-        AND COLUMN_NAME = 'departmentName'
-    ) THEN
-        ALTER TABLE `learners` DROP COLUMN `departmentName`;
-    END IF;
-END$$
+-- Drop indexes if they exist
+SET @drop_idx1 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'learners'
+    AND INDEX_NAME = 'learners_clientOrganizationId_idx'
+  ),
+  'ALTER TABLE learners DROP INDEX learners_clientOrganizationId_idx',
+  'SELECT 1'
+));
+PREPARE stmt3 FROM @drop_idx1;
+EXECUTE stmt3;
+DEALLOCATE PREPARE stmt3;
 
-DELIMITER ;
+SET @drop_idx2 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'learners'
+    AND INDEX_NAME = 'learners_trainingCoordinatorId_idx'
+  ),
+  'ALTER TABLE learners DROP INDEX learners_trainingCoordinatorId_idx',
+  'SELECT 1'
+));
+PREPARE stmt4 FROM @drop_idx2;
+EXECUTE stmt4;
+DEALLOCATE PREPARE stmt4;
 
-CALL DropLearnersColumnsIfExists();
-DROP PROCEDURE DropLearnersColumnsIfExists;
+-- Drop columns if they exist
+SET @drop_col1 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'learners'
+    AND COLUMN_NAME = 'clientOrganizationId'
+  ),
+  'ALTER TABLE learners DROP COLUMN clientOrganizationId',
+  'SELECT 1'
+));
+PREPARE stmt5 FROM @drop_col1;
+EXECUTE stmt5;
+DEALLOCATE PREPARE stmt5;
 
--- Step 2: Add columns to course_run_learners (if they don't exist)
-DELIMITER $$
+SET @drop_col2 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'learners'
+    AND COLUMN_NAME = 'trainingCoordinatorId'
+  ),
+  'ALTER TABLE learners DROP COLUMN trainingCoordinatorId',
+  'SELECT 1'
+));
+PREPARE stmt6 FROM @drop_col2;
+EXECUTE stmt6;
+DEALLOCATE PREPARE stmt6;
 
-CREATE PROCEDURE AddCourseRunLearnersColumnsIfNotExists()
-BEGIN
-    -- Add clientOrganizationId if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND COLUMN_NAME = 'clientOrganizationId'
-    ) THEN
-        ALTER TABLE `course_run_learners` ADD COLUMN `clientOrganizationId` VARCHAR(191) NULL;
-    END IF;
+SET @drop_col3 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'learners'
+    AND COLUMN_NAME = 'departmentName'
+  ),
+  'ALTER TABLE learners DROP COLUMN departmentName',
+  'SELECT 1'
+));
+PREPARE stmt7 FROM @drop_col3;
+EXECUTE stmt7;
+DEALLOCATE PREPARE stmt7;
 
-    -- Add trainingCoordinatorId if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND COLUMN_NAME = 'trainingCoordinatorId'
-    ) THEN
-        ALTER TABLE `course_run_learners` ADD COLUMN `trainingCoordinatorId` VARCHAR(191) NULL;
-    END IF;
+-- Drop venues capacity column if it exists
+SET @drop_col4 = (SELECT IF(
+  EXISTS(
+    SELECT 1 FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'venues'
+    AND COLUMN_NAME = 'capacity'
+  ),
+  'ALTER TABLE venues DROP COLUMN capacity',
+  'SELECT 1'
+));
+PREPARE stmt8 FROM @drop_col4;
+EXECUTE stmt8;
+DEALLOCATE PREPARE stmt8;
 
-    -- Add buNumber if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND COLUMN_NAME = 'buNumber'
-    ) THEN
-        ALTER TABLE `course_run_learners` ADD COLUMN `buNumber` VARCHAR(191) NULL;
-    END IF;
-
-    -- Add division if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND COLUMN_NAME = 'division'
-    ) THEN
-        ALTER TABLE `course_run_learners` ADD COLUMN `division` VARCHAR(191) NULL;
-    END IF;
-END$$
-
-DELIMITER ;
-
-CALL AddCourseRunLearnersColumnsIfNotExists();
-DROP PROCEDURE AddCourseRunLearnersColumnsIfNotExists;
-
--- Step 3: Add indexes (if they don't exist)
-DELIMITER $$
-
-CREATE PROCEDURE AddCourseRunLearnersIndexesIfNotExists()
-BEGIN
-    -- Add clientOrganizationId index if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.STATISTICS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND INDEX_NAME = 'course_run_learners_clientOrganizationId_idx'
-    ) THEN
-        CREATE INDEX `course_run_learners_clientOrganizationId_idx` ON `course_run_learners`(`clientOrganizationId`);
-    END IF;
-
-    -- Add trainingCoordinatorId index if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.STATISTICS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND INDEX_NAME = 'course_run_learners_trainingCoordinatorId_idx'
-    ) THEN
-        CREATE INDEX `course_run_learners_trainingCoordinatorId_idx` ON `course_run_learners`(`trainingCoordinatorId`);
-    END IF;
-END$$
-
-DELIMITER ;
-
-CALL AddCourseRunLearnersIndexesIfNotExists();
-DROP PROCEDURE AddCourseRunLearnersIndexesIfNotExists;
-
--- Step 4: Add foreign keys (only if they don't exist)
--- Note: MySQL doesn't support IF NOT EXISTS for foreign keys, so we'll use a procedure
-DELIMITER $$
-
-CREATE PROCEDURE AddForeignKeyIfNotExists()
-BEGIN
-    -- Check and add clientOrganizationId foreign key
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.TABLE_CONSTRAINTS 
-        WHERE CONSTRAINT_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND CONSTRAINT_NAME = 'course_run_learners_clientOrganizationId_fkey'
-    ) THEN
-        ALTER TABLE `course_run_learners` 
-            ADD CONSTRAINT `course_run_learners_clientOrganizationId_fkey` 
-            FOREIGN KEY (`clientOrganizationId`) REFERENCES `organizations`(`id`) 
-            ON DELETE SET NULL ON UPDATE CASCADE;
-    END IF;
-
-    -- Check and add trainingCoordinatorId foreign key
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.TABLE_CONSTRAINTS 
-        WHERE CONSTRAINT_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'course_run_learners'
-        AND CONSTRAINT_NAME = 'course_run_learners_trainingCoordinatorId_fkey'
-    ) THEN
-        ALTER TABLE `course_run_learners` 
-            ADD CONSTRAINT `course_run_learners_trainingCoordinatorId_fkey` 
-            FOREIGN KEY (`trainingCoordinatorId`) REFERENCES `users`(`id`) 
-            ON DELETE SET NULL ON UPDATE CASCADE;
-    END IF;
-END$$
-
-DELIMITER ;
-
-CALL AddForeignKeyIfNotExists();
-DROP PROCEDURE AddForeignKeyIfNotExists;
-
--- Step 5: Remove capacity column from venues if it exists
-DELIMITER $$
-
-CREATE PROCEDURE DropVenuesCapacityIfExists()
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'venues'
-        AND COLUMN_NAME = 'capacity'
-    ) THEN
-        ALTER TABLE `venues` DROP COLUMN `capacity`;
-    END IF;
-END$$
-
-DELIMITER ;
-
-CALL DropVenuesCapacityIfExists();
-DROP PROCEDURE DropVenuesCapacityIfExists;
+SET SQL_NOTES=@OLD_SQL_NOTES;

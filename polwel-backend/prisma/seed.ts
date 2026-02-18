@@ -880,9 +880,6 @@ async function main() {
       designation: 'Police Officer',
       email: 'rajesh.kumar@spf.gov.sg',
       contact: '91234567',
-      clientOrganizationId: angMoKioDiv.id,
-      departmentName: 'Operations Department',
-      trainingCoordinatorId: maryLim.id,
     },
   });
 
@@ -892,9 +889,6 @@ async function main() {
       designation: 'Police Sergeant',
       email: 'lisa.tan@spf.gov.sg',
       contact: '91234568',
-      clientOrganizationId: angMoKioDiv.id,
-      departmentName: 'Investigation Department',
-      trainingCoordinatorId: maryLim.id,
     },
   });
 
@@ -904,9 +898,6 @@ async function main() {
       designation: 'Police Corporal',
       email: 'ahmad.farid@spf.gov.sg',
       contact: '91234569',
-      clientOrganizationId: angMoKioDiv.id,
-      departmentName: 'Traffic Police',
-      trainingCoordinatorId: maryLim.id,
     },
   });
 
@@ -916,9 +907,6 @@ async function main() {
       designation: 'Police Inspector',
       email: 'michelle.loh@spf.gov.sg',
       contact: '91234570',
-      clientOrganizationId: angMoKioDiv.id,
-      departmentName: 'Community Policing',
-      trainingCoordinatorId: maryLim.id,
     },
   });
 
@@ -928,9 +916,6 @@ async function main() {
       designation: 'Senior Police Officer',
       email: 'david.wong@spf.gov.sg',
       contact: '91234571',
-      clientOrganizationId: choaChuKangDiv.id,
-      departmentName: 'Criminal Investigation',
-      trainingCoordinatorId: ahmadRahman.id,
     },
   });
 
@@ -940,9 +925,6 @@ async function main() {
       designation: 'Police Constable',
       email: 'sarah.kim@spf.gov.sg',
       contact: '91234572',
-      clientOrganizationId: choaChuKangDiv.id,
-      departmentName: 'Patrol Division',
-      trainingCoordinatorId: ahmadRahman.id,
     },
   });
 
@@ -952,9 +934,6 @@ async function main() {
       designation: 'Police Lance Corporal',
       email: 'james.teo@spf.gov.sg',
       contact: '91234573',
-      clientOrganizationId: choaChuKangDiv.id,
-      departmentName: 'Neighbourhood Police',
-      trainingCoordinatorId: ahmadRahman.id,
     },
   });
 
@@ -964,9 +943,6 @@ async function main() {
       designation: 'Police Staff Sergeant',
       email: 'rachel.lee@spf.gov.sg',
       contact: '91234574',
-      clientOrganizationId: choaChuKangDiv.id,
-      departmentName: 'Special Operations',
-      trainingCoordinatorId: ahmadRahman.id,
     },
   });
 
@@ -1704,6 +1680,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun1.id,
       learnerId: learner1.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Operations Department',
       currentDefaultCourseFee: 850.00,
       discountPercentage: 10.00,
       discountAmount: 85.00,
@@ -1721,6 +1701,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun1.id,
       learnerId: learner2.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Investigation Department',
       currentDefaultCourseFee: 850.00,
       discountPercentage: 5.00,
       discountAmount: 42.50,
@@ -1738,6 +1722,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun1.id,
       learnerId: learner3.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Traffic Police',
       currentDefaultCourseFee: 850.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1757,6 +1745,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun1.id,
       learnerId: learner4.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Community Policing',
       currentDefaultCourseFee: 850.00,
       discountPercentage: 15.00,
       discountAmount: 127.50,
@@ -1775,6 +1767,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun1.id,
       learnerId: learner5.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Criminal Investigation',
       currentDefaultCourseFee: 450.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1792,6 +1788,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun1.id,
       learnerId: learner6.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Patrol Division',
       currentDefaultCourseFee: 450.00,
       discountPercentage: 8.00,
       discountAmount: 36.00,
@@ -1809,6 +1809,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun1.id,
       learnerId: learner7.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Neighbourhood Police',
       currentDefaultCourseFee: 450.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1826,6 +1830,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun1.id,
       learnerId: learner8.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Special Operations',
       currentDefaultCourseFee: 450.00,
       discountPercentage: 12.00,
       discountAmount: 54.00,
@@ -1844,6 +1852,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun2.id,
       learnerId: learner1.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Operations Department',
       currentDefaultCourseFee: 200.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1861,6 +1873,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun2.id,
       learnerId: learner3.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Traffic Police',
       currentDefaultCourseFee: 200.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1878,6 +1894,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun2.id,
       learnerId: learner5.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Criminal Investigation',
       currentDefaultCourseFee: 200.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1895,6 +1915,10 @@ async function main() {
     data: {
       courseRunId: leadershipRun2.id,
       learnerId: learner7.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Neighbourhood Police',
       currentDefaultCourseFee: 200.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1912,6 +1936,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun2.id,
       learnerId: learner2.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Investigation Department',
       currentDefaultCourseFee: 600.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1929,6 +1957,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun2.id,
       learnerId: learner4.id,
+      clientOrganizationId: angMoKioDiv.id,
+      trainingCoordinatorId: maryLim.id,
+      buNumber: 'SPF-AMK-001',
+      division: 'Community Policing',
       currentDefaultCourseFee: 600.00,
       discountPercentage: 5.00,
       discountAmount: 30.00,
@@ -1946,6 +1978,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun2.id,
       learnerId: learner6.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Patrol Division',
       currentDefaultCourseFee: 600.00,
       discountPercentage: 0.00,
       discountAmount: 0.00,
@@ -1963,6 +1999,10 @@ async function main() {
     data: {
       courseRunId: emotionalIntelligenceRun2.id,
       learnerId: learner8.id,
+      clientOrganizationId: choaChuKangDiv.id,
+      trainingCoordinatorId: ahmadRahman.id,
+      buNumber: 'SPF-CCK-001',
+      division: 'Special Operations',
       currentDefaultCourseFee: 600.00,
       discountPercentage: 10.00,
       discountAmount: 60.00,
