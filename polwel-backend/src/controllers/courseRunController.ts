@@ -369,6 +369,7 @@ type AttendanceLearnerRecord = {
   email: string | null;
   contactNumber: string | null;
   departmentName: string | null;
+  designation: string | null;
   attendanceStatus: string | null;
   attendance: AttendanceDayRecord[];
 };
@@ -412,7 +413,7 @@ const loadAttendanceSnapshot = async (courseRunId: string, editorId: string | nu
           fullname: true,
           email: true,
           contact: true,
-          departmentName: true,
+          designation: true,
         },
       },
     },
@@ -483,7 +484,8 @@ const loadAttendanceSnapshot = async (courseRunId: string, editorId: string | nu
       fullName: learner?.fullname ?? 'Unknown Learner',
       email: learner?.email ?? null,
       contactNumber: learner?.contact ?? null,
-      departmentName: enrollment.departmentName ?? learner?.departmentName ?? null,
+      departmentName: enrollment.departmentName ?? null,
+      designation: learner?.designation ?? null,
       attendanceStatus: enrollment.attendanceStatus ?? null,
       attendance,
     };
@@ -530,11 +532,13 @@ const courseRunBaseSchema = z.object({
   remarks: z.string().nullable().optional(),
   baseCourseFee: z.number().nullable().optional(),
   courseRunFeeType: z.enum(['PER_RUN', 'PER_HEAD']).nullable().optional(),
+  feeType: z.enum(['PER_HEAD', 'PER_VENUE', 'FIXED']).nullable().optional(),
   venueFee: z.number().nullable().optional(),
   venueMaxParticipant: z.number().int().min(1).nullable().optional(),
   perHeadFeeIfMaxExceed: z.number().nullable().optional(),
   venuePerHeadIfExceed: z.number().nullable().optional(),
   contractFees: z.number().nullable().optional(),
+  additionalCostExceedingCapacity: z.number().nullable().optional(),
   otherFee: z.number().nullable().optional(),
   adminFee: z.number().nullable().optional(),
   contingencyFee: z.number().nullable().optional(),
@@ -546,7 +550,6 @@ const courseRunBaseSchema = z.object({
       z.object({
         trainerId: z.string(),
         trainerBaseAmount: z.number().nullable().optional(),
-        additionalCost: z.number().nullable().optional(),
       })
     )
     .optional()
@@ -1136,7 +1139,6 @@ export const courseRunController = {
             courseRunId: courseRun.id,
             trainerId: t.trainerId,
             trainerBaseAmount: t.trainerBaseAmount ?? null,
-            additionalCost: t.additionalCost ?? null,
           })),
         });
       }
@@ -2884,8 +2886,6 @@ export const courseRunController = {
               courseRunId: id,
               trainerId: t.trainerId,
               trainerBaseAmount: t.trainerBaseAmount || 0,
-              additionalCost: t.additionalCost || 0,
-              additionalCostUnit: t.additionalCostUnit || 'PER_CLASS',
               remarks: t.remarks || null,
             })),
           });
@@ -3123,7 +3123,6 @@ export const courseRunController = {
         }
 
         const baseFee = Number(assignment.trainerBaseAmount || 0);
-        const additional = Number(assignment.additionalCost || 0);
 
         const courseDetails: Parameters<typeof EmailService.sendTrainerAssignmentEmail>[2] = {};
         if (courseRun.course?.title) {
@@ -3142,7 +3141,6 @@ export const courseRunController = {
           trainerName,
           courseDetails,
           baseFee,
-          additional,
           ccList.length > 0 ? ccList : null,
           additionalBody || null,
           attachments.length > 0 ? attachments : null
@@ -3939,7 +3937,6 @@ export const courseRunController = {
             trainerName,
             trainerCourseDetails,
             Number(assignment.trainerBaseAmount || 0),
-            Number(assignment.additionalCost || 0),
             null,
             null,
           );
@@ -5817,7 +5814,6 @@ export const courseRunController = {
           trainerId: crt.trainerId,
           // Use updated trainer fee from course_trainers or fall back to original
           trainerBaseAmount: trainerFeeMap.get(crt.trainerId) || crt.trainerBaseAmount,
-          additionalCost: crt.additionalCost,
           remarks: crt.remarks,
           emailStatus: 'PENDING',
         }));

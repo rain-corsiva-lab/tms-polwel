@@ -1713,7 +1713,7 @@ export const courseRunsApi = {
   },
 
   // Update trainer assignments
-  updateTrainerAssignments: async (courseRunId: string, trainers: Array<{trainerId: string; trainerBaseAmount: number; additionalCost: number}>) => {
+  updateTrainerAssignments: async (courseRunId: string, trainers: Array<{trainerId: string; trainerBaseAmount: number}>) => {
     return apiRequest(`/course-runs/${courseRunId}/trainer-assignments`, {
       method: 'PUT',
       body: JSON.stringify({ trainers }),

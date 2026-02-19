@@ -303,7 +303,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="venueType">Venue</Label>
+          <Label htmlFor="venueType">Venue Type</Label>
           <Select value={formData.venueType || ""} onValueChange={(value) => onInputChange("venueType", value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select venue type" />
@@ -316,6 +316,40 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
           </Select>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="venueId">Venue Name {formData.venueType ? "(Optional)" : ""}</Label>
+          <Select value={formData.venueId || ""} onValueChange={handleVenueChange} disabled={!formData.venueType}>
+            <SelectTrigger>
+              <SelectValue placeholder={formData.venueType ? "Select venue..." : "Select venue type first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {loading?.venues && (
+                <SelectItem value="__loading__" disabled>
+                  Loading venues...
+                </SelectItem>
+              )}
+              {!loading?.venues && venues.filter((v: any) => v.venueType === formData.venueType).length === 0 && (
+                <SelectItem value="__empty__" disabled>
+                  No venues available for this type
+                </SelectItem>
+              )}
+              {!loading?.venues &&
+                venues
+                  .filter((v: any) => v.venueType === formData.venueType)
+                  .map((venue: any) => (
+                    <SelectItem key={venue.id} value={venue.id}>
+                      {venue.name} {venue.address ? `- ${venue.address}` : ""}
+                    </SelectItem>
+                  ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[10px] text-muted-foreground">
+            {formData.venueType ? "Selecting a venue will auto-fill venue fees" : "Select venue type first to see available venues"}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="specifiedLocation">Specified Location (Optional)</Label>
           <Input

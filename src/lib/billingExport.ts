@@ -318,8 +318,7 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
     if (courseRun.courseRunTrainers && Array.isArray(courseRun.courseRunTrainers)) {
       trainerFeesTotal = courseRun.courseRunTrainers.reduce((sum: number, trainer: any) => {
         const baseFee = typeof trainer.trainerBaseAmount === 'number' ? trainer.trainerBaseAmount : Number(trainer.trainerBaseAmount || 0);
-        const additionalCost = typeof trainer.additionalCost === 'number' ? trainer.additionalCost : Number(trainer.additionalCost || 0);
-        return sum + baseFee + additionalCost;
+        return sum + baseFee;
       }, 0);
     }
     setCurrency(firstDataRow.getCell(22), trainerFeesTotal);

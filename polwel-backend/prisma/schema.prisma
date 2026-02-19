@@ -298,8 +298,6 @@ model CourseRunTrainer {
   courseRunId                  String
   trainerId                    String
   trainerBaseAmount            Decimal?                  @db.Decimal(10, 2)
-  additionalCost               Decimal?                  @db.Decimal(10, 2)
-  additionalCostUnit           AdditionalCostUnit?       @default(PER_CLASS)
   remarks                      String?                   @db.Text
   trainerAssignmentEmailStatus String?
   emailStatus                  String?                   @default("PENDING")
@@ -341,6 +339,8 @@ model Venue {
   contacts                Json?
   feeType                 FeeType     @default(PER_VENUE)
   fee                     Float       @default(0)
+  maxParticipants         Int?
+  perHeadPriceIfMaxExceed Decimal?    @db.Decimal(10, 2)
   status                  VenueStatus @default(ACTIVE)
   remarks                 String?     @db.Text
   createdAt               DateTime    @default(now())
@@ -828,11 +828,6 @@ enum ResourceLibraryStatus {
 enum ResourceLibraryAudience {
   TRAINING_COORDINATORS
   ALL_USERS
-}
-
-enum AdditionalCostUnit {
-  PER_PAX
-  PER_CLASS
 }
 
 model ResourceLibrary {

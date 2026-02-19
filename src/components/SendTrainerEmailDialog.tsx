@@ -19,7 +19,6 @@ interface SendTrainerEmailDialogProps {
     name: string;
     email: string;
     baseFee: number;
-    additionalCost: number;
   }>;
   partners?: Array<{
     id: string;
@@ -186,7 +185,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
     return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(amount);
   };
 
-  const totalFees = trainers.reduce((sum, t) => sum + t.baseFee + t.additionalCost, 0);
+  const totalFees = trainers.reduce((sum, t) => sum + t.baseFee, 0);
   const hasPartners = partners && partners.length > 0;
   const isPartnerScenario = hasPartners;
 
@@ -257,7 +256,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
                       <span className={isPartnerScenario ? "text-gray-600" : ""}>{t.name}</span>
                       {!isPartnerScenario && (
                         <span className="text-gray-600">
-                          Base: {formatCurrency(t.baseFee)} + Additional: {formatCurrency(t.additionalCost)} = {formatCurrency(t.baseFee + t.additionalCost)}
+                          Fee: {formatCurrency(t.baseFee)}
                         </span>
                       )}
                     </div>
