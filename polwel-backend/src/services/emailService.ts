@@ -376,6 +376,64 @@ class EmailService {
     return this.getLogoUrl();
   }
 
+  // Get standardized email footer HTML
+  private static getEmailFooter(): string {
+    return `
+      <tr>
+        <td style="padding: 32px 28px; background-color: #ffffff; border-top: 2px solid #e5e7eb;" bgcolor="#ffffff">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <!-- Regards -->
+            <tr>
+              <td style="padding-bottom: 8px;">
+                <p style="margin: 0; font-size: 14px; color: #1f2937 !important; font-family: Arial, sans-serif;">Regards,</p>
+              </td>
+            </tr>
+            <!-- Organization Name -->
+            <tr>
+              <td style="padding-bottom: 2px;">
+                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development & Career Services Division</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-bottom: 12px;">
+                <p style="margin: 0; font-size: 13px; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Co-operative Society Limited</p>
+              </td>
+            </tr>
+            <!-- Contact Info -->
+            <tr>
+              <td style="padding-bottom: 8px;">
+                <p style="margin: 0; font-size: 12px; color: #374151 !important; line-height: 1.6; font-family: Arial, sans-serif;">
+                  Main: (65) 6235 6428 (Option 4) | 
+                  <a href="https://www.polwel.org.sg" style="color: #3b82f6 !important; text-decoration: none;">www.polwel.org.sg</a> | 
+                  <span style="color: #22c55e !important; font-weight: 600;">#POLWELCares</span>
+                </p>
+              </td>
+            </tr>
+            <!-- Social Media & HRPI -->
+            <tr>
+              <td style="padding-bottom: 16px;">
+                <p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif;">
+                  <span style="font-style: italic;">Stay connected with POLWEL on 
+                  <a href="https://www.linkedin.com/company/polwel" style="color: #0077b5 !important; text-decoration: none; font-weight: 600;">LinkedIn</a> and 
+                  <a href="https://www.youtube.com/@polwelsg" style="color: #ff0000 !important; text-decoration: none; font-weight: 600;">YouTube</a> 
+                  and view our professional development courses on HRPI</span>
+                </p>
+              </td>
+            </tr>
+            <!-- Warning -->
+            <tr>
+              <td style="padding: 16px 0 0 0; border-top: 1px solid #e5e7eb;">
+                <p style="margin: 0; font-size: 10px; color: #dc2626 !important; font-family: Arial, sans-serif; line-height: 1.5;">
+                  <strong style="font-weight: 700;">WARNING:</strong> Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    `;
+  }
+
   private static getTransporter() {
     if (!this.isInitialized) {
       // Check if Microsoft Graph API is configured      
@@ -564,12 +622,7 @@ class EmailService {
                       </td>
                     </tr>
                     <!-- Footer -->
-                    <tr>
-                      <td style="padding: 24px 28px 30px; text-align: center; background-color: #0f172a;" bgcolor="#0f172a">
-                        <p style="margin: 0; font-size: 12px; color: #94a3b8 !important; font-family: Arial, sans-serif;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
-                        <p style="margin: 18px 0 0 0; font-size: 12px; color: #cbd5e1 !important; font-family: Arial, sans-serif;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color: #9ca3af !important; text-decoration: none;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a></p>
-                      </td>
-                    </tr>
+                    ${this.getEmailFooter()}
                   </table>
                 </td>
               </tr>
@@ -971,20 +1024,7 @@ class EmailService {
                       </td>
                     </tr>
                     <!-- Footer -->
-                    <tr>
-                      <td bgcolor="#1f2937" style="padding: 24px; text-align: center; background-color: #1f2937 !important;">
-                        <!--[if mso]>
-                        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
-                        <v:textbox inset="0,0,0,0">
-                        <![endif]-->
-                        <p style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
-                        <p style="margin: 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color: #9ca3af !important; text-decoration: underline !important; font-family: Arial, sans-serif !important;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a></p>
-                        <!--[if mso]>
-                        </v:textbox>
-                        </v:rect>
-                        <![endif]-->
-                      </td>
-                    </tr>
+                    ${this.getEmailFooter()}
                   </table>
                 </td>
               </tr>
@@ -1121,20 +1161,7 @@ class EmailService {
                       </td>
                     </tr>
                     <!-- Footer -->
-                    <tr>
-                      <td bgcolor="#1f2937" style="padding: 24px; text-align: center; background-color: #1f2937 !important;">
-                        <!--[if mso]>
-                        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fillcolor="#1f2937" stroke="false" style="width:552px;height:auto;">
-                        <v:textbox inset="0,0,0,0">
-                        <![endif]-->
-                        <p style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">&copy; ${new Date().getFullYear()} POLWEL Training Management. All rights reserved.</p>
-                        <p style="margin: 0 !important; padding: 0 !important; font-size: 12px !important; color: #d1d5db !important; font-family: Arial, sans-serif !important;">Need help? Email <a href="mailto:${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}" style="color: #9ca3af !important; text-decoration: underline !important; font-family: Arial, sans-serif !important;">${process.env.SUPPORT_EMAIL || 'pdcs@polwel.org.sg'}</a></p>
-                        <!--[if mso]>
-                        </v:textbox>
-                        </v:rect>
-                        <![endif]-->
-                      </td>
-                    </tr>
+                    ${this.getEmailFooter()}
                   </table>
                 </td>
               </tr>
@@ -1176,7 +1203,6 @@ class EmailService {
       specifiedLocation?: string | null;
     },
     baseFee: number,
-    additionalCost: number,
     ccEmails?: string[] | null,
     additionalBody?: string | null,
     attachments?: any[] | null
@@ -1216,8 +1242,6 @@ class EmailService {
         return '0900 to 1700 hrs';
       }
     };
-
-    const professionalFees = baseFee + (additionalCost || 0);
 
     const textBody = `Dear ${name},\n\nPlease refer to the attached documents and the details below regarding the upcoming course, ${courseRunDetails.course || 'N/A'}, for your organisation's reference.\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Day & Date: ${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}\n- Time: ${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}${courseRunDetails.venueAddress ? '\n  ' + courseRunDetails.venueAddress : ''}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Thank you.\n\nRegards,\n\nProfessional Development & Career Services Division\nPOLWEL Co-operative Society Limited\nMain: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares\nStay connected with POLWEL on and view our professional development courses on HRP!`;
 
@@ -1315,11 +1339,7 @@ class EmailService {
                   </td>
                 </tr>
                 <!-- Footer -->
-                <tr>
-                  <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
-                    <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
-                  </td>
-                </tr>
+                ${this.getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -1615,11 +1635,7 @@ class EmailService {
                       </td>
                     </tr>
                     <!-- Footer -->
-                    <tr>
-                      <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
-                        <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
-                      </td>
-                    </tr>
+                    ${this.getEmailFooter()}
                   </table>
                 </td>
               </tr>
@@ -1837,11 +1853,7 @@ class EmailService {
                       </td>
                     </tr>
                     <!-- Footer -->
-                    <tr>
-                      <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
-                        <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
-                      </td>
-                    </tr>
+                    ${this.getEmailFooter()}
                   </table>
                 </td>
               </tr>
@@ -2038,11 +2050,7 @@ class EmailService {
                       </td>
                     </tr>
                     <!-- Footer -->
-                    <tr>
-                      <td style="padding: 24px; background-color: #f9fafb !important; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb" align="center">
-                        <p style="margin: 0; color: #6b7280 !important; font-size: 12px; font-family: Arial, sans-serif !important;">© ${new Date().getFullYear()} POLWEL. All rights reserved.</p>
-                      </td>
-                    </tr>
+                    ${this.getEmailFooter()}
                   </table>
                 </td>
               </tr>

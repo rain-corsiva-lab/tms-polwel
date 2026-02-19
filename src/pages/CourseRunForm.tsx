@@ -288,6 +288,8 @@ const CourseRunForm: React.FC = () => {
             venueFinalFee: course.venueFee || undefined,
             venueMaxParticipants: course.venueMaxParticipants || undefined,
             perHeadFeeIfMaxExceed: course.perHeadPriceIfMaxExceed ? parseFloat(String(course.perHeadPriceIfMaxExceed)) : undefined,
+            // Keep courseRunFeeType as is (course run fee structure)
+            courseRunFeeType: formData.courseRunFeeType || "PER_HEAD",
 
             additionalCostExceedingCapacity: undefined,
           };
@@ -492,11 +494,19 @@ const CourseRunForm: React.FC = () => {
         setFormData({
           ...formData,
           [field]: value,
+          venueFinalFee: selectedVenue.fee || undefined,
           venueMaxParticipants: selectedVenue.maxParticipants || undefined,
           perHeadFeeIfMaxExceed: selectedVenue.perHeadPriceIfMaxExceed ? parseFloat(String(selectedVenue.perHeadPriceIfMaxExceed)) : undefined,
+          // Note: Keep courseRunFeeType as is - it's for course run fees (PER_RUN/PER_HEAD)
+          // Venue's feeType is separate and handled by backend
         });
         // Clear any previous error for venueId
         if (errors.venueId) setErrors({ ...errors, venueId: "" });
+
+        // Show toast notification for auto-fill
+        toast.success("Venue fees auto-filled", {
+          description: `Venue fees populated from ${selectedVenue.name}`,
+        });
         return;
       }
     }
@@ -586,18 +596,18 @@ const CourseRunForm: React.FC = () => {
       // Get venue fee and fee type from selected venue
       const selectedVenue = venues.find((v) => v.id === formData.venueId);
       const venueFee = selectedVenue?.fee ?? null;
-      // Use courseRunFeeType from form, fallback to venue fee type
-      const courseRunFeeType = formData.courseRunFeeType
-        ? String(formData.courseRunFeeType).toUpperCase()
-        : selectedVenue?.feeType
-          ? String(selectedVenue.feeType).toUpperCase()
-          : "PER_HEAD";
+
+      // Two separate fee type fields:
+      // 1. feeType: Venue fee type (PER_HEAD, PER_VENUE, FIXED) - from venue
+      const venueFeeType = selectedVenue?.feeType ? String(selectedVenue.feeType).toUpperCase() : null;
+
+      // 2. courseRunFeeType: Course run fee type (PER_RUN, PER_HEAD) - from form or default
+      const courseRunFeeType = formData.courseRunFeeType ? String(formData.courseRunFeeType).toUpperCase() : "PER_HEAD";
 
       // Prepare trainer assignments
       const trainerAssignments = formData.selectedTrainers.map((trainerId) => ({
         trainerId,
         trainerBaseAmount: formData.baseAmount ?? null,
-        additionalCost: formData.additionalCosts ?? null,
       }));
 
       const submissionData = {
@@ -608,8 +618,8 @@ const CourseRunForm: React.FC = () => {
         endDatetime,
         venueId: formData.venueId || null,
         venueFee: venueFee,
-        feeType: courseRunFeeType, // Use courseRunFeeType from form with fallback
-        courseRunFeeType: courseRunFeeType, // Add explicit courseRunFeeType field
+        feeType: venueFeeType, // Venue fee type (PER_HEAD/PER_VENUE/FIXED)
+        courseRunFeeType: courseRunFeeType, // Course run fee type (PER_RUN/PER_HEAD)
         venueMaxParticipant: formData.venueMaxParticipants ?? null,
         perHeadFeeIfMaxExceed: formData.perHeadFeeIfMaxExceed ?? null,
         venueType: formData.venueType || null, // Send null instead of empty string

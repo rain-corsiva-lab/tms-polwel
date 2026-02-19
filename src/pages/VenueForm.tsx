@@ -58,6 +58,8 @@ const VenueForm = () => {
           name: venue.name,
           address: venue.address || "",
           fee: venue.fee,
+          maxParticipants: venue.maxParticipants || "",
+          perHeadPriceIfMaxExceed: venue.perHeadPriceIfMaxExceed || "",
           contacts: venue.contacts && venue.contacts.length > 0 ? venue.contacts : [{ id: "temp-1", name: "", number: "", email: "" }],
           remarks: venue.remarks || "",
           status: venue.status || "ACTIVE",
@@ -176,6 +178,15 @@ const VenueForm = () => {
         name: formData.name.trim(),
         ...(formData.address && { address: formData.address.trim() }),
         fee: typeof formData.fee === "string" ? parseFloat(formData.fee) : formData.fee,
+        ...(formData.maxParticipants &&
+          formData.maxParticipants !== "" && {
+            maxParticipants: typeof formData.maxParticipants === "string" ? parseInt(formData.maxParticipants) : formData.maxParticipants,
+          }),
+        ...(formData.perHeadPriceIfMaxExceed &&
+          formData.perHeadPriceIfMaxExceed !== "" && {
+            perHeadPriceIfMaxExceed:
+              typeof formData.perHeadPriceIfMaxExceed === "string" ? parseFloat(formData.perHeadPriceIfMaxExceed) : formData.perHeadPriceIfMaxExceed,
+          }),
         contacts: validContacts,
         remarks: formData.remarks.trim(),
         status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE",

@@ -484,8 +484,7 @@ export default function BillingReports() {
                           const courseRunTrainers = courseRun?.courseRunTrainers || [];
                           const trainerFees = courseRunTrainers.reduce((sum: number, trainer: any) => {
                             const baseAmount = Number(trainer.trainerBaseAmount) || 0;
-                            const additionalCost = Number(trainer.additionalCost) || 0;
-                            return sum + baseAmount + additionalCost;
+                            return sum + baseAmount;
                           }, 0);
 
                           // Calculate additional fees

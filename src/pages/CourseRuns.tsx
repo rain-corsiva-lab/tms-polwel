@@ -1754,7 +1754,7 @@ const CourseRuns: React.FC = () => {
                         <div className="text-right">
                           <div className="text-lg font-semibold text-green-600">
                             {"$" +
-                              (Number(crt.trainerBaseAmount ?? 0) + Number(crt.additionalCost ?? 0)).toLocaleString("en-US", {
+                              Number(crt.trainerBaseAmount ?? 0).toLocaleString("en-US", {
                                 minimumFractionDigits: 0,
                                 maximumFractionDigits: 0,
                               })}
@@ -1796,8 +1796,7 @@ const CourseRuns: React.FC = () => {
                           trainerApprovalDialog.courseRunDetails.courseRunTrainers
                             .reduce((sum: number, crt: any) => {
                               const base = Number(crt.trainerBaseAmount ?? 0);
-                              const add = Number(crt.additionalCost ?? 0);
-                              return sum + base + add;
+                              return sum + base;
                             }, 0)
                             .toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </div>
@@ -1963,7 +1962,6 @@ const CourseRuns: React.FC = () => {
               name: crt.trainer?.name || "Unknown",
               email: crt.trainer?.email || "",
               baseFee: crt.trainerBaseAmount || 0,
-              additionalCost: crt.additionalCost || 0,
             })) || []
           }
           partners={

@@ -28,6 +28,7 @@ type AttendanceLearnerRecord = {
   email: string | null;
   contactNumber: string | null;
   departmentName: string | null;
+  designation?: string | null;
   attendanceStatus: string | null;
   attendance: AttendanceDayRecord[];
 };
