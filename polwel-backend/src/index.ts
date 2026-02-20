@@ -42,6 +42,7 @@ import { startCourseRunStatusJob, evaluateCourseRunStatusesNow } from './jobs/co
 import dashboardRoutes from './routes/dashboard';
 import resourceLibraryRoutes from './routes/resourceLibrary';
 import reportingRoutes from './routes/reporting';
+import testEmailRoutes from './routes/testEmail';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -186,8 +187,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request timeout middleware - prevent hanging connections
 app.use((req, res, next) => {
-  // Set timeout to 30 seconds for all requests except file uploads
-  const timeout = req.path.includes('/uploads') ? 120000 : 30000; // 2 min for uploads, 30s for others
+  // Set timeout to 30 seconds for all requests except file uploads and email sending
+  const isLongRunningOperation = req.path.includes('/uploads') || 
+                                   req.path.includes('/send-course-confirmation-email') ||
+                                   req.path.includes('/send-trainer-assignment-email');
+  const timeout = isLongRunningOperation ? 120000 : 30000; // 2 min for uploads/emails, 30s for others
   
   req.setTimeout(timeout, () => {
     console.error(`⏱️ Request timeout on ${req.method} ${req.path} after ${timeout}ms`);
@@ -289,6 +293,7 @@ app.use('/api/uploads', uploadsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/resource-library', resourceLibraryRoutes);
 app.use('/api/reporting', reportingRoutes);
+app.use('/api', testEmailRoutes); // Test email endpoint (no auth for debugging)
 
 // Error handling middleware
 app.use(errorLogger); // Add error logging before error handlers

@@ -13,8 +13,14 @@ interface EmailConfig {
     user: string;
     pass: string;
   };
+  pool?: boolean;
+  maxConnections?: number;
+  socketTimeout?: number;
+  greetingTimeout?: number;
+  connectionTimeout?: number;
   tls?: {
     rejectUnauthorized: boolean;
+    minVersion?: string;
   };
 }
 
@@ -487,6 +493,14 @@ class EmailService {
           user: process.env.MAIL_USERNAME || '',
           pass: process.env.MAIL_PASSWORD || ''
         },
+        // CRITICAL FIX: Disable pooling for immediate Gmail delivery
+        pool: false,
+        // Direct sending - no connection reuse delays
+        maxConnections: 1,
+        // Aggressive timeouts for instant delivery
+        socketTimeout: 10000,
+        greetingTimeout: 5000,
+        connectionTimeout: 10000,
         tls: {
           rejectUnauthorized: false,
           // For STARTTLS, we need to explicitly set ciphers if using older OpenSSL
@@ -506,25 +520,42 @@ class EmailService {
         return null;
       }
 
-      console.log('📧 Initializing email service with SMTP:', {
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        encryption: encryption,
-        user: config.auth.user?.substring(0, 3) + '***' // Only show first 3 chars for security
-      });
+      console.log('╔════════════════════════════════════════════════════════════════╗');
+      console.log('║ 📧 EMAIL SERVICE INITIALIZATION - DETAILED LOG                ║');
+      console.log('╚════════════════════════════════════════════════════════════════╝');
+      console.log('🔧 SMTP Configuration:');
+      console.log('   ├─ Host:', config.host);
+      console.log('   ├─ Port:', config.port);
+      console.log('   ├─ Secure (SSL):', config.secure);
+      console.log('   ├─ Encryption:', encryption);
+      console.log('   ├─ Username:', config.auth.user);
+      console.log('   ├─ Password:', config.auth.pass ? '***SET*** (length: ' + config.auth.pass.length + ')' : '❌ NOT SET');
+      console.log('   ├─ From Address:', this.mailFromAddress);
+      console.log('   └─ TLS Reject Unauthorized:', config.tls?.rejectUnauthorized);
+      console.log('');
 
       this.transporter = nodemailer.createTransport(config as any);
       this.isInitialized = true;
       
+      console.log('✅ Transporter created successfully');
+      console.log('🔄 Verifying SMTP connection...');
+      
       // Verify connection
       this.transporter.verify((error, success) => {
         if (error) {
-          console.error('❌ SMTP connection verification failed:', error.message);
-          console.error('   Code:', (error as any).code);
-          console.error('   Details:', (error as any).response);
+          console.error('╔════════════════════════════════════════════════════════════════╗');
+          console.error('║ ❌ SMTP CONNECTION VERIFICATION FAILED                        ║');
+          console.error('╚════════════════════════════════════════════════════════════════╝');
+          console.error('Error Message:', error.message);
+          console.error('Error Code:', (error as any).code);
+          console.error('Error Command:', (error as any).command);
+          console.error('Response:', (error as any).response);
+          console.error('Full Error:', error);
+          console.error('════════════════════════════════════════════════════════════════');
         } else {
-          console.log('✅ SMTP connection verified successfully');
+          console.log('╔════════════════════════════════════════════════════════════════╗');
+          console.log('║ ✅ SMTP CONNECTION VERIFIED SUCCESSFULLY                      ║');
+          console.log('╚════════════════════════════════════════════════════════════════╝');
         }
       });
     }
@@ -634,8 +665,10 @@ class EmailService {
     };
     try {
       if (transporter) {
-        await transporter.sendMail(mailOptions);
-        console.log(`Trainer setup email sent to ${email}`);
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`✅ Trainer setup email sent to ${email}`);
+        console.log(`   Message ID: ${info.messageId}`);
+        console.log(`   Response: ${info.response}`);
         return true;
       } else {
         console.log('=== TRAINER SETUP EMAIL (Development Mode) ===');
@@ -646,7 +679,15 @@ class EmailService {
         return true;
       }
     } catch (error) {
-      console.error('Error sending trainer setup email:', error);
+      console.error('❌ Error sending trainer setup email:');
+      console.error('   Recipient:', email);
+      console.error('   Error:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && (error as any).code) {
+        console.error('   Error Code:', (error as any).code);
+      }
+      if (error instanceof Error && (error as any).response) {
+        console.error('   SMTP Response:', (error as any).response);
+      }
       return false;
     }
   }
@@ -1324,15 +1365,6 @@ class EmailService {
                           <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                             Thank you.
                           </p>
-                          <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                            Regards,
-                          </p>
-                          <p style="margin: 16px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.8; font-family: Arial, sans-serif !important;">
-                            <strong>Professional Development & Career Services Division</strong><br/>
-                            POLWEL Co-operative Society Limited<br/>
-                            Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
-                            Stay connected with POLWEL on and view our professional development courses on HRP!
-                          </p>
                         </td>
                       </tr>
                     </table>
@@ -1620,15 +1652,6 @@ class EmailService {
                               <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Thank you.
                               </p>
-                              <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                Regards,
-                              </p>
-                              <p style="margin: 16px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.8; font-family: Arial, sans-serif !important;">
-                                <strong>Professional Development & Career Services Division</strong><br/>
-                                POLWEL Co-operative Society Limited<br/>
-                                Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
-                                Stay connected with POLWEL on and view our professional development courses on HRP!
-                              </p>
                             </td>
                           </tr>
                         </table>
@@ -1653,47 +1676,117 @@ class EmailService {
       // Add logo attachment first if available
       if (logoAttachment) {
         mailOptions.attachments.push(logoAttachment);
+        console.log('📎 Added logo attachment to email');
       }
 
+      console.log(`📎 Processing ${attachments.length} attachments...`);
       for (const attachment of attachments) {
         try {
+          console.log(`   Checking attachment: ${attachment.path}`);
           // Check if file exists
           if (fs.existsSync(attachment.path)) {
+            const fileStats = fs.statSync(attachment.path);
+            console.log(`   ✅ File exists (${fileStats.size} bytes)`);
             mailOptions.attachments.push({
               filename: attachment.originalName || attachment.filename,
               path: attachment.path,
             });
+            console.log(`   Added attachment: ${attachment.originalName || attachment.filename}`);
           } else {
-            console.warn(`Attachment file not found: ${attachment.path}`);
+            console.warn(`   ❌ Attachment file not found: ${attachment.path}`);
           }
         } catch (fileErr) {
-          console.warn('Error adding attachment:', (fileErr as any)?.message);
+          console.warn('   ⚠️ Error adding attachment:', (fileErr as any)?.message);
         }
       }
+      console.log(`📎 Total attachments in email: ${mailOptions.attachments.length}`);
     } else if (logoAttachment) {
       // If no custom attachments but logo exists, add it
       mailOptions.attachments = [logoAttachment];
+      console.log('📎 Added only logo attachment to email');
     }
 
     try {
       if (!transporter) {
-        console.log('(EmailService) SMTP not configured — learner confirmation email would be:');
-          console.log('To:', email);
-        console.log('Course:', courseTitle);
-        console.log('Serial:', serialNumber);
-        console.log('Start:', formatDateWithDay(startDate));
-        console.log('End:', formatDateWithDay(endDate));
-        console.log('Venue:', venueName);
-        if (ccRecipients) {
-          console.log('CC:', ccRecipients);
-          }
-        return true;
+        console.error('╔════════════════════════════════════════════════════════════════╗');
+        console.error('║ ❌ SMTP TRANSPORTER NOT CONFIGURED                            ║');
+        console.error('╚════════════════════════════════════════════════════════════════╝');
+        console.error('Email would be sent to:', email);
+        console.error('Course:', courseTitle);
+        console.error('Configure SMTP in .env file with:');
+        console.error('  - MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD');
+        console.error('════════════════════════════════════════════════════════════════');
+        return false;
       }
 
-      await transporter.sendMail(mailOptions);
+      console.log('╔════════════════════════════════════════════════════════════════╗');
+      console.log('║ 📧 SENDING COURSE CONFIRMATION EMAIL - DETAILED LOG           ║');
+      console.log('╚════════════════════════════════════════════════════════════════╝');
+      console.log('📬 Recipient Details:');
+      console.log('   ├─ To:', email);
+      console.log('   ├─ Learner Name:', learnerName);
+      console.log('   ├─ Course:', courseTitle);
+      console.log('   ├─ Subject:', mailOptions.subject);
+      if (ccRecipients) {
+        console.log('   ├─ CC Recipients:', ccRecipients.join(', '));
+      }
+      console.log('   └─ From:', this.mailFromAddress);
+      console.log('');
+      console.log('📋 Mail Options:');
+      console.log('   ├─ From:', mailOptions.from);
+      console.log('   ├─ To:', mailOptions.to);
+      console.log('   ├─ CC:', mailOptions.cc || 'None');
+      console.log('   ├─ Subject:', mailOptions.subject);
+      console.log('   ├─ HTML Length:', mailOptions.html?.length || 0, 'characters');
+      console.log('   └─ Attachments:', mailOptions.attachments?.length || 0, 'file(s)');
+      console.log('');
+      console.log('🔄 Sending email...');
+
+      const info = await transporter.sendMail(mailOptions);
+      
+      console.log('╔════════════════════════════════════════════════════════════════╗');
+      console.log('║ ✅ EMAIL SENT SUCCESSFULLY - SMTP RESPONSE                    ║');
+      console.log('╚════════════════════════════════════════════════════════════════╝');
+      console.log('📨 Email sent to:', email);
+      console.log('📬 SMTP Response Details:');
+      console.log('   ├─ Message ID:', info.messageId);
+      console.log('   ├─ Response:', info.response);
+      console.log('   ├─ Accepted Recipients:', JSON.stringify(info.accepted));
+      console.log('   ├─ Rejected Recipients:', JSON.stringify(info.rejected));
+      console.log('   ├─ Pending:', JSON.stringify(info.pending || []));
+      console.log('   └─ Envelope:', JSON.stringify(info.envelope));
+      console.log('');
+      console.log('🔍 Full Response Object:');
+      console.log(JSON.stringify(info, null, 2));
+      console.log('════════════════════════════════════════════════════════════════');
+      
+      if (info.rejected && info.rejected.length > 0) {
+        console.error('╔════════════════════════════════════════════════════════════════╗');
+        console.error('║ ⚠️  WARNING: EMAIL REJECTED BY SERVER                         ║');
+        console.error('╚════════════════════════════════════════════════════════════════╝');
+        console.error('Rejected Recipients:', info.rejected);
+        console.error('This means the SMTP server refused to deliver to these addresses');
+        console.error('════════════════════════════════════════════════════════════════');
+        return false;
+      }
+      
       return true;
     } catch (error) {
-      console.error('Failed to send learner confirmation email:', error);
+      console.error('╔════════════════════════════════════════════════════════════════╗');
+      console.error('║ ❌ FAILED TO SEND EMAIL - ERROR DETAILS                       ║');
+      console.error('╚════════════════════════════════════════════════════════════════╝');
+      console.error('Failed to send email to:', email);
+      console.error('Error Type:', typeof error);
+      console.error('Error Name:', (error as any)?.name);
+      console.error('Error Message:', (error as any)?.message);
+      console.error('Error Code:', (error as any)?.code);
+      console.error('Error Command:', (error as any)?.command);
+      console.error('Error Response:', (error as any)?.response);
+      console.error('Error Response Code:', (error as any)?.responseCode);
+      console.error('');
+      console.error('Full Error Object:');
+      console.error(JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.error('════════════════════════════════════════════════════════════════');
       return false;
     }
   }
@@ -1842,10 +1935,6 @@ class EmailService {
                               </p>
                               <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Thank you for your understanding and continued support. We look forward to serving you in future training programmes.
-                              </p>
-                              <p style="margin: 16px 0 0 0; color: #1f2937 !important; font-size: 14px; font-weight: 500; font-family: Arial, sans-serif !important;">
-                                Best regards,<br/>
-                                <strong>POLWEL Training System Team</strong>
                               </p>
                             </td>
                           </tr>
@@ -2033,16 +2122,6 @@ class EmailService {
                               
                               <p style="margin: 20px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Thank you.
-                              </p>
-                              <p style="margin: 16px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                Regards,
-                              </p>
-                              
-                              <p style="margin: 16px 0 0 0; color: #1f2937 !important; font-size: 14px; font-weight: 500; font-family: Arial, sans-serif !important;">
-                                <strong>Professional Development & Career Services Division</strong><br/>
-                                POLWEL Co-operative Society Limited<br/>
-                                Main: (65) 6235 6428 (Option 4) | <a href="http://www.polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">www.polwel.org.sg</a> | #POLWELCares<br/>
-                                Stay connected with POLWEL on <a href="https://www.facebook.com/polwelsg" style="color: #4b5563 !important; text-decoration: none;">Facebook</a> and view our professional development courses on <a href="https://hrp.gov.sg/" style="color: #4b5563 !important; text-decoration: none;">HRP</a>!
                               </p>
                             </td>
                           </tr>

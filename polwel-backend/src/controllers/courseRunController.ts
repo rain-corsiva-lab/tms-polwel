@@ -3267,16 +3267,25 @@ export const courseRunController = {
       const totalPartners = (courseRun.courseRunPartners || []).length;
       const totalRecipients = totalTrainers + totalPartners;
 
-      res.json({
-        success: true,
-        message: 'Trainer assignment emails sent successfully',
-        emailsSent: totalRecipients,
-        trainersSent: totalTrainers,
-        partnersSent: totalPartners,
-      });
+      // Check if response already sent (e.g., by timeout middleware)
+      if (!res.headersSent) {
+        res.json({
+          success: true,
+          message: 'Trainer assignment emails sent successfully',
+          emailsSent: totalRecipients,
+          trainersSent: totalTrainers,
+          partnersSent: totalPartners,
+        });
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping success response');
+      }
     } catch (error) {
       console.error('Error sending trainer assignment emails:', error);
-      res.status(500).json(buildErrorResponse('courseRunController.sendTrainerAssignmentEmail', 'Failed to send trainer assignment emails', error));
+      if (!res.headersSent) {
+        res.status(500).json(buildErrorResponse('courseRunController.sendTrainerAssignmentEmail', 'Failed to send trainer assignment emails', error));
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping error response');
+      }
     }
   },
 
@@ -3739,23 +3748,32 @@ export const courseRunController = {
         console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
       }
 
-      res.json({
-        success: true,
-        message: `Course confirmation emails processed. Success: ${successCount}, Failed: ${failedCount}`,
-        emailsSent: successCount,
-        failures: failedCount,
-      });
+      // Check if response already sent (e.g., by timeout middleware)
+      if (!res.headersSent) {
+        res.json({
+          success: true,
+          message: `Course confirmation emails processed. Success: ${successCount}, Failed: ${failedCount}`,
+          emailsSent: successCount,
+          failures: failedCount,
+        });
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping success response');
+      }
     } catch (error) {
       console.error('Error sending course confirmation emails:', error);
-      res
-        .status(500)
-        .json(
-          buildErrorResponse(
-            'courseRunController.sendCourseConfirmationEmail',
-            'Failed to send course confirmation emails',
-            error,
-          ),
-        );
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json(
+            buildErrorResponse(
+              'courseRunController.sendCourseConfirmationEmail',
+              'Failed to send course confirmation emails',
+              error,
+            ),
+          );
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping error response');
+      }
     }
   },
 
@@ -5965,20 +5983,6 @@ export const courseRunController = {
     } catch (error) {
       console.error('Error downloading certificate:', error);
       res.status(500).json(buildErrorResponse('downloadCertificatePublic', 'Failed to download certificate', error));
-    }
-  },
-
-  // Save billing information
-  async saveBilling(req: Request, res: Response): Promise<void> {
-    try {
-      // TODO: Implement billing save functionality
-      res.status(501).json({
-        success: false,
-        error: 'Save billing functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error saving billing:', error);
-      res.status(500).json(buildErrorResponse('saveBilling', 'Failed to save billing', error));
     }
   },
 

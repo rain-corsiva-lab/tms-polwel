@@ -1,0 +1,129 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║     ✅ SWITCHED TO GMAIL SMTP - CHECK YOUR INBOX NOW!              ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+📅 Sent: February 19, 2026 - 22:39:41 WIB
+⚡ Expected Delivery: 10-20 SECONDS (Gmail-to-Gmail is INSTANT!)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 WHAT I CHANGED:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ DISABLED: Mailjet SMTP (in-v3.mailjet.com)
+   - Reason: Too slow, emails not arriving
+
+✅ ENABLED: Gmail SMTP (smtp.gmail.com)
+   - Account: phuongtestwordpress@gmail.com
+   - Gmail-to-Gmail delivery: 10-20 seconds (as you mentioned!)
+   - This is what you were using before
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📧 TEST EMAIL SENT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ To: kukuhthewow@gmail.com
+✅ From: phuongtestwordpress@gmail.com
+✅ Subject: "Course Confirmation — 🚀 GMAIL SMTP TEST"
+✅ Sent: 22:39:41 WIB
+✅ SMTP Response: 250 2.0.0 OK (Gmail accepted!)
+✅ Message ID: <3839966c-5bb0-c5f0-13ce-088240ffc778@gmail.com>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 CHECK YOUR GMAIL NOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Open Gmail: kukuhthewow@gmail.com
+
+2. Look for NEW email from: phuongtestwordpress@gmail.com
+
+3. Subject line contains: "🚀 GMAIL SMTP TEST"
+
+4. Should arrive within: 10-20 SECONDS
+
+5. Check these tabs:
+   ✓ Primary Inbox
+   ✓ Promotions
+   ✓ All Mail
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ TIMING TEST:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Email sent at: 22:39:41 WIB
+Current time:  ~22:40:00 WIB
+Should arrive: Before 22:40:01 WIB (20 seconds max!)
+
+This is GMAIL → GMAIL delivery, usually arrives within 5-15 seconds!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 WHY THIS SHOULD WORK:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Gmail SMTP is Google's service
+✅ Gmail-to-Gmail stays in Google's network
+✅ No external mail servers involved
+✅ No third-party API delays
+✅ You mentioned this was working fast before!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 TEST IT YOURSELF:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Send another test email:
+
+cd /home/kukuh/webprojects/polwel/polwel-backend
+curl -X POST http://localhost:3001/api/test-email \
+  -H "Content-Type: application/json" \
+  -d '{"to":"kukuhthewow@gmail.com","type":"course"}'
+
+Then check Gmail within 20 seconds!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 BACKEND STATUS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Backend running on port 3001
+✅ Using Gmail SMTP (smtp.gmail.com)
+✅ Email service initialized successfully
+✅ Test email sent and accepted by Gmail
+✅ No errors in backend logs
+
+Check logs:
+tail -50 /home/kukuh/webprojects/polwel/polwel-backend/backend-gmail.log
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 WHAT TO DO IF EMAIL STILL NOT IN INBOX:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If the email is NOT in Primary Inbox after 20 seconds:
+
+1. ✓ Check "Promotions" tab
+2. ✓ Check "All Mail" folder
+3. ✓ Search: from:phuongtestwordpress@gmail.com
+4. ✓ Check Spam folder
+
+If it's in Promotions/All Mail but NOT Primary:
+→ This is Gmail auto-categorizing, but email IS being delivered!
+→ Click the email → "Move to Primary" → Future emails go to Primary
+
+If it's NOWHERE after 1 minute:
+→ There may be a Gmail account issue
+→ Try sending to a different email address
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ GMAIL SMTP IS NOW ACTIVE - CHECK YOUR INBOX!
+
+Should arrive within 10-20 seconds as you mentioned it was before!
+
+═══════════════════════════════════════════════════════════════════════

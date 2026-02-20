@@ -261,9 +261,8 @@ const CourseRunDetail: React.FC = () => {
     const perHeadFromCr = cr.perHeadFeeIfMaxExceed ?? cr.venuePerHeadIfExceed ?? cr.venue?.perHeadPriceIfMaxExceed ?? "";
 
     // Handle additionalCostExceedingCapacity - use value even if 0
-    const additionalCost = cr.additionalCostExceedingCapacity !== null && cr.additionalCostExceedingCapacity !== undefined 
-      ? cr.additionalCostExceedingCapacity 
-      : "";
+    const additionalCost =
+      cr.additionalCostExceedingCapacity !== null && cr.additionalCostExceedingCapacity !== undefined ? cr.additionalCostExceedingCapacity : "";
 
     setEditData({
       serialNumber: cr.serialNumber || "",
@@ -295,10 +294,10 @@ const CourseRunDetail: React.FC = () => {
       feeType: cr.feeType || "",
       courseRunFeeType: cr.courseRunFeeType || cr.feeType || "",
     });
-    
-    console.log("Initialized edit data with:", { 
-      additionalCostExceedingCapacity: additionalCost, 
-      feeType: cr.feeType 
+
+    console.log("Initialized edit data with:", {
+      additionalCostExceedingCapacity: additionalCost,
+      feeType: cr.feeType,
     });
   }, []);
 
@@ -376,18 +375,20 @@ const CourseRunDetail: React.FC = () => {
     if (!courseRun || !id) return;
 
     try {
-      const learnerIdentifier = learnerRecord?.learner?.id || learnerRecord?.learnerId || learnerRecord?.id;
+      const learnerIdentifier = learnerRecord?.id;
       if (!learnerIdentifier) {
         toast.error("Unable to determine learner identifier for resend");
         return;
       }
 
-      const response = await courseRunsApi.resendLearnerConfirmation(id, learnerIdentifier);
-      toast.success(response?.message || "Confirmation email sent successfully");
-      loadCourseRunDetail();
+      // Set the selected participant to this learner only
+      setSelectedParticipants(new Set([learnerIdentifier]));
+
+      // Open the confirmation email dialog
+      setSendConfirmationEmailDialogOpen(true);
     } catch (error: any) {
-      console.error("Error sending confirmation email:", error);
-      toast.error(error?.message || "Failed to send confirmation email");
+      console.error("Error opening confirmation email dialog:", error);
+      toast.error(error?.message || "Failed to open confirmation email dialog");
     }
   };
 
@@ -1586,11 +1587,11 @@ const CourseRunDetail: React.FC = () => {
         baseCourseFee: editData.baseCourseFee === "" ? null : Number(editData.baseCourseFee),
         contractFees: editData.contractFees === "" ? null : Number(editData.contractFees),
         // Handle additionalCostExceedingCapacity - convert to number or null
-        additionalCostExceedingCapacity: 
-          editData.additionalCostExceedingCapacity === "" || 
-          editData.additionalCostExceedingCapacity === null || 
+        additionalCostExceedingCapacity:
+          editData.additionalCostExceedingCapacity === "" ||
+          editData.additionalCostExceedingCapacity === null ||
           editData.additionalCostExceedingCapacity === undefined
-            ? null 
+            ? null
             : Number(editData.additionalCostExceedingCapacity),
         venueFee: editData.venueFee === "" ? null : Number(editData.venueFee),
         venueMaxParticipant: editData.venueMaxParticipant === "" ? null : Number(editData.venueMaxParticipant),
@@ -1610,12 +1611,12 @@ const CourseRunDetail: React.FC = () => {
         courseRunFeeType: editData.courseRunFeeType && editData.courseRunFeeType !== "" ? editData.courseRunFeeType : null,
         clientOrganizationId: editData.clientOrganizationId || null,
       };
-      
-      console.log("Saving course run with payload:", { 
-        feeType: payload.feeType, 
-        additionalCostExceedingCapacity: payload.additionalCostExceedingCapacity 
+
+      console.log("Saving course run with payload:", {
+        feeType: payload.feeType,
+        additionalCostExceedingCapacity: payload.additionalCostExceedingCapacity,
       });
-      
+
       const resp = await courseRunsApi.update(courseRun.id, payload);
       if (resp.success) {
         toast.success("Course run updated");
@@ -2172,7 +2173,9 @@ const CourseRunDetail: React.FC = () => {
                                         learnerRecord.confirmationEmailStatus === "FAILED" ||
                                         !learnerRecord.confirmationEmailStatus) &&
                                         courseRun.status !== "DRAFT" && (
-                                          <DropdownMenuItem onClick={() => handleResendConfirmation(learnerRecord)}>Send Confirmation</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleResendConfirmation(learnerRecord)}>
+                                            Send Course Confirmation Email
+                                          </DropdownMenuItem>
                                         )}
                                       <DropdownMenuItem
                                         onClick={() => {
@@ -2354,9 +2357,7 @@ const CourseRunDetail: React.FC = () => {
                                 <div className="border-t pt-3">
                                   <div className="flex items-center justify-between">
                                     <span className="font-medium">Total for this trainer:</span>
-                                    <span className="font-medium text-lg text-blue-600">
-                                      {currency(safeNumber(assignment.baseFee, 0))}
-                                    </span>
+                                    <span className="font-medium text-lg text-blue-600">{currency(safeNumber(assignment.baseFee, 0))}</span>
                                   </div>
                                 </div>
                               </div>
@@ -2625,7 +2626,7 @@ const CourseRunDetail: React.FC = () => {
                           value={
                             isEditing
                               ? editData?.additionalCostExceedingCapacity
-                              : courseRun.additionalCostExceedingCapacity ?? calculateAdditionalCostExceedingCapacity() ?? ""
+                              : (courseRun.additionalCostExceedingCapacity ?? calculateAdditionalCostExceedingCapacity() ?? "")
                           }
                           disabled={!isEditing || (courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))}
                           onChange={(e) => handleEditField("additionalCostExceedingCapacity", e.target.value)}
@@ -2645,7 +2646,8 @@ const CourseRunDetail: React.FC = () => {
                                 const remarks = courseTrainer?.remarks;
                                 return (
                                   <li key={crt.trainer.id}>
-                                    - {crt.trainer.name}{remarks ? `, ${remarks}` : ""}
+                                    - {crt.trainer.name}
+                                    {remarks ? `, ${remarks}` : ""}
                                   </li>
                                 );
                               })}
