@@ -61,8 +61,14 @@ try {
 
 // Generate HTML from template
 export function generateCertificateHTML(data: CertificateData): string {
-  // Format duration with hyphen: "4-days" instead of "4 days"
-  const durationText = `${data.duration}-${data.durationType}`.trim();
+  // Format duration with hyphen and proper singular/plural form
+  // e.g. duration=1 → "1-day" / "1-hour"; duration=2 → "2-days" / "2-hours"
+  const durationNum = Number(data.duration);
+  // Normalise to the base singular form ("day" or "hour")
+  const baseType = data.durationType.toLowerCase().trim().replace(/s$/, '');
+  const durationTypeFormatted = durationNum === 1 ? baseType : baseType + 's';
+
+  const durationText = `${data.duration}-${durationTypeFormatted}`.trim();
   
   const formattedEndDate = data.endDate.toLocaleDateString('en-GB', {
     day: 'numeric',

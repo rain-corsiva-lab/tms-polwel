@@ -1145,7 +1145,7 @@ const CourseRuns: React.FC = () => {
           </Button>
           <Button variant="outline" onClick={() => setDuplicateDialog(true)} className="border-blue-600 text-blue-600 hover:bg-blue-50">
             <Plus className="h-4 w-4 mr-2" />
-            Add from Post Run
+            Duplicate post run
           </Button>
           <Button onClick={() => navigate("/course-runs/new")}>
             <Plus className="h-4 w-4 mr-2" />

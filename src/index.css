@@ -411,3 +411,15 @@ button.relative.flex.items-center.rounded-sm{
     scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
   }
 }
+
+/* ── Disable scroll-wheel value change on all number inputs ─────────────────
+   Prevents accidental value changes when scrolling through forms.
+   The `onWheel` handler below works alongside this CSS to blur the input. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}

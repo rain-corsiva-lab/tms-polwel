@@ -961,6 +961,15 @@ export const courseRunController = {
                   id: true,
                   name: true,
                   email: true,
+                  pointOfContactEmail: true,
+                  partnerTrainers: {
+                    where: { deletedAt: null },
+                    select: {
+                      id: true,
+                      trainerName: true,
+                      trainerEmail: true,
+                    },
+                  },
                 },
               },
             },
@@ -3143,7 +3152,8 @@ export const courseRunController = {
           baseFee,
           ccList.length > 0 ? ccList : null,
           additionalBody || null,
-          attachments.length > 0 ? attachments : null
+          attachments.length > 0 ? attachments : null,
+          'trainer'
         );
 
         // create history record with attachments - ONLY if email was sent successfully
@@ -3219,10 +3229,10 @@ export const courseRunController = {
           partnerName,
           courseDetails,
           0, // No base fee for partners
-          0, // No additional cost for partners
           ccList.length > 0 ? ccList : null,
           additionalBody || null,
-          attachments.length > 0 ? attachments : null
+          attachments.length > 0 ? attachments : null,
+          'partner'
         );
 
         return result;
@@ -3267,16 +3277,25 @@ export const courseRunController = {
       const totalPartners = (courseRun.courseRunPartners || []).length;
       const totalRecipients = totalTrainers + totalPartners;
 
-      res.json({
-        success: true,
-        message: 'Trainer assignment emails sent successfully',
-        emailsSent: totalRecipients,
-        trainersSent: totalTrainers,
-        partnersSent: totalPartners,
-      });
+      // Check if response already sent (e.g., by timeout middleware)
+      if (!res.headersSent) {
+        res.json({
+          success: true,
+          message: 'Trainer assignment emails sent successfully',
+          emailsSent: totalRecipients,
+          trainersSent: totalTrainers,
+          partnersSent: totalPartners,
+        });
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping success response');
+      }
     } catch (error) {
       console.error('Error sending trainer assignment emails:', error);
-      res.status(500).json(buildErrorResponse('courseRunController.sendTrainerAssignmentEmail', 'Failed to send trainer assignment emails', error));
+      if (!res.headersSent) {
+        res.status(500).json(buildErrorResponse('courseRunController.sendTrainerAssignmentEmail', 'Failed to send trainer assignment emails', error));
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping error response');
+      }
     }
   },
 
@@ -3739,23 +3758,32 @@ export const courseRunController = {
         console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
       }
 
-      res.json({
-        success: true,
-        message: `Course confirmation emails processed. Success: ${successCount}, Failed: ${failedCount}`,
-        emailsSent: successCount,
-        failures: failedCount,
-      });
+      // Check if response already sent (e.g., by timeout middleware)
+      if (!res.headersSent) {
+        res.json({
+          success: true,
+          message: `Course confirmation emails processed. Success: ${successCount}, Failed: ${failedCount}`,
+          emailsSent: successCount,
+          failures: failedCount,
+        });
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping success response');
+      }
     } catch (error) {
       console.error('Error sending course confirmation emails:', error);
-      res
-        .status(500)
-        .json(
-          buildErrorResponse(
-            'courseRunController.sendCourseConfirmationEmail',
-            'Failed to send course confirmation emails',
-            error,
-          ),
-        );
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json(
+            buildErrorResponse(
+              'courseRunController.sendCourseConfirmationEmail',
+              'Failed to send course confirmation emails',
+              error,
+            ),
+          );
+      } else {
+        console.log('⚠️ Response already sent by timeout middleware, skipping error response');
+      }
     }
   },
 
@@ -3939,6 +3967,8 @@ export const courseRunController = {
             Number(assignment.trainerBaseAmount || 0),
             null,
             null,
+            undefined,
+            'trainer'
           );
 
           await prisma.courseRunTrainer.update({
@@ -4017,9 +4047,10 @@ export const courseRunController = {
             partnerName,
             partnerCourseDetails,
             0, // No base fee for partners
-            0, // No additional cost for partners
             null,
             null,
+            undefined,
+            'partner'
           );
 
           if (result.success) {
@@ -4990,6 +5021,17 @@ export const courseRunController = {
               email: true,
             },
           },
+          courseRun: {
+            include: {
+              course: {
+                select: {
+                  id: true,
+                  title: true,
+                  courseCode: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -4997,6 +5039,56 @@ export const courseRunController = {
         success: true,
         message: 'Waiver form submitted successfully',
         enrollment,
+      });
+
+      // ── Asynchronous waiver notification emails (don't block HTTP response) ──
+      setImmediate(async () => {
+        try {
+          // Find all users with waiver:edit (approve) permission who are active
+          const waiverAdmins = await prisma.userPermission.findMany({
+            where: {
+              permissionName: 'waiver:edit',
+              granted: true,
+              user: { status: 'ACTIVE' },
+            },
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          });
+
+          if (waiverAdmins.length === 0) {
+            console.log('(submitWaiverForm) No users with waiver:edit permission found — no notification sent');
+            return;
+          }
+
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+          const waiverRequestUrl = `${frontendUrl}/waiver-requests`;
+          const courseName   = enrollment.courseRun?.course?.title      || 'N/A';
+          const serialNumber = enrollment.courseRun?.serialNumber        || '';
+          const submissionDate = enrollment.waiverSubmittedAt || new Date();
+
+          console.log(`(submitWaiverForm) Sending waiver notification to ${waiverAdmins.length} admin(s)…`);
+
+          for (const wp of waiverAdmins) {
+            if (!wp.user.email) continue;
+            await EmailService.sendWaiverPendingNotificationEmail({
+              adminEmail:      wp.user.email,
+              adminName:       wp.user.name,
+              learnerName:     enrollment.learner.fullname,
+              courseName,
+              serialNumber,
+              submissionDate,
+              reason:          waiverReason,
+              waiverRequestUrl,
+            }).catch((err) => {
+              console.error(`(submitWaiverForm) Failed to send waiver notification to ${wp.user.email}:`, err?.message);
+            });
+          }
+        } catch (notifyErr) {
+          console.error('(submitWaiverForm) Waiver notification error:', notifyErr);
+        }
       });
     } catch (error) {
       console.error('Error submitting waiver form:', error);
@@ -5922,7 +6014,6 @@ export const courseRunController = {
                   email: true,
                   contact: true,
                   designation: true,
-                  departmentName: true,
                 },
               },
             },
@@ -5965,20 +6056,6 @@ export const courseRunController = {
     } catch (error) {
       console.error('Error downloading certificate:', error);
       res.status(500).json(buildErrorResponse('downloadCertificatePublic', 'Failed to download certificate', error));
-    }
-  },
-
-  // Save billing information
-  async saveBilling(req: Request, res: Response): Promise<void> {
-    try {
-      // TODO: Implement billing save functionality
-      res.status(501).json({
-        success: false,
-        error: 'Save billing functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error saving billing:', error);
-      res.status(500).json(buildErrorResponse('saveBilling', 'Failed to save billing', error));
     }
   },
 

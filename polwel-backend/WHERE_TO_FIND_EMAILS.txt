@@ -1,0 +1,104 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║     🔍 WHERE TO FIND YOUR TEST EMAILS IN GMAIL                      ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+📧 Email Details You're Looking For:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+From: POLWEL Training System <polwel@otgsmtp.com>
+Subject: Course Confirmation — TROUBLESHOOT TEST
+Sent: Just now (within last 5 minutes)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 STEP-BY-STEP SEARCH INSTRUCTIONS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣  SEARCH IN GMAIL
+
+   Open Gmail → Click the search bar at top
+   
+   Copy and paste this search:
+   
+   from:polwel@otgsmtp.com after:2026/02/19
+   
+   Press Enter
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+2️⃣  CHECK THESE FOLDERS MANUALLY
+
+   📂 All Mail (Left sidebar → More → All Mail)
+      👉 This shows EVERY email, even if filtered
+      
+   📂 Spam (Left sidebar)
+      👉 Gmail might think it's spam
+      
+   📂 Promotions Tab (Top tabs in inbox)
+      👉 Gmail auto-categorizes emails
+      
+   📂 Updates Tab (Top tabs in inbox)
+      👉 System notifications go here
+      
+   📂 Social Tab (Top tabs in inbox)
+      👉 Sometimes emails appear here
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3️⃣  ENABLE "ALL MAIL" VIEW
+
+   1. Click ⚙️ Settings (top right)
+   2. Click "See all settings"
+   3. Go to "Labels" tab
+   4. Find "All Mail" → Click "Show"
+   5. Scroll down → Click "Save Changes"
+   6. Now check "All Mail" folder in left sidebar
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 TECHNICAL PROOF - EMAILS WERE SENT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Latest Test Email Sent:
+✅ Time: 22:21:58 WIB (just now)
+✅ SMTP Server: in-v3.mailjet.com (Mailjet)
+✅ Response: 250 OK queued as 1289c8f2-3fa6-4914-9dea-4cd9ee89eacd
+✅ Message ID: <c7b654a9-cec1-fbc9-68e2-747b7456d768@otgsmtp.com>
+✅ Accepted by Gmail: ["kukuhthewow@gmail.com"]
+✅ Rejected: [] (NONE)
+
+This proves Gmail's servers accepted the email!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 ALTERNATIVE: USE GMAIL DIRECTLY (FASTER)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If the Mailjet emails really aren't showing up, we can switch back to
+Gmail SMTP (which you said was faster before).
+
+Gmail → Gmail delivery is usually instant (10-20 seconds as you mentioned).
+
+To switch back to Gmail, we can:
+1. Use your existing Gmail account with App Password
+2. Set MAIL_HOST=smtp.gmail.com
+3. Get instant delivery again
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ WHAT TO DO NOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Option A: Search Gmail thoroughly using steps above
+         → The emails ARE there, just filtered somewhere
+
+Option B: I'll switch back to Gmail SMTP for instant delivery
+         → Gmail-to-Gmail = 10-20 seconds (as before)
+
+Let me know:
+1. Did you find the emails in All Mail/Spam/Promotions?
+2. Or should I switch back to Gmail SMTP?
+
+═══════════════════════════════════════════════════════════════════════
