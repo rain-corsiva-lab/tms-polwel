@@ -115,10 +115,17 @@ interface CourseRunDetailData {
   }>;
   courseRunPartners?: Array<{
     id: string;
+    selectedTrainerIds?: string[] | null;
     partner: {
       id: string;
       name: string;
       email: string;
+      pointOfContactEmail?: string | null;
+      partnerTrainers?: Array<{
+        id: string;
+        trainerName: string;
+        trainerEmail?: string | null;
+      }>;
     };
   }>;
   courseRunLearners: Array<{
@@ -2432,7 +2439,7 @@ const CourseRunDetail: React.FC = () => {
                                   {/* Show partner trainers when selected */}
                                   {isSelected && partnerTrainers.length > 0 && (
                                     <div className="mt-3 pl-4 border-l-2 border-green-200 space-y-2">
-                                      <p className="text-xs font-semibold text-gray-600 uppercase">Associated Trainers:</p>
+                                      <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Partner Trainer(s)</p>
                                       {partnerTrainers.map((trainer: any) => {
                                         const isTrainerSelected = partnerAssignments[partner.id]?.selectedTrainerIds?.includes(trainer.id) || false;
                                         return (
@@ -2584,7 +2591,7 @@ const CourseRunDetail: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Contract Fees - Editable for training partners, auto-calculated for trainers */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Contract Fees ($)</Label>
+                        <Label className="text-sm font-medium">Trainer Contract Fees ($)</Label>
                         {(() => {
                           const hasTrainingPartners = courseRun.courseRunPartners && courseRun.courseRunPartners.length > 0;
                           const isLocked = courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status);
@@ -2607,9 +2614,7 @@ const CourseRunDetail: React.FC = () => {
                                 className={isContractFeesEditable ? "" : "bg-gray-50"}
                               />
                               <p className="text-xs text-gray-500">
-                                {hasTrainingPartners
-                                  ? "Editable for training partners"
-                                  : "Auto-calculated from trainer assignments (updates live based on PER_PAX costs)"}
+                                {hasTrainingPartners ? "Editable for training partners" : "Auto-calculated from trainer assignments"}
                               </p>
                             </>
                           );
@@ -2661,8 +2666,27 @@ const CourseRunDetail: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Venue Fee Type & Base Venue Fee - 2x2 Grid Row 2 */}
+                    {/* Base Venue Fee & Venue Fee Type - 2x2 Grid Row 2 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Base Venue Fee */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={isEditing ? editData?.venueFee : (courseRun.venueFee ?? "")}
+                          disabled={!isEditing || (courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))}
+                          onChange={(e) => handleEditField("venueFee", e.target.value)}
+                          className={
+                            isEditing && !(courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))
+                              ? ""
+                              : "bg-gray-50"
+                          }
+                        />
+                        <p className="text-xs text-gray-500">Base venue rental fee</p>
+                      </div>
+
                       {/* Venue Fee Type */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Venue Fee Type</Label>
@@ -2681,25 +2705,6 @@ const CourseRunDetail: React.FC = () => {
                           <Input value={courseRun.feeType || ""} disabled className="bg-gray-50" />
                         )}
                         <p className="text-xs text-gray-500">Pricing model for venue charges</p>
-                      </div>
-
-                      {/* Base Venue Fee */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={isEditing ? editData?.venueFee : (courseRun.venueFee ?? "")}
-                          disabled={!isEditing || (courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))}
-                          onChange={(e) => handleEditField("venueFee", e.target.value)}
-                          className={
-                            isEditing && !(courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))
-                              ? ""
-                              : "bg-gray-50"
-                          }
-                        />
-                        <p className="text-xs text-gray-500">Base venue rental fee</p>
                       </div>
                     </div>
 
@@ -2995,12 +3000,22 @@ const CourseRunDetail: React.FC = () => {
           })) || []
         }
         partners={
-          courseRun.courseRunPartners?.map((crp) => ({
-            id: crp.partner.id,
-            name: crp.partner.name,
-            email: crp.partner.email || "",
-            pointOfContactEmail: (crp.partner as any).pointOfContactEmail || crp.partner.email || "",
-          })) || []
+          courseRun.courseRunPartners?.map((crp) => {
+            // Use availablePartners (loaded from course API) – guaranteed to have partnerTrainers
+            const fullPartner = availablePartners.find((ap: any) => ap.id === crp.partner.id);
+            const allTrainers: Array<{ id: string; trainerName: string; trainerEmail?: string }> =
+              (fullPartner as any)?.partnerTrainers || crp.partner.partnerTrainers || [];
+            // partnerAssignments already stores selectedTrainerIds loaded from DB
+            const selectedIds: string[] = partnerAssignments[crp.partner.id]?.selectedTrainerIds || [];
+            const trainersToShow = selectedIds.length > 0 ? allTrainers.filter((pt) => selectedIds.includes(pt.id)) : allTrainers;
+            return {
+              id: crp.partner.id,
+              name: crp.partner.name,
+              email: crp.partner.email || "",
+              pointOfContactEmail: (fullPartner as any)?.pointOfContactEmail || crp.partner.pointOfContactEmail || crp.partner.email || "",
+              partnerTrainers: trainersToShow,
+            };
+          }) || []
         }
         courseRunDetails={{
           serialNumber: courseRun.serialNumber || "",
