@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -19,13 +19,17 @@ interface SendTrainerEmailDialogProps {
     name: string;
     email: string;
     baseFee: number;
-    additionalCost: number;
   }>;
   partners?: Array<{
     id: string;
     name: string;
     email: string;
     pointOfContactEmail?: string;
+    partnerTrainers?: Array<{
+      id: string;
+      trainerName: string;
+      trainerEmail?: string;
+    }>;
   }>;
   courseRunDetails: {
     serialNumber: string;
@@ -50,6 +54,40 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
   const [additionalBody, setAdditionalBody] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+
+  // Internally resolved partner trainers keyed by partnerId
+  // This avoids relying on parent state timing and ensures fresh data on open
+  const [resolvedPartnerTrainers, setResolvedPartnerTrainers] = useState<
+    Record<string, Array<{ id: string; trainerName: string; trainerEmail?: string | null }>>
+  >({});
+
+  useEffect(() => {
+    if (!open || !courseRunId) return;
+
+    courseRunsApi
+      .getById(courseRunId)
+      .then((res: any) => {
+        const crps: any[] = res?.courseRun?.courseRunPartners || [];
+        const map: Record<string, Array<{ id: string; trainerName: string; trainerEmail?: string | null }>> = {};
+
+        for (const crp of crps) {
+          const partnerId: string = crp.partner?.id;
+          if (!partnerId) continue;
+
+          const allTrainers: Array<{ id: string; trainerName: string; trainerEmail?: string | null }> = crp.partner?.partnerTrainers || [];
+
+          // selectedTrainerIds is a Json field — comes as array or null
+          const selectedIds: string[] = Array.isArray(crp.selectedTrainerIds) ? crp.selectedTrainerIds : [];
+
+          map[partnerId] = selectedIds.length > 0 ? allTrainers.filter((pt) => selectedIds.includes(pt.id)) : allTrainers;
+        }
+
+        setResolvedPartnerTrainers(map);
+      })
+      .catch(() => {
+        // silently ignore — fall back to prop data
+      });
+  }, [open, courseRunId]);
 
   const handleFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -186,7 +224,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
     return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(amount);
   };
 
-  const totalFees = trainers.reduce((sum, t) => sum + t.baseFee + t.additionalCost, 0);
+  const totalFees = trainers.reduce((sum, t) => sum + t.baseFee, 0);
   const hasPartners = partners && partners.length > 0;
   const isPartnerScenario = hasPartners;
 
@@ -217,6 +255,25 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
                         <span className="text-gray-600 min-w-[80px]">Email To:</span>
                         <span className="font-medium text-blue-700">{partner.pointOfContactEmail || partner.email}</span>
                       </div>
+                      {/* Partner Trainers List */}
+                      {(() => {
+                        const pts = resolvedPartnerTrainers[partner.id] ?? partner.partnerTrainers ?? [];
+                        if (pts.length === 0) return null;
+                        return (
+                          <div className="mt-2 pt-2 border-t border-blue-100">
+                            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Partner Trainer(s)</p>
+                            <div className="space-y-1">
+                              {pts.map((pt) => (
+                                <div key={pt.id} className="flex items-center gap-2 text-xs text-gray-700">
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                                  <span className="font-medium">{pt.trainerName}</span>
+                                  {pt.trainerEmail && <span className="text-gray-500">({pt.trainerEmail})</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}
@@ -255,11 +312,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
                   {trainers.map((t) => (
                     <div key={t.id} className="flex justify-between items-center text-xs">
                       <span className={isPartnerScenario ? "text-gray-600" : ""}>{t.name}</span>
-                      {!isPartnerScenario && (
-                        <span className="text-gray-600">
-                          Base: {formatCurrency(t.baseFee)} + Additional: {formatCurrency(t.additionalCost)} = {formatCurrency(t.baseFee + t.additionalCost)}
-                        </span>
-                      )}
+                      {!isPartnerScenario && <span className="text-gray-600">Fee: {formatCurrency(t.baseFee)}</span>}
                     </div>
                   ))}
                   {!isPartnerScenario && (

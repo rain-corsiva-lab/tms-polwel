@@ -62,7 +62,7 @@ const uploadEmailAttachment = multer({
     fileSize: 25 * 1024 * 1024, // 25MB - Microsoft Outlook restriction
   },
   fileFilter: (req, file, cb) => {
-    // Allow common document types
+    // Allow common document types and zip files
     const allowed = [
       'application/pdf',
       'application/msword',
@@ -73,6 +73,10 @@ const uploadEmailAttachment = multer({
       'image/jpeg',
       'image/png',
       'image/gif',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-compressed',
+      'application/octet-stream', // Sometimes used for zip files
     ];
 
     if (allowed.includes(file.mimetype)) {

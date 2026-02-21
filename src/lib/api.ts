@@ -218,7 +218,7 @@ export const debugAuthState = () => {
 };
 
 // API request helper with connection retry and fallback
-const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+const apiRequest = async (endpoint: string, options: RequestInit & { timeout?: number } = {}) => {
   const token = getAuthToken();
 
   const headers = new Headers(options.headers as HeadersInit | undefined);
@@ -234,11 +234,14 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
+  // Use custom timeout if provided, otherwise default to 30 seconds
+  const timeoutMs = options.timeout || 30000;
+
   const config: RequestInit = {
     ...options,
     headers,
     // Add timeout and keep-alive settings
-    signal: options.signal || AbortSignal.timeout(30000), // 30 second timeout
+    signal: options.signal || AbortSignal.timeout(timeoutMs),
     keepalive: true, // Keep connection alive for better performance
   };
 
@@ -1713,7 +1716,7 @@ export const courseRunsApi = {
   },
 
   // Update trainer assignments
-  updateTrainerAssignments: async (courseRunId: string, trainers: Array<{trainerId: string; trainerBaseAmount: number; additionalCost: number}>) => {
+  updateTrainerAssignments: async (courseRunId: string, trainers: Array<{trainerId: string; trainerBaseAmount: number}>) => {
     return apiRequest(`/course-runs/${courseRunId}/trainer-assignments`, {
       method: 'PUT',
       body: JSON.stringify({ trainers }),
@@ -1757,6 +1760,7 @@ export const courseRunsApi = {
     return apiRequest(`/course-runs/${courseRunId}/send-course-confirmation-email`, {
       method: 'POST',
       body: JSON.stringify(payload),
+      timeout: 120000, // 120 seconds for email operations with attachments
     });
   },
 
@@ -1775,6 +1779,7 @@ export const courseRunsApi = {
     return apiRequest(`/course-runs/${courseRunId}/send-trainer-assignment-email`, {
       method: 'POST',
       body: JSON.stringify(payload),
+      timeout: 120000, // 120 seconds for email operations with attachments
     });
   },
 
@@ -1801,6 +1806,7 @@ export const courseRunsApi = {
     return apiRequest(`/course-runs/${courseRunId}/certificates/send`, {
       method: 'POST',
       body: JSON.stringify({ learnerIds }),
+      timeout: 120000, // 120 seconds for email operations with attachments
     });
   },
 

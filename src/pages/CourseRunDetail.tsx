@@ -105,8 +105,6 @@ interface CourseRunDetailData {
   courseRunTrainers: Array<{
     id: string;
     trainerBaseAmount: number;
-    additionalCost: number;
-    additionalCostUnit?: string;
     remarks: string;
     trainer: {
       id: string;
@@ -117,10 +115,17 @@ interface CourseRunDetailData {
   }>;
   courseRunPartners?: Array<{
     id: string;
+    selectedTrainerIds?: string[] | null;
     partner: {
       id: string;
       name: string;
       email: string;
+      pointOfContactEmail?: string | null;
+      partnerTrainers?: Array<{
+        id: string;
+        trainerName: string;
+        trainerEmail?: string | null;
+      }>;
     };
   }>;
   courseRunLearners: Array<{
@@ -176,10 +181,10 @@ const CourseRunDetail: React.FC = () => {
   // Trainer Assignment State (always loaded, no edit mode)
   const [availableTrainers, setAvailableTrainers] = useState<any[]>([]);
   const [trainerAssignments, setTrainerAssignments] = useState<{
-    [trainerId: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null; additionalCostUnit?: string };
+    [trainerId: string]: { selected: boolean; baseFee?: number | null };
   }>({});
   const [initialTrainerAssignments, setInitialTrainerAssignments] = useState<{
-    [trainerId: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null; additionalCostUnit?: string };
+    [trainerId: string]: { selected: boolean; baseFee?: number | null };
   }>({});
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
 
@@ -262,6 +267,10 @@ const CourseRunDetail: React.FC = () => {
     const venueMax = cr.venueMaxParticipant ?? cr.venue?.maxParticipants ?? "";
     const perHeadFromCr = cr.perHeadFeeIfMaxExceed ?? cr.venuePerHeadIfExceed ?? cr.venue?.perHeadPriceIfMaxExceed ?? "";
 
+    // Handle additionalCostExceedingCapacity - use value even if 0
+    const additionalCost =
+      cr.additionalCostExceedingCapacity !== null && cr.additionalCostExceedingCapacity !== undefined ? cr.additionalCostExceedingCapacity : "";
+
     setEditData({
       serialNumber: cr.serialNumber || "",
       courseRunType: cr.courseRunType || "",
@@ -281,7 +290,7 @@ const CourseRunDetail: React.FC = () => {
       remarks: cr.remarks || "",
       baseCourseFee: cr.baseCourseFee ?? "",
       contractFees: cr.contractFees ?? "",
-      additionalCostExceedingCapacity: cr.additionalCostExceedingCapacity ?? "",
+      additionalCostExceedingCapacity: additionalCost,
       venueFee: cr.venueFee ?? cr.venue?.fee ?? "",
       venueMaxParticipant: venueMax,
       perHeadFeeIfMaxExceed: perHeadFromCr,
@@ -291,6 +300,11 @@ const CourseRunDetail: React.FC = () => {
       contingencyFee: cr.contingencyFee ?? "",
       feeType: cr.feeType || "",
       courseRunFeeType: cr.courseRunFeeType || cr.feeType || "",
+    });
+
+    console.log("Initialized edit data with:", {
+      additionalCostExceedingCapacity: additionalCost,
+      feeType: cr.feeType,
     });
   }, []);
 
@@ -368,18 +382,20 @@ const CourseRunDetail: React.FC = () => {
     if (!courseRun || !id) return;
 
     try {
-      const learnerIdentifier = learnerRecord?.learner?.id || learnerRecord?.learnerId || learnerRecord?.id;
+      const learnerIdentifier = learnerRecord?.id;
       if (!learnerIdentifier) {
         toast.error("Unable to determine learner identifier for resend");
         return;
       }
 
-      const response = await courseRunsApi.resendLearnerConfirmation(id, learnerIdentifier);
-      toast.success(response?.message || "Confirmation email sent successfully");
-      loadCourseRunDetail();
+      // Set the selected participant to this learner only
+      setSelectedParticipants(new Set([learnerIdentifier]));
+
+      // Open the confirmation email dialog
+      setSendConfirmationEmailDialogOpen(true);
     } catch (error: any) {
-      console.error("Error sending confirmation email:", error);
-      toast.error(error?.message || "Failed to send confirmation email");
+      console.error("Error opening confirmation email dialog:", error);
+      toast.error(error?.message || "Failed to open confirmation email dialog");
     }
   };
 
@@ -997,13 +1013,11 @@ const CourseRunDetail: React.FC = () => {
       }
 
       // Initialize trainer assignments from current courseRunTrainers
-      const assignments: { [key: string]: { selected: boolean; baseFee?: number | null; additionalCost?: number | null; additionalCostUnit?: string } } = {};
+      const assignments: { [key: string]: { selected: boolean; baseFee?: number | null } } = {};
       courseRun.courseRunTrainers?.forEach((crt) => {
         assignments[crt.trainer.id] = {
           selected: true,
           baseFee: crt.trainerBaseAmount === null || crt.trainerBaseAmount === undefined ? null : Number(crt.trainerBaseAmount),
-          additionalCost: crt.additionalCost === null || crt.additionalCost === undefined ? null : Number(crt.additionalCost),
-          additionalCostUnit: crt.additionalCostUnit || "PER_CLASS",
         };
       });
 
@@ -1014,8 +1028,6 @@ const CourseRunDetail: React.FC = () => {
             assignments[ct.trainer.id] = {
               selected: false,
               baseFee: ct.feePerRun || 0,
-              additionalCost: null,
-              additionalCostUnit: "PER_CLASS",
             };
           }
         });
@@ -1052,8 +1064,6 @@ const CourseRunDetail: React.FC = () => {
         .map(([trainerId, data]) => ({
           trainerId,
           trainerBaseAmount: data.baseFee === null || data.baseFee === undefined ? null : Number(data.baseFee),
-          additionalCost: data.additionalCost === null || data.additionalCost === undefined ? null : Number(data.additionalCost),
-          additionalCostUnit: data.additionalCostUnit || "PER_CLASS",
         }));
 
       // Prepare partner assignments data
@@ -1194,8 +1204,6 @@ const CourseRunDetail: React.FC = () => {
       [trainerId]: {
         selected: !prev[trainerId]?.selected,
         baseFee: prev[trainerId]?.baseFee === undefined ? null : (prev[trainerId]?.baseFee ?? null),
-        additionalCost: prev[trainerId]?.additionalCost === undefined ? null : (prev[trainerId]?.additionalCost ?? null),
-        additionalCostUnit: prev[trainerId]?.additionalCostUnit || "PER_CLASS",
       },
     }));
   };
@@ -1232,12 +1240,12 @@ const CourseRunDetail: React.FC = () => {
     });
   };
 
-  const updateTrainerFee = (trainerId: string, field: "baseFee" | "additionalCost" | "additionalCostUnit", value: number | null | string) => {
+  const updateTrainerFee = (trainerId: string, field: "baseFee", value: number | null) => {
     setTrainerAssignments((prev) => ({
       ...prev,
       [trainerId]: {
-        ...(prev[trainerId] || { selected: false, baseFee: null, additionalCost: null, additionalCostUnit: "PER_CLASS" }),
-        [field]: field === "additionalCostUnit" ? value : value === null || value === undefined ? null : Number(value),
+        ...(prev[trainerId] || { selected: false, baseFee: null }),
+        [field]: value === null || value === undefined ? null : Number(value),
       },
     }));
   };
@@ -1245,24 +1253,16 @@ const CourseRunDetail: React.FC = () => {
   const calculateTotalTrainerFees = () => {
     return Object.entries(trainerAssignments)
       .filter(([_, data]) => data.selected)
-      .reduce((sum, [_, data]) => sum + safeNumber(data.baseFee, 0) + safeNumber(data.additionalCost, 0), 0);
+      .reduce((sum, [_, data]) => sum + safeNumber(data.baseFee, 0), 0);
   };
 
-  // Calculate dynamic contract fees based on PER_PAX trainer costs
+  // Calculate dynamic contract fees based on trainer base fees
   const calculateDynamicContractFees = () => {
-    const participantCount = courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus !== "WITHDRAWN").length || 0;
-
     const totalFees = Object.entries(trainerAssignments)
       .filter(([_, data]) => data.selected)
       .reduce((sum, [_, data]) => {
         const baseFee = safeNumber(data.baseFee, 0);
-        const additionalCost = safeNumber(data.additionalCost, 0);
-        const unit = data.additionalCostUnit || "PER_CLASS";
-
-        // For PER_PAX, multiply additional cost by participant count
-        const calculatedAdditional = unit === "PER_PAX" ? additionalCost * participantCount : additionalCost;
-
-        return sum + baseFee + calculatedAdditional;
+        return sum + baseFee;
       }, 0);
 
     return totalFees;
@@ -1593,7 +1593,13 @@ const CourseRunDetail: React.FC = () => {
         remarks: editData.remarks || null,
         baseCourseFee: editData.baseCourseFee === "" ? null : Number(editData.baseCourseFee),
         contractFees: editData.contractFees === "" ? null : Number(editData.contractFees),
-        additionalCostExceedingCapacity: editData.additionalCostExceedingCapacity === "" ? null : Number(editData.additionalCostExceedingCapacity),
+        // Handle additionalCostExceedingCapacity - convert to number or null
+        additionalCostExceedingCapacity:
+          editData.additionalCostExceedingCapacity === "" ||
+          editData.additionalCostExceedingCapacity === null ||
+          editData.additionalCostExceedingCapacity === undefined
+            ? null
+            : Number(editData.additionalCostExceedingCapacity),
         venueFee: editData.venueFee === "" ? null : Number(editData.venueFee),
         venueMaxParticipant: editData.venueMaxParticipant === "" ? null : Number(editData.venueMaxParticipant),
         perHeadFeeIfMaxExceed: editData.perHeadFeeIfMaxExceed === "" ? null : Number(editData.perHeadFeeIfMaxExceed),
@@ -1607,10 +1613,17 @@ const CourseRunDetail: React.FC = () => {
         otherFee: editData.otherFee === "" ? null : Number(editData.otherFee),
         adminFee: editData.adminFee === "" ? null : Number(editData.adminFee),
         contingencyFee: editData.contingencyFee === "" ? null : Number(editData.contingencyFee),
-        feeType: editData.feeType || null,
-        courseRunFeeType: editData.courseRunFeeType || null,
+        // Handle feeType - send as string or null
+        feeType: editData.feeType && editData.feeType !== "" ? editData.feeType : null,
+        courseRunFeeType: editData.courseRunFeeType && editData.courseRunFeeType !== "" ? editData.courseRunFeeType : null,
         clientOrganizationId: editData.clientOrganizationId || null,
       };
+
+      console.log("Saving course run with payload:", {
+        feeType: payload.feeType,
+        additionalCostExceedingCapacity: payload.additionalCostExceedingCapacity,
+      });
+
       const resp = await courseRunsApi.update(courseRun.id, payload);
       if (resp.success) {
         toast.success("Course run updated");
@@ -2167,7 +2180,9 @@ const CourseRunDetail: React.FC = () => {
                                         learnerRecord.confirmationEmailStatus === "FAILED" ||
                                         !learnerRecord.confirmationEmailStatus) &&
                                         courseRun.status !== "DRAFT" && (
-                                          <DropdownMenuItem onClick={() => handleResendConfirmation(learnerRecord)}>Send Confirmation</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleResendConfirmation(learnerRecord)}>
+                                            Send Course Confirmation Email
+                                          </DropdownMenuItem>
                                         )}
                                       <DropdownMenuItem
                                         onClick={() => {
@@ -2303,7 +2318,7 @@ const CourseRunDetail: React.FC = () => {
                   ) : (
                     <div className="space-y-3">
                       {availableTrainers.map((trainer) => {
-                        const assignment = trainerAssignments[trainer.id] || { selected: false, baseFee: 0, additionalCost: 0 };
+                        const assignment = trainerAssignments[trainer.id] || { selected: false, baseFee: 0 };
                         const isSelected = assignment.selected;
 
                         return (
@@ -2329,66 +2344,27 @@ const CourseRunDetail: React.FC = () => {
 
                             {isSelected && (
                               <div className="mt-4 space-y-3 pl-14">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <Label className="text-sm font-medium">Base Fee ($)</Label>
-                                    <Input
-                                      id={`trainer-base-${trainer.id}`}
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      value={assignment.baseFee ?? ""}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        updateTrainerFee(trainer.id, "baseFee", val === "" ? null : parseFloat(val));
-                                      }}
-                                      placeholder="0.00"
-                                      className="mt-1"
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                      <Label className="text-sm font-medium">Additional Cost ($)</Label>
-                                      <Input
-                                        id={`trainer-add-${trainer.id}`}
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={assignment.additionalCost ?? ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          updateTrainerFee(trainer.id, "additionalCost", val === "" ? null : parseFloat(val));
-                                        }}
-                                        placeholder="0.00"
-                                        className="mt-1"
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label className="text-sm font-medium">Cost Unit</Label>
-                                      <Select
-                                        value={assignment.additionalCostUnit || "PER_CLASS"}
-                                        onValueChange={(value) => {
-                                          updateTrainerFee(trainer.id, "additionalCostUnit", value);
-                                        }}
-                                      >
-                                        <SelectTrigger className="mt-1">
-                                          <SelectValue placeholder="Select unit" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="PER_CLASS">Per Class</SelectItem>
-                                          <SelectItem value="PER_PAX">Per Pax</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
+                                <div>
+                                  <Label className="text-sm font-medium">Base Fee ($)</Label>
+                                  <Input
+                                    id={`trainer-base-${trainer.id}`}
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={assignment.baseFee ?? ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      updateTrainerFee(trainer.id, "baseFee", val === "" ? null : parseFloat(val));
+                                    }}
+                                    placeholder="0.00"
+                                    className="mt-1"
+                                  />
                                 </div>
 
                                 <div className="border-t pt-3">
                                   <div className="flex items-center justify-between">
                                     <span className="font-medium">Total for this trainer:</span>
-                                    <span className="font-medium text-lg text-blue-600">
-                                      {currency(safeNumber(assignment.baseFee, 0) + safeNumber(assignment.additionalCost, 0))}
-                                    </span>
+                                    <span className="font-medium text-lg text-blue-600">{currency(safeNumber(assignment.baseFee, 0))}</span>
                                   </div>
                                 </div>
                               </div>
@@ -2463,7 +2439,7 @@ const CourseRunDetail: React.FC = () => {
                                   {/* Show partner trainers when selected */}
                                   {isSelected && partnerTrainers.length > 0 && (
                                     <div className="mt-3 pl-4 border-l-2 border-green-200 space-y-2">
-                                      <p className="text-xs font-semibold text-gray-600 uppercase">Associated Trainers:</p>
+                                      <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Partner Trainer(s)</p>
                                       {partnerTrainers.map((trainer: any) => {
                                         const isTrainerSelected = partnerAssignments[partner.id]?.selectedTrainerIds?.includes(trainer.id) || false;
                                         return (
@@ -2615,7 +2591,7 @@ const CourseRunDetail: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Contract Fees - Editable for training partners, auto-calculated for trainers */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Contract Fees ($)</Label>
+                        <Label className="text-sm font-medium">Trainer Contract Fees ($)</Label>
                         {(() => {
                           const hasTrainingPartners = courseRun.courseRunPartners && courseRun.courseRunPartners.length > 0;
                           const isLocked = courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status);
@@ -2638,9 +2614,7 @@ const CourseRunDetail: React.FC = () => {
                                 className={isContractFeesEditable ? "" : "bg-gray-50"}
                               />
                               <p className="text-xs text-gray-500">
-                                {hasTrainingPartners
-                                  ? "Editable for training partners"
-                                  : "Auto-calculated from trainer assignments (updates live based on PER_PAX costs)"}
+                                {hasTrainingPartners ? "Editable for training partners" : "Auto-calculated from trainer assignments"}
                               </p>
                             </>
                           );
@@ -2657,7 +2631,7 @@ const CourseRunDetail: React.FC = () => {
                           value={
                             isEditing
                               ? editData?.additionalCostExceedingCapacity
-                              : calculateAdditionalCostExceedingCapacity() || courseRun.additionalCostExceedingCapacity || ""
+                              : (courseRun.additionalCostExceedingCapacity ?? calculateAdditionalCostExceedingCapacity() ?? "")
                           }
                           disabled={!isEditing || (courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))}
                           onChange={(e) => handleEditField("additionalCostExceedingCapacity", e.target.value)}
@@ -2667,14 +2641,9 @@ const CourseRunDetail: React.FC = () => {
                               : "bg-gray-50"
                           }
                         />
-                        {/* <p className="text-xs text-gray-500">
-                          {calculateAdditionalCostExceedingCapacity() > 0
-                            ? `Auto-calculated: ${courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length || 0} enrolled exceeds ${courseVenueMaxParticipants} max capacity × $${coursePerHeadIfMaxExceed} per head`
-                            : "Calculated when enrolled participants exceed venue max capacity"}
-                        </p> */}
                         {/* Display trainer remarks from course_trainers table */}
-                        {/* {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
-                          <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
+                        {courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 && courseTrainersRemarks.length > 0 ? (
+                          <div className="text-xs text-gray-600 space-y-1 pt-2 border-t mt-2">
                             <p className="font-medium">Trainer Remarks:</p>
                             <ul className="list-none space-y-1 ml-2">
                               {courseRun.courseRunTrainers.map((crt) => {
@@ -2682,20 +2651,42 @@ const CourseRunDetail: React.FC = () => {
                                 const remarks = courseTrainer?.remarks;
                                 return (
                                   <li key={crt.trainer.id}>
-                                    - {crt.trainer.name} {remarks ? `- ${remarks}` : ""}
+                                    - {crt.trainer.name}
+                                    {remarks ? `, ${remarks}` : ""}
                                   </li>
                                 );
                               })}
                             </ul>
                           </div>
+                        ) : courseRun.courseRunTrainers && courseRun.courseRunTrainers.length > 0 ? (
+                          <p className="text-xs text-gray-500 pt-2">Trainers assigned (no remarks from course trainers)</p>
                         ) : (
                           <p className="text-xs text-gray-500 pt-2">No trainers assigned yet</p>
-                        )} */}
+                        )}
                       </div>
                     </div>
 
-                    {/* Venue Fee Type & Base Venue Fee - 2x2 Grid Row 2 */}
+                    {/* Base Venue Fee & Venue Fee Type - 2x2 Grid Row 2 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Base Venue Fee */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={isEditing ? editData?.venueFee : (courseRun.venueFee ?? "")}
+                          disabled={!isEditing || (courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))}
+                          onChange={(e) => handleEditField("venueFee", e.target.value)}
+                          className={
+                            isEditing && !(courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))
+                              ? ""
+                              : "bg-gray-50"
+                          }
+                        />
+                        <p className="text-xs text-gray-500">Base venue rental fee</p>
+                      </div>
+
                       {/* Venue Fee Type */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Venue Fee Type</Label>
@@ -2714,25 +2705,6 @@ const CourseRunDetail: React.FC = () => {
                           <Input value={courseRun.feeType || ""} disabled className="bg-gray-50" />
                         )}
                         <p className="text-xs text-gray-500">Pricing model for venue charges</p>
-                      </div>
-
-                      {/* Base Venue Fee */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Base Venue Fee ($)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={isEditing ? editData?.venueFee : (courseRun.venueFee ?? "")}
-                          disabled={!isEditing || (courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))}
-                          onChange={(e) => handleEditField("venueFee", e.target.value)}
-                          className={
-                            isEditing && !(courseRun.status && ["IN_PROGRESS", "COMPLETED", "CANCELLED", "INCOMPLETED"].includes(courseRun.status))
-                              ? ""
-                              : "bg-gray-50"
-                          }
-                        />
-                        <p className="text-xs text-gray-500">Base venue rental fee</p>
                       </div>
                     </div>
 
@@ -3025,16 +2997,25 @@ const CourseRunDetail: React.FC = () => {
             name: crt.trainer.name,
             email: crt.trainer.email,
             baseFee: crt.trainerBaseAmount || 0,
-            additionalCost: crt.additionalCost || 0,
           })) || []
         }
         partners={
-          courseRun.courseRunPartners?.map((crp) => ({
-            id: crp.partner.id,
-            name: crp.partner.name,
-            email: crp.partner.email || "",
-            pointOfContactEmail: (crp.partner as any).pointOfContactEmail || crp.partner.email || "",
-          })) || []
+          courseRun.courseRunPartners?.map((crp) => {
+            // Use availablePartners (loaded from course API) – guaranteed to have partnerTrainers
+            const fullPartner = availablePartners.find((ap: any) => ap.id === crp.partner.id);
+            const allTrainers: Array<{ id: string; trainerName: string; trainerEmail?: string }> =
+              (fullPartner as any)?.partnerTrainers || crp.partner.partnerTrainers || [];
+            // partnerAssignments already stores selectedTrainerIds loaded from DB
+            const selectedIds: string[] = partnerAssignments[crp.partner.id]?.selectedTrainerIds || [];
+            const trainersToShow = selectedIds.length > 0 ? allTrainers.filter((pt) => selectedIds.includes(pt.id)) : allTrainers;
+            return {
+              id: crp.partner.id,
+              name: crp.partner.name,
+              email: crp.partner.email || "",
+              pointOfContactEmail: (fullPartner as any)?.pointOfContactEmail || crp.partner.pointOfContactEmail || crp.partner.email || "",
+              partnerTrainers: trainersToShow,
+            };
+          }) || []
         }
         courseRunDetails={{
           serialNumber: courseRun.serialNumber || "",

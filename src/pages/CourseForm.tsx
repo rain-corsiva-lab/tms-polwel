@@ -88,6 +88,22 @@ const CourseForm: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("information");
   // Removed financial calculations per new simplified requirements
 
+  // Normalize durationType for the form (always plural for select options)
+  const normalizeToFormType = (type: string) => {
+    if (!type) return "days";
+    const t = type.toLowerCase().trim();
+    if (t === "day" || t === "days") return "days";
+    if (t === "hour" || t === "hours") return "hours";
+    return type;
+  };
+
+  // Compute correct singular/plural durationType for DB save
+  const getDbDurationType = (duration: string, durationType: string) => {
+    const num = parseFloat(duration);
+    const base = durationType.toLowerCase().replace(/s$/, ""); // "days" → "day", "hours" → "hour"
+    return num === 1 ? base : base + "s"; // "day"/"days", "hour"/"hours"
+  };
+
   const sanitizeCourseCode = (value: string) =>
     value
       .toUpperCase()
@@ -195,7 +211,7 @@ const CourseForm: React.FC = () => {
             learningObjectives: c.learningObjectives || "",
             category: c.category || "",
             duration: c.duration || "",
-            durationType: c.durationType || "days",
+            durationType: normalizeToFormType(c.durationType || "days"),
             trainer: combinedAssignmentIds,
             contractFees: c.contractFees || 0,
             venueFee: c.venueFee || 0,
@@ -361,7 +377,7 @@ const CourseForm: React.FC = () => {
       learningObjectives: formData.learningObjectives,
       category: formData.category,
       duration: formData.duration,
-      durationType: formData.durationType,
+      durationType: getDbDurationType(formData.duration, formData.durationType),
       trainers: formData.trainer,
       contractFees: formData.contractFees,
       venueFee: formData.venueFee,

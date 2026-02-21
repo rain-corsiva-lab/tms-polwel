@@ -137,10 +137,14 @@ export const DuplicateCourseRunDialog: React.FC<DuplicateCourseRunDialogProps> =
       return;
     }
 
-    if (startDate >= endDate) {
+    // Build full datetime objects combining date + time before comparing
+    const startDateTime = new Date(formatDateTime(startDate, startTime));
+    const endDateTime = new Date(formatDateTime(endDate, endTime));
+
+    if (startDateTime >= endDateTime) {
       toast({
         title: "Validation Error",
-        description: "End date must be after start date",
+        description: "End date/time must be after start date/time",
         variant: "destructive",
       });
       return;

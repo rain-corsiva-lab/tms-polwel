@@ -219,8 +219,7 @@ export const fetchTrainerTrainingSummary = async ({
       }
 
       const baseAmount = toNumber(row.trainerBaseAmount);
-      const additional = toNumber(row.additionalCost);
-      let fee = baseAmount + additional;
+      let fee = baseAmount;
 
       return {
         id: row.id,
@@ -239,11 +238,10 @@ export const fetchTrainerTrainingSummary = async ({
     where: whereClause,
     _sum: {
       trainerBaseAmount: true,
-      additionalCost: true,
     },
   });
 
-  let totalFee = toNumber(totalsAggregate._sum.trainerBaseAmount) + toNumber(totalsAggregate._sum.additionalCost);
+  let totalFee = toNumber(totalsAggregate._sum.trainerBaseAmount);
 
   return {
     items: decoratedItems,

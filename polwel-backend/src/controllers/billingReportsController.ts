@@ -129,12 +129,11 @@ export const billingReportsController = {
           contractFees += toNumber(billing.contractInvoiceAmount) ?? 0;
           venueFees += toNumber(billing.venueInvoiceAmount) ?? 0;
 
-          // Sum trainer fees (trainerBaseAmount + additionalCost)
+          // Sum trainer fees
           const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
           courseRunTrainers.forEach((trainer: any) => {
             const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
-            const additionalCost = toNumber(trainer.additionalCost) ?? 0;
-            totalTrainerFees += baseAmount + additionalCost;
+            totalTrainerFees += baseAmount;
           });
 
           // Sum additional fees (contingencyFee + adminFee + otherFee)
@@ -241,8 +240,7 @@ export const billingReportsController = {
         const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
         courseRunTrainers.forEach((trainer: any) => {
           const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
-          const additionalCost = toNumber(trainer.additionalCost) ?? 0;
-          totalTrainerFees += baseAmount + additionalCost;
+          totalTrainerFees += baseAmount;
         });
 
         // Sum additional fees
@@ -360,8 +358,7 @@ export const billingReportsController = {
         const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
         courseRunTrainers.forEach((trainer: any) => {
           const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
-          const additionalCost = toNumber(trainer.additionalCost) ?? 0;
-          totalTrainerFees += baseAmount + additionalCost;
+          totalTrainerFees += baseAmount;
         });
 
         // Sum additional fees
@@ -389,8 +386,7 @@ export const billingReportsController = {
           const courseRunTrainers = billing.courseRun?.courseRunTrainers || [];
           const trainerFees = courseRunTrainers.reduce((sum: number, trainer: any) => {
             const baseAmount = toNumber(trainer.trainerBaseAmount) ?? 0;
-            const additionalCost = toNumber(trainer.additionalCost) ?? 0;
-            return sum + baseAmount + additionalCost;
+            return sum + baseAmount;
           }, 0);
 
           // Calculate additional fees for this course run
