@@ -36,8 +36,8 @@ export default function RunsByPeriod() {
   const [runs, setRuns] = useState<CourseRun[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -77,21 +77,6 @@ export default function RunsByPeriod() {
     }
   };
 
-  const months = [
-    { value: "1", label: "January" },
-    { value: "2", label: "February" },
-    { value: "3", label: "March" },
-    { value: "4", label: "April" },
-    { value: "5", label: "May" },
-    { value: "6", label: "June" },
-    { value: "7", label: "July" },
-    { value: "8", label: "August" },
-    { value: "9", label: "September" },
-    { value: "10", label: "October" },
-    { value: "11", label: "November" },
-    { value: "12", label: "December" },
-  ];
-
   useEffect(() => {
     fetchFilterOptions();
   }, []);
@@ -110,7 +95,7 @@ export default function RunsByPeriod() {
   useEffect(() => {
     fetchRuns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, month, year, status]);
+  }, [page, startDate, endDate, status]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -124,31 +109,15 @@ export default function RunsByPeriod() {
   const fetchRuns = async () => {
     setLoading(true);
     try {
-      // Convert month/year to startDate/endDate
-      let startDate: string | undefined;
-      let endDate: string | undefined;
-
-      if (year) {
-        if (month) {
-          // Specific month and year
-          const monthNum = parseInt(month);
-          const yearNum = parseInt(year);
-          startDate = new Date(yearNum, monthNum - 1, 1).toISOString();
-          endDate = new Date(yearNum, monthNum, 0, 23, 59, 59).toISOString();
-        } else {
-          // Whole year
-          const yearNum = parseInt(year);
-          startDate = new Date(yearNum, 0, 1).toISOString();
-          endDate = new Date(yearNum, 11, 31, 23, 59, 59).toISOString();
-        }
-      }
+      const resolvedStartDate = startDate ? new Date(startDate + "T00:00:00").toISOString() : undefined;
+      const resolvedEndDate = endDate ? new Date(endDate + "T23:59:59").toISOString() : undefined;
 
       const response = await reportingApi.getRunsByPeriod({
         page,
         limit,
         ...(search && { search }),
-        ...(startDate && { startDate }),
-        ...(endDate && { endDate }),
+        ...(resolvedStartDate && { startDate: resolvedStartDate }),
+        ...(resolvedEndDate && { endDate: resolvedEndDate }),
         ...(status && { status }),
       });
       setRuns(response.data);
@@ -172,31 +141,15 @@ export default function RunsByPeriod() {
 
   const handleExportToExcel = async () => {
     try {
-      // Convert month/year to startDate/endDate
-      let startDate: string | undefined;
-      let endDate: string | undefined;
-
-      if (year) {
-        if (month) {
-          // Specific month and year
-          const monthNum = parseInt(month);
-          const yearNum = parseInt(year);
-          startDate = new Date(yearNum, monthNum - 1, 1).toISOString();
-          endDate = new Date(yearNum, monthNum, 0, 23, 59, 59).toISOString();
-        } else {
-          // Whole year
-          const yearNum = parseInt(year);
-          startDate = new Date(yearNum, 0, 1).toISOString();
-          endDate = new Date(yearNum, 11, 31, 23, 59, 59).toISOString();
-        }
-      }
+      const resolvedStartDate = startDate ? new Date(startDate + "T00:00:00").toISOString() : undefined;
+      const resolvedEndDate = endDate ? new Date(endDate + "T23:59:59").toISOString() : undefined;
 
       const response = await reportingApi.getRunsByPeriod({
         page: 1,
         limit: 10000,
         ...(search && { search }),
-        ...(startDate && { startDate }),
-        ...(endDate && { endDate }),
+        ...(resolvedStartDate && { startDate: resolvedStartDate }),
+        ...(resolvedEndDate && { endDate: resolvedEndDate }),
         ...(status && { status }),
       });
       const allRuns = response.data;
@@ -213,7 +166,7 @@ export default function RunsByPeriod() {
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Runs by Period");
-      XLSX.writeFile(wb, `Runs_by_Period_${year}${month ? `_${month}` : ""}.xlsx`);
+      XLSX.writeFile(wb, `Runs_by_Period${startDate ? `_from_${startDate}` : ""}${endDate ? `_to_${endDate}` : ""}.xlsx`);
 
       toast({
         title: "Success",
@@ -240,7 +193,7 @@ export default function RunsByPeriod() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Runs by Period</h1>
-              <p className="text-muted-foreground">View course runs filtered by month and year</p>
+              <p className="text-muted-foreground">View course runs filtered by date range</p>
             </div>
           </div>
           <Button onClick={handleExportToExcel} disabled={runs.length === 0}>
@@ -267,44 +220,28 @@ export default function RunsByPeriod() {
                   className="pl-9"
                 />
               </div>
-              <Select
-                value={year || "all"}
-                onValueChange={(value) => {
-                  setYear(value === "all" ? "" : value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Years" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-                    <SelectItem key={y} value={y.toString()}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={month || "all"}
-                onValueChange={(value) => {
-                  setMonth(value === "all" ? "" : value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Months" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Months</SelectItem>
-                  {months.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground font-medium">Start Date</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground font-medium">End Date</label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
               <Select
                 value={status || "all"}
                 onValueChange={(value) => {

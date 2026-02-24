@@ -1275,8 +1275,7 @@ const CourseRuns: React.FC = () => {
           <CardTitle className="flex items-center justify-between">
             <span>Course Runs ({totalCount})</span>
             <span className="text-sm font-normal text-gray-500">
-              Page {pagination.page} of {Math.max(1, pagination.totalPages || Math.ceil(Math.max(1, totalCount) / perPage))} | Current status checks cycle : per
-              5 minutes
+              Page {pagination.page} of {Math.max(1, pagination.totalPages || Math.ceil(Math.max(1, totalCount) / perPage))}
             </span>
           </CardTitle>
         </CardHeader>
