@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { venuesApi, type Venue } from "@/lib/api";
 import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 import { Input } from "@/components/ui/input";
+import PaginationControls from "@/components/ui/pagination";
 import * as XLSX from "xlsx";
 
 const VenueArchive = () => {
@@ -20,8 +21,12 @@ const VenueArchive = () => {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [exporting, setExporting] = useState(false);
+
+  // Pagination state
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [perPage, setPerPage] = useState(10);
 
   // Debounce search
   useEffect(() => {
@@ -39,18 +44,29 @@ const VenueArchive = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    loadVenues();
+    // Reset to page 1 when search changes
+    setPagination((p) => ({ ...p, page: 1 }));
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    loadVenues();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, pagination.page, perPage]);
 
   const loadVenues = async () => {
     try {
       setLoading(true);
       const response = await venuesApi.getAll({
         search: debouncedSearch || undefined,
+        page: pagination.page,
+        limit: perPage,
       });
 
       if (response.success) {
         setVenues(response.venues || []);
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
       } else {
         toast({
           title: "Error",
@@ -75,7 +91,14 @@ const VenueArchive = () => {
         description: "Generating venues export...",
       });
 
-      const dataToExport = venues.map((venue: any) => ({
+      // Fetch all venues for export (no pagination limit)
+      const exportResponse = await venuesApi.getAll({
+        search: debouncedSearch || undefined,
+        limit: "all",
+      });
+      const allVenues: Venue[] = exportResponse.venues || [];
+
+      const dataToExport = allVenues.map((venue: any) => ({
         Name: venue.name,
         Address: venue.address || "N/A",
         Capacity: venue.capacity || "N/A",
@@ -209,51 +232,66 @@ const VenueArchive = () => {
           <CardTitle>All Training Venues</CardTitle>
         </CardHeader>
         <CardContent>
-          {venues.length === 0 ? (
+          {venues.length === 0 && !loading ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No venues found</p>
               <Button onClick={() => navigate("/venue-setup/new")}>
-                \
-                <Plus className="h-4 w-4 mr-2" />\ Add First Venue
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Venue
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Venue Name</TableHead>
-                  <TableHead>Venue Type</TableHead>
-                  <TableHead>Capacity</TableHead>
-                  <TableHead>Fee Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {venues.map((venue) => (
-                  <TableRow key={venue.id}>
-                    <TableCell className="font-medium">{venue.name}</TableCell>
-                    <TableCell>{venue.venueType ? venue.venueType.replace(/_/g, " ") : "N/A"}</TableCell>
-                    <TableCell>{venue.capacity || "Not specified"}</TableCell>
-                    <TableCell>${venue.fee}</TableCell>
-                    <TableCell>{getStatusBadge(venue.status || "ACTIVE")}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/venue-detail/${venue.id}`)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/venue-setup/edit/${venue.id}`)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDelete(venue.id, venue.name)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Venue Name</TableHead>
+                    <TableHead>Venue Type</TableHead>
+                    <TableHead>Capacity</TableHead>
+                    <TableHead>Fee Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {venues.map((venue) => (
+                    <TableRow key={venue.id}>
+                      <TableCell className="font-medium">{venue.name}</TableCell>
+                      <TableCell>{venue.venueType ? venue.venueType.replace(/_/g, " ") : "N/A"}</TableCell>
+                      <TableCell>{venue.capacity || "Not specified"}</TableCell>
+                      <TableCell>${venue.fee}</TableCell>
+                      <TableCell>{getStatusBadge(venue.status || "ACTIVE")}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/venue-detail/${venue.id}`)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/venue-setup/edit/${venue.id}`)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDelete(venue.id, venue.name)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="border-t mt-4 px-1">
+                <PaginationControls
+                  page={pagination.page}
+                  perPage={perPage}
+                  total={pagination.total}
+                  onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+                  onPerPageChange={(pp) => {
+                    setPerPage(pp);
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                />
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
