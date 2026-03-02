@@ -752,14 +752,9 @@ export const courseRunController = {
         };
       }
 
-      // When sorting by startDatetime ascending (Upcoming), only show future course runs
-      if (sortBy === 'startDatetime' && sortOrder === 'asc') {
-        const now = new Date();
-        where.startDatetime = {
-          ...where.startDatetime,
-          gte: now,
-        };
-      }
+      // NOTE: Previously this block added `gte: now` when sorting ascending to show only
+      // future course runs. That was removed because it hid IN_PROGRESS courses (which
+      // have already started). The list now shows all statuses regardless of sort order.
 
       // Get course runs with related data. Prisma's count() has trouble with some relation filters
       // that include case-insensitive `mode`, so derive the total by selecting matching IDs instead.
@@ -3057,6 +3052,12 @@ export const courseRunController = {
             select: {
               title: true,
               courseCode: true,
+              courseTrainers: {
+                select: {
+                  trainerId: true,
+                  remarks: true,
+                },
+              },
             },
           },
           venue: {
@@ -3144,6 +3145,12 @@ export const courseRunController = {
         courseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
         courseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
         courseDetails.venueAddress = courseRun.venue?.address || null;
+        courseDetails.specifiedLocation = courseRun.specifiedLocation || null;
+        // Look up remarks from CourseTrainer (course-level trainer assignment)
+        const courseTrainerRecord = (courseRun.course as any)?.courseTrainers?.find(
+          (ct: any) => ct.trainerId === assignment.trainerId
+        );
+        courseDetails.trainerRemarks = courseTrainerRecord?.remarks || null;
 
         const result = await EmailService.sendTrainerAssignmentEmail(
           trainerEmail,
@@ -3959,6 +3966,11 @@ export const courseRunController = {
           trainerCourseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
           trainerCourseDetails.venueAddress = courseRun.venue?.address || null;
           trainerCourseDetails.specifiedLocation = courseRun.specifiedLocation || null;
+          // Look up remarks from CourseTrainer (course-level trainer assignment)
+          const courseTrainerRec = (courseRun.course as any)?.courseTrainers?.find(
+            (ct: any) => ct.trainerId === assignment.trainerId
+          );
+          trainerCourseDetails.trainerRemarks = courseTrainerRec?.remarks || null;
 
           const result = await EmailService.sendTrainerAssignmentEmail(
             trainerEmail,
