@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import type { SentMessageInfo, Transport, TransportOptions } from 'nodemailer';
 import type MailMessage from 'nodemailer/lib/mailer/mail-message';
+import { POLWEL_LOGO_BASE64_DATA_URI } from '../assets/logoBase64';
 
 interface EmailConfig {
   host: string;
@@ -345,15 +346,20 @@ class EmailService {
     }
   }
 
-  // Get logo URL for use in emails (fallback when CID attachment can't be used)
+  // Get logo URL for use in emails (last-resort fallback when base64 encoding is unavailable)
   private static getLogoUrl(): string {
     if (this.logoUrl) return this.logoUrl;
-    
-    // Try to get from environment variable first
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
-    this.logoUrl = `${frontendUrl}/images/POLWEL Logo_Horizontal.png`;
-    console.log('📷 Using logo URL:', this.logoUrl);
+    // Encode the space in the filename so the URL is valid in all email clients
+    this.logoUrl = `${frontendUrl}/images/POLWEL%20Logo_Horizontal.png`;
+    console.log('📷 Using logo URL fallback:', this.logoUrl);
     return this.logoUrl;
+  }
+
+  // Detect when the SMTP host is Microsoft Office 365 / Outlook
+  private static isOutlookSmtp(): boolean {
+    const host = (process.env.MAIL_HOST || '').toLowerCase();
+    return host.includes('office365.com') || host.includes('outlook.com') || host.includes('hotmail.com');
   }
 
   // Detect if the service is running in Graph API (production) mode
@@ -363,8 +369,16 @@ class EmailService {
          process.env.GRAPH_TENANT_ID && process.env.GRAPH_MAIL_FROM_ADDRESS);
   }
 
-  // Return logo as base64 data URL — used when sending via REST API (no CID support)
+  // Return logo as base64 data URI.
+  // Uses the embedded constant (POLWEL_LOGO_BASE64_DATA_URI) which is compiled into the
+  // bundle — completely independent of the file system. This guarantees the logo always
+  // renders in production (Graph API / Outlook) where the PNG file is not deployed.
+  // Falls back to reading from disk (dev convenience) then URL if the constant is empty.
   private static getLogoBase64Src(): string {
+    if (POLWEL_LOGO_BASE64_DATA_URI) {
+      return POLWEL_LOGO_BASE64_DATA_URI;
+    }
+    // Disk fallback (development only — file may not exist in production)
     const logoPath = this.getLogoPath();
     if (logoPath) {
       try {
@@ -608,33 +622,34 @@ class EmailService {
       }
 
       // Fallback to SMTP configuration
-      const encryption = process.env.MAIL_ENCRYPTION || 'TLS';
+      const smtpHost = process.env.MAIL_HOST || 'smtp.gmail.com';
+      const smtpPort = parseInt(process.env.MAIL_PORT || '587');
+      const encryption = process.env.MAIL_ENCRYPTION || (smtpPort === 465 ? 'SSL' : 'STARTTLS');
       const isSSL = encryption === 'SSL';
-      const isSTARTTLS = encryption === 'STARTTLS';
-      
+      const isSTARTTLS = encryption !== 'SSL';
+      const isOutlook = this.isOutlookSmtp();
+
+      // Office 365 / Outlook requires STARTTLS on port 587 with requireTLS.
+      // Gmail supports both SSL on 465 and STARTTLS on 587.
       const config: EmailConfig = {
-        host: process.env.MAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.MAIL_PORT || '587'),
-        secure: isSSL, // true for SSL (port 465), false for STARTTLS (port 587)
+        host: smtpHost,
+        port: smtpPort,
+        secure: isSSL, // true only for direct SSL (port 465)
         auth: {
           user: process.env.MAIL_USERNAME || '',
           pass: process.env.MAIL_PASSWORD || ''
         },
-        // CRITICAL FIX: Disable pooling for immediate Gmail delivery
         pool: false,
-        // Direct sending - no connection reuse delays
         maxConnections: 1,
-        // Generous timeouts — 5 MB attachments can take 30–60s to upload over SMTP
         socketTimeout: 120000,
         greetingTimeout: 15000,
         connectionTimeout: 30000,
         tls: {
           rejectUnauthorized: false,
-          // For STARTTLS, we need to explicitly set ciphers if using older OpenSSL
-          ...(isSTARTTLS && {
-            minVersion: 'TLSv1.2'
-          })
-        }
+          minVersion: 'TLSv1.2',
+        },
+        // Office 365 needs requireTLS so nodemailer upgrades the connection via STARTTLS
+        ...(isOutlook && { requireTLS: true } as any),
       };
 
       // For development, create a test account if SMTP not configured
@@ -648,17 +663,16 @@ class EmailService {
       }
 
       console.log('╔════════════════════════════════════════════════════════════════╗');
-      console.log('║ 📧 EMAIL SERVICE INITIALIZATION - DETAILED LOG                ║');
+      console.log(`║ 📧 EMAIL SERVICE INITIALIZATION - ${isOutlook ? 'OUTLOOK/OFFICE 365' : 'SMTP'}           ║`);
       console.log('╚════════════════════════════════════════════════════════════════╝');
       console.log('🔧 SMTP Configuration:');
       console.log('   ├─ Host:', config.host);
       console.log('   ├─ Port:', config.port);
-      console.log('   ├─ Secure (SSL):', config.secure);
-      console.log('   ├─ Encryption:', encryption);
+      console.log('   ├─ Mode:', isOutlook ? '🔵 Office 365 / Outlook (requireTLS + STARTTLS)' : isSSL ? '🔒 SSL' : '🔓 STARTTLS');
       console.log('   ├─ Username:', config.auth.user);
       console.log('   ├─ Password:', config.auth.pass ? '***SET*** (length: ' + config.auth.pass.length + ')' : '❌ NOT SET');
       console.log('   ├─ From Address:', this.mailFromAddress);
-      console.log('   └─ TLS Reject Unauthorized:', config.tls?.rejectUnauthorized);
+      console.log('   └─ Logo:', 'Embedded base64 (no file dependency)');
       console.log('');
 
       this.transporter = nodemailer.createTransport(config as any);
