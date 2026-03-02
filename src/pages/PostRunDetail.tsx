@@ -41,6 +41,12 @@ interface CourseRunDetails {
   maxClassSize?: number;
   currentParticipants?: number;
   status: string;
+  baseCourseFee?: number | null;
+  feeType?: string | null;
+  courseRunFeeType?: string | null;
+  venueFinalFee?: number | null;
+  contractFees?: number | null;
+  additionalCostExceedingCapacity?: number | null;
   trainers?: Array<{
     id: string;
     user?: {
@@ -193,7 +199,7 @@ const PostRunDetail = () => {
                     },
                     role: crt.role,
                   }
-                : null
+                : null,
             )
             .filter(Boolean)
         : [];
@@ -241,7 +247,17 @@ const PostRunDetail = () => {
           entries: resolvedEntries.length > 0 ? resolvedEntries : [createEmptyBillingEntry()],
         });
       } else {
-        setBillingForm(createEmptyBillingForm());
+        // Pre-fill contract and venue invoice amounts from course run data
+        const contractFeesVal = Number(cr.contractFees ?? 0);
+        const additionalCostVal = Number(cr.additionalCostExceedingCapacity ?? 0);
+        const preFillContractAmount = contractFeesVal + additionalCostVal;
+        const preFillVenueAmount = Number(cr.venueFinalFee ?? 0);
+
+        setBillingForm({
+          ...createEmptyBillingForm(),
+          contractInvoiceAmount: preFillContractAmount > 0 ? preFillContractAmount.toFixed(2) : "",
+          venueInvoiceAmount: preFillVenueAmount > 0 ? preFillVenueAmount.toFixed(2) : "",
+        });
       }
 
       // Fetch learners enrolled in this course run and normalize
@@ -643,8 +659,16 @@ const PostRunDetail = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="billingRate">Billing Rate</Label>
-                    <Input id="billingRate" value="$500" disabled className="mt-2" />
+                    <Label htmlFor="billingRate">Billing Rate (Default Course Fee)</Label>
+                    <Input
+                      id="billingRate"
+                      value={courseRun.baseCourseFee != null ? `$${Number(courseRun.baseCourseFee).toFixed(2)}` : "—"}
+                      disabled
+                      className="mt-2"
+                    />
+                    {(courseRun.courseRunFeeType || courseRun.feeType) && (
+                      <p className="text-xs text-muted-foreground mt-1">Fee Type: {courseRun.courseRunFeeType || courseRun.feeType}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="valueOfWorkDone">Value of Work Done</Label>

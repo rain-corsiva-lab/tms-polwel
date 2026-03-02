@@ -1335,6 +1335,7 @@ class EmailService {
       venue?: string | null;
       venueAddress?: string | null;
       specifiedLocation?: string | null;
+      trainerRemarks?: string | null;
     },
     baseFee: number,
     ccEmails?: string[] | null,
@@ -1476,6 +1477,7 @@ class EmailService {
                               <td style="padding: 16px; background-color: #f9fafb !important; border: 1px solid #e5e7eb;" bgcolor="#f9fafb">
                                 <p style="margin: 0 0 8px 0; color: #374151 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Professional Fees:</p>
                                 <p style="margin: 0; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatCurrency(baseFee)}/run</p>
+                                ${courseRunDetails.trainerRemarks ? `<p style="margin: 8px 0 0 0; color: #4b5563 !important; font-size: 13px; font-family: Arial, sans-serif !important;"><strong>Remarks:</strong> ${courseRunDetails.trainerRemarks}</p>` : ''}
                               </td>
                             </tr>
                           </table>
