@@ -428,12 +428,18 @@ class EmailService {
   }
 
   // Get logo source for use in HTML img tag.
-  // In Graph API (production) mode, embed the image directly as a base64 data URI because
-  // Microsoft Graph API does not reliably resolve CID references for inline attachments.
-  // In SMTP mode, use CID which is resolved by the nodemailer inline attachment.
+  //
+  // Strategy by transport:
+  //   • Graph API / Outlook (production): HTTPS URL from FRONTEND_URL.
+  //     Outlook's Exchange Online security policy strips data: URIs and unresolvable CID
+  //     references from img src attributes, making the image disappear. A public HTTPS URL
+  //     is the only reliable option for Outlook-delivered emails.
+  //   • SMTP (dev/local): CID inline attachment resolved by nodemailer.
   private static getLogoSrc(): string {
     if (this.isGraphApiMode()) {
-      return this.getLogoBase64Src();
+      // Use the production public URL — Outlook loads this without stripping it.
+      const frontendUrl = (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+      return `${frontendUrl}/images/POLWEL%20Logo_Horizontal.png`;
     }
     return 'cid:polwellogo';
   }
