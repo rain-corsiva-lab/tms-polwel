@@ -1509,10 +1509,15 @@ export const courseRunController = {
           });
         });
 
-        // Send emails to trainers
-        const trainerEmailPromises = trainers.map((trainerAssignment) => {
+        // Send emails to trainers (skip trainers with no email address)
+        const trainersWithEmail = trainers.filter((t) => t.trainer.email && t.trainer.email.trim() !== '');
+        const trainersSkipped = trainers.length - trainersWithEmail.length;
+        if (trainersSkipped > 0) {
+          console.warn(`⚠️  Skipping cancellation email for ${trainersSkipped} trainer(s) with missing email address`);
+        }
+        const trainerEmailPromises = trainersWithEmail.map((trainerAssignment) => {
           const emailParams: any = {
-            email: trainerAssignment.trainer.email ?? '',
+            email: trainerAssignment.trainer.email!,
             learnerName: trainerAssignment.trainer.name ?? 'Trainer',
             courseTitle: courseRun.course?.title || 'Course',
             cancellationReason: reason || 'unforeseen circumstances',
@@ -1523,14 +1528,21 @@ export const courseRunController = {
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
           
-          return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
-            console.error(`Failed to send cancellation email to trainer ${trainerAssignment.trainer.email}:`, err);
-            return false;
-          });
+          return EmailService.sendCourseCancellationEmail(emailParams)
+            .then(() => {
+              console.log(`✅ Cancellation email sent to trainer: ${trainerAssignment.trainer.email}`);
+              return true;
+            })
+            .catch((err) => {
+              console.error(`❌ Failed to send cancellation email to trainer ${trainerAssignment.trainer.email}:`, err);
+              return false;
+            });
         });
 
-        await Promise.all([...learnerEmailPromises, ...trainerEmailPromises]);
-        console.log(`Sent cancellation emails to ${enrollments.length} learners and ${trainers.length} trainers`);
+        const results = await Promise.all([...learnerEmailPromises, ...trainerEmailPromises]);
+        const successCount = results.filter(Boolean).length;
+        const failCount = results.length - successCount;
+        console.log(`Cancellation emails: ${successCount} sent, ${failCount} failed (${enrollments.length} learners + ${trainersWithEmail.length} trainers attempted)`);
       } catch (emailError) {
         console.error('Error sending cancellation emails:', emailError);
         // Don't fail the cancellation if emails fail
