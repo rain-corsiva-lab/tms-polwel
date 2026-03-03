@@ -751,7 +751,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">Complete Your Trainer Account Setup</p>
                       </td>
@@ -877,7 +877,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">Complete Your Training Coordinator Setup</p>
                       </td>
@@ -1001,7 +1001,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Password Reset Request</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">POLWEL Training Management System</p>
                       </td>
@@ -1143,7 +1143,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td bgcolor="#ffffff" style="padding: 32px 24px; background-color: #ffffff !important; text-align: center; border-bottom: 2px solid #f3f4f6;">
-                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Secure your login</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #6b7280 !important; font-family: Arial, sans-serif !important;">POLWEL Training Management System</p>
                       </td>
@@ -1286,7 +1286,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td bgcolor="#ffffff" style="padding: 32px 24px; background-color: #ffffff !important; text-align: center; border-bottom: 2px solid #f3f4f6;">
-                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Welcome to POLWEL!</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #6b7280 !important; font-family: Arial, sans-serif !important;">Complete Your Account Setup</p>
                       </td>
@@ -1455,7 +1455,7 @@ class EmailService {
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td align="center">
-                          <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                          <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                           <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Training Assignment & Course Confirmation</h1>
                           <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${courseRunDetails.course || 'Training Course'}</p>
                         </td>
@@ -1770,7 +1770,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Confirmation</h1>
                               <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Registration Confirmed</p>
                             </td>
@@ -2100,7 +2100,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Cancellation Notice</h1>
                               <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Important Update Regarding Your Course</p>
                             </td>
@@ -2285,7 +2285,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Congratulations!</h1>
                               <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">You've Successfully Completed the Course</p>
                             </td>
@@ -2436,7 +2436,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Training Management System</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #dc2626 !important; font-weight: 600; font-family: Arial, sans-serif;">⚠ Waiver Request Pending Review</p>
                       </td>
