@@ -1586,7 +1586,7 @@ export const courseRunsApi = {
     return apiRequest('/course-runs/status-options');
   },
 
-  cancel: async (id: string, payload?: { reason?: string }) => {
+  cancel: async (id: string, payload?: { reason?: string; nextRunDate?: string }) => {
     return apiRequest(`/course-runs/${id}/cancel`, {
       method: 'POST',
       body: JSON.stringify(payload ?? {}),

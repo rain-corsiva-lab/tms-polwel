@@ -730,12 +730,13 @@ const PostRunDetail = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`invoiceAmount-${index}`}>Invoice Amount (Auto-calculated)</Label>
+                          <Label htmlFor={`invoiceAmount-${index}`}>Invoice Amount</Label>
                           <Input
                             id={`invoiceAmount-${index}`}
                             placeholder="Calculated from selected participants"
                             value={entry.invoiceAmount}
-                            disabled
+                            onChange={(e) => handleEntryChange(index, "invoiceAmount", e.target.value)}
+                            disabled={isCompleted}
                             className="mt-2"
                           />
                         </div>

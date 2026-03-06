@@ -126,6 +126,7 @@ interface CancelDialogState {
   open: boolean;
   courseRun: CourseRunUI | null;
   reason: string;
+  nextRunDate: string;
   submitting: boolean;
 }
 
@@ -217,6 +218,7 @@ const CourseRuns: React.FC = () => {
     open: false,
     courseRun: null,
     reason: "",
+    nextRunDate: "",
     submitting: false,
   };
 
@@ -618,6 +620,7 @@ const CourseRuns: React.FC = () => {
       open: true,
       courseRun,
       reason: courseRun.cancelReason ?? "",
+      nextRunDate: "",
       submitting: false,
     });
   };
@@ -628,7 +631,10 @@ const CourseRuns: React.FC = () => {
 
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
-    const payload = cancelDialog.reason.trim() ? { reason: cancelDialog.reason.trim() } : undefined;
+    const payloadObj: { reason?: string; nextRunDate?: string } = {};
+    if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
+    if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
+    const payload = Object.keys(payloadObj).length > 0 ? payloadObj : undefined;
 
     setCancelDialog((prev) => ({ ...prev, submitting: true }));
 
@@ -1629,6 +1635,18 @@ const CourseRuns: React.FC = () => {
                   onChange={(e) => setCancelDialog((prev) => ({ ...prev, reason: e.target.value.slice(0, 1000) }))}
                   rows={4}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nextRunDate">
+                  Next Run Date <span className="text-muted-foreground text-xs">(Optional)</span>
+                </Label>
+                <Input
+                  id="nextRunDate"
+                  placeholder="e.g. 15 April 2026"
+                  value={cancelDialog.nextRunDate}
+                  onChange={(e) => setCancelDialog((prev) => ({ ...prev, nextRunDate: e.target.value.slice(0, 200) }))}
+                />
+                <p className="text-xs text-muted-foreground">If provided, participants will be notified of the next available session date.</p>
               </div>
             </div>
           )}

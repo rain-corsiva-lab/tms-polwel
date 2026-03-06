@@ -30,6 +30,9 @@ interface LearnerWithAttendance {
   waiverReason?: string | null;
   waiverDocument?: string | null;
   waiverSubmittedAt?: Date | null;
+  waiverStatus?: "PENDING" | "APPROVED" | "REJECTED" | null;
+  waiverRejectReason?: string | null;
+  waiverReviewedAt?: Date | null;
 }
 
 interface CourseRunInfo {
@@ -259,7 +262,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
         const { success, failed, total } = response.data || {};
         toast({
           title: "Certificates Sent",
-          description: `Successfully sent ${success || 0} certificate(s)${failed > 0 ? `. ${failed} failed` : ''}`,
+          description: `Successfully sent ${success || 0} certificate(s)${failed > 0 ? `. ${failed} failed` : ""}`,
         });
       } else {
         throw new Error(response?.error || response?.message || "Failed to send certificates");
@@ -278,8 +281,11 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
 
   const handleOpenWaiverDialog = (learner: LearnerWithAttendance) => {
     setSelectedLearnerForWaiver(learner);
+    // For REJECTED waivers, clear the form to allow fresh resubmission
+    // For PENDING/APPROVED, show the existing reason read-only
+    const isRejected = learner.waiverStatus === "REJECTED";
     setWaiverForm({
-      reason: learner.waiverReason || "",
+      reason: isRejected ? "" : learner.waiverReason || "",
       document: null,
     });
     setWaiverDialogOpen(true);
@@ -485,26 +491,52 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
                       <TableRow>
                         <TableHead>Participant Name</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Attendance</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Waiver</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {absentLearners.map((learner) => (
-                        <TableRow key={learner.id}>
-                          <TableCell className="font-medium">{learner.learnerName}</TableCell>
-                          <TableCell>{learner.learnerEmail}</TableCell>
-                          <TableCell>
-                            <Badge variant="destructive">Absent</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenWaiverDialog(learner)}>
-                              <FileText className="h-4 w-4 mr-1" />
-                              {learner.waiverReason ? "View Waiver" : "Submit Waiver Form"}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {absentLearners.map((learner) => {
+                        const waiverStatus = learner.waiverStatus;
+                        const hasWaiver = !!learner.waiverReason;
+
+                        // Waiver status badge
+                        let waiverBadge: React.ReactNode = <span className="text-xs text-muted-foreground">No waiver</span>;
+                        if (waiverStatus === "APPROVED") {
+                          waiverBadge = <Badge className="bg-green-100 text-green-800 border-green-200">Waiver Approved</Badge>;
+                        } else if (waiverStatus === "PENDING") {
+                          waiverBadge = <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Waiver Pending</Badge>;
+                        } else if (waiverStatus === "REJECTED") {
+                          waiverBadge = <Badge className="bg-red-100 text-red-800 border-red-200">Waiver Rejected</Badge>;
+                        } else if (hasWaiver) {
+                          waiverBadge = <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Waiver Pending</Badge>;
+                        }
+
+                        // Action button label
+                        let actionLabel = "Submit Waiver";
+                        if (waiverStatus === "APPROVED") actionLabel = "View Waiver";
+                        else if (waiverStatus === "PENDING") actionLabel = "View Waiver";
+                        else if (waiverStatus === "REJECTED") actionLabel = "Resubmit Waiver";
+                        else if (hasWaiver) actionLabel = "View Waiver";
+
+                        return (
+                          <TableRow key={learner.id}>
+                            <TableCell className="font-medium">{learner.learnerName}</TableCell>
+                            <TableCell>{learner.learnerEmail}</TableCell>
+                            <TableCell>
+                              <Badge variant="destructive">Absent</Badge>
+                            </TableCell>
+                            <TableCell>{waiverBadge}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" onClick={() => handleOpenWaiverDialog(learner)}>
+                                <FileText className="h-4 w-4 mr-1" />
+                                {actionLabel}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -522,10 +554,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
                 <FileArchive className="h-4 w-4 mr-2" />
                 Export ZIP ({selectedLearners.length})
               </Button>
-              <Button 
-                onClick={handleSendCertificates} 
-                disabled={selectedLearners.length === 0 || sendingCertificates}
-              >
+              <Button onClick={handleSendCertificates} disabled={selectedLearners.length === 0 || sendingCertificates}>
                 {sendingCertificates ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -547,15 +576,54 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
       <Dialog open={waiverDialogOpen} onOpenChange={setWaiverDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Submit Waiver Form</DialogTitle>
+            <DialogTitle>
+              {selectedLearnerForWaiver?.waiverStatus === "REJECTED"
+                ? "Resubmit Waiver Form"
+                : selectedLearnerForWaiver?.waiverStatus === "APPROVED"
+                  ? "Waiver Details — Approved"
+                  : selectedLearnerForWaiver?.waiverStatus === "PENDING"
+                    ? "Waiver Details — Pending Review"
+                    : "Submit Waiver Form"}
+            </DialogTitle>
             <DialogDescription asChild>
               <div>
-                Submit a waiver form for <strong>{selectedLearnerForWaiver?.learnerName}</strong> who was absent from the training.
+                Waiver form for <strong>{selectedLearnerForWaiver?.learnerName}</strong> who was absent from the training.
               </div>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Status banner for APPROVED / PENDING / REJECTED */}
+            {selectedLearnerForWaiver?.waiverStatus === "APPROVED" && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="text-sm font-semibold text-green-800">✓ Waiver Approved</div>
+                <div className="text-xs text-green-700 mt-1">
+                  Approved on {selectedLearnerForWaiver.waiverReviewedAt ? new Date(selectedLearnerForWaiver.waiverReviewedAt).toLocaleDateString() : "N/A"}.
+                  This participant will not be billed for the course.
+                </div>
+              </div>
+            )}
+
+            {selectedLearnerForWaiver?.waiverStatus === "PENDING" && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <div className="text-sm font-semibold text-yellow-800">⏳ Awaiting Review</div>
+                <div className="text-xs text-yellow-700 mt-1">
+                  Submitted on {selectedLearnerForWaiver.waiverSubmittedAt ? new Date(selectedLearnerForWaiver.waiverSubmittedAt).toLocaleDateString() : "N/A"}.
+                  This participant can still be billed until the waiver is approved.
+                </div>
+              </div>
+            )}
+
+            {selectedLearnerForWaiver?.waiverStatus === "REJECTED" && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="text-sm font-semibold text-red-800">✗ Waiver Rejected</div>
+                {selectedLearnerForWaiver.waiverRejectReason && (
+                  <div className="text-xs text-red-700 mt-1">Reason: {selectedLearnerForWaiver.waiverRejectReason}</div>
+                )}
+                <div className="text-xs text-red-700 mt-1">You may submit a new waiver request below. This participant can still be billed.</div>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="reason">Reason for Absence *</Label>
               <Textarea
@@ -565,59 +633,44 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
                 placeholder="Please provide the reason for absence (e.g., medical emergency, family emergency, etc.)"
                 rows={4}
                 className="mt-2"
-                disabled={!!selectedLearnerForWaiver?.waiverReason}
+                disabled={selectedLearnerForWaiver?.waiverStatus === "APPROVED" || selectedLearnerForWaiver?.waiverStatus === "PENDING"}
               />
             </div>
 
-            <div>
-              <Label htmlFor="document">Supporting Document (Optional)</Label>
-              <Input
-                id="document"
-                type="file"
-                onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.jpg,.png"
-                className="mt-2"
-                disabled={!!selectedLearnerForWaiver?.waiverReason}
-              />
-              <p className="text-xs text-muted-foreground mt-1">Supported formats: PDF, DOC, DOCX, JPG, PNG (max 5MB)</p>
-              {waiverForm.document && (
-                <div className="flex items-center gap-2 mt-2 text-sm">
-                  <FileText className="h-4 w-4" />
-                  <span>{waiverForm.document.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setWaiverForm({ ...waiverForm, document: null })}
-                    disabled={!!selectedLearnerForWaiver?.waiverReason}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {selectedLearnerForWaiver?.waiverReason && (
-              <div className="p-4 bg-muted rounded-md">
-                <div className="text-sm font-medium mb-2">Waiver Already Submitted</div>
-                <div className="text-sm text-muted-foreground">
-                  This learner already has a waiver form on file. Submitted on{" "}
-                  {selectedLearnerForWaiver.waiverSubmittedAt ? new Date(selectedLearnerForWaiver.waiverSubmittedAt).toLocaleDateString() : "N/A"}
-                </div>
+            {/* Document upload — only for new submission or resubmission */}
+            {selectedLearnerForWaiver?.waiverStatus !== "APPROVED" && selectedLearnerForWaiver?.waiverStatus !== "PENDING" && (
+              <div>
+                <Label htmlFor="document">Supporting Document (Optional)</Label>
+                <Input id="document" type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.jpg,.png" className="mt-2" />
+                <p className="text-xs text-muted-foreground mt-1">Supported formats: PDF, DOC, DOCX, JPG, PNG (max 5MB)</p>
+                {waiverForm.document && (
+                  <div className="flex items-center gap-2 mt-2 text-sm">
+                    <FileText className="h-4 w-4" />
+                    <span>{waiverForm.document.name}</span>
+                    <Button variant="ghost" size="sm" onClick={() => setWaiverForm({ ...waiverForm, document: null })}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setWaiverDialogOpen(false)}>
-              Cancel
+              Close
             </Button>
-            {!selectedLearnerForWaiver?.waiverReason && (
+            {/* Show submit button only when no waiver yet, or waiver was REJECTED */}
+            {(selectedLearnerForWaiver?.waiverStatus === "REJECTED" ||
+              (!selectedLearnerForWaiver?.waiverStatus && !selectedLearnerForWaiver?.waiverReason)) && (
               <Button onClick={handleSubmitWaiver} disabled={submittingWaiver}>
                 {submittingWaiver ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Submitting...
                   </>
+                ) : selectedLearnerForWaiver?.waiverStatus === "REJECTED" ? (
+                  "Resubmit Waiver"
                 ) : (
                   "Submit Waiver"
                 )}

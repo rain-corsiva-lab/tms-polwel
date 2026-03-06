@@ -1659,6 +1659,8 @@ class EmailService {
     additionalNotes?: string;
     cc?: string[] | string | null;
     attachments?: any[] | null;
+    /** e.g. "3 Days" — used in the email subject line instead of the start date */
+    courseDuration?: string | null;
   }): Promise<boolean> {
     const {
       email,
@@ -1674,11 +1676,18 @@ class EmailService {
       additionalNotes,
       cc,
       attachments,
+      courseDuration,
     } = params;
 
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
     const logoAttachment = this.getLogoAttachment();
+
+    // Returns true when both dates fall on the same calendar day (ignores time)
+    const isSameDayLocal = (d1?: Date, d2?: Date): boolean => {
+      if (!d1 || !d2) return false;
+      return d1.toISOString().substring(0, 10) === d2.toISOString().substring(0, 10);
+    };
 
     const formatDateWithDay = (date?: Date) => {
       if (!date) return 'To be confirmed';
@@ -1739,11 +1748,14 @@ class EmailService {
 
     const ccRecipients = normalizeCc();
 
-    const subjectDate = formatDateForSubject(startDate);
+    // Subject: prefer "(3 Days)" style; fall back to start date if no duration given
+    const subjectSuffix = courseDuration
+      ? courseDuration
+      : formatDateForSubject(startDate);
     const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
-      subject: `Course Confirmation: ${courseTitle}${subjectDate ? ` (${subjectDate})` : ''}`,
+      subject: `Course Confirmation: ${courseTitle}${subjectSuffix ? ` (${subjectSuffix})` : ''}`,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
       html: `
         <!DOCTYPE html>
@@ -1784,7 +1796,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td>
-                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Learners and/or Training Coordinators,</p>
+                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Learners,</p>
                               <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Please refer to the attached documents and the details below regarding the upcoming course for your reference.
                               </p>
@@ -1797,12 +1809,12 @@ class EmailService {
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; width: 30%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Course Name &amp; Run Code</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
                                     ${courseTitle}
-                                    ${serialNumber ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; font-family: Arial, sans-serif !important;">Run Code: ${serialNumber}</span>` : ''}
+                                    
                                   </td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Day &amp; Date</td>
-                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatDateWithDay(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' to ' + formatDateWithDay(endDate) : ''}</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatDateWithDay(startDate)}${!isSameDayLocal(startDate, endDate) && endDate ? ' to ' + formatDateWithDay(endDate) : ''}</td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Time</td>
@@ -2019,6 +2031,8 @@ class EmailService {
     endDate?: Date;
     venueName?: string;
     cancellationReason?: string;
+    /** Optional next run date text to include in the email, e.g. "15 April 2026" */
+    nextRunDate?: string | null;
   }): Promise<boolean> {
     const {
       email,
@@ -2030,6 +2044,7 @@ class EmailService {
       endDate,
       venueName,
       cancellationReason,
+      nextRunDate,
     } = params;
 
     const transporter = this.getTransporter();
@@ -2114,7 +2129,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td>
-                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Whom It May Concern,</p>
+                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear ${learnerName || 'Participant'},</p>
                               <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 We regret to inform you that the following course has been cancelled due to ${cancellationReason || 'unforeseen circumstances'}.
                               </p>
@@ -2168,7 +2183,8 @@ class EmailService {
                                     <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Alternative Options</p>
                                     <div style="color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                       We will notify you once a new course run has been scheduled. In the meantime, you may wish to explore other available courses on our training calendar.<br/><br/>
-                                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563 !important; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563 !important; text-decoration: none;">6431 9973</a>.
+                                      ${nextRunDate ? `The next available session will be on ${nextRunDate}. Do let us know if your officers are still keen/ available to register for the next run, and we will arrange it accordingly.<br/><br/>` : ''}
+                                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at <a href="tel:67184870" style="color: #4b5563 !important; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563 !important; text-decoration: none;">6431 9973</a>.
                                     </div>
                                   </td>
                                 </tr>

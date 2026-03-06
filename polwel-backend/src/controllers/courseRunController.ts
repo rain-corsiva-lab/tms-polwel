@@ -539,6 +539,7 @@ const courseRunBaseSchema = z.object({
   venuePerHeadIfExceed: z.number().nullable().optional(),
   contractFees: z.number().nullable().optional(),
   additionalCostExceedingCapacity: z.number().nullable().optional(),
+  venueFinalFee: z.number().nullable().optional(),
   otherFee: z.number().nullable().optional(),
   adminFee: z.number().nullable().optional(),
   contingencyFee: z.number().nullable().optional(),
@@ -581,6 +582,12 @@ const cancelCourseRunSchema = z
       .min(5, 'Please provide a short reason (min 5 characters).')
       .max(2000, 'Reason cannot exceed 2000 characters.')
       .optional(),
+    nextRunDate: z
+      .string()
+      .trim()
+      .max(200, 'Next run date cannot exceed 200 characters.')
+      .optional()
+      .nullable(),
   })
   .optional();
 
@@ -1416,6 +1423,7 @@ export const courseRunController = {
 
       const payload = cancelCourseRunSchema?.parse(req.body) ?? {};
       const reason = payload?.reason?.trim() || null;
+      const nextRunDate = payload?.nextRunDate?.trim() || null;
       const actorId = req.user?.userId ?? null;
 
       // Update status to CANCELLED
@@ -1502,6 +1510,7 @@ export const courseRunController = {
           if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
+          if (nextRunDate) emailParams.nextRunDate = nextRunDate;
           
           return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
             console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -1527,7 +1536,8 @@ export const courseRunController = {
           if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
-          
+          if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+
           return EmailService.sendCourseCancellationEmail(emailParams)
             .then(() => {
               console.log(`✅ Cancellation email sent to trainer: ${trainerAssignment.trainer.email}`);
@@ -3655,6 +3665,13 @@ export const courseRunController = {
             emailPayload.additionalNotes = additionalNotes;
           }
 
+          if (courseRun.course?.duration) {
+            const dur = parseFloat(String(courseRun.course.duration));
+            const durType = courseRun.course.durationType || 'days';
+            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+            emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
+          }
+
           // Build CC list: include custom CC + training coordinator if they exist
           const emailCcList = [...ccList];
           if (trainingCoordinator?.email?.trim()) {
@@ -3914,6 +3931,13 @@ export const courseRunController = {
 
           if (courseRun.venue?.address) {
             emailPayload.venueAddress = courseRun.venue.address;
+          }
+
+          if (courseRun.course?.duration) {
+            const dur = parseFloat(String(courseRun.course.duration));
+            const durType = courseRun.course.durationType || 'days';
+            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+            emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
           }
 
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -4378,6 +4402,13 @@ export const courseRunController = {
           emailPayload.venueAddress = enrollment.courseRun.venue.address;
         }
 
+        if (enrollment.courseRun?.course?.duration) {
+          const dur = parseFloat(String(enrollment.courseRun.course.duration));
+          const durType = enrollment.courseRun.course.durationType || 'days';
+          const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+          emailPayload.courseDuration = `${isNaN(dur) ? enrollment.courseRun.course.duration : dur} ${durLabel}`;
+        }
+
         const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
         const status = didSend ? 'SENT' : 'FAILED';
@@ -4582,14 +4613,26 @@ export const courseRunController = {
         }
       }
 
-      // Determine completeness: a course run is considered COMPLETED only when
-      // all learners have been associated with a billing entry. If one or more
-      // learners are not present in any billing entry, mark as INCOMPLETED.
+      // Determine completeness: a course run is COMPLETED when all billable learners
+      // have been assigned to a billing entry.
+      // Non-billable learners are excluded from this check:
+      //   - Absent learners with an APPROVED waiver (exempt from billing)
+      //   - WITHDRAWN learners
+      //   - Self-sponsored or Transition Dollars payers (they paid directly)
       const unassignedLearnersCount = await prisma.courseRunLearner.count({
         where: {
           courseRunId: courseRunId,
           deletedAt: null,
           courseRunBillingEntryId: null,
+          // Exclude non-billable learners
+          NOT: [
+            // Absent with approved waiver
+            { AND: [{ attendanceStatus: 'ABSENT' }, { waiverStatus: 'APPROVED' }] },
+            // Withdrawn
+            { enrollmentStatus: 'WITHDRAWN' },
+            // Already paid directly
+            { paymentMode: { in: ['SELF_SPONSORED', 'TRANSITION_DOLLARS'] } },
+          ],
         },
       });
 
@@ -4936,6 +4979,9 @@ export const courseRunController = {
           waiverReason: enrollment.waiverReason,
           waiverSupportingDocumentId: enrollment.waiverSupportingDocumentId,
           waiverSubmittedAt: enrollment.waiverSubmittedAt,
+          waiverStatus: enrollment.waiverStatus || null,
+          waiverRejectReason: enrollment.waiverRejectReason || null,
+          waiverReviewedAt: enrollment.waiverReviewedAt || null,
         };
       });
 
