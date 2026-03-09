@@ -1597,6 +1597,21 @@ export const courseRunsApi = {
     return apiRequest(`/course-runs/${id}/workflow`);
   },
 
+  // Public endpoint — no auth required. Returns the current workflow timing mode
+  // so the frontend can display a testing-mode banner.
+  getWorkflowMode: async (): Promise<{
+    success: boolean;
+    isTestingMode: boolean;
+    environment: string;
+    cronSchedule: string;
+    transitionRule: string;
+  }> => {
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    const res = await fetch(`${base}/course-runs/workflow-mode`);
+    if (!res.ok) throw new Error('Failed to fetch workflow mode');
+    return res.json();
+  },
+
   performWorkflowAction: async (
     id: string,
     payload: {

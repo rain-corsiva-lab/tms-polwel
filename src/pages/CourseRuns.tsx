@@ -500,6 +500,7 @@ const CourseRuns: React.FC = () => {
       COMPLETED: "Completed",
       CANCELLED: "Cancelled",
       DRAFT: "Draft",
+      INCOMPLETED: "Incomplete",
     };
     return (
       statusMap[status] ||
@@ -564,6 +565,8 @@ const CourseRuns: React.FC = () => {
         return "default";
       case "CANCELLED":
         return "destructive";
+      case "INCOMPLETED":
+        return "secondary";
       case "PUBLISHED":
         return "default";
       case "ONGOING":
@@ -597,6 +600,8 @@ const CourseRuns: React.FC = () => {
         return `${baseClass} bg-green-600 text-white`;
       case "CANCELLED":
         return `${baseClass} bg-red-100 text-red-800`;
+      case "INCOMPLETED":
+        return `${baseClass} bg-orange-100 text-orange-800`;
       case "DRAFT":
         return `${baseClass} bg-gray-100 text-gray-600`;
       default:

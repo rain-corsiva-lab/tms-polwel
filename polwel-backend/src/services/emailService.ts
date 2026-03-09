@@ -2408,6 +2408,119 @@ class EmailService {
   }
 
   /**
+   * Send a "course completed" notification email to a trainer or partner.
+   * Used when billing is finalized and the course run transitions to COMPLETED.
+   */
+  static async sendTrainerCourseCompletionEmail(params: {
+    email: string;
+    recipientName: string;
+    courseTitle: string;
+    courseCode?: string;
+    serialNumber?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<boolean> {
+    const { email, recipientName, courseTitle, courseCode, serialNumber, startDate, endDate } = params;
+    const logoSrc = this.getLogoSrc();
+    const logoAttachment = this.getLogoAttachment();
+
+    const formatDateFull = (d: Date) =>
+      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const isSameDay = (a: Date, b: Date) => a.toISOString().substring(0, 10) === b.toISOString().substring(0, 10);
+    const dateRange = startDate
+      ? (endDate && !isSameDay(startDate, endDate)
+          ? `${formatDateFull(startDate)} – ${formatDateFull(endDate)}`
+          : formatDateFull(startDate))
+      : null;
+
+    const footerHtml = this.getEmailFooter();
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course Completed – ${courseTitle}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:20px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+        <!-- Header -->
+        <tr>
+          <td style="background-color:#1e3a5f;padding:24px 32px;text-align:center;">
+            <img src="${logoSrc}" alt="POLWEL Logo" height="50" style="height:50px;display:block;margin:0 auto;" />
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 16px 0;font-size:16px;color:#1f2937;">Dear ${recipientName},</p>
+            <p style="margin:0 0 16px 0;font-size:15px;color:#374151;">
+              We are pleased to inform you that the following course run has been <strong>completed</strong> and billing has been finalised.
+            </p>
+            <!-- Course details table -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:24px;">
+              <tr style="background-color:#f9fafb;">
+                <td style="padding:12px 16px;font-weight:600;color:#374151;font-size:14px;border-bottom:1px solid #e5e7eb;">Course</td>
+                <td style="padding:12px 16px;color:#1f2937;font-size:14px;border-bottom:1px solid #e5e7eb;">${courseTitle}${courseCode ? ` (${courseCode})` : ''}</td>
+              </tr>
+              ${serialNumber ? `<tr><td style="padding:12px 16px;font-weight:600;color:#374151;font-size:14px;border-bottom:1px solid #e5e7eb;">Serial No.</td><td style="padding:12px 16px;color:#1f2937;font-size:14px;border-bottom:1px solid #e5e7eb;">${serialNumber}</td></tr>` : ''}
+              ${dateRange ? `<tr><td style="padding:12px 16px;font-weight:600;color:#374151;font-size:14px;">Date</td><td style="padding:12px 16px;color:#1f2937;font-size:14px;">${dateRange}</td></tr>` : ''}
+            </table>
+            <p style="margin:0 0 16px 0;font-size:14px;color:#6b7280;">
+              If you have any questions, please contact us at <a href="mailto:pdcs@polwel.org.sg" style="color:#1e3a5f;">pdcs@polwel.org.sg</a>.
+            </p>
+            <p style="margin:0;font-size:14px;color:#374151;">Best regards,<br/><strong>POLWEL Training Team</strong></p>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr><td>${footerHtml}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    const inlinedAttachments = this.isMailjetSmtp() ? (this.getLogoMailjetInline() ? [this.getLogoMailjetInline()!] : []) : [];
+    const mailOptions: any = {
+      from: `"POLWEL Training" <${this.mailFromAddress}>`,
+      to: email,
+      subject: `Course Completed: ${courseTitle}`,
+      html,
+      text: `Dear ${recipientName},\n\nThe course "${courseTitle}" has been completed and billing finalised.\n\nBest regards,\nPOLWEL Training Team`,
+    };
+
+    if (!this.isGraphApiMode()) {
+      const logoAttachmentData = logoAttachment;
+      if (logoAttachmentData) {
+        mailOptions.attachments = [logoAttachmentData];
+      }
+    }
+
+    try {
+      if (this.isMailjetSmtp()) {
+        const result = await this.sendViaMailjetApi({
+          to: email,
+          from: this.mailFromAddress,
+          subject: mailOptions.subject,
+          html,
+          text: mailOptions.text,
+          inlinedAttachments,
+        });
+        return result.success;
+      }
+      const t = this.getTransporter();
+      if (!t) throw new Error('Email transporter not available');
+      await t.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Failed to send trainer course completion email:', error);
+      return false;
+    }
+  }
+
+  /**
    * Send waiver pending notification email to admins/staff with waiver approve permission.
    * Triggered when a learner submits a waiver request.
    */
