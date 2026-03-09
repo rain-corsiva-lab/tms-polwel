@@ -539,6 +539,7 @@ const courseRunBaseSchema = z.object({
   venuePerHeadIfExceed: z.number().nullable().optional(),
   contractFees: z.number().nullable().optional(),
   additionalCostExceedingCapacity: z.number().nullable().optional(),
+  venueFinalFee: z.number().nullable().optional(),
   otherFee: z.number().nullable().optional(),
   adminFee: z.number().nullable().optional(),
   contingencyFee: z.number().nullable().optional(),
@@ -581,6 +582,12 @@ const cancelCourseRunSchema = z
       .min(5, 'Please provide a short reason (min 5 characters).')
       .max(2000, 'Reason cannot exceed 2000 characters.')
       .optional(),
+    nextRunDate: z
+      .string()
+      .trim()
+      .max(200, 'Next run date cannot exceed 200 characters.')
+      .optional()
+      .nullable(),
   })
   .optional();
 
@@ -1416,6 +1423,7 @@ export const courseRunController = {
 
       const payload = cancelCourseRunSchema?.parse(req.body) ?? {};
       const reason = payload?.reason?.trim() || null;
+      const nextRunDate = payload?.nextRunDate?.trim() || null;
       const actorId = req.user?.userId ?? null;
 
       // Update status to CANCELLED
@@ -1502,6 +1510,7 @@ export const courseRunController = {
           if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
+          if (nextRunDate) emailParams.nextRunDate = nextRunDate;
           
           return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
             console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -1527,7 +1536,8 @@ export const courseRunController = {
           if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
-          
+          if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+
           return EmailService.sendCourseCancellationEmail(emailParams)
             .then(() => {
               console.log(`✅ Cancellation email sent to trainer: ${trainerAssignment.trainer.email}`);
@@ -1627,6 +1637,24 @@ export const courseRunController = {
       console.error('Error fetching status options:', error);
       res.status(500).json(buildErrorResponse('courseRunController.getStatusOptions', 'Failed to fetch status options', error));
     }
+  },
+
+  // Return current workflow timing mode so the frontend can display a banner
+  async getWorkflowMode(req: Request, res: Response) {
+    const isTestingMode = process.env.WORKFLOW_TESTING_MODE === 'true';
+    const environment = process.env.NODE_ENV || 'development';
+    // Cron always runs every 5 minutes; only the transition rule differs
+    const cronSchedule = process.env.COURSE_RUN_STATUS_CRON || '*/5 * * * *';
+
+    res.json({
+      success: true,
+      isTestingMode,
+      environment,
+      cronSchedule,
+      transitionRule: isTestingMode
+        ? 'IN_PROGRESS → PENDING_BILLING 5 minutes after course end time'
+        : 'IN_PROGRESS → PENDING_BILLING at midnight on the day after course end date',
+    });
   },
 
   // Enroll single learner
@@ -3576,12 +3604,15 @@ export const courseRunController = {
 
       let successCount = 0;
       let failedCount = 0;
+      // Map from lowercase TC email → TC details; used to send one email per TC at the end
+      const tcEmailMap = new Map<string, { email: string; name: string }>();
 
       for (const enrollment of courseRun.courseRunLearners) {
         const now = new Date();
         const learnerEmail = enrollment.learner?.email?.trim();
         const learnerName = enrollment.learner?.fullname || 'Learner';
         const trainingCoordinator = enrollment.trainingCoordinator;
+        const isSelfPayment = enrollment.paymentMode === 'SELF_SPONSORED';
 
         if (!learnerEmail) {
           failedCount += 1;
@@ -3655,18 +3686,16 @@ export const courseRunController = {
             emailPayload.additionalNotes = additionalNotes;
           }
 
-          // Build CC list: include custom CC + training coordinator if they exist
-          const emailCcList = [...ccList];
-          if (trainingCoordinator?.email?.trim()) {
-            const tcEmail = trainingCoordinator.email.trim();
-            // Add TC to CC list if not already there and different from learner
-            if (!emailCcList.includes(tcEmail) && tcEmail !== learnerEmail) {
-              emailCcList.push(tcEmail);
-            }
+          if (courseRun.course?.duration) {
+            const dur = parseFloat(String(courseRun.course.duration));
+            const durType = courseRun.course.durationType || 'days';
+            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+            emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
           }
 
-          if (emailCcList.length > 0) {
-            emailPayload.cc = emailCcList;
+          // Only apply admin-provided CC (never auto-CC the TC here — TC gets their own separate email below)
+          if (ccList.length > 0) {
+            emailPayload.cc = ccList;
           }
 
           if (attachments && attachments.length > 0) {
@@ -3712,6 +3741,17 @@ export const courseRunController = {
           } else {
             failedCount += 1;
           }
+
+          // Collect TC for a separate consolidated email — skip self-payment learners
+          if (!isSelfPayment && trainingCoordinator?.email?.trim()) {
+            const tcEmail = trainingCoordinator.email.trim().toLowerCase();
+            if (!tcEmailMap.has(tcEmail)) {
+              tcEmailMap.set(tcEmail, {
+                email: trainingCoordinator.email.trim(),
+                name: trainingCoordinator.name || 'Training Coordinator',
+              });
+            }
+          }
         } catch (sendError) {
           failedCount += 1;
 
@@ -3744,6 +3784,43 @@ export const courseRunController = {
               });
             }
           }
+        }
+      }
+
+      // Send one confirmation email per unique TC (instead of CC-ing on every learner email)
+      for (const [, tc] of tcEmailMap) {
+        try {
+          const tcEmailPayload: Parameters<typeof EmailService.sendLearnerCourseConfirmationEmail>[0] = {
+            email: tc.email,
+            learnerName: tc.name,
+            courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
+          };
+          if (courseRun.course?.courseCode) tcEmailPayload.courseCode = courseRun.course.courseCode;
+          if (courseRun.serialNumber) tcEmailPayload.serialNumber = courseRun.serialNumber;
+          if (courseRun.startDatetime) tcEmailPayload.startDate = new Date(courseRun.startDatetime);
+          if (courseRun.endDatetime) tcEmailPayload.endDate = new Date(courseRun.endDatetime);
+          const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
+          if (venueName) tcEmailPayload.venueName = venueName;
+          if (courseRun.venue?.address) tcEmailPayload.venueAddress = courseRun.venue.address;
+          if (courseRun.specifiedLocation) tcEmailPayload.specifiedLocation = courseRun.specifiedLocation;
+          if (additionalNotes) tcEmailPayload.additionalNotes = additionalNotes;
+          if (courseRun.course?.duration) {
+            const dur = parseFloat(String(courseRun.course.duration));
+            const durType = courseRun.course.durationType || 'days';
+            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+            tcEmailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
+          }
+          if (attachments && attachments.length > 0) tcEmailPayload.attachments = attachments;
+          const tcSent = await EmailService.sendLearnerCourseConfirmationEmail(tcEmailPayload);
+          if (tcSent) {
+            successCount += 1;
+          } else {
+            failedCount += 1;
+          }
+          console.log(`[sendCourseConfirmationEmail] TC email ${tcSent ? 'sent' : 'failed'} → ${tc.email}`);
+        } catch (tcErr) {
+          failedCount += 1;
+          console.error(`[sendCourseConfirmationEmail] Failed to send TC email to ${tc.email}:`, tcErr);
         }
       }
 
@@ -3914,6 +3991,13 @@ export const courseRunController = {
 
           if (courseRun.venue?.address) {
             emailPayload.venueAddress = courseRun.venue.address;
+          }
+
+          if (courseRun.course?.duration) {
+            const dur = parseFloat(String(courseRun.course.duration));
+            const durType = courseRun.course.durationType || 'days';
+            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+            emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
           }
 
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -4378,6 +4462,13 @@ export const courseRunController = {
           emailPayload.venueAddress = enrollment.courseRun.venue.address;
         }
 
+        if (enrollment.courseRun?.course?.duration) {
+          const dur = parseFloat(String(enrollment.courseRun.course.duration));
+          const durType = enrollment.courseRun.course.durationType || 'days';
+          const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+          emailPayload.courseDuration = `${isNaN(dur) ? enrollment.courseRun.course.duration : dur} ${durLabel}`;
+        }
+
         const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
         const status = didSend ? 'SENT' : 'FAILED';
@@ -4582,18 +4673,31 @@ export const courseRunController = {
         }
       }
 
-      // Determine completeness: a course run is considered COMPLETED only when
-      // all learners have been associated with a billing entry. If one or more
-      // learners are not present in any billing entry, mark as INCOMPLETED.
+      // Determine completeness: a course run is COMPLETED when all billable learners
+      // have been assigned to a billing entry.
+      // Non-billable learners are excluded from this check:
+      //   - Absent learners with an APPROVED waiver (exempt from billing)
+      //   - WITHDRAWN learners
+      //   - Self-sponsored or Transition Dollars payers (they paid directly)
       const unassignedLearnersCount = await prisma.courseRunLearner.count({
         where: {
           courseRunId: courseRunId,
           deletedAt: null,
           courseRunBillingEntryId: null,
+          // Exclude non-billable learners
+          NOT: [
+            // Absent with approved waiver
+            { AND: [{ attendanceStatus: 'ABSENT' }, { waiverStatus: 'APPROVED' }] },
+            // Withdrawn
+            { enrollmentStatus: 'WITHDRAWN' },
+            // Already paid directly
+            { paymentMode: { in: ['SELF_SPONSORED', 'TRANSITION_DOLLARS'] } },
+          ],
         },
       });
 
       const newStatus = unassignedLearnersCount > 0 ? 'INCOMPLETED' : 'COMPLETED';
+      const previousStatus = courseRun.status;
 
       await prisma.courseRun.update({
         where: { id: courseRunId },
@@ -4610,6 +4714,114 @@ export const courseRunController = {
             status: calculatedStatus,
           },
         });
+      }
+
+      // Send completion emails when the course transitions TO COMPLETED for the first time
+      if (newStatus === 'COMPLETED' && previousStatus !== 'COMPLETED') {
+        try {
+          const completionCourseRun = await prisma.courseRun.findUnique({
+            where: { id: courseRunId },
+            include: {
+              course: true,
+              venue: true,
+              courseRunLearners: {
+                where: { deletedAt: null, enrollmentStatus: 'ENROLLED' },
+                include: { learner: true },
+              },
+              courseRunTrainers: {
+                where: { deletedAt: null },
+                include: { trainer: true },
+              },
+              courseRunPartners: {
+                include: {
+                  partner: {
+                    select: { id: true, name: true, email: true, pointOfContactEmail: true },
+                  },
+                },
+              },
+            },
+          });
+
+          if (completionCourseRun) {
+            const backendUrl = process.env.NODE_ENV === 'Production'
+              ? (process.env.BACKEND_URL || process.env.API_URL || 'https://api.polwel.org')
+              : 'http://localhost:3001';
+            const baseUrl = backendUrl.replace(/\/api$/, '');
+
+            const trainerNames = (completionCourseRun.courseRunTrainers || [])
+              .map((ct: any) => ct.trainer?.name)
+              .filter(Boolean)
+              .join(', ');
+
+            // Send completion email to each enrolled learner
+            for (const enrollment of completionCourseRun.courseRunLearners) {
+              const learnerEmail = enrollment.learner?.email?.trim();
+              if (!learnerEmail) continue;
+              try {
+                const emailParams: any = {
+                  email: learnerEmail,
+                  learnerName: enrollment.learner?.fullname || 'Learner',
+                  courseTitle: completionCourseRun.course?.title || 'POLWEL Course',
+                  certificateDownloadUrl: `${baseUrl}/cert/${enrollment.learner?.id}/${courseRunId}`,
+                };
+                if (completionCourseRun.course?.courseCode) emailParams.courseCode = completionCourseRun.course.courseCode;
+                if (completionCourseRun.serialNumber) emailParams.serialNumber = completionCourseRun.serialNumber;
+                if (completionCourseRun.startDatetime) emailParams.startDate = new Date(completionCourseRun.startDatetime);
+                if (completionCourseRun.endDatetime) emailParams.endDate = new Date(completionCourseRun.endDatetime);
+                if (completionCourseRun.endDatetime) emailParams.completionDate = new Date(completionCourseRun.endDatetime);
+                if (trainerNames) emailParams.trainerName = trainerNames;
+                await EmailService.sendCourseCompletionEmail(emailParams);
+                console.log(`[saveBilling] Sent completion email to learner ${learnerEmail}`);
+              } catch (err) {
+                console.error(`[saveBilling] Failed to send completion email to learner ${enrollment.learner?.email}:`, err);
+              }
+            }
+
+            // Build trainer completion email params
+            const trainerCompletionParams = {
+              courseTitle: completionCourseRun.course?.title || 'POLWEL Course',
+              courseCode: completionCourseRun.course?.courseCode || undefined,
+              serialNumber: completionCourseRun.serialNumber || undefined,
+              startDate: completionCourseRun.startDatetime ? new Date(completionCourseRun.startDatetime) : undefined,
+              endDate: completionCourseRun.endDatetime ? new Date(completionCourseRun.endDatetime) : undefined,
+            };
+
+            // Send completion notification to each trainer
+            for (const assignment of completionCourseRun.courseRunTrainers) {
+              const trainerEmail = assignment.trainer?.email?.trim();
+              if (!trainerEmail) continue;
+              try {
+                await EmailService.sendTrainerCourseCompletionEmail({
+                  email: trainerEmail,
+                  recipientName: assignment.trainer?.name || 'Trainer',
+                  ...trainerCompletionParams,
+                });
+                console.log(`[saveBilling] Sent completion notification to trainer ${trainerEmail}`);
+              } catch (err) {
+                console.error(`[saveBilling] Failed to send completion notification to trainer ${trainerEmail}:`, err);
+              }
+            }
+
+            // Send completion notification to each partner (TC email)
+            for (const cp of completionCourseRun.courseRunPartners || []) {
+              const partnerEmail = (cp.partner?.pointOfContactEmail || cp.partner?.email)?.trim();
+              if (!partnerEmail) continue;
+              try {
+                await EmailService.sendTrainerCourseCompletionEmail({
+                  email: partnerEmail,
+                  recipientName: cp.partner?.name || 'Partner',
+                  ...trainerCompletionParams,
+                });
+                console.log(`[saveBilling] Sent completion notification to partner ${partnerEmail}`);
+              } catch (err) {
+                console.error(`[saveBilling] Failed to send completion notification to partner ${partnerEmail}:`, err);
+              }
+            }
+          }
+        } catch (emailErr) {
+          // Completion emails are non-blocking — billing save already succeeded
+          console.error('[saveBilling] Error sending completion emails:', emailErr);
+        }
       }
 
       res.json({
@@ -4936,6 +5148,9 @@ export const courseRunController = {
           waiverReason: enrollment.waiverReason,
           waiverSupportingDocumentId: enrollment.waiverSupportingDocumentId,
           waiverSubmittedAt: enrollment.waiverSubmittedAt,
+          waiverStatus: enrollment.waiverStatus || null,
+          waiverRejectReason: enrollment.waiverRejectReason || null,
+          waiverReviewedAt: enrollment.waiverReviewedAt || null,
         };
       });
 

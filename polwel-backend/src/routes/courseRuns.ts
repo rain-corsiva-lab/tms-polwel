@@ -8,6 +8,9 @@ const router = Router();
 // GET /api/course-runs/certificates/download/:learnerId/:courseRunId - Public certificate download (no auth required)
 router.get('/certificates/download/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
 
+// GET /api/course-runs/workflow-mode - Returns current workflow timing mode (no auth needed — used by frontend banner)
+router.get('/workflow-mode', courseRunController.getWorkflowMode);
+
 // Apply authentication middleware to all other routes
 router.use(authenticateToken);
 

@@ -199,6 +199,18 @@ function DashboardContent() {
   const [loadingCharts, setLoadingCharts] = useState(true);
   const [loadingDrafts, setLoadingDrafts] = useState(true);
 
+  // Sort: highest cancellation rate first, then alphabetically for ties
+  const sortedCancellationRates = useMemo(
+    () =>
+      [...cancellationRates].sort((a, b) => {
+        if (b.cancellationRate !== a.cancellationRate) {
+          return b.cancellationRate - a.cancellationRate;
+        }
+        return (a.courseName || "").localeCompare(b.courseName || "");
+      }),
+    [cancellationRates],
+  );
+
   // Calendar state - now supports date range
   const [selectedDate, setSelectedDate] = useState<{ from: Date; to?: Date }>({ from: new Date() });
 
@@ -666,7 +678,7 @@ function DashboardContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {cancellationRates.map((item, index) => (
+                  {sortedCancellationRates.map((item, index) => (
                     <TableRow key={item.courseId} className={index % 2 === 0 ? "bg-orange-50" : ""}>
                       <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell>{item.courseName}</TableCell>

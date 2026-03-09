@@ -87,6 +87,10 @@ const statusChipBaseClass = "inline-flex items-center rounded-full px-3 py-1 tex
 
 const formatStatusLabel = (status: string): string => {
   if (!status) return "Unknown";
+  const overrides: Record<string, string> = {
+    INCOMPLETED: "Incomplete",
+  };
+  if (overrides[status]) return overrides[status];
   return status
     .toLowerCase()
     .split("_")

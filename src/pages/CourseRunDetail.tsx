@@ -1134,6 +1134,24 @@ const CourseRunDetail: React.FC = () => {
 
       console.log("Fee updates to be saved:", feeUpdates);
 
+      // Calculate and persist venueFinalFee so PostRunDetail can reliably read it
+      const enrolledForFee = courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length ?? 0;
+      const feeTypeForFee = courseRun.feeType;
+      const baseFeeForFee = feeUpdates.venueFee ?? courseRun.venueFee ?? 0;
+      const maxPForFee = feeUpdates.venueMaxParticipant ?? courseVenueMaxParticipants ?? 0;
+      const perHeadForFee = feeUpdates.perHeadFeeIfMaxExceed ?? coursePerHeadIfMaxExceed ?? 0;
+      if (feeTypeForFee === "PER_HEAD") {
+        feeUpdates.venueFinalFee = safeNumber(baseFeeForFee) * enrolledForFee;
+      } else if (feeTypeForFee === "PER_VENUE") {
+        if (maxPForFee > 0 && enrolledForFee > maxPForFee && perHeadForFee > 0) {
+          feeUpdates.venueFinalFee = safeNumber(baseFeeForFee) + (enrolledForFee - maxPForFee) * safeNumber(perHeadForFee);
+        } else {
+          feeUpdates.venueFinalFee = safeNumber(baseFeeForFee);
+        }
+      } else if (feeTypeForFee === "FIXED") {
+        feeUpdates.venueFinalFee = safeNumber(baseFeeForFee);
+      }
+
       // Update all fees in one call
       await courseRunsApi.update(courseRun.id, feeUpdates);
 
@@ -1618,6 +1636,28 @@ const CourseRunDetail: React.FC = () => {
         courseRunFeeType: editData.courseRunFeeType && editData.courseRunFeeType !== "" ? editData.courseRunFeeType : null,
         clientOrganizationId: editData.clientOrganizationId || null,
       };
+
+      // Calculate and persist venueFinalFee so PostRunDetail can reliably read it
+      const feeTypeForCalc = payload.feeType ?? courseRun.feeType;
+      const baseFeeForCalc = payload.venueFee ?? courseRun.venueFee ?? 0;
+      const maxPForCalc = payload.venueMaxParticipant ?? courseRun.venueMaxParticipant ?? 0;
+      const perHeadForCalc = payload.perHeadFeeIfMaxExceed ?? courseRun.perHeadFeeIfMaxExceed ?? 0;
+      const enrolledForCalc = courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "ENROLLED").length ?? 0;
+      let computedVenueFinalFee: number | null = null;
+      if (feeTypeForCalc === "PER_HEAD") {
+        computedVenueFinalFee = safeNumber(baseFeeForCalc) * enrolledForCalc;
+      } else if (feeTypeForCalc === "PER_VENUE") {
+        if (maxPForCalc > 0 && enrolledForCalc > maxPForCalc && perHeadForCalc > 0) {
+          computedVenueFinalFee = safeNumber(baseFeeForCalc) + (enrolledForCalc - maxPForCalc) * safeNumber(perHeadForCalc);
+        } else {
+          computedVenueFinalFee = safeNumber(baseFeeForCalc);
+        }
+      } else if (feeTypeForCalc === "FIXED") {
+        computedVenueFinalFee = safeNumber(baseFeeForCalc);
+      }
+      if (computedVenueFinalFee !== null) {
+        payload.venueFinalFee = computedVenueFinalFee;
+      }
 
       console.log("Saving course run with payload:", {
         feeType: payload.feeType,
