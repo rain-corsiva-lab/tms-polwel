@@ -543,15 +543,29 @@ export const courseRunWorkflowService = {
 
   async evaluateStatuses(prisma: PrismaClient) {
     const now = new Date();
-    
-    // PRODUCTION: Transition IN_PROGRESS → PENDING_BILLING at midnight
-    // of the day AFTER the course end date.
-    // e.g. Course ends 23 Jan 2026 15:00 → transitions on 24 Jan 2026 00:00
-    // Cron runs hourly; at each run we check whether today's midnight has passed
-    // relative to the end date (i.e. endDatetime < today's midnight).
-    const todayMidnight = new Date(now);
-    todayMidnight.setHours(0, 0, 0, 0);
-    const billingTransitionTime = todayMidnight;
+
+    // ── Workflow timing mode ──────────────────────────────────────────────────
+    // WORKFLOW_TESTING_MODE=true  →  Staging / Local
+    //   Transition IN_PROGRESS → PENDING_BILLING 5 minutes after endDatetime.
+    //   Cron also runs every 5 minutes (see courseRunStatusJob.ts).
+    //
+    // WORKFLOW_TESTING_MODE=false (default / production)
+    //   Transition at midnight of the day AFTER the course end date.
+    //   e.g. Course ends 23 Jan 2026 15:00 → transitions on 24 Jan 2026 00:00
+    //   Cron runs hourly.
+    // ─────────────────────────────────────────────────────────────────────────
+    const isTestingMode = process.env.WORKFLOW_TESTING_MODE === 'true';
+
+    let billingTransitionTime: Date;
+    if (isTestingMode) {
+      // Testing: transition 5 minutes after the course ends
+      billingTransitionTime = new Date(now.getTime() - 5 * 60 * 1000);
+    } else {
+      // Production: transition at the start of today (midnight)
+      const todayMidnight = new Date(now);
+      todayMidnight.setHours(0, 0, 0, 0);
+      billingTransitionTime = todayMidnight;
+    }
 
     // NEW: Mark courses as INCOMPLETED if their start date has passed and they haven't been activated
     // This applies to courses in pre-activation statuses: DRAFT, PENDING, CONFIRMED_PENDING_TA_APPROVAL, CONFIRMED_PENDING_CONFIRMATION_EMAILS

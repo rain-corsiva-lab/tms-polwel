@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import type { SentMessageInfo, Transport, TransportOptions } from 'nodemailer';
 import type MailMessage from 'nodemailer/lib/mailer/mail-message';
+import { POLWEL_LOGO_BASE64_DATA_URI } from '../assets/logoBase64';
 
 interface EmailConfig {
   host: string;
@@ -216,6 +217,8 @@ class AzureTransport implements Transport<SentMessageInfo> {
               name: name,
               contentBytes: contentBytes,
               contentType: contentType,
+              isInline: !!(attachment as any).cid,
+              ...((attachment as any).cid && { contentId: (attachment as any).cid }),
             });
           } catch (attErr) {
             console.warn('Error processing attachment:', (attErr as any)?.message || attErr);
@@ -343,19 +346,39 @@ class EmailService {
     }
   }
 
-  // Get logo URL for use in emails (fallback when CID attachment can't be used)
+  // Get logo URL for use in emails (last-resort fallback when base64 encoding is unavailable)
   private static getLogoUrl(): string {
     if (this.logoUrl) return this.logoUrl;
-    
-    // Try to get from environment variable first
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
-    this.logoUrl = `${frontendUrl}/images/POLWEL Logo_Horizontal.png`;
-    console.log('📷 Using logo URL:', this.logoUrl);
+    // Encode the space in the filename so the URL is valid in all email clients
+    this.logoUrl = `${frontendUrl}/images/POLWEL%20Logo_Horizontal.png`;
+    console.log('📷 Using logo URL fallback:', this.logoUrl);
     return this.logoUrl;
   }
 
-  // Return logo as base64 data URL — used when sending via REST API (no CID support)
+  // Detect when the SMTP host is Microsoft Office 365 / Outlook
+  private static isOutlookSmtp(): boolean {
+    const host = (process.env.MAIL_HOST || '').toLowerCase();
+    return host.includes('office365.com') || host.includes('outlook.com') || host.includes('hotmail.com');
+  }
+
+  // Detect if the service is running in Graph API (production) mode
+  private static isGraphApiMode(): boolean {
+    return process.env.NODE_ENV === 'Production' &&
+      !!(process.env.GRAPH_CLIENT_ID && process.env.GRAPH_CLIENT_SECRET &&
+         process.env.GRAPH_TENANT_ID && process.env.GRAPH_MAIL_FROM_ADDRESS);
+  }
+
+  // Return logo as base64 data URI.
+  // Uses the embedded constant (POLWEL_LOGO_BASE64_DATA_URI) which is compiled into the
+  // bundle — completely independent of the file system. This guarantees the logo always
+  // renders in production (Graph API / Outlook) where the PNG file is not deployed.
+  // Falls back to reading from disk (dev convenience) then URL if the constant is empty.
   private static getLogoBase64Src(): string {
+    if (POLWEL_LOGO_BASE64_DATA_URI) {
+      return POLWEL_LOGO_BASE64_DATA_URI;
+    }
+    // Disk fallback (development only — file may not exist in production)
     const logoPath = this.getLogoPath();
     if (logoPath) {
       try {
@@ -370,8 +393,13 @@ class EmailService {
     return this.getLogoUrl();
   }
 
-  // Get logo attachment for email (CID approach - works in all email clients)
+  // Get logo attachment for email (CID approach - works in SMTP clients).
+  // Returns null in Graph API mode because the logo is embedded directly as a base64
+  // data URI in getLogoSrc(), so no separate attachment is needed.
   private static getLogoAttachment(): any | null {
+    if (this.isGraphApiMode()) {
+      return null; // Logo is embedded as base64 data URI in HTML; no attachment needed
+    }
     const logoPath = this.getLogoPath();
     if (!logoPath) {
       console.warn('⚠️  Logo file not found, will use URL fallback in email');
@@ -399,10 +427,20 @@ class EmailService {
     }
   }
 
-  // Get logo source for use in HTML img tag
-  // Uses CID (Content-ID) which works correctly in all major email clients (Gmail, Outlook, Apple Mail).
-  // CID is resolved by the SMTP inline attachment (nodemailer) or Mailjet InlinedAttachments (REST API).
+  // Get logo source for use in HTML img tag.
+  //
+  // Strategy by transport:
+  //   • Graph API / Outlook (production): HTTPS URL from FRONTEND_URL.
+  //     Outlook's Exchange Online security policy strips data: URIs and unresolvable CID
+  //     references from img src attributes, making the image disappear. A public HTTPS URL
+  //     is the only reliable option for Outlook-delivered emails.
+  //   • SMTP (dev/local): CID inline attachment resolved by nodemailer.
   private static getLogoSrc(): string {
+    if (this.isGraphApiMode()) {
+      // Use the production public URL — Outlook loads this without stripping it.
+      const frontendUrl = (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+      return `${frontendUrl}/images/POLWEL%20Logo_Horizontal.png`;
+    }
     return 'cid:polwellogo';
   }
 
@@ -590,33 +628,34 @@ class EmailService {
       }
 
       // Fallback to SMTP configuration
-      const encryption = process.env.MAIL_ENCRYPTION || 'TLS';
+      const smtpHost = process.env.MAIL_HOST || 'smtp.gmail.com';
+      const smtpPort = parseInt(process.env.MAIL_PORT || '587');
+      const encryption = process.env.MAIL_ENCRYPTION || (smtpPort === 465 ? 'SSL' : 'STARTTLS');
       const isSSL = encryption === 'SSL';
-      const isSTARTTLS = encryption === 'STARTTLS';
-      
+      const isSTARTTLS = encryption !== 'SSL';
+      const isOutlook = this.isOutlookSmtp();
+
+      // Office 365 / Outlook requires STARTTLS on port 587 with requireTLS.
+      // Gmail supports both SSL on 465 and STARTTLS on 587.
       const config: EmailConfig = {
-        host: process.env.MAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.MAIL_PORT || '587'),
-        secure: isSSL, // true for SSL (port 465), false for STARTTLS (port 587)
+        host: smtpHost,
+        port: smtpPort,
+        secure: isSSL, // true only for direct SSL (port 465)
         auth: {
           user: process.env.MAIL_USERNAME || '',
           pass: process.env.MAIL_PASSWORD || ''
         },
-        // CRITICAL FIX: Disable pooling for immediate Gmail delivery
         pool: false,
-        // Direct sending - no connection reuse delays
         maxConnections: 1,
-        // Generous timeouts — 5 MB attachments can take 30–60s to upload over SMTP
         socketTimeout: 120000,
         greetingTimeout: 15000,
         connectionTimeout: 30000,
         tls: {
           rejectUnauthorized: false,
-          // For STARTTLS, we need to explicitly set ciphers if using older OpenSSL
-          ...(isSTARTTLS && {
-            minVersion: 'TLSv1.2'
-          })
-        }
+          minVersion: 'TLSv1.2',
+        },
+        // Office 365 needs requireTLS so nodemailer upgrades the connection via STARTTLS
+        ...(isOutlook && { requireTLS: true } as any),
       };
 
       // For development, create a test account if SMTP not configured
@@ -630,17 +669,16 @@ class EmailService {
       }
 
       console.log('╔════════════════════════════════════════════════════════════════╗');
-      console.log('║ 📧 EMAIL SERVICE INITIALIZATION - DETAILED LOG                ║');
+      console.log(`║ 📧 EMAIL SERVICE INITIALIZATION - ${isOutlook ? 'OUTLOOK/OFFICE 365' : 'SMTP'}           ║`);
       console.log('╚════════════════════════════════════════════════════════════════╝');
       console.log('🔧 SMTP Configuration:');
       console.log('   ├─ Host:', config.host);
       console.log('   ├─ Port:', config.port);
-      console.log('   ├─ Secure (SSL):', config.secure);
-      console.log('   ├─ Encryption:', encryption);
+      console.log('   ├─ Mode:', isOutlook ? '🔵 Office 365 / Outlook (requireTLS + STARTTLS)' : isSSL ? '🔒 SSL' : '🔓 STARTTLS');
       console.log('   ├─ Username:', config.auth.user);
       console.log('   ├─ Password:', config.auth.pass ? '***SET*** (length: ' + config.auth.pass.length + ')' : '❌ NOT SET');
       console.log('   ├─ From Address:', this.mailFromAddress);
-      console.log('   └─ TLS Reject Unauthorized:', config.tls?.rejectUnauthorized);
+      console.log('   └─ Logo:', 'Embedded base64 (no file dependency)');
       console.log('');
 
       this.transporter = nodemailer.createTransport(config as any);
@@ -713,7 +751,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">Complete Your Trainer Account Setup</p>
                       </td>
@@ -839,7 +877,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">Complete Your Training Coordinator Setup</p>
                       </td>
@@ -963,7 +1001,7 @@ class EmailService {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Password Reset Request</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">POLWEL Training Management System</p>
                       </td>
@@ -1105,7 +1143,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td bgcolor="#ffffff" style="padding: 32px 24px; background-color: #ffffff !important; text-align: center; border-bottom: 2px solid #f3f4f6;">
-                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Secure your login</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #6b7280 !important; font-family: Arial, sans-serif !important;">POLWEL Training Management System</p>
                       </td>
@@ -1165,8 +1203,12 @@ class EmailService {
                         </table>
                       </td>
                     </tr>
-                    <!-- Footer -->
-                    ${this.getEmailFooter()}
+                    <!-- Footer: autogenerated note only (no full POLWEL footer for OTP emails) -->
+                    <tr>
+                      <td style="padding: 20px 28px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;" bgcolor="#f9fafb">
+                        <p style="margin: 0; font-size: 12px; color: #6b7280; font-family: Arial, sans-serif;">This is an autogenerated email. No reply is required.</p>
+                      </td>
+                    </tr>
                   </table>
                 </td>
               </tr>
@@ -1244,7 +1286,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td bgcolor="#ffffff" style="padding: 32px 24px; background-color: #ffffff !important; text-align: center; border-bottom: 2px solid #f3f4f6;">
-                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0 !important; padding: 0 !important; font-size: 26px !important; font-weight: 700 !important; color: #1f2937 !important; font-family: Arial, sans-serif !important;">Welcome to POLWEL!</h1>
                         <p style="margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #6b7280 !important; font-family: Arial, sans-serif !important;">Complete Your Account Setup</p>
                       </td>
@@ -1413,7 +1455,7 @@ class EmailService {
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td align="center">
-                          <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                          <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                           <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Training Assignment & Course Confirmation</h1>
                           <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${courseRunDetails.course || 'Training Course'}</p>
                         </td>
@@ -1617,6 +1659,8 @@ class EmailService {
     additionalNotes?: string;
     cc?: string[] | string | null;
     attachments?: any[] | null;
+    /** e.g. "3 Days" — used in the email subject line instead of the start date */
+    courseDuration?: string | null;
   }): Promise<boolean> {
     const {
       email,
@@ -1632,11 +1676,18 @@ class EmailService {
       additionalNotes,
       cc,
       attachments,
+      courseDuration,
     } = params;
 
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
     const logoAttachment = this.getLogoAttachment();
+
+    // Returns true when both dates fall on the same calendar day (ignores time)
+    const isSameDayLocal = (d1?: Date, d2?: Date): boolean => {
+      if (!d1 || !d2) return false;
+      return d1.toISOString().substring(0, 10) === d2.toISOString().substring(0, 10);
+    };
 
     const formatDateWithDay = (date?: Date) => {
       if (!date) return 'To be confirmed';
@@ -1697,11 +1748,14 @@ class EmailService {
 
     const ccRecipients = normalizeCc();
 
-    const subjectDate = formatDateForSubject(startDate);
+    // Subject: prefer "(3 Days)" style; fall back to start date if no duration given
+    const subjectSuffix = courseDuration
+      ? courseDuration
+      : formatDateForSubject(startDate);
     const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
-      subject: `Course Confirmation: ${courseTitle}${subjectDate ? ` (${subjectDate})` : ''}`,
+      subject: `Course Confirmation: ${courseTitle}${subjectSuffix ? ` (${subjectSuffix})` : ''}`,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
       html: `
         <!DOCTYPE html>
@@ -1728,7 +1782,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Confirmation</h1>
                               <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Registration Confirmed</p>
                             </td>
@@ -1742,7 +1796,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td>
-                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Learners and/or Training Coordinators,</p>
+                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Learners,</p>
                               <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Please refer to the attached documents and the details below regarding the upcoming course for your reference.
                               </p>
@@ -1755,12 +1809,12 @@ class EmailService {
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; width: 30%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Course Name &amp; Run Code</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
                                     ${courseTitle}
-                                    ${serialNumber ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; font-family: Arial, sans-serif !important;">Run Code: ${serialNumber}</span>` : ''}
+                                    
                                   </td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Day &amp; Date</td>
-                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatDateWithDay(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' to ' + formatDateWithDay(endDate) : ''}</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${formatDateWithDay(startDate)}${!isSameDayLocal(startDate, endDate) && endDate ? ' to ' + formatDateWithDay(endDate) : ''}</td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Time</td>
@@ -1977,6 +2031,8 @@ class EmailService {
     endDate?: Date;
     venueName?: string;
     cancellationReason?: string;
+    /** Optional next run date text to include in the email, e.g. "15 April 2026" */
+    nextRunDate?: string | null;
   }): Promise<boolean> {
     const {
       email,
@@ -1988,6 +2044,7 @@ class EmailService {
       endDate,
       venueName,
       cancellationReason,
+      nextRunDate,
     } = params;
 
     const transporter = this.getTransporter();
@@ -2058,7 +2115,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Cancellation Notice</h1>
                               <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Important Update Regarding Your Course</p>
                             </td>
@@ -2072,7 +2129,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td>
-                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Whom It May Concern,</p>
+                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear ${learnerName || 'Participant'},</p>
                               <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 We regret to inform you that the following course has been cancelled due to ${cancellationReason || 'unforeseen circumstances'}.
                               </p>
@@ -2126,7 +2183,8 @@ class EmailService {
                                     <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Alternative Options</p>
                                     <div style="color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                       We will notify you once a new course run has been scheduled. In the meantime, you may wish to explore other available courses on our training calendar.<br/><br/>
-                                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org</a> or call us at <a href="tel:67184870" style="color: #4b5563 !important; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563 !important; text-decoration: none;">6431 9973</a>.
+                                      ${nextRunDate ? `The next available session will be on ${nextRunDate}. Do let us know if your officers are still keen/ available to register for the next run, and we will arrange it accordingly.<br/><br/>` : ''}
+                                      For any queries or to discuss alternative training options, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at <a href="tel:67184870" style="color: #4b5563 !important; text-decoration: none;">6718 4870</a> or <a href="tel:64319973" style="color: #4b5563 !important; text-decoration: none;">6431 9973</a>.
                                     </div>
                                   </td>
                                 </tr>
@@ -2243,7 +2301,7 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td align="center">
-                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 42px; width: auto;" /></div>
+                              <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Congratulations!</h1>
                               <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">You've Successfully Completed the Course</p>
                             </td>
@@ -2350,6 +2408,119 @@ class EmailService {
   }
 
   /**
+   * Send a "course completed" notification email to a trainer or partner.
+   * Used when billing is finalized and the course run transitions to COMPLETED.
+   */
+  static async sendTrainerCourseCompletionEmail(params: {
+    email: string;
+    recipientName: string;
+    courseTitle: string;
+    courseCode?: string;
+    serialNumber?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<boolean> {
+    const { email, recipientName, courseTitle, courseCode, serialNumber, startDate, endDate } = params;
+    const logoSrc = this.getLogoSrc();
+    const logoAttachment = this.getLogoAttachment();
+
+    const formatDateFull = (d: Date) =>
+      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const isSameDay = (a: Date, b: Date) => a.toISOString().substring(0, 10) === b.toISOString().substring(0, 10);
+    const dateRange = startDate
+      ? (endDate && !isSameDay(startDate, endDate)
+          ? `${formatDateFull(startDate)} – ${formatDateFull(endDate)}`
+          : formatDateFull(startDate))
+      : null;
+
+    const footerHtml = this.getEmailFooter();
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course Completed – ${courseTitle}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:20px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+        <!-- Header -->
+        <tr>
+          <td style="background-color:#1e3a5f;padding:24px 32px;text-align:center;">
+            <img src="${logoSrc}" alt="POLWEL Logo" height="50" style="height:50px;display:block;margin:0 auto;" />
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 16px 0;font-size:16px;color:#1f2937;">Dear ${recipientName},</p>
+            <p style="margin:0 0 16px 0;font-size:15px;color:#374151;">
+              We are pleased to inform you that the following course run has been <strong>completed</strong> and billing has been finalised.
+            </p>
+            <!-- Course details table -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:24px;">
+              <tr style="background-color:#f9fafb;">
+                <td style="padding:12px 16px;font-weight:600;color:#374151;font-size:14px;border-bottom:1px solid #e5e7eb;">Course</td>
+                <td style="padding:12px 16px;color:#1f2937;font-size:14px;border-bottom:1px solid #e5e7eb;">${courseTitle}${courseCode ? ` (${courseCode})` : ''}</td>
+              </tr>
+              ${serialNumber ? `<tr><td style="padding:12px 16px;font-weight:600;color:#374151;font-size:14px;border-bottom:1px solid #e5e7eb;">Serial No.</td><td style="padding:12px 16px;color:#1f2937;font-size:14px;border-bottom:1px solid #e5e7eb;">${serialNumber}</td></tr>` : ''}
+              ${dateRange ? `<tr><td style="padding:12px 16px;font-weight:600;color:#374151;font-size:14px;">Date</td><td style="padding:12px 16px;color:#1f2937;font-size:14px;">${dateRange}</td></tr>` : ''}
+            </table>
+            <p style="margin:0 0 16px 0;font-size:14px;color:#6b7280;">
+              If you have any questions, please contact us at <a href="mailto:pdcs@polwel.org.sg" style="color:#1e3a5f;">pdcs@polwel.org.sg</a>.
+            </p>
+            <p style="margin:0;font-size:14px;color:#374151;">Best regards,<br/><strong>POLWEL Training Team</strong></p>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr><td>${footerHtml}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    const inlinedAttachments = this.isMailjetSmtp() ? (this.getLogoMailjetInline() ? [this.getLogoMailjetInline()!] : []) : [];
+    const mailOptions: any = {
+      from: `"POLWEL Training" <${this.mailFromAddress}>`,
+      to: email,
+      subject: `Course Completed: ${courseTitle}`,
+      html,
+      text: `Dear ${recipientName},\n\nThe course "${courseTitle}" has been completed and billing finalised.\n\nBest regards,\nPOLWEL Training Team`,
+    };
+
+    if (!this.isGraphApiMode()) {
+      const logoAttachmentData = logoAttachment;
+      if (logoAttachmentData) {
+        mailOptions.attachments = [logoAttachmentData];
+      }
+    }
+
+    try {
+      if (this.isMailjetSmtp()) {
+        const result = await this.sendViaMailjetApi({
+          to: email,
+          from: this.mailFromAddress,
+          subject: mailOptions.subject,
+          html,
+          text: mailOptions.text,
+          inlinedAttachments,
+        });
+        return result.success;
+      }
+      const t = this.getTransporter();
+      if (!t) throw new Error('Email transporter not available');
+      await t.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Failed to send trainer course completion email:', error);
+      return false;
+    }
+  }
+
+  /**
    * Send waiver pending notification email to admins/staff with waiver approve permission.
    * Triggered when a learner submits a waiver request.
    */
@@ -2394,7 +2565,7 @@ class EmailService {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" style="height: 48px; width: auto;" /></div>
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none;" /></div>
                         <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Training Management System</h1>
                         <p style="margin: 4px 0 0 0; font-size: 14px; color: #dc2626 !important; font-weight: 600; font-family: Arial, sans-serif;">⚠ Waiver Request Pending Review</p>
                       </td>

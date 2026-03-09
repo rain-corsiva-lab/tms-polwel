@@ -11,6 +11,7 @@ import { ArrowLeft, Download, Loader2, Eye, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { RunDetailsDialog } from "./RunDetailsDialog";
 import * as XLSX from "xlsx";
+import DateInput from "@/components/ui/date-input";
 
 interface CourseRun {
   id: string;
@@ -207,60 +208,64 @@ export default function RunsByPeriod() {
             <CardTitle>Filters</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search run code or course..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-9"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground font-medium">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="Search run code or course..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="pl-9"
+                  />
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground font-medium">Start Date</label>
-                <Input
-                  type="date"
+                <DateInput
                   value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
+                  onChange={(iso) => {
+                    setStartDate(iso ?? "");
                     setPage(1);
                   }}
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground font-medium">End Date</label>
-                <Input
-                  type="date"
+                <DateInput
                   value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
+                  onChange={(iso) => {
+                    setEndDate(iso ?? "");
                     setPage(1);
                   }}
                 />
               </div>
-              <Select
-                value={status || "all"}
-                onValueChange={(value) => {
-                  setStatus(value === "all" ? "" : value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {filterOptions.statuses.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s.replace("_", " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground font-medium">Status</label>
+                <Select
+                  value={status || "all"}
+                  onValueChange={(value) => {
+                    setStatus(value === "all" ? "" : value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    {filterOptions.statuses.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s.replace("_", " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>

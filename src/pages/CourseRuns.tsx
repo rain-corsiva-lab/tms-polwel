@@ -126,6 +126,7 @@ interface CancelDialogState {
   open: boolean;
   courseRun: CourseRunUI | null;
   reason: string;
+  nextRunDate: string;
   submitting: boolean;
 }
 
@@ -217,6 +218,7 @@ const CourseRuns: React.FC = () => {
     open: false,
     courseRun: null,
     reason: "",
+    nextRunDate: "",
     submitting: false,
   };
 
@@ -498,6 +500,7 @@ const CourseRuns: React.FC = () => {
       COMPLETED: "Completed",
       CANCELLED: "Cancelled",
       DRAFT: "Draft",
+      INCOMPLETED: "Incomplete",
     };
     return (
       statusMap[status] ||
@@ -562,6 +565,8 @@ const CourseRuns: React.FC = () => {
         return "default";
       case "CANCELLED":
         return "destructive";
+      case "INCOMPLETED":
+        return "secondary";
       case "PUBLISHED":
         return "default";
       case "ONGOING":
@@ -595,6 +600,8 @@ const CourseRuns: React.FC = () => {
         return `${baseClass} bg-green-600 text-white`;
       case "CANCELLED":
         return `${baseClass} bg-red-100 text-red-800`;
+      case "INCOMPLETED":
+        return `${baseClass} bg-orange-100 text-orange-800`;
       case "DRAFT":
         return `${baseClass} bg-gray-100 text-gray-600`;
       default:
@@ -618,6 +625,7 @@ const CourseRuns: React.FC = () => {
       open: true,
       courseRun,
       reason: courseRun.cancelReason ?? "",
+      nextRunDate: "",
       submitting: false,
     });
   };
@@ -628,7 +636,10 @@ const CourseRuns: React.FC = () => {
 
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
-    const payload = cancelDialog.reason.trim() ? { reason: cancelDialog.reason.trim() } : undefined;
+    const payloadObj: { reason?: string; nextRunDate?: string } = {};
+    if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
+    if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
+    const payload = Object.keys(payloadObj).length > 0 ? payloadObj : undefined;
 
     setCancelDialog((prev) => ({ ...prev, submitting: true }));
 
@@ -1629,6 +1640,18 @@ const CourseRuns: React.FC = () => {
                   onChange={(e) => setCancelDialog((prev) => ({ ...prev, reason: e.target.value.slice(0, 1000) }))}
                   rows={4}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nextRunDate">
+                  Next Run Date <span className="text-muted-foreground text-xs">(Optional)</span>
+                </Label>
+                <Input
+                  id="nextRunDate"
+                  placeholder="e.g. 15 April 2026"
+                  value={cancelDialog.nextRunDate}
+                  onChange={(e) => setCancelDialog((prev) => ({ ...prev, nextRunDate: e.target.value.slice(0, 200) }))}
+                />
+                <p className="text-xs text-muted-foreground">If provided, participants will be notified of the next available session date.</p>
               </div>
             </div>
           )}

@@ -236,6 +236,7 @@ const OrganizationDashboard = () => {
       COMPLETED: "Completed",
       CANCELLED: "Cancelled",
       DRAFT: "Draft",
+      INCOMPLETED: "Incomplete",
     };
     return (
       statusMap[status] ||

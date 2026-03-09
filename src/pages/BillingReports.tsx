@@ -195,7 +195,7 @@ export default function BillingReports() {
         className: "bg-gray-100 text-gray-800 hover:bg-gray-200",
       },
       ALL_INCOMPLETED: {
-        label: "All Incompleted",
+        label: "All Incomplete",
         className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
       },
     };

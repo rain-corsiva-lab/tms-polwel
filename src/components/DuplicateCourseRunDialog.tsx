@@ -84,7 +84,7 @@ export const DuplicateCourseRunDialog: React.FC<DuplicateCourseRunDialogProps> =
     try {
       setLoading(true);
       const response = await courseRunsApi.getPostCourseRuns({
-        statuses: "COMPLETED,PENDING_BILLING",
+        statuses: "COMPLETED,INCOMPLETED,PENDING_BILLING,CANCELLED",
         limit: 1000,
       });
 
