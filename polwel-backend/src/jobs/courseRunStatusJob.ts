@@ -2,15 +2,18 @@ import cron from 'node-cron';
 import prisma from '../lib/prisma';
 import { courseRunWorkflowService } from '../services/courseRunWorkflowService';
 
-// ── Cron schedule: always every 5 minutes in all environments ─────────────
-// The billing TRANSITION RULE differs by mode (see courseRunWorkflowService):
-//   WORKFLOW_TESTING_MODE=true  → transition 5 min after endDatetime  (staging/local)
-//   Default (production)        → transition at midnight after end date
+// ── Cron schedule ─────────────────────────────────────────────────────────
+// WORKFLOW_TESTING_MODE=true  (staging/local)  → every 5 minutes
+// WORKFLOW_TESTING_MODE=false (production)      → every hour (top of hour)
 //
-// You can still override the cron schedule directly via COURSE_RUN_STATUS_CRON.
+// The billing TRANSITION RULE also differs by mode (see courseRunWorkflowService):
+//   Testing   → transition 5 min after endDatetime
+//   Production → transition at midnight the day AFTER the course end date
+//
+// Override either schedule via COURSE_RUN_STATUS_CRON env var.
 // ────────────────────────────────────────────────────────────────────────────
 const isTestingMode = process.env.WORKFLOW_TESTING_MODE === 'true';
-const DEFAULT_CRON = process.env.COURSE_RUN_STATUS_CRON || '*/5 * * * *'; // Every 5 minutes in all envs
+const DEFAULT_CRON = process.env.COURSE_RUN_STATUS_CRON || (isTestingMode ? '*/5 * * * *' : '0 * * * *');
 const DEFAULT_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Singapore';
 
 export const startCourseRunStatusJob = () => {
@@ -36,7 +39,7 @@ export const startCourseRunStatusJob = () => {
   task.start();
   const modeLabel = isTestingMode
     ? '🧪 TESTING MODE (5-min cycle, 5-min delay after end time)'
-    : '🏭 PRODUCTION MODE (5-min cycle, midnight transition)';
+    : '🏭 PRODUCTION MODE (hourly cycle, midnight-next-day transition)';
   console.log(`⏱️  Course run status job scheduled (${DEFAULT_CRON}, timezone: ${DEFAULT_TIMEZONE}) — ${modeLabel}`);
   return task;
 };

@@ -202,8 +202,23 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     const coordinatorPhoneFromDb =
       learner?.trainingCoordinator?.contactNumber || enrollment?.trainingCoordinator?.contactNumber || enrollment?.trainingCoordinatorPhone;
 
+    // Resolve organization ID from multiple possible sources
+    // (enrollment-level clientOrganizationId takes precedence over learner-level)
+    const resolvedOrgId: string | null =
+      enrollment?.clientOrganizationId || enrollment?.clientOrganization?.id || learner?.clientOrganizationId || learner?.clientOrganization?.id || null;
+
+    // Seed organizationType immediately from already-fetched org data to avoid a flash of empty field.
+    // Fallback chain:
+    //  1. learner.clientOrganization.organizationType  (from enrollment's org via backend mapping)
+    //  2. enrollment.clientOrganization.organizationType  (direct join)
+    //  3. enrollment.division  (org type text stored by the backend when enrollment was created)
+    const resolvedOrgType: string =
+      learner?.clientOrganization?.organizationType || enrollment?.clientOrganization?.organizationType || (enrollment as any)?.division || "";
+
     console.log("[EditLearnerDialog] Loading learner data:", {
       learnerId: learner.id,
+      resolvedOrgId,
+      resolvedOrgType,
       coordinatorIdFromDb,
       coordinatorEmailFromDb,
       coordinatorPhoneFromDb,
@@ -215,9 +230,10 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       designation: learner.designation || "",
       email: learner.email || "",
       contactNumber: learner.contact || "",
-      division: learner.clientOrganizationId || "",
+      division: resolvedOrgId || "",
+      organizationType: resolvedOrgType || prev.organizationType,
       departmentName: learner.departmentName || "",
-      buNumber: learner.clientOrganization?.buNumber || prev.buNumber || "",
+      buNumber: learner.clientOrganization?.buNumber || enrollment?.clientOrganization?.buNumber || prev.buNumber || "",
       paymentMode: enrollment?.paymentMode || learner.paymentMode || prev.paymentMode || "",
       // Use the value from database directly - don't fall back to previous state
       trainingCoordinatorId: coordinatorIdFromDb || null,
@@ -232,8 +248,8 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       remarks: enrollment?.remarks || "",
     }));
 
-    if (learner.clientOrganizationId) {
-      loadCoordinators(learner.clientOrganizationId);
+    if (resolvedOrgId) {
+      loadCoordinators(resolvedOrgId);
     } else {
       setCoordinators([]);
     }
@@ -243,8 +259,8 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       const mapped = await loadOrganizations();
       if (!active) return;
 
-      if (learner.clientOrganizationId) {
-        const selectedOrg = mapped.find((o) => o.id === learner.clientOrganizationId) ?? null;
+      if (resolvedOrgId) {
+        const selectedOrg = mapped.find((o) => o.id === resolvedOrgId) ?? null;
         if (selectedOrg) {
           setForm((prev) => ({
             ...prev,
@@ -491,6 +507,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
           email: form.email,
           contactNumber: form.contactNumber,
           division: form.division,
+          organizationType: form.organizationType, // persist to enrollment.division
           departmentName: form.departmentName,
           trainingCoordinatorId: coordinatorValue, // Always send this field
         },

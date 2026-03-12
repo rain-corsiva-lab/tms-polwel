@@ -16,10 +16,10 @@ router.get('/:id', requirePermissions('waiver.view'), waiverController.getById);
 // GET /api/waivers/:id/document - Get waiver supporting document info
 router.get('/:id/document', requirePermissions('waiver.view'), waiverController.downloadDocument);
 
-// POST /api/waivers/:id/approve - Approve a waiver request
-router.post('/:id/approve', requirePermissions('waiver.edit'), waiverController.approve);
+// POST /api/waivers/:id/approve - Approve a waiver request (requires waiver.edit OR waiver.approve)
+router.post('/:id/approve', requirePermissions(['waiver.edit', 'waiver.approve']), waiverController.approve);
 
-// POST /api/waivers/:id/reject - Reject a waiver request
-router.post('/:id/reject', requirePermissions('waiver.edit'), waiverController.reject);
+// POST /api/waivers/:id/reject - Reject a waiver request (requires waiver.edit OR waiver.approve)
+router.post('/:id/reject', requirePermissions(['waiver.edit', 'waiver.approve']), waiverController.reject);
 
 export default router;
