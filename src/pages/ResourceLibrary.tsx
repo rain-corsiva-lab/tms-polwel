@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 import { format } from "date-fns";
-import { FileText, Download, Trash2, Upload, Edit2, FileUp, CheckCircle, XCircle } from "lucide-react";
+import { FileText, Download, Trash2, Upload, Edit2, FileUp, CheckCircle, XCircle, Image, X } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
@@ -33,6 +33,9 @@ interface Resource {
   fileUrl: string;
   fileSize: number | null;
   mimeType: string | null;
+  imageUrl: string | null;
+  imageName: string | null;
+  imageSize: number | null;
   status: "DRAFT" | "PUBLISHED" | "DELETED";
   targetAudience: "TRAINING_COORDINATORS" | "ALL_USERS";
   createdAt: string;
@@ -45,11 +48,15 @@ interface Resource {
   };
 }
 
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+
 export default function ResourceLibrary() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -100,7 +107,6 @@ export default function ResourceLibrary() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Only allow PDF files
       if (file.type !== "application/pdf") {
         toast({
           title: "Invalid file type",
@@ -114,22 +120,40 @@ export default function ResourceLibrary() {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        toast({
+          title: "Invalid image type",
+          description: "Only JPG, PNG, GIF and WebP images are allowed",
+          variant: "destructive",
+        });
+        e.target.value = "";
+        return;
+      }
+      setSelectedImage(file);
+    }
+  };
+
+  const handleClearImage = () => {
+    setSelectedImage(null);
+    setExistingImageUrl(null);
+    const imgInput = document.getElementById("resource-image") as HTMLInputElement;
+    if (imgInput) imgInput.value = "";
+  };
+
   const uploadFile = async (file: File): Promise<{ url: string }> => {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Use VITE_API_URL environment variable (e.g., http://localhost:3001/api)
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
     const uploadUrl = `${apiUrl.replace("/api", "")}/api/uploads/media/upload`;
-
-    // Get token from localStorage (same key as api.ts uses)
     const token = localStorage.getItem("polwel_access_token");
 
     const response = await fetch(uploadUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
 
@@ -159,7 +183,6 @@ export default function ResourceLibrary() {
       let fileSize = 0;
       let mimeType = "";
 
-      // Upload file if new file is selected
       if (selectedFile) {
         const uploadResponse = await uploadFile(selectedFile);
         fileUrl = uploadResponse.url;
@@ -168,42 +191,49 @@ export default function ResourceLibrary() {
         mimeType = selectedFile.type;
       }
 
-      const payload = {
+      // Upload image if a new one was selected
+      let imageUrl: string | null = existingImageUrl ?? null;
+      let imageName: string | null = null;
+      let imageSize: number | null = null;
+
+      if (selectedImage) {
+        const imageUploadResponse = await uploadFile(selectedImage);
+        imageUrl = imageUploadResponse.url;
+        imageName = selectedImage.name;
+        imageSize = selectedImage.size;
+      }
+
+      const payload: Record<string, any> = {
         title: data.title,
         description: description || undefined,
         targetAudience: data.targetAudience,
         status: data.status,
-        ...(selectedFile && {
-          fileName,
-          fileUrl,
-          fileSize,
-          mimeType,
-        }),
+        imageUrl: imageUrl ?? null,
+        imageName: imageName ?? null,
+        imageSize: imageSize ?? null,
+        ...(selectedFile && { fileName, fileUrl, fileSize, mimeType }),
       };
 
       if (editingId) {
         await api.resourceLibraryApi.update(editingId, payload);
-        toast({
-          title: "Success",
-          description: "Resource updated successfully",
-        });
+        toast({ title: "Success", description: "Resource updated successfully" });
       } else {
         await api.resourceLibraryApi.create(payload);
-        toast({
-          title: "Success",
-          description: "Resource uploaded successfully",
-        });
+        toast({ title: "Success", description: "Resource uploaded successfully" });
       }
 
       // Reset form
       reset();
       setDescription("");
       setSelectedFile(null);
+      setSelectedImage(null);
+      setExistingImageUrl(null);
       setEditingId(null);
       const fileInput = document.getElementById("pdf-file") as HTMLInputElement;
       if (fileInput) fileInput.value = "";
+      const imgInput = document.getElementById("resource-image") as HTMLInputElement;
+      if (imgInput) imgInput.value = "";
 
-      // Refresh list
       fetchResources();
     } catch (error: any) {
       toast({
@@ -222,8 +252,9 @@ export default function ResourceLibrary() {
     setValue("targetAudience", resource.targetAudience);
     setValue("status", resource.status);
     setDescription(resource.description || "");
-
-    // Scroll to form
+    setSelectedFile(null);
+    setSelectedImage(null);
+    setExistingImageUrl(resource.imageUrl || null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -232,20 +263,22 @@ export default function ResourceLibrary() {
     reset();
     setDescription("");
     setSelectedFile(null);
+    setSelectedImage(null);
+    setExistingImageUrl(null);
     const fileInput = document.getElementById("pdf-file") as HTMLInputElement;
     if (fileInput) fileInput.value = "";
+    const imgInput = document.getElementById("resource-image") as HTMLInputElement;
+    if (imgInput) imgInput.value = "";
   };
 
   const handleToggleStatus = async (resource: Resource) => {
     try {
       const newStatus = resource.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED";
       await api.resourceLibraryApi.updateStatus(resource.id, newStatus);
-
       toast({
         title: "Success",
         description: `Resource ${newStatus === "PUBLISHED" ? "published" : "set to draft"}`,
       });
-
       fetchResources();
     } catch (error: any) {
       toast({
@@ -257,16 +290,10 @@ export default function ResourceLibrary() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this resource?")) {
-      return;
-    }
-
+    if (!confirm("Are you sure you want to remove this resource?")) return;
     try {
       await api.resourceLibraryApi.delete(id);
-      toast({
-        title: "Success",
-        description: "Resource removed successfully",
-      });
+      toast({ title: "Success", description: "Resource removed successfully" });
       fetchResources();
     } catch (error: any) {
       toast({
@@ -278,13 +305,17 @@ export default function ResourceLibrary() {
   };
 
   const handleDownload = (resource: Resource) => {
-    // Construct full backend URL for file download
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
     const baseUrl = apiUrl.replace("/api", "");
     const fullUrl = `${baseUrl}${resource.fileUrl}`;
-
-    // Open in new tab to download/view
     window.open(fullUrl, "_blank");
+  };
+
+  const getImageSrc = (imageUrl: string) => {
+    if (!imageUrl) return "";
+    if (imageUrl.startsWith("http")) return imageUrl;
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+    return `${apiUrl.replace("/api", "")}${imageUrl}`;
   };
 
   const formatFileSize = (bytes: number | null) => {
@@ -310,7 +341,7 @@ export default function ResourceLibrary() {
         <h1 className="text-3xl font-bold">Resource Library</h1>
       </div>
 
-      {/* Upload Form - Only show if user has create or edit permission */}
+      {/* Upload / Edit Form */}
       {(canCreate || canEdit) && (
         <Card>
           <CardHeader>
@@ -375,6 +406,57 @@ export default function ResourceLibrary() {
                 </div>
               </div>
 
+              {/* Cover Image Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="resource-image">Cover Image (Optional)</Label>
+                <p className="text-xs text-gray-500">Upload a cover/thumbnail image for this resource. Accepted formats: JPG, PNG, GIF, WebP.</p>
+
+                {/* Show existing image preview when editing */}
+                {(existingImageUrl || selectedImage) && (
+                  <div className="flex items-start gap-3 p-3 border rounded-lg bg-gray-50">
+                    <div className="relative">
+                      <img
+                        src={selectedImage ? URL.createObjectURL(selectedImage) : getImageSrc(existingImageUrl!)}
+                        alt="Cover preview"
+                        className="h-20 w-32 object-cover rounded border"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {selectedImage ? (
+                        <p className="text-sm font-medium text-gray-700 truncate">{selectedImage.name}</p>
+                      ) : (
+                        <p className="text-sm text-gray-500">Current image</p>
+                      )}
+                      <Button type="button" variant="ghost" size="sm" className="mt-1 text-red-500 hover:text-red-700 h-auto p-0" onClick={handleClearImage}>
+                        <X className="h-4 w-4 mr-1" />
+                        Remove image
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!existingImageUrl && !selectedImage && (
+                  <div className="flex items-center gap-2">
+                    <Input id="resource-image" type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" onChange={handleImageChange} />
+                  </div>
+                )}
+
+                {(existingImageUrl || selectedImage) && (
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="resource-image" className="text-sm text-gray-600 cursor-pointer underline">
+                      Change image
+                    </Label>
+                    <Input
+                      id="resource-image"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Description - Rich Text */}
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -432,6 +514,7 @@ export default function ResourceLibrary() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-16">Cover</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>File Name</TableHead>
@@ -444,6 +527,15 @@ export default function ResourceLibrary() {
                 <TableBody>
                   {resources.map((resource) => (
                     <TableRow key={resource.id}>
+                      <TableCell>
+                        {resource.imageUrl ? (
+                          <img src={getImageSrc(resource.imageUrl)} alt={resource.title} className="h-10 w-14 object-cover rounded border" />
+                        ) : (
+                          <div className="h-10 w-14 flex items-center justify-center bg-gray-100 rounded border">
+                            <Image className="h-5 w-5 text-gray-400" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{resource.title}</TableCell>
                       <TableCell>
                         <div

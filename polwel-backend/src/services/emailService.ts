@@ -2524,6 +2524,133 @@ class EmailService {
    * Send waiver pending notification email to admins/staff with waiver approve permission.
    * Triggered when a learner submits a waiver request.
    */
+  /**
+   * Send email notification to users with course-run.approve permission when a course run
+   * is moved to CONFIRMED_PENDING_TA_APPROVAL (i.e. pending trainer assignment review).
+   */
+  static async sendCourseRunTAApprovalEmail(params: {
+    adminEmail: string;
+    adminName: string;
+    courseTitle: string;
+    courseCode?: string | null;
+    serialNumber?: string | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    reviewUrl: string;
+  }): Promise<boolean> {
+    const { adminEmail, adminName, courseTitle, courseCode, serialNumber, startDate, endDate, reviewUrl } = params;
+    const t = this.getTransporter();
+    const logoSrc = this.getLogoSrc();
+    const logoAttachment = this.getLogoAttachment();
+
+    const fmt = (d: Date) =>
+      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const displayCode = serialNumber || courseCode || '—';
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+        <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+        <body style="margin:0!important;padding:0!important;background-color:#0f172a!important;font-family:Arial,sans-serif!important;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#0f172a;" bgcolor="#0f172a">
+            <tr><td align="center" style="padding:32px 16px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:560px;background-color:#ffffff;" bgcolor="#ffffff">
+                <!-- Header -->
+                <tr>
+                  <td style="padding:32px 28px 24px;background-color:#ffffff;border-bottom:2px solid #f3f4f6;" align="center">
+                    <div style="margin-bottom:12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display:block;height:48px;width:117px;max-width:117px;" /></div>
+                    <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#1f2937;font-family:Arial,sans-serif;">POLWEL Training Management System</h1>
+                    <p style="margin:4px 0 0 0;font-size:14px;color:#2563eb;font-weight:600;font-family:Arial,sans-serif;">📋 Course Run Pending Trainer Assignment Approval</p>
+                  </td>
+                </tr>
+                <!-- Body -->
+                <tr>
+                  <td style="padding:32px 28px;background-color:#ffffff;">
+                    <p style="font-size:16px;margin:0 0 16px 0;color:#1f2937;font-family:Arial,sans-serif;">Dear ${adminName},</p>
+                    <p style="margin:0 0 24px 0;font-size:15px;color:#374151;line-height:1.7;font-family:Arial,sans-serif;">
+                      A course run has been confirmed and is now awaiting your review of the trainer assignment before proceeding.
+                    </p>
+                    <!-- Details table -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+                      <tr style="background-color:#f9fafb;">
+                        <td style="padding:14px 16px;font-size:13px;color:#6b7280;font-weight:600;font-family:Arial,sans-serif;width:40%;border-bottom:1px solid #e5e7eb;">Course Title</td>
+                        <td style="padding:14px 16px;font-size:14px;color:#1f2937;font-weight:600;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">${courseTitle}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px 16px;font-size:13px;color:#6b7280;font-weight:600;font-family:Arial,sans-serif;background-color:#f9fafb;border-bottom:1px solid #e5e7eb;">Run Code</td>
+                        <td style="padding:14px 16px;font-size:14px;color:#1f2937;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">${displayCode}</td>
+                      </tr>
+                      ${startDate ? `
+                      <tr style="background-color:#f9fafb;">
+                        <td style="padding:14px 16px;font-size:13px;color:#6b7280;font-weight:600;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">Start Date</td>
+                        <td style="padding:14px 16px;font-size:14px;color:#1f2937;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">${fmt(startDate)}</td>
+                      </tr>` : ''}
+                      ${endDate ? `
+                      <tr>
+                        <td style="padding:14px 16px;font-size:13px;color:#6b7280;font-weight:600;font-family:Arial,sans-serif;background-color:#f9fafb;">End Date</td>
+                        <td style="padding:14px 16px;font-size:14px;color:#1f2937;font-family:Arial,sans-serif;">${fmt(endDate)}</td>
+                      </tr>` : ''}
+                    </table>
+                    <!-- CTA -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:24px 0;">
+                      <tr>
+                        <td align="center" style="padding:20px;background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+                          <p style="margin:0 0 16px 0;font-size:14px;color:#1e40af;font-family:Arial,sans-serif;">Review the trainer assignment and approve or reject it in the TMS portal.</p>
+                          <a href="${reviewUrl}" style="display:inline-block;background-color:#2563eb;color:#ffffff!important;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;font-family:Arial,sans-serif;">Review Course Run</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin:16px 0 0 0;font-size:13px;color:#6b7280;line-height:1.6;font-family:Arial,sans-serif;">
+                      This is an automated notification from the POLWEL Training Management System.
+                    </p>
+                  </td>
+                </tr>
+                <!-- Footer -->
+                ${this.getEmailFooter()}
+              </table>
+            </td></tr>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const mailOptions: any = {
+      from: this.mailFromAddress,
+      to: adminEmail,
+      subject: `[Action Required] Course Run Pending TA Approval – ${displayCode}: ${courseTitle}`,
+      html,
+      attachments: logoAttachment ? [logoAttachment] : [],
+    };
+
+    try {
+      if (this.isGraphApiMode()) {
+        const t2 = this.getTransporter();
+        if (!t2) { console.log(`(EmailService) Graph transport unavailable — TA approval notice to ${adminEmail} skipped`); return false; }
+        await t2.sendMail(mailOptions);
+      } else if (this.isMailjetSmtp()) {
+        const mjOpts: { to: string; from: string; subject: string; html: string; attachments?: { filename: string; content: Buffer; contentType?: string }[] } = {
+          to: adminEmail,
+          from: this.mailFromAddress,
+          subject: mailOptions.subject as string,
+          html,
+        };
+        if (logoAttachment) mjOpts.attachments = [logoAttachment as { filename: string; content: Buffer; contentType?: string }];
+        const result = await this.sendViaMailjetApi(mjOpts);
+        return result.success;
+      } else {
+        if (!t) { console.log(`(EmailService) SMTP not configured — TA approval notice to ${adminEmail} skipped`); return false; }
+        if (logoAttachment) mailOptions.attachments = [logoAttachment];
+        await t.sendMail(mailOptions);
+      }
+      console.log(`✅ TA approval notice sent to ${adminEmail}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to send TA approval notice to ${adminEmail}:`, error);
+      return false;
+    }
+  }
+
   static async sendWaiverPendingNotificationEmail(params: {
     adminEmail: string;
     adminName: string;

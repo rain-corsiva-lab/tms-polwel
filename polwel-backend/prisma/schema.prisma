@@ -838,6 +838,9 @@ model ResourceLibrary {
   fileUrl         String
   fileSize        Int?
   mimeType        String?
+  imageUrl        String?
+  imageName       String?
+  imageSize       Int?
   status          ResourceLibraryStatus       @default(DRAFT)
   targetAudience  ResourceLibraryAudience     @default(TRAINING_COORDINATORS)
   uploadedBy      String?

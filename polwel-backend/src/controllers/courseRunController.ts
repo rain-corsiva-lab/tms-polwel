@@ -2360,6 +2360,17 @@ export const courseRunController = {
               email: true,
               designation: true,
               contact: true,
+              // Include learner's own org as fallback for older enrollments
+              // that may not have clientOrganizationId set at the enrollment level
+              clientOrganizationId: true,
+              clientOrganization: {
+                select: {
+                  id: true,
+                  name: true,
+                  buNumber: true,
+                  organizationType: true,
+                },
+              },
           },
         },
         clientOrganization: {
@@ -2386,19 +2397,25 @@ export const courseRunController = {
 
     const normalizedEnrollments = enrollments.map((enrollment) => {
       const learner = enrollment.learner;
-      const clientOrganization = enrollment.clientOrganization || null;
+      // Use enrollment-level org first, fall back to learner's own org (handles older records)
+      const clientOrganization = enrollment.clientOrganization || (learner?.clientOrganization as any) || null;
+      const effectiveClientOrgId = enrollment.clientOrganizationId || learner?.clientOrganizationId || null;
       const coordinator = enrollment.trainingCoordinator || null;
 
       return {
         ...enrollment,
         departmentName: enrollment.departmentName || null,
+        // Expose the resolved org at enrollment level so the frontend can always read it
+        clientOrganizationId: effectiveClientOrgId,
+        clientOrganization,
+        // division field stores org type text — keep it for frontend fallback
         learner: learner
           ? {
               ...learner,
               contactNumber: learner.contact || null,
               contact: learner.contact || null,
               departmentName: enrollment.departmentName || null,
-              clientOrganizationId: enrollment.clientOrganizationId || null,
+              clientOrganizationId: effectiveClientOrgId,
               clientOrganization,
               clientOrganizationName: clientOrganization?.name || null,
               clientOrganizationBuNumber: clientOrganization?.buNumber || null,
@@ -3394,6 +3411,49 @@ export const courseRunController = {
         success: true,
         message: 'Course run marked as confirmed, pending trainer approval',
         courseRun: updated,
+      });
+
+      // ── Asynchronous notification emails to users who can approve trainer assignments ──
+      setImmediate(async () => {
+        try {
+          const approvers = await prisma.userPermission.findMany({
+            where: {
+              permissionName: 'course-run.approve',
+              granted: true,
+              user: { status: 'ACTIVE', role: 'POLWEL' },
+            },
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          });
+
+          if (approvers.length === 0) {
+            console.log('(markAsConfirmed) No users with course-run.approve permission — notification skipped');
+            return;
+          }
+
+          const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/$/, '');
+          const reviewUrl = `${frontendUrl}/course-runs?status=CONFIRMED_PENDING_TA_APPROVAL`;
+
+          console.log(`(markAsConfirmed) Sending TA approval notice to ${approvers.length} user(s)…`);
+          for (const ap of approvers) {
+            if (!ap.user.email) continue;
+            EmailService.sendCourseRunTAApprovalEmail({
+              adminEmail: ap.user.email,
+              adminName: ap.user.name,
+              courseTitle: courseRun.course?.title || 'POLWEL Course',
+              courseCode: courseRun.course?.courseCode || null,
+              serialNumber: courseRun.serialNumber || null,
+              startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime) : null,
+              endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : null,
+              reviewUrl,
+            }).catch((err: any) => {
+              console.error(`(markAsConfirmed) Failed to notify ${ap.user.email}:`, err?.message);
+            });
+          }
+        } catch (notifyErr) {
+          console.error('(markAsConfirmed) Notification error:', notifyErr);
+        }
       });
     } catch (error) {
       console.error('Error marking course run as confirmed:', error);
@@ -5283,10 +5343,10 @@ export const courseRunController = {
       // ── Asynchronous waiver notification emails (don't block HTTP response) ──
       setImmediate(async () => {
         try {
-          // Find all users with waiver:edit (approve) permission who are active
+          // Find all active POLWEL users who have waiver.edit OR waiver.approve permission
           const waiverAdmins = await prisma.userPermission.findMany({
             where: {
-              permissionName: 'waiver:edit',
+              permissionName: { in: ['waiver.edit', 'waiver.approve'] },
               granted: true,
               user: { status: 'ACTIVE' },
             },
@@ -5298,9 +5358,17 @@ export const courseRunController = {
           });
 
           if (waiverAdmins.length === 0) {
-            console.log('(submitWaiverForm) No users with waiver:edit permission found — no notification sent');
+            console.log('(submitWaiverForm) No users with waiver.edit/waiver.approve permission found — no notification sent');
             return;
           }
+
+          // Deduplicate by user ID (a user might have both permissions)
+          const seen = new Set<string>();
+          const uniqueAdmins = waiverAdmins.filter((wp) => {
+            if (seen.has(wp.user.id)) return false;
+            seen.add(wp.user.id);
+            return true;
+          });
 
           const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
           const waiverRequestUrl = `${frontendUrl}/waiver-requests`;
@@ -5308,9 +5376,9 @@ export const courseRunController = {
           const serialNumber = enrollment.courseRun?.serialNumber        || '';
           const submissionDate = enrollment.waiverSubmittedAt || new Date();
 
-          console.log(`(submitWaiverForm) Sending waiver notification to ${waiverAdmins.length} admin(s)…`);
+          console.log(`(submitWaiverForm) Sending waiver notification to ${uniqueAdmins.length} admin(s)…`);
 
-          for (const wp of waiverAdmins) {
+          for (const wp of uniqueAdmins) {
             if (!wp.user.email) continue;
             await EmailService.sendWaiverPendingNotificationEmail({
               adminEmail:      wp.user.email,

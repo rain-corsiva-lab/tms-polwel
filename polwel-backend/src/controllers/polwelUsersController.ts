@@ -92,6 +92,12 @@ const permissionNameMapping: Record<string, string> = {
   'waiver:edit': 'waiver.edit',
   'waiver:update': 'waiver.edit',
   'waiver:delete': 'waiver.delete',
+  'waiver:approve': 'waiver.approve',
+  'waiver.view': 'waiver.view',
+  'waiver.create': 'waiver.create',
+  'waiver.edit': 'waiver.edit',
+  'waiver.delete': 'waiver.delete',
+  'waiver.approve': 'waiver.approve',
 
   // Resource Library module
   'resource-library:view': 'resource-library.view',

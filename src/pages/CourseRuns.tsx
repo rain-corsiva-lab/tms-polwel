@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -26,6 +26,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
 import { formatDateTime } from "../lib/date";
 import { API_BASE_URL } from "../lib/api";
+import { AbilityContext } from "../lib/casl/Can";
 
 // Raw shape from backend
 interface BackendCourseRun {
@@ -142,6 +143,8 @@ interface WorkflowDialogState {
 const CourseRuns: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const ability = useContext(AbilityContext);
+  const canApproveCourseRun = ability.can("approve", "CourseRun");
   const [courseRuns, setCourseRuns] = useState<CourseRunUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -1480,18 +1483,15 @@ const CourseRuns: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-2">
-                          {/* Make status chip clickable for CONFIRMED_PENDING_TA_APPROVAL */}
-                          {courseRun.status === "CONFIRMED_PENDING_TA_APPROVAL" ? (
+                          {/* Make status chip clickable for CONFIRMED_PENDING_TA_APPROVAL — only for users with Approve permission */}
+                          {courseRun.status === "CONFIRMED_PENDING_TA_APPROVAL" && canApproveCourseRun ? (
                             <button
                               onClick={() => openTrainerApprovalDialog(courseRun)}
                               className={`${getStatusChipClass(
                                 courseRun.status,
                               )} inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-all hover:scale-110 cursor-pointer self-center text-center`}
+                              title="Click to review trainer assignment"
                             >
-                              {/* {courseRun.status
-                                .replace(/_/g, " ")
-                                .toLowerCase()
-                                .replace(/\b\w/g, (c) => c.toUpperCase())} */}
                               Confirmed Pending TA Approval
                             </button>
                           ) : (
