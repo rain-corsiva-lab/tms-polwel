@@ -42,7 +42,7 @@ const IMPORT_TEMPLATE_COLUMNS: Array<{ header: string; key: keyof ImportLearnerR
   { header: "Name", key: "name", required: true, example: "Jane Doe" },
   { header: "Designation", key: "designation", example: "Training Officer" },
   { header: "Email", key: "email", required: true, example: "jane.doe@example.com" },
-  { header: "Contact", key: "contact", example: "+65 6123 4567" },
+  { header: "Contact", key: "contact", example: "88938374" },
   { header: "Organization Type", key: "organizationType", required: true, example: "SPF" },
   { header: "Client Organisation Name", key: "clientOrganizationName", required: true, example: "Singapore Police Force" },
   { header: "Department", key: "department", example: "Operations" },
@@ -143,34 +143,43 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       }
 
       // Add data validation dropdown for Payment Method column (column I, index 8)
-      // Validation applies to rows 2-1000
-      const paymentMethods = PAYMENT_MODES.join(",");
+      // Reference the "Payment Method" sheet's column A so that when the user edits
+      // that sheet (removing/adding options) the dropdown updates automatically.
+      const pmCount = PAYMENT_MODES.length;
       for (let row = 2; row <= 1000; row++) {
         const cell = learnersSheet.getCell(`I${row}`);
         (cell.dataValidation as any) = {
           type: "list",
-          formulae: [`"${paymentMethods}"`],
+          formulae: [`'Payment Method'!$A$2:$A$${pmCount + 1}`],
         };
       }
 
-      // Create Payment Method reference sheet
+      // Create Payment Method reference sheet (Sheet 2)
+      // Users can edit this sheet to add/remove payment options; the dropdown in the main sheet references it.
       const refSheet = workbook.addWorksheet("Payment Method");
-      refSheet.addRow(["Payment Method", "Description", "Code"]);
-      refSheet.addRow(["Self-Payment", "Participant pays their own fees", "SELF_SPONSORED"]);
-      refSheet.addRow(["Transition Dollar (TS)", "Using Transition Dollar funding", "TRANSITION_DOLLARS"]);
-      refSheet.addRow(["Unit Local Training Fund (ULTF)", "Using Unit Local Training Fund", "ULTF"]);
-      refSheet.addRow(["Company-Sponsored (Non-Home Team)", "Company sponsored training", "COMPANY_BILLING"]);
-      refSheet.addRow(["Polwel Training Subsidy", "Government training subsidy", "GOVERNMENT_FUNDING"]);
+      refSheet.addRow(["Payment Method"]);
+      refSheet.addRow(["Self-Payment"]);
+      refSheet.addRow(["Transition Dollar (TS)"]);
+      refSheet.addRow(["Unit Local Training Fund (ULTF)"]);
+      refSheet.addRow(["Company-Sponsored (Non-Home Team)"]);
+      refSheet.addRow(["Polwel Training Subsidy"]);
 
       // Style reference sheet header
       refSheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
       refSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF366092" } };
       refSheet.getRow(1).alignment = { horizontal: "center", vertical: "middle" };
 
-      // Set column widths for reference sheet
-      refSheet.columns[0].width = 35;
-      refSheet.columns[1].width = 40;
-      refSheet.columns[2].width = 20;
+      // Style data rows with alternating background so each option is visible
+      for (let r = 2; r <= PAYMENT_MODES.length + 1; r++) {
+        refSheet.getRow(r).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: r % 2 === 0 ? "FFF0F4FF" : "FFFFFFFF" },
+        };
+      }
+
+      // Set column width for reference sheet
+      refSheet.columns[0].width = 40;
 
       // Create Name of Organisation reference sheet
       const orgSheet = workbook.addWorksheet("Name of Organisation");
@@ -268,7 +277,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       });
 
       const missingHeaders = IMPORT_TEMPLATE_COLUMNS.filter((column) => column.required).filter(
-        (column) => !normalizedHeaders.has(column.header.toLowerCase())
+        (column) => !normalizedHeaders.has(column.header.toLowerCase()),
       );
 
       if (missingHeaders.length) {
@@ -301,10 +310,28 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
             return "";
           };
 
+          // Normalize contact number – auto-prefix with +65 if the user omitted it
+          const rawContact = extractValue(["Contact", "contact", "Contact Number", "Phone"]);
+          let normalizedContact = "";
+          if (rawContact) {
+            // Strip spaces, dashes, parentheses
+            const digits = rawContact.replace(/[\s\-\(\)]/g, "");
+            if (digits.startsWith("+65")) {
+              normalizedContact = digits; // Already correct
+            } else if (/^65\d{8}$/.test(digits)) {
+              normalizedContact = "+" + digits; // e.g. 6588889999 → +6588889999
+            } else if (/^\d{8}$/.test(digits)) {
+              normalizedContact = "+65" + digits; // Local 8-digit number → +6588889999
+            } else if (digits.length > 0) {
+              // Any other format – just prepend +65 if no leading +
+              normalizedContact = digits.startsWith("+") ? digits : "+65" + digits;
+            }
+          }
+
           const mappedRow: ImportLearnerRow = {
             name: extractValue(["Name", "name"]),
             email: extractValue(["Email", "email"]),
-            contact: extractValue(["Contact", "contact", "Contact Number", "Phone"]),
+            contact: normalizedContact || undefined,
             designation: extractValue(["Designation", "designation", "Title"]),
             organizationType: extractValue(["Organization Type", "organizationType", "Organisation Type"]),
             clientOrganizationName: extractValue(["Client Organization Name", "clientOrganizationName", "Client Organisation Name", "Division", "division"]),
@@ -313,7 +340,12 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
             paymentMethod: extractValue(["Payment Method", "paymentMethod", "Payment Mode", "paymentMode"]),
             trainingCoordinatorName: extractValue(["Training Coordinator Name", "trainingCoordinatorName", "Coordinator Name"]),
             trainingCoordinatorEmail: extractValue(["Training Coordinator Email", "trainingCoordinatorEmail", "Coordinator Email", "coordinatorEmail"]),
-            trainingCoordinatorContact: extractValue(["Training Coordinator Contact", "trainingCoordinatorContact", "Coordinator Contact", "Coordinator Phone"]),
+            trainingCoordinatorContact: extractValue([
+              "Training Coordinator Contact",
+              "trainingCoordinatorContact",
+              "Coordinator Contact",
+              "Coordinator Phone",
+            ]),
             discountName: extractValue(["Discount Name", "discountName"]),
             feesRemarks: extractValue(["Fees Remarks", "feesRemarks", "Fee Remarks"]),
             invoiceNumber: extractValue(["Invoice Number", "invoiceNumber", "Invoice Remarks", "invoiceRemarks"]),
@@ -341,7 +373,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
         if (!row.trainingCoordinatorEmail) missingFields.push("Training Coordinator Email");
         if (missingFields.length) {
           rowValidationIssues.push(
-            `Row ${index + 2}: Missing ${missingFields.join(", ")}. These participants will fail to import until the details are provided.`
+            `Row ${index + 2}: Missing ${missingFields.join(", ")}. These participants will fail to import until the details are provided.`,
           );
         }
       });
@@ -412,10 +444,10 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       }
     } catch (error: any) {
       console.error("Failed to import participants:", error);
-      
+
       // Extract specific error message from API response
       let errorMessage = "We couldn't import participants. Please review your file and try again.";
-      
+
       if (error?.data?.error) {
         errorMessage = error.data.error;
       } else if (error?.data?.message) {
@@ -423,7 +455,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       // If there are validation errors in the response, show them
       if (error?.data?.errors && Array.isArray(error.data.errors)) {
         const errorDetails = error.data.errors
@@ -434,7 +466,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
           errorMessage = `${errorMessage}. ${errorDetails}`;
         }
       }
-      
+
       toast({
         title: "Import failed",
         description: errorMessage,
@@ -457,7 +489,7 @@ export const ImportLearnersDialog: React.FC<ImportLearnersDialogProps> = ({ cour
         }
       }}
     >
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[80vw] w-[80vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import participants from CSV/XLSX</DialogTitle>
         </DialogHeader>

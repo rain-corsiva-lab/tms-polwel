@@ -711,7 +711,18 @@ async function main() {
   { name: 'course-venue.delete', description: 'Delete courses & venues', module: 'Course & Venue', action: 'delete' },
 
   // Course-run specific actions (approve kept under course-run)
+  { name: 'course-run.view', description: 'View course runs', module: 'Course Run', action: 'read' },
+  { name: 'course-run.create', description: 'Create course runs', module: 'Course Run', action: 'create' },
+  { name: 'course-run.edit', description: 'Edit course runs', module: 'Course Run', action: 'update' },
+  { name: 'course-run.delete', description: 'Delete course runs', module: 'Course Run', action: 'delete' },
   { name: 'course-run.approve', description: 'Approve course runs', module: 'Course Run', action: 'approve' },
+
+  // Waiver module permissions
+  { name: 'waiver.view', description: 'View waiver requests', module: 'Waiver', action: 'read' },
+  { name: 'waiver.create', description: 'Create waiver requests', module: 'Waiver', action: 'create' },
+  { name: 'waiver.edit', description: 'Edit / approve waiver requests', module: 'Waiver', action: 'update' },
+  { name: 'waiver.delete', description: 'Delete waiver requests', module: 'Waiver', action: 'delete' },
+  { name: 'waiver.approve', description: 'Approve/reject waiver requests', module: 'Waiver', action: 'approve' },
 
     { name: 'venues.view', description: 'View venues (legacy)', module: 'Venue Management', action: 'read' },
     { name: 'venues.create', description: 'Create venues (legacy)', module: 'Venue Management', action: 'create' },

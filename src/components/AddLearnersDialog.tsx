@@ -1172,6 +1172,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
         const cleanGroupData = {
           division: groupData.division,
+          organizationType: groupData.organizationType, // persist org type to enrollment.division
           departmentName: groupData.departmentName,
           buNumber: groupData.buNumber,
           paymentMode: groupData.paymentMode,
