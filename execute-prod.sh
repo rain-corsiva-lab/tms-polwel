@@ -36,6 +36,14 @@ echo "📦 Installing backend dependencies..."
 cd $PROJECT_DIR/polwel-backend
 npm install
 
+echo "🔧 Installing Chrome system libraries for PDF certificate generation..."
+apt-get install -y --no-install-recommends \
+  libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+  libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
+  libnss3 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 \
+  libxss1 libxtst6 libxshmfence1 libx11-xcb1 libxcb-dri3-0 \
+  ca-certificates fonts-liberation wget 2>/dev/null || true
+
 echo "🔧 Applying Prisma migrations..."
 npm run db:deploy
 

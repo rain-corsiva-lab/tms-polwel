@@ -39,6 +39,50 @@ function imageToBase64(imagePath: string): string {
   }
 }
 
+/**
+ * Resolve the Chrome/Chromium executable path to use for Puppeteer.
+ *
+ * Priority:
+ *   1. PUPPETEER_EXECUTABLE_PATH env var  (set this on production if needed)
+ *   2. Common system Chrome/Chromium paths on Linux
+ *   3. undefined → Puppeteer uses its bundled Chrome (may need system libs)
+ */
+function resolveChromiumExecutablePath(): string | undefined {
+  // 1. Explicit override via env var
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    console.log(`[CertService] Using Chrome from PUPPETEER_EXECUTABLE_PATH: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  // 2. Auto-detect from common system paths
+  const candidates = [
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/local/bin/chromium',
+    '/snap/bin/chromium',
+  ];
+
+  const found = candidates.find(p => {
+    try {
+      fs.accessSync(p, fs.constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  if (found) {
+    console.log(`[CertService] Auto-detected system Chrome: ${found}`);
+    return found;
+  }
+
+  // 3. Fall back to Puppeteer bundled Chrome
+  console.log('[CertService] No system Chrome found, using Puppeteer bundled Chrome');
+  return undefined;
+}
+
 
 const regularFontPath = path.join(__dirname, './cert-fonts/calibri.ttf');
 const boldFontPath = path.join(__dirname, './cert-fonts/calibrib.ttf');
@@ -338,9 +382,34 @@ function escapeHtml(text: string): string {
 export async function buildCertificatePDFBuffer(data: CertificateData): Promise<Buffer> {
   let browser;
   try {
+    const executablePath = resolveChromiumExecutablePath();
+
+    // Chrome launch args tuned for headless server environments (Docker, VPS, etc.)
+    const launchArgs = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      // Critical for servers without /dev/shm or with small shared memory
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-accelerated-2d-canvas',
+      '--disable-software-rasterizer',
+      // Reduce memory footprint
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-background-networking',
+      '--disable-default-apps',
+      '--disable-extensions',
+      '--disable-sync',
+      '--disable-translate',
+      '--metrics-recording-only',
+      '--mute-audio',
+      '--safebrowsing-disable-auto-update',
+    ];
+
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      ...(executablePath ? { executablePath } : {}),
+      args: launchArgs,
     });
     
     const page = await browser.newPage();
