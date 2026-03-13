@@ -6340,51 +6340,6 @@ export const courseRunController = {
     }
   },
 
-  // Download certificate (public route - no auth required)
-  async downloadCertificatePublic(req: Request, res: Response): Promise<void> {
-    try {
-      const { learnerId, courseRunId } = req.params;
-      // TODO: Implement certificate download functionality
-      res.status(501).json({
-        success: false,
-        error: 'Certificate download functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error downloading certificate:', error);
-      res.status(500).json(buildErrorResponse('downloadCertificatePublic', 'Failed to download certificate', error));
-    }
-  },
-
-  // Generate billing export
-  async generateBillingExport(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      // TODO: Implement billing export functionality
-      res.status(501).json({
-        success: false,
-        error: 'Billing export functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error generating billing export:', error);
-      res.status(500).json(buildErrorResponse('generateBillingExport', 'Failed to generate billing export', error));
-    }
-  },
-
-  // Export participants with attendance to XLSX
-  async exportParticipantsXLSX(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      // TODO: Implement participants export functionality
-      res.status(501).json({
-        success: false,
-        error: 'Participants export functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error exporting participants:', error);
-      res.status(500).json(buildErrorResponse('exportParticipantsXLSX', 'Failed to export participants', error));
-    }
-  },
-
   // Get certificate data for learners
   async generateCertificates(req: Request, res: Response): Promise<void> {
     try {
