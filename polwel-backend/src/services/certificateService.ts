@@ -407,7 +407,11 @@ function buildLaunchOptions() {
 async function renderCertificatePage(browser: Awaited<ReturnType<typeof puppeteer.launch>>, data: CertificateData): Promise<Buffer> {
   const page = await browser.newPage();
   try {
-    await page.setContent(generateCertificateHTML(data), { waitUntil: 'networkidle0' });
+    // The certificate HTML is fully self-contained (all fonts/images are base64-embedded).
+    // Use 'domcontentloaded' — 'networkidle0' waits up to 30s for network silence
+    // which causes timeouts on production servers with no outbound internet access.
+    page.setDefaultNavigationTimeout(120000); // 2 min safety cap
+    await page.setContent(generateCertificateHTML(data), { waitUntil: 'domcontentloaded', timeout: 120000 });
     const pdf = await page.pdf({
       format: 'Letter',
       landscape: true,
