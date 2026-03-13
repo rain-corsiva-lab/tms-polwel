@@ -2360,19 +2360,8 @@ export const courseRunController = {
               email: true,
               designation: true,
               contact: true,
-              // Include learner's own org as fallback for older enrollments
-              // that may not have clientOrganizationId set at the enrollment level
-              clientOrganizationId: true,
-              clientOrganization: {
-                select: {
-                  id: true,
-                  name: true,
-                  buNumber: true,
-                  organizationType: true,
-                },
-              },
+            },
           },
-        },
         clientOrganization: {
           select: {
             id: true,
@@ -2397,9 +2386,9 @@ export const courseRunController = {
 
     const normalizedEnrollments = enrollments.map((enrollment) => {
       const learner = enrollment.learner;
-      // Use enrollment-level org first, fall back to learner's own org (handles older records)
-      const clientOrganization = enrollment.clientOrganization || (learner?.clientOrganization as any) || null;
-      const effectiveClientOrgId = enrollment.clientOrganizationId || learner?.clientOrganizationId || null;
+      // Use enrollment-level org (clientOrganizationId exists only on the enrollment)
+      const clientOrganization = enrollment.clientOrganization || null;
+      const effectiveClientOrgId = enrollment.clientOrganizationId || null;
       const coordinator = enrollment.trainingCoordinator || null;
 
       return {
@@ -6687,8 +6676,8 @@ export const courseRunController = {
             contentType: 'application/pdf',
           };
 
-          // Generate download URL (if needed in future)
-          const downloadUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/certificates/download/${enrollment.learner.id}/${enrollment.courseRun.id}`;
+          // Generate public download URL — routed via Apache to the backend API
+          const downloadUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/api/course-runs/certificates/download/${enrollment.learner.id}/${enrollment.courseRun.id}`;
 
           // Send email with certificate
           const emailSent = await EmailService.sendCourseCompletionEmail({

@@ -379,69 +379,65 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (m) => map[m] || m);
 }
 
-export async function buildCertificatePDFBuffer(data: CertificateData): Promise<Buffer> {
-  let browser;
+// Shared Chrome launch configuration used by both single-PDF and bulk-ZIP functions
+function buildLaunchOptions() {
+  const executablePath = resolveChromiumExecutablePath();
+  const args = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--disable-accelerated-2d-canvas',
+    '--disable-software-rasterizer',
+    '--no-first-run',
+    '--no-zygote',
+    '--disable-background-networking',
+    '--disable-default-apps',
+    '--disable-extensions',
+    '--disable-sync',
+    '--disable-translate',
+    '--metrics-recording-only',
+    '--mute-audio',
+    '--safebrowsing-disable-auto-update',
+  ];
+  return { headless: true as const, args, ...(executablePath ? { executablePath } : {}) };
+}
+
+// Render one certificate PDF using an already-open browser (no launch/close overhead)
+async function renderCertificatePage(browser: Awaited<ReturnType<typeof puppeteer.launch>>, data: CertificateData): Promise<Buffer> {
+  const page = await browser.newPage();
   try {
-    const executablePath = resolveChromiumExecutablePath();
-
-    // Chrome launch args tuned for headless server environments (Docker, VPS, etc.)
-    const launchArgs = [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      // Critical for servers without /dev/shm or with small shared memory
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-accelerated-2d-canvas',
-      '--disable-software-rasterizer',
-      // Reduce memory footprint
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-background-networking',
-      '--disable-default-apps',
-      '--disable-extensions',
-      '--disable-sync',
-      '--disable-translate',
-      '--metrics-recording-only',
-      '--mute-audio',
-      '--safebrowsing-disable-auto-update',
-    ];
-
-    browser = await puppeteer.launch({
-      headless: true,
-      ...(executablePath ? { executablePath } : {}),
-      args: launchArgs,
-    });
-    
-    const page = await browser.newPage();
-    const html = generateCertificateHTML(data);
-    
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    
-    const pdfBuffer = await page.pdf({
+    await page.setContent(generateCertificateHTML(data), { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({
       format: 'Letter',
       landscape: true,
       printBackground: true,
-      margin: {
-        top: '0',
-        right: '0',
-        bottom: '0',
-        left: '0',
-      },
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
     });
-    
-    return Buffer.from(pdfBuffer);
+    return Buffer.from(pdf);
+  } finally {
+    await page.close();
+  }
+}
+
+export async function buildCertificatePDFBuffer(data: CertificateData): Promise<Buffer> {
+  const browser = await puppeteer.launch(buildLaunchOptions());
+  try {
+    return await renderCertificatePage(browser, data);
   } catch (error) {
     throw new Error(`Failed to generate certificate PDF: ${error}`);
   } finally {
-    if (browser) {
-      await browser.close();
-    }
+    await browser.close();
   }
 }
 
 export async function buildCertificatesZipBuffer(certificates: CertificateData[]): Promise<Buffer> {
+  // Launch Chrome ONCE and reuse for all PDFs — avoids N × browser-launch overhead
+  // which would otherwise cause gateway timeouts for classes with many learners.
+  const browser = await puppeteer.launch(buildLaunchOptions());
+
   return new Promise<Buffer>(async (resolve, reject) => {
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = archiver('zip', { zlib: { level: 6 } });
     const passThrough = new PassThrough();
     const chunks: Buffer[] = [];
 
@@ -450,10 +446,7 @@ export async function buildCertificatesZipBuffer(certificates: CertificateData[]
     archive.on('error', reject);
     archive.on('warning', (error) => {
       const maybeError = error as NodeJS.ErrnoException;
-      if (maybeError?.code === 'ENOENT') {
-        return;
-      }
-      reject(error as Error);
+      if (maybeError?.code !== 'ENOENT') reject(error as Error);
     });
 
     const finalizePromise = new Promise<void>((resolveFinalize, rejectFinalize) => {
@@ -466,7 +459,7 @@ export async function buildCertificatesZipBuffer(certificates: CertificateData[]
 
     try {
       for (const certData of certificates) {
-        const pdfBuffer = await buildCertificatePDFBuffer(certData);
+        const pdfBuffer = await renderCertificatePage(browser, certData);
         const learnerSlug = certData.learnerName.replace(/[^a-z0-9]+/gi, '_') || 'Learner';
         const codeSlug = certData.courseCode?.replace(/[^a-z0-9]+/gi, '_');
         const filename = `Certificate_${learnerSlug}${codeSlug ? `_${codeSlug}` : ''}.pdf`;
@@ -478,6 +471,8 @@ export async function buildCertificatesZipBuffer(certificates: CertificateData[]
       resolve(Buffer.concat(chunks));
     } catch (error) {
       reject(error as Error);
+    } finally {
+      await browser.close();
     }
   });
 }
