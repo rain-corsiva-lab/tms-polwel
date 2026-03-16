@@ -375,6 +375,10 @@ export const courseRunWorkflowService = {
             emailPayload.venueName = venueName;
           }
 
+          if (courseRun.remarks) {
+            emailPayload.remarks = courseRun.remarks;
+          }
+
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
           if (didSend) {

@@ -1661,6 +1661,8 @@ class EmailService {
     attachments?: any[] | null;
     /** e.g. "3 Days" — used in the email subject line instead of the start date */
     courseDuration?: string | null;
+    /** Course run remarks to display in the Note field */
+    remarks?: string | null;
   }): Promise<boolean> {
     const {
       email,
@@ -1677,6 +1679,7 @@ class EmailService {
       cc,
       attachments,
       courseDuration,
+      remarks,
     } = params;
 
     const transporter = this.getTransporter();
@@ -1784,7 +1787,7 @@ class EmailService {
                             <td align="center">
                               <div style="margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="103" height="42" border="0" style="display: block; height: 42px; width: 103px; max-width: 103px; border: 0; outline: none;" /></div>
                               <h1 style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 20px; font-weight: 600; font-family: Arial, sans-serif !important;">Course Confirmation</h1>
-                              <p style="margin: 0; color: #6b7280 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Registration Confirmed</p>
+                             
                             </td>
                           </tr>
                         </table>
@@ -1796,17 +1799,19 @@ class EmailService {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td>
-                              <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Learners,</p>
-                              <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                Please refer to the attached documents and the details below regarding the upcoming course for your reference.
+                              <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear Learners,</p>
+                              <p style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                Thank you for registering for  <b>${courseTitle}</b>.
                               </p>
-                              
+                              <p style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                The course details are as follows:
+                              </p>
                               
                               <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
                               
                               <table role="presentation" cellspacing="0" cellpadding="0" border="1" width="100%" style="border: 1px solid #d1d5db; border-collapse: collapse; margin-bottom: 20px;">
                                 <tr>
-                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; width: 30%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Course Name &amp; Run Code</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; width: 30%; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Course Name</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
                                     ${courseTitle}
                                     
@@ -1823,15 +1828,15 @@ class EmailService {
                                 <tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
-                                    ${venueName || specifiedLocation || 'To be confirmed'}
-                                    ${venueAddress ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">${venueAddress}</span>` : ''}
-                                    ${specifiedLocation && venueName ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">Specified Location: ${specifiedLocation}</span>` : ''}
+                                    ${venueName || specifiedLocation || 'To be confirmed'} <br>
+                                    ${venueAddress ? `<span style="display: block; margin-top: 12px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">${venueAddress}</span>` : ''}
+                                    ${specifiedLocation && venueName ? `<span style="display: block; margin-top: 12px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">Specified Location: ${specifiedLocation}</span>` : ''}
                                   </td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Note</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
-                                    For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
+                                    ${remarks || 'For any queries pertaining to the workshop, please contact the training coordinator.'}
                                   </td>
                                 </tr>
                               </table>
@@ -1845,23 +1850,6 @@ class EmailService {
                                 </tr>
                               </table>
                               ` : ''}
-
-                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
-                                <tr>
-                                  <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
-                                    <p style="margin: 0 0 12px 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                      If you are interested to know or register for our other course offerings, please refer to the link &amp; QR code below:
-                                    </p>
-                                    <div style="text-align: center; margin: 16px 0;">
-                                      <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important; display: block; margin-bottom: 12px;">https://polwel.org.sg/courses/</a>
-                                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://polwel.org.sg/courses/" alt="QR Code for Course Offerings" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
-                                    </div>
-                                    <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                      Once again, thank you for your support and hope to see you soon in our next workshop!
-                                    </p>
-                                  </td>
-                                </tr>
-                              </table>
 
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
@@ -1886,6 +1874,9 @@ class EmailService {
                                   </td>
                                 </tr>
                               </table>
+                              <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                              For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
+                              </div>
 
                               <p style="margin: 24px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Thank you.

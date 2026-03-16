@@ -3750,6 +3750,11 @@ export const courseRunController = {
           if (attachments && attachments.length > 0) {
             emailPayload.attachments = attachments;
           }
+
+          if (courseRun.remarks) {
+            emailPayload.remarks = courseRun.remarks;
+          }
+
           console.log('emailPayload', emailPayload);
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
@@ -4047,6 +4052,10 @@ export const courseRunController = {
             const durType = courseRun.course.durationType || 'days';
             const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
             emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
+          }
+
+          if (courseRun.remarks) {
+            emailPayload.remarks = courseRun.remarks;
           }
 
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -4516,6 +4525,10 @@ export const courseRunController = {
           const durType = enrollment.courseRun.course.durationType || 'days';
           const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
           emailPayload.courseDuration = `${isNaN(dur) ? enrollment.courseRun.course.duration : dur} ${durLabel}`;
+        }
+
+        if (enrollment.courseRun?.remarks) {
+          emailPayload.remarks = enrollment.courseRun.remarks;
         }
 
         const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
