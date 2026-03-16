@@ -5735,8 +5735,10 @@ export const courseRunController = {
         return;
       }
 
-      // Check if course run is completed
-      if (enrollment.courseRun.status !== 'COMPLETED') {
+      // Allow certificate download for both COMPLETED and PENDING_BILLING statuses
+      // (billing is an admin process; the learner's participation is already confirmed)
+      const allowedStatuses = ['COMPLETED', 'PENDING_BILLING'];
+      if (!allowedStatuses.includes(enrollment.courseRun.status)) {
         res.status(400).json(buildErrorResponse('courseRunController.downloadCertificatePublic', 'Certificate not available yet', new Error('Course not completed')));
         return;
       }
