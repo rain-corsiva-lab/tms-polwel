@@ -2158,7 +2158,7 @@ class EmailService {
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
                                   <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
-                                    <div style="color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalNotes.replace(/\n/g, '<br>')}</div>
+                                    <div style="color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalNotes}</div>
                                   </td>
                                 </tr>
                               </table>` : ''}

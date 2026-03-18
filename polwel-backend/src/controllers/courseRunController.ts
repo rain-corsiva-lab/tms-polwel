@@ -1471,102 +1471,7 @@ export const courseRunController = {
         deletedAt: courseRun.deletedAt,
       });
 
-      // Send cancellation emails to learners and trainers
-      try {
-        // Fetch enrolled learners
-        const enrollments = await prisma.courseRunLearner.findMany({
-          where: {
-            courseRunId: id,
-            enrollmentStatus: { not: 'WITHDRAWN' },
-          },
-          include: {
-            learner: {
-              select: {
-                id: true,
-                fullname: true,
-                email: true,
-              },
-            },
-          },
-        });
-
-        // Fetch assigned trainers
-        const trainers = await prisma.courseRunTrainer.findMany({
-          where: { courseRunId: id },
-          include: {
-            trainer: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        });
-
-        // Send emails to learners
-        const learnerEmailPromises = enrollments.map((enrollment) => {
-          const emailParams: any = {
-            email: enrollment.learner.email ?? '',
-            learnerName: enrollment.learner.fullname,
-            courseTitle: courseRun.course?.title || 'Course',
-            cancellationReason: reason || 'unforeseen circumstances',
-          };
-          if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
-          if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
-          if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
-          if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
-          if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
-          if (nextRunDate) emailParams.nextRunDate = nextRunDate;
-          if (additionalNotes) emailParams.additionalNotes = additionalNotes;
-          
-          return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
-            console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
-            return false;
-          });
-        });
-
-        // Send emails to trainers (skip trainers with no email address)
-        const trainersWithEmail = trainers.filter((t) => t.trainer.email && t.trainer.email.trim() !== '');
-        const trainersSkipped = trainers.length - trainersWithEmail.length;
-        if (trainersSkipped > 0) {
-          console.warn(`⚠️  Skipping cancellation email for ${trainersSkipped} trainer(s) with missing email address`);
-        }
-        const trainerEmailPromises = trainersWithEmail.map((trainerAssignment) => {
-          const emailParams: any = {
-            email: trainerAssignment.trainer.email!,
-            learnerName: trainerAssignment.trainer.name ?? 'Trainer',
-            courseTitle: courseRun.course?.title || 'Course',
-            cancellationReason: reason || 'unforeseen circumstances',
-          };
-          if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
-          if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
-          if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
-          if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
-          if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
-          if (nextRunDate) emailParams.nextRunDate = nextRunDate;
-          if (additionalNotes) emailParams.additionalNotes = additionalNotes;
-
-          return EmailService.sendCourseCancellationEmail(emailParams)
-            .then(() => {
-              console.log(`✅ Cancellation email sent to trainer: ${trainerAssignment.trainer.email}`);
-              return true;
-            })
-            .catch((err) => {
-              console.error(`❌ Failed to send cancellation email to trainer ${trainerAssignment.trainer.email}:`, err);
-              return false;
-            });
-        });
-
-        const results = await Promise.all([...learnerEmailPromises, ...trainerEmailPromises]);
-        const successCount = results.filter(Boolean).length;
-        const failCount = results.length - successCount;
-        console.log(`Cancellation emails: ${successCount} sent, ${failCount} failed (${enrollments.length} learners + ${trainersWithEmail.length} trainers attempted)`);
-      } catch (emailError) {
-        console.error('Error sending cancellation emails:', emailError);
-        // Don't fail the cancellation if emails fail
-      }
-
+      // Respond immediately — do not block on email sending
       res.json({
         success: true,
         courseRun: {
@@ -1579,7 +1484,111 @@ export const courseRunController = {
         },
         message: 'Course run cancelled successfully',
       });
+
+      // Send cancellation emails fire-and-forget (does not block the HTTP response)
+      setImmediate(async () => {
+        try {
+          // Fetch enrolled learners
+          const enrollments = await prisma.courseRunLearner.findMany({
+            where: {
+              courseRunId: id,
+              enrollmentStatus: { not: 'WITHDRAWN' },
+            },
+            include: {
+              learner: {
+                select: {
+                  id: true,
+                  fullname: true,
+                  email: true,
+                },
+              },
+            },
+          });
+
+          // Fetch assigned trainers
+          const trainers = await prisma.courseRunTrainer.findMany({
+            where: { courseRunId: id },
+            include: {
+              trainer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          });
+
+          // Send emails to learners
+          const learnerEmailPromises = enrollments.map((enrollment) => {
+            const emailParams: any = {
+              email: enrollment.learner.email ?? '',
+              learnerName: enrollment.learner.fullname,
+              courseTitle: courseRun.course?.title || 'Course',
+              cancellationReason: reason || 'unforeseen circumstances',
+            };
+            if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
+            if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
+            if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
+            if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
+            if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
+            if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+            if (additionalNotes) emailParams.additionalNotes = additionalNotes;
+
+            return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
+              console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
+              return false;
+            });
+          });
+
+          // Send emails to trainers (skip trainers with no email address)
+          const trainersWithEmail = trainers.filter((t) => t.trainer.email && t.trainer.email.trim() !== '');
+          const trainersSkipped = trainers.length - trainersWithEmail.length;
+          if (trainersSkipped > 0) {
+            console.warn(`⚠️  Skipping cancellation email for ${trainersSkipped} trainer(s) with missing email address`);
+          }
+          const trainerEmailPromises = trainersWithEmail.map((trainerAssignment) => {
+            const emailParams: any = {
+              email: trainerAssignment.trainer.email!,
+              learnerName: trainerAssignment.trainer.name ?? 'Trainer',
+              courseTitle: courseRun.course?.title || 'Course',
+              cancellationReason: reason || 'unforeseen circumstances',
+            };
+            if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
+            if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
+            if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
+            if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
+            if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
+            if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+            if (additionalNotes) emailParams.additionalNotes = additionalNotes;
+
+            return EmailService.sendCourseCancellationEmail(emailParams)
+              .then(() => {
+                console.log(`✅ Cancellation email sent to trainer: ${trainerAssignment.trainer.email}`);
+                return true;
+              })
+              .catch((err) => {
+                console.error(`❌ Failed to send cancellation email to trainer ${trainerAssignment.trainer.email}:`, err);
+                return false;
+              });
+          });
+
+          const results = await Promise.all([...learnerEmailPromises, ...trainerEmailPromises]);
+          const successCount = results.filter(Boolean).length;
+          const failCount = results.length - successCount;
+          console.log(`Cancellation emails: ${successCount} sent, ${failCount} failed (${enrollments.length} learners + ${trainersWithEmail.length} trainers attempted)`);
+        } catch (emailError) {
+          console.error('Error sending cancellation emails:', emailError);
+        }
+      });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: error.issues.map((i) => i.message).join(' '),
+        });
+        return;
+      }
       console.error('Error cancelling course run:', error);
       res.status(500).json(buildErrorResponse('courseRunController.cancel', 'Failed to cancel course run', error));
     }
