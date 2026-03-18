@@ -190,8 +190,10 @@ app.use((req, res, next) => {
   // Set timeout to 30 seconds for all requests except file uploads and email sending
   const isLongRunningOperation = req.path.includes('/uploads') || 
                                    req.path.includes('/send-course-confirmation-email') ||
-                                   req.path.includes('/send-trainer-assignment-email');
-  const timeout = isLongRunningOperation ? 120000 : 30000; // 2 min for uploads/emails, 30s for others
+                                   req.path.includes('/send-trainer-assignment-email') ||
+                                   req.path.includes('/certificates') || // PDF/ZIP generation via Puppeteer
+                                   req.path.includes('/certificates/bulk-zip');
+  const timeout = isLongRunningOperation ? 300000 : 30000; // 5 min for certificate/upload ops, 30s for others
   
   req.setTimeout(timeout, () => {
     console.error(`⏱️ Request timeout on ${req.method} ${req.path} after ${timeout}ms`);

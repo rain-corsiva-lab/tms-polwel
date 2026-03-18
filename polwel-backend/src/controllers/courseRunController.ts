@@ -588,6 +588,12 @@ const cancelCourseRunSchema = z
       .max(200, 'Next run date cannot exceed 200 characters.')
       .optional()
       .nullable(),
+    additionalNotes: z
+      .string()
+      .trim()
+      .max(2000, 'Additional notes cannot exceed 2000 characters.')
+      .optional()
+      .nullable(),
   })
   .optional();
 
@@ -1424,6 +1430,7 @@ export const courseRunController = {
       const payload = cancelCourseRunSchema?.parse(req.body) ?? {};
       const reason = payload?.reason?.trim() || null;
       const nextRunDate = payload?.nextRunDate?.trim() || null;
+      const additionalNotes = payload?.additionalNotes?.trim() || null;
       const actorId = req.user?.userId ?? null;
 
       // Update status to CANCELLED
@@ -1511,6 +1518,7 @@ export const courseRunController = {
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
           if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+          if (additionalNotes) emailParams.additionalNotes = additionalNotes;
           
           return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
             console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -1537,6 +1545,7 @@ export const courseRunController = {
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
           if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+          if (additionalNotes) emailParams.additionalNotes = additionalNotes;
 
           return EmailService.sendCourseCancellationEmail(emailParams)
             .then(() => {
@@ -2360,19 +2369,8 @@ export const courseRunController = {
               email: true,
               designation: true,
               contact: true,
-              // Include learner's own org as fallback for older enrollments
-              // that may not have clientOrganizationId set at the enrollment level
-              clientOrganizationId: true,
-              clientOrganization: {
-                select: {
-                  id: true,
-                  name: true,
-                  buNumber: true,
-                  organizationType: true,
-                },
-              },
+            },
           },
-        },
         clientOrganization: {
           select: {
             id: true,
@@ -2397,9 +2395,9 @@ export const courseRunController = {
 
     const normalizedEnrollments = enrollments.map((enrollment) => {
       const learner = enrollment.learner;
-      // Use enrollment-level org first, fall back to learner's own org (handles older records)
-      const clientOrganization = enrollment.clientOrganization || (learner?.clientOrganization as any) || null;
-      const effectiveClientOrgId = enrollment.clientOrganizationId || learner?.clientOrganizationId || null;
+      // Use enrollment-level org (clientOrganizationId exists only on the enrollment)
+      const clientOrganization = enrollment.clientOrganization || null;
+      const effectiveClientOrgId = enrollment.clientOrganizationId || null;
       const coordinator = enrollment.trainingCoordinator || null;
 
       return {
@@ -3761,6 +3759,11 @@ export const courseRunController = {
           if (attachments && attachments.length > 0) {
             emailPayload.attachments = attachments;
           }
+
+          if (courseRun.remarks) {
+            emailPayload.remarks = courseRun.remarks;
+          }
+
           console.log('emailPayload', emailPayload);
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
@@ -4058,6 +4061,10 @@ export const courseRunController = {
             const durType = courseRun.course.durationType || 'days';
             const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
             emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
+          }
+
+          if (courseRun.remarks) {
+            emailPayload.remarks = courseRun.remarks;
           }
 
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -4527,6 +4534,10 @@ export const courseRunController = {
           const durType = enrollment.courseRun.course.durationType || 'days';
           const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
           emailPayload.courseDuration = `${isNaN(dur) ? enrollment.courseRun.course.duration : dur} ${durLabel}`;
+        }
+
+        if (enrollment.courseRun?.remarks) {
+          emailPayload.remarks = enrollment.courseRun.remarks;
         }
 
         const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -5746,8 +5757,10 @@ export const courseRunController = {
         return;
       }
 
-      // Check if course run is completed
-      if (enrollment.courseRun.status !== 'COMPLETED') {
+      // Allow certificate download for both COMPLETED and PENDING_BILLING statuses
+      // (billing is an admin process; the learner's participation is already confirmed)
+      const allowedStatuses = ['COMPLETED', 'PENDING_BILLING'];
+      if (!allowedStatuses.includes(enrollment.courseRun.status)) {
         res.status(400).json(buildErrorResponse('courseRunController.downloadCertificatePublic', 'Certificate not available yet', new Error('Course not completed')));
         return;
       }
@@ -6351,51 +6364,6 @@ export const courseRunController = {
     }
   },
 
-  // Download certificate (public route - no auth required)
-  async downloadCertificatePublic(req: Request, res: Response): Promise<void> {
-    try {
-      const { learnerId, courseRunId } = req.params;
-      // TODO: Implement certificate download functionality
-      res.status(501).json({
-        success: false,
-        error: 'Certificate download functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error downloading certificate:', error);
-      res.status(500).json(buildErrorResponse('downloadCertificatePublic', 'Failed to download certificate', error));
-    }
-  },
-
-  // Generate billing export
-  async generateBillingExport(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      // TODO: Implement billing export functionality
-      res.status(501).json({
-        success: false,
-        error: 'Billing export functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error generating billing export:', error);
-      res.status(500).json(buildErrorResponse('generateBillingExport', 'Failed to generate billing export', error));
-    }
-  },
-
-  // Export participants with attendance to XLSX
-  async exportParticipantsXLSX(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      // TODO: Implement participants export functionality
-      res.status(501).json({
-        success: false,
-        error: 'Participants export functionality not yet implemented',
-      });
-    } catch (error) {
-      console.error('Error exporting participants:', error);
-      res.status(500).json(buildErrorResponse('exportParticipantsXLSX', 'Failed to export participants', error));
-    }
-  },
-
   // Get certificate data for learners
   async generateCertificates(req: Request, res: Response): Promise<void> {
     try {
@@ -6687,8 +6655,8 @@ export const courseRunController = {
             contentType: 'application/pdf',
           };
 
-          // Generate download URL (if needed in future)
-          const downloadUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/certificates/download/${enrollment.learner.id}/${enrollment.courseRun.id}`;
+          // Generate public download URL — routed via Apache to the backend API
+          const downloadUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/api/course-runs/certificates/download/${enrollment.learner.id}/${enrollment.courseRun.id}`;
 
           // Send email with certificate
           const emailSent = await EmailService.sendCourseCompletionEmail({

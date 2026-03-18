@@ -39,6 +39,50 @@ function imageToBase64(imagePath: string): string {
   }
 }
 
+/**
+ * Resolve the Chrome/Chromium executable path to use for Puppeteer.
+ *
+ * Priority:
+ *   1. PUPPETEER_EXECUTABLE_PATH env var  (set this on production if needed)
+ *   2. Common system Chrome/Chromium paths on Linux
+ *   3. undefined → Puppeteer uses its bundled Chrome (may need system libs)
+ */
+function resolveChromiumExecutablePath(): string | undefined {
+  // 1. Explicit override via env var
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    console.log(`[CertService] Using Chrome from PUPPETEER_EXECUTABLE_PATH: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  // 2. Auto-detect from common system paths
+  const candidates = [
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/local/bin/chromium',
+    '/snap/bin/chromium',
+  ];
+
+  const found = candidates.find(p => {
+    try {
+      fs.accessSync(p, fs.constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  if (found) {
+    console.log(`[CertService] Auto-detected system Chrome: ${found}`);
+    return found;
+  }
+
+  // 3. Fall back to Puppeteer bundled Chrome
+  console.log('[CertService] No system Chrome found, using Puppeteer bundled Chrome');
+  return undefined;
+}
+
 
 const regularFontPath = path.join(__dirname, './cert-fonts/calibri.ttf');
 const boldFontPath = path.join(__dirname, './cert-fonts/calibrib.ttf');
@@ -194,7 +238,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 0;
     }
     
     .learner-name {
@@ -203,8 +247,8 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-weight: 300;
       color: #252c63;
       text-align: center;
-      margin-top: 0;
-      margin-bottom: 12px;
+      margin-top: 20px;
+      margin-bottom: 20px;
       text-transform: uppercase;
     }
     
@@ -214,7 +258,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #595959;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 4px;
+      margin-bottom: 0;
     }
     
     .course-name {
@@ -222,13 +266,13 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-weight: bold;
       color: #252c63;
       text-align: center;
-      margin-top: 0;
-      margin-bottom: 68px;
+      margin-top: 25px;
+      margin-bottom: 25px;
       max-width: 90%;
       line-height: 1.3;
       letter-spacing: 1.2px;
       text-transform: uppercase;
-      min-height: 80px;
+      // min-height: 80px;
     }
     
     .date {
@@ -335,44 +379,69 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (m) => map[m] || m);
 }
 
-export async function buildCertificatePDFBuffer(data: CertificateData): Promise<Buffer> {
-  let browser;
+// Shared Chrome launch configuration used by both single-PDF and bulk-ZIP functions
+function buildLaunchOptions() {
+  const executablePath = resolveChromiumExecutablePath();
+  const args = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--disable-accelerated-2d-canvas',
+    '--disable-software-rasterizer',
+    '--no-first-run',
+    '--no-zygote',
+    '--disable-background-networking',
+    '--disable-default-apps',
+    '--disable-extensions',
+    '--disable-sync',
+    '--disable-translate',
+    '--metrics-recording-only',
+    '--mute-audio',
+    '--safebrowsing-disable-auto-update',
+  ];
+  return { headless: true as const, args, ...(executablePath ? { executablePath } : {}) };
+}
+
+// Render one certificate PDF using an already-open browser (no launch/close overhead)
+async function renderCertificatePage(browser: Awaited<ReturnType<typeof puppeteer.launch>>, data: CertificateData): Promise<Buffer> {
+  const page = await browser.newPage();
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    
-    const page = await browser.newPage();
-    const html = generateCertificateHTML(data);
-    
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    
-    const pdfBuffer = await page.pdf({
+    // The certificate HTML is fully self-contained (all fonts/images are base64-embedded).
+    // Use 'domcontentloaded' — 'networkidle0' waits up to 30s for network silence
+    // which causes timeouts on production servers with no outbound internet access.
+    page.setDefaultNavigationTimeout(120000); // 2 min safety cap
+    await page.setContent(generateCertificateHTML(data), { waitUntil: 'domcontentloaded', timeout: 120000 });
+    const pdf = await page.pdf({
       format: 'Letter',
       landscape: true,
       printBackground: true,
-      margin: {
-        top: '0',
-        right: '0',
-        bottom: '0',
-        left: '0',
-      },
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
     });
-    
-    return Buffer.from(pdfBuffer);
+    return Buffer.from(pdf);
+  } finally {
+    await page.close();
+  }
+}
+
+export async function buildCertificatePDFBuffer(data: CertificateData): Promise<Buffer> {
+  const browser = await puppeteer.launch(buildLaunchOptions());
+  try {
+    return await renderCertificatePage(browser, data);
   } catch (error) {
     throw new Error(`Failed to generate certificate PDF: ${error}`);
   } finally {
-    if (browser) {
-      await browser.close();
-    }
+    await browser.close();
   }
 }
 
 export async function buildCertificatesZipBuffer(certificates: CertificateData[]): Promise<Buffer> {
+  // Launch Chrome ONCE and reuse for all PDFs — avoids N × browser-launch overhead
+  // which would otherwise cause gateway timeouts for classes with many learners.
+  const browser = await puppeteer.launch(buildLaunchOptions());
+
   return new Promise<Buffer>(async (resolve, reject) => {
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = archiver('zip', { zlib: { level: 6 } });
     const passThrough = new PassThrough();
     const chunks: Buffer[] = [];
 
@@ -381,10 +450,7 @@ export async function buildCertificatesZipBuffer(certificates: CertificateData[]
     archive.on('error', reject);
     archive.on('warning', (error) => {
       const maybeError = error as NodeJS.ErrnoException;
-      if (maybeError?.code === 'ENOENT') {
-        return;
-      }
-      reject(error as Error);
+      if (maybeError?.code !== 'ENOENT') reject(error as Error);
     });
 
     const finalizePromise = new Promise<void>((resolveFinalize, rejectFinalize) => {
@@ -397,7 +463,7 @@ export async function buildCertificatesZipBuffer(certificates: CertificateData[]
 
     try {
       for (const certData of certificates) {
-        const pdfBuffer = await buildCertificatePDFBuffer(certData);
+        const pdfBuffer = await renderCertificatePage(browser, certData);
         const learnerSlug = certData.learnerName.replace(/[^a-z0-9]+/gi, '_') || 'Learner';
         const codeSlug = certData.courseCode?.replace(/[^a-z0-9]+/gi, '_');
         const filename = `Certificate_${learnerSlug}${codeSlug ? `_${codeSlug}` : ''}.pdf`;
@@ -409,6 +475,8 @@ export async function buildCertificatesZipBuffer(certificates: CertificateData[]
       resolve(Buffer.concat(chunks));
     } catch (error) {
       reject(error as Error);
+    } finally {
+      await browser.close();
     }
   });
 }
