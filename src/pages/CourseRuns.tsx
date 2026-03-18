@@ -21,6 +21,9 @@ import { useToast } from "../hooks/use-toast";
 import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
 import { SendCourseConfirmationEmailDialog } from "../components/SendCourseConfirmationEmailDialog";
 import { DuplicateCourseRunDialog } from "../components/DuplicateCourseRunDialog";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import "../styles/quill-custom.css";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
@@ -642,10 +645,12 @@ const CourseRuns: React.FC = () => {
 
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
+    // Strip Quill empty-state HTML before sending
+    const isQuillEmpty = (val: string) => !val || val.replace(/<[^>]*>/g, "").trim() === "";
     const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string } = {};
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
-    if (cancelDialog.additionalNotes.trim()) payloadObj.additionalNotes = cancelDialog.additionalNotes.trim();
+    if (!isQuillEmpty(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
     const payload = Object.keys(payloadObj).length > 0 ? payloadObj : undefined;
 
     setCancelDialog((prev) => ({ ...prev, submitting: true }));
@@ -1616,7 +1621,7 @@ const CourseRuns: React.FC = () => {
       </Card>
 
       <Dialog open={cancelDialog.open} onOpenChange={(open) => (open ? null : closeCancelDialog())}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] !max-w-[50vw] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cancel course run</DialogTitle>
             <DialogDescription>
@@ -1658,17 +1663,30 @@ const CourseRuns: React.FC = () => {
                 <p className="text-xs text-muted-foreground">If provided, participants will be notified of the next available session date.</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cancelAdditionalNotes">
+                <Label>
                   Additional Notes <span className="text-muted-foreground text-xs">(Optional)</span>
                 </Label>
-                <Textarea
-                  id="cancelAdditionalNotes"
-                  placeholder="Any additional information to include in the cancellation email (e.g. refund instructions, re-registration details)."
-                  value={cancelDialog.additionalNotes}
-                  onChange={(e) => setCancelDialog((prev) => ({ ...prev, additionalNotes: e.target.value.slice(0, 2000) }))}
-                  rows={4}
-                />
-                <p className="text-xs text-muted-foreground">This will be included in the cancellation notification email sent to participants and trainers.</p>
+                <div className="border rounded-md overflow-hidden" style={{ minHeight: "200px" }}>
+                  <ReactQuill
+                    theme="snow"
+                    value={cancelDialog.additionalNotes}
+                    onChange={(value) => setCancelDialog((prev) => ({ ...prev, additionalNotes: value }))}
+                    placeholder="Any additional information to include in the cancellation email (e.g. refund instructions, re-registration details)."
+                    modules={{
+                      toolbar: [
+                        [{ header: [1, 2, 3, false] }],
+                        ["bold", "italic", "underline", "strike"],
+                        [{ list: "ordered" }, { list: "bullet" }],
+                        ["link"],
+                        ["clean"],
+                      ],
+                    }}
+                    style={{ height: "150px" }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Rich text supported. Will be included in the cancellation notification email sent to participants and trainers.
+                </p>
               </div>
             </div>
           )}
