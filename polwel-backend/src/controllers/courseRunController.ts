@@ -588,6 +588,12 @@ const cancelCourseRunSchema = z
       .max(200, 'Next run date cannot exceed 200 characters.')
       .optional()
       .nullable(),
+    additionalNotes: z
+      .string()
+      .trim()
+      .max(2000, 'Additional notes cannot exceed 2000 characters.')
+      .optional()
+      .nullable(),
   })
   .optional();
 
@@ -1424,6 +1430,7 @@ export const courseRunController = {
       const payload = cancelCourseRunSchema?.parse(req.body) ?? {};
       const reason = payload?.reason?.trim() || null;
       const nextRunDate = payload?.nextRunDate?.trim() || null;
+      const additionalNotes = payload?.additionalNotes?.trim() || null;
       const actorId = req.user?.userId ?? null;
 
       // Update status to CANCELLED
@@ -1511,6 +1518,7 @@ export const courseRunController = {
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
           if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+          if (additionalNotes) emailParams.additionalNotes = additionalNotes;
           
           return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
             console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -1537,6 +1545,7 @@ export const courseRunController = {
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
           if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+          if (additionalNotes) emailParams.additionalNotes = additionalNotes;
 
           return EmailService.sendCourseCancellationEmail(emailParams)
             .then(() => {
@@ -3750,6 +3759,11 @@ export const courseRunController = {
           if (attachments && attachments.length > 0) {
             emailPayload.attachments = attachments;
           }
+
+          if (courseRun.remarks) {
+            emailPayload.remarks = courseRun.remarks;
+          }
+
           console.log('emailPayload', emailPayload);
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
 
@@ -4047,6 +4061,10 @@ export const courseRunController = {
             const durType = courseRun.course.durationType || 'days';
             const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
             emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
+          }
+
+          if (courseRun.remarks) {
+            emailPayload.remarks = courseRun.remarks;
           }
 
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
@@ -4516,6 +4534,10 @@ export const courseRunController = {
           const durType = enrollment.courseRun.course.durationType || 'days';
           const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
           emailPayload.courseDuration = `${isNaN(dur) ? enrollment.courseRun.course.duration : dur} ${durLabel}`;
+        }
+
+        if (enrollment.courseRun?.remarks) {
+          emailPayload.remarks = enrollment.courseRun.remarks;
         }
 
         const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
