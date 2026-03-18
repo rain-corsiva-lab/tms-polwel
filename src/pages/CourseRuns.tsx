@@ -128,6 +128,7 @@ interface CancelDialogState {
   courseRun: CourseRunUI | null;
   reason: string;
   nextRunDate: string;
+  additionalNotes: string;
   submitting: boolean;
 }
 
@@ -222,6 +223,7 @@ const CourseRuns: React.FC = () => {
     courseRun: null,
     reason: "",
     nextRunDate: "",
+    additionalNotes: "",
     submitting: false,
   };
 
@@ -629,6 +631,7 @@ const CourseRuns: React.FC = () => {
       courseRun,
       reason: courseRun.cancelReason ?? "",
       nextRunDate: "",
+      additionalNotes: "",
       submitting: false,
     });
   };
@@ -639,9 +642,10 @@ const CourseRuns: React.FC = () => {
 
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
-    const payloadObj: { reason?: string; nextRunDate?: string } = {};
+    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string } = {};
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
+    if (cancelDialog.additionalNotes.trim()) payloadObj.additionalNotes = cancelDialog.additionalNotes.trim();
     const payload = Object.keys(payloadObj).length > 0 ? payloadObj : undefined;
 
     setCancelDialog((prev) => ({ ...prev, submitting: true }));
@@ -1652,6 +1656,19 @@ const CourseRuns: React.FC = () => {
                   onChange={(e) => setCancelDialog((prev) => ({ ...prev, nextRunDate: e.target.value.slice(0, 200) }))}
                 />
                 <p className="text-xs text-muted-foreground">If provided, participants will be notified of the next available session date.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cancelAdditionalNotes">
+                  Additional Notes <span className="text-muted-foreground text-xs">(Optional)</span>
+                </Label>
+                <Textarea
+                  id="cancelAdditionalNotes"
+                  placeholder="Any additional information to include in the cancellation email (e.g. refund instructions, re-registration details)."
+                  value={cancelDialog.additionalNotes}
+                  onChange={(e) => setCancelDialog((prev) => ({ ...prev, additionalNotes: e.target.value.slice(0, 2000) }))}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">This will be included in the cancellation notification email sent to participants and trainers.</p>
               </div>
             </div>
           )}

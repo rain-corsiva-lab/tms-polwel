@@ -238,7 +238,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #252c63;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 0;
     }
     
     .learner-name {
@@ -247,8 +247,8 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-weight: 300;
       color: #252c63;
       text-align: center;
-      margin-top: 0;
-      margin-bottom: 12px;
+      margin-top: 20px;
+      margin-bottom: 20px;
       text-transform: uppercase;
     }
     
@@ -258,7 +258,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #595959;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 4px;
+      margin-bottom: 0;
     }
     
     .course-name {
@@ -266,13 +266,13 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-weight: bold;
       color: #252c63;
       text-align: center;
-      margin-top: 0;
-      margin-bottom: 68px;
+      margin-top: 25px;
+      margin-bottom: 25px;
       max-width: 90%;
       line-height: 1.3;
       letter-spacing: 1.2px;
       text-transform: uppercase;
-      min-height: 80px;
+      // min-height: 80px;
     }
     
     .date {
