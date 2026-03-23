@@ -1767,6 +1767,17 @@ export const courseRunsApi = {
     });
   },
 
+  /** HTML + subject preview — same template as the sent email (does not send). */
+  previewCourseConfirmationEmail: async (
+    courseRunId: string,
+    payload: { additionalBody?: string }
+  ) => {
+    return apiRequest(`/course-runs/${courseRunId}/course-confirmation-email/preview`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Send course confirmation email to learners
   sendCourseConfirmationEmail: async (
     courseRunId: string,
