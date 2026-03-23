@@ -3572,6 +3572,88 @@ export const courseRunController = {
     }
   },
 
+  /** Returns HTML + subject identical to the email body (for UI preview). Does not send mail. */
+  async previewCourseConfirmationEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { additionalBody } = req.body || {};
+
+      if (!id) {
+        res.status(400).json({ success: false, error: 'Course run ID is required' });
+        return;
+      }
+
+      const courseRun = await prisma.courseRun.findFirst({
+        where: { id, deletedAt: null },
+        include: {
+          course: true,
+          venue: true,
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      const additionalNotes =
+        typeof additionalBody === 'string' && additionalBody.trim().length > 0
+          ? additionalBody.trim()
+          : undefined;
+
+      const content: Parameters<typeof EmailService.buildLearnerCourseConfirmationEmailHtml>[0] = {
+        courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
+      };
+
+      if (courseRun.startDatetime) {
+        content.startDate = new Date(courseRun.startDatetime);
+      }
+      if (courseRun.endDatetime) {
+        content.endDate = new Date(courseRun.endDatetime);
+      }
+
+      const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
+      if (venueName) {
+        content.venueName = venueName;
+      }
+      if (courseRun.venue?.address) {
+        content.venueAddress = courseRun.venue.address;
+      }
+      if (courseRun.specifiedLocation) {
+        content.specifiedLocation = courseRun.specifiedLocation;
+      }
+      if (additionalNotes) {
+        content.additionalNotes = additionalNotes;
+      }
+      if (courseRun.course?.duration) {
+        const dur = parseFloat(String(courseRun.course.duration));
+        const durType = courseRun.course.durationType || 'days';
+        const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+        content.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
+      }
+      if (courseRun.remarks) {
+        content.remarks = courseRun.remarks;
+      }
+
+      const { html, subject } = EmailService.buildLearnerCourseConfirmationEmailHtml(content, {
+        logoSrc: EmailService.getLogoSrcForWebPreview(),
+      });
+
+      res.json({ success: true, html, subject });
+    } catch (error) {
+      console.error('Error building course confirmation email preview:', error);
+      res
+        .status(500)
+        .json(
+          buildErrorResponse(
+            'courseRunController.previewCourseConfirmationEmail',
+            'Failed to build email preview',
+            error,
+          ),
+        );
+    }
+  },
+
   // Send course confirmation email to learners
   async sendCourseConfirmationEmail(req: Request, res: Response): Promise<void> {
     try {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -20,7 +20,8 @@ interface SendCourseConfirmationEmailDialogProps {
     email: string;
     organizationName: string;
   }>;
-  courseRunDetails: {
+  /** Optional; preview is loaded from the API. Callers may omit. */
+  courseRunDetails?: {
     serialNumber: string;
     courseName: string;
     startDate: string;
@@ -35,13 +36,74 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
   onOpenChange,
   courseRunId,
   learners,
-  courseRunDetails,
   onSuccess,
 }) => {
   const [ccEmails, setCcEmails] = useState("");
   const [additionalBody, setAdditionalBody] = useState("");
+  const [debouncedAdditionalBody, setDebouncedAdditionalBody] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewSubject, setPreviewSubject] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const prevOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setDebouncedAdditionalBody(additionalBody);
+    }
+    prevOpenRef.current = open;
+  }, [open, additionalBody]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedAdditionalBody(additionalBody), 400);
+    return () => window.clearTimeout(t);
+  }, [additionalBody]);
+
+  useEffect(() => {
+    if (!open) {
+      setPreviewHtml(null);
+      setPreviewSubject(null);
+      setPreviewError(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !courseRunId) {
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    const body = debouncedAdditionalBody.trim() ? debouncedAdditionalBody.trim() : undefined;
+    courseRunsApi
+      .previewCourseConfirmationEmail(courseRunId, { additionalBody: body })
+      .then((res: any) => {
+        if (cancelled) return;
+        if (res?.success && typeof res.html === "string") {
+          setPreviewHtml(res.html);
+          setPreviewSubject(typeof res.subject === "string" ? res.subject : null);
+        } else {
+          setPreviewError(res?.message || res?.error || "Could not load preview");
+          setPreviewHtml(null);
+          setPreviewSubject(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : "Could not load preview";
+        setPreviewError(message);
+        setPreviewHtml(null);
+        setPreviewSubject(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, courseRunId, debouncedAdditionalBody]);
 
   const handleFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -189,42 +251,52 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Course Run Summary */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h3 className="font-semibold text-sm mb-3">Email Preview</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Course:</span>
-                <span className="font-medium">{courseRunDetails.courseName}</span>
+          {/* Live HTML preview — same template as sent email (server-rendered) */}
+          <div className="border rounded-lg overflow-hidden bg-slate-100">
+            <div className="px-3 py-2 border-b bg-white flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-sm">Email preview</h3>
+              {previewLoading && <span className="text-xs text-muted-foreground">Updating…</span>}
+            </div>
+            {previewSubject && (
+              <div className="px-3 py-2 bg-white border-b text-xs">
+                <span className="text-muted-foreground">Subject: </span>
+                <span className="font-medium text-foreground break-all">{previewSubject}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Serial Number:</span>
-                <span className="font-medium">{courseRunDetails.serialNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Date:</span>
-                <span className="font-medium">
-                  {courseRunDetails.startDate} to {courseRunDetails.endDate}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Venue:</span>
-                <span className="font-medium">{courseRunDetails.venue}</span>
-              </div>
-              <div className="mt-3 pt-3 border-t">
-                <div className="font-semibold mb-2">Participants ({learners.length}):</div>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {learners.map((learner) => (
-                    <div key={learner.id} className="flex justify-between items-center text-xs py-1 border-b last:border-b-0">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{learner.name}</span>
-                        <span className="text-gray-500">{learner.email || "No email"}</span>
-                      </div>
-                      {/* <span className="text-gray-600 text-right">{learner.organizationName || "Not specified"}</span> */}
-                    </div>
-                  ))}
+            )}
+            {previewError && (
+              <div className="p-3 text-sm text-destructive bg-white">{previewError}</div>
+            )}
+            <div className="relative bg-[#0f172a] min-h-[320px] max-h-[55vh] overflow-auto">
+              {previewLoading && !previewHtml && (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">
+                  Loading preview…
                 </div>
+              )}
+              {previewHtml && (
+                <iframe
+                  title="Course confirmation email preview"
+                  srcDoc={previewHtml}
+                  sandbox="allow-same-origin"
+                  className="w-full min-h-[480px] border-0 block bg-white"
+                  style={{ minHeight: "min(55vh, 640px)" }}
+                />
+              )}
+            </div>
+            <div className="p-3 bg-gray-50 border-t">
+              <div className="font-semibold text-sm mb-2">Recipients ({learners.length})</div>
+              <div className="space-y-1 max-h-36 overflow-y-auto text-xs">
+                {learners.map((learner) => (
+                  <div key={learner.id} className="flex justify-between items-start py-1 border-b last:border-b-0 border-gray-200">
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium truncate">{learner.name}</span>
+                      <span className="text-gray-500 truncate">{learner.email || "No email"}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Attachments are not shown in this preview; they will be included when you send.
+              </p>
             </div>
           </div>
 

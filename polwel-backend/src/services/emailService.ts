@@ -444,6 +444,11 @@ class EmailService {
     return 'cid:polwellogo';
   }
 
+  /** Logo src for browser iframe preview — never `cid:` (embeds base64 or public URL). */
+  static getLogoSrcForWebPreview(): string {
+    return this.getLogoBase64Src();
+  }
+
   // Get standardized email footer HTML
   private static getEmailFooter(): string {
     return `
@@ -1645,48 +1650,40 @@ class EmailService {
     }
   }
 
-  static async sendLearnerCourseConfirmationEmail(params: {
-    email: string;
-    learnerName: string;
-    courseTitle: string;
-    courseCode?: string;
-    serialNumber?: string;
-    startDate?: Date;
-    endDate?: Date;
-    venueName?: string;
-    venueAddress?: string;
-    specifiedLocation?: string;
-    additionalNotes?: string;
-    cc?: string[] | string | null;
-    attachments?: any[] | null;
-    /** e.g. "3 Days" — used in the email subject line instead of the start date */
-    courseDuration?: string | null;
-    /** Course run remarks to display in the Note field */
-    remarks?: string | null;
-  }): Promise<boolean> {
+  /**
+   * Builds the same HTML + subject as the learner course confirmation email (single source of truth).
+   * Use `logoSrc` override for browser preview (e.g. base64 via getLogoSrcForWebPreview); sending uses getLogoSrc().
+   */
+  static buildLearnerCourseConfirmationEmailHtml(
+    params: {
+      courseTitle: string;
+      courseCode?: string;
+      serialNumber?: string;
+      startDate?: Date;
+      endDate?: Date;
+      venueName?: string;
+      venueAddress?: string;
+      specifiedLocation?: string;
+      additionalNotes?: string;
+      courseDuration?: string | null;
+      remarks?: string | null;
+    },
+    options?: { logoSrc?: string },
+  ): { html: string; subject: string } {
     const {
-      email,
-      learnerName,
       courseTitle,
-      courseCode,
-      serialNumber,
       startDate,
       endDate,
       venueName,
       venueAddress,
       specifiedLocation,
       additionalNotes,
-      cc,
-      attachments,
       courseDuration,
       remarks,
     } = params;
 
-    const transporter = this.getTransporter();
-    const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
+    const logoSrc = options?.logoSrc ?? this.getLogoSrc();
 
-    // Returns true when both dates fall on the same calendar day (ignores time)
     const isSameDayLocal = (d1?: Date, d2?: Date): boolean => {
       if (!d1 || !d2) return false;
       return d1.toISOString().substring(0, 10) === d2.toISOString().substring(0, 10);
@@ -1695,7 +1692,6 @@ class EmailService {
     const formatDateWithDay = (date?: Date) => {
       if (!date) return 'To be confirmed';
       try {
-        // Format as: Friday, 19 December 2025
         return new Intl.DateTimeFormat('en-SG', {
           weekday: 'long',
           day: 'numeric',
@@ -1711,7 +1707,6 @@ class EmailService {
     const formatDateForSubject = (date?: Date) => {
       if (!date) return '';
       try {
-        // Format as: 25 December 2025
         return new Intl.DateTimeFormat('en-SG', {
           day: 'numeric',
           month: 'long',
@@ -1735,34 +1730,10 @@ class EmailService {
       }
     };
 
-    const normalizeCc = () => {
-      if (!cc) return undefined;
-      if (Array.isArray(cc)) {
-        const cleaned = cc.map((item) => item?.trim()).filter(Boolean);
-        return cleaned.length > 0 ? cleaned : undefined;
-      }
-      if (typeof cc === 'string') {
-        const cleaned = cc
-          .split(/[;,]/)
-          .map((item) => item.trim())
-          .filter(Boolean);
-        return cleaned.length > 0 ? cleaned : undefined;
-      }
-      return undefined;
-    };
+    const subjectSuffix = courseDuration ? courseDuration : formatDateForSubject(startDate);
+    const subject = `Course Confirmation: ${courseTitle}${subjectSuffix ? ` (${subjectSuffix})` : ''}`;
 
-    const ccRecipients = normalizeCc();
-
-    // Subject: prefer "(3 Days)" style; fall back to start date if no duration given
-    const subjectSuffix = courseDuration
-      ? courseDuration
-      : formatDateForSubject(startDate);
-    const mailOptions: any = {
-      from: this.mailFromAddress,
-      to: email,
-      subject: `Course Confirmation: ${courseTitle}${subjectSuffix ? ` (${subjectSuffix})` : ''}`,
-      ...(ccRecipients ? { cc: ccRecipients } : {}),
-      html: `
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
           <head>
@@ -1896,7 +1867,92 @@ class EmailService {
             </table>
           </body>
         </html>
-      `,
+      `;
+
+    return { html, subject };
+  }
+
+  static async sendLearnerCourseConfirmationEmail(params: {
+    email: string;
+    learnerName: string;
+    courseTitle: string;
+    courseCode?: string;
+    serialNumber?: string;
+    startDate?: Date;
+    endDate?: Date;
+    venueName?: string;
+    venueAddress?: string;
+    specifiedLocation?: string;
+    additionalNotes?: string;
+    cc?: string[] | string | null;
+    attachments?: any[] | null;
+    /** e.g. "3 Days" — used in the email subject line instead of the start date */
+    courseDuration?: string | null;
+    /** Course run remarks to display in the Note field */
+    remarks?: string | null;
+  }): Promise<boolean> {
+    const {
+      email,
+      learnerName,
+      courseTitle,
+      courseCode,
+      serialNumber,
+      startDate,
+      endDate,
+      venueName,
+      venueAddress,
+      specifiedLocation,
+      additionalNotes,
+      cc,
+      attachments,
+      courseDuration,
+      remarks,
+    } = params;
+
+    const transporter = this.getTransporter();
+    const logoAttachment = this.getLogoAttachment();
+
+    const normalizeCc = () => {
+      if (!cc) return undefined;
+      if (Array.isArray(cc)) {
+        const cleaned = cc.map((item) => item?.trim()).filter(Boolean);
+        return cleaned.length > 0 ? cleaned : undefined;
+      }
+      if (typeof cc === 'string') {
+        const cleaned = cc
+          .split(/[;,]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+        return cleaned.length > 0 ? cleaned : undefined;
+      }
+      return undefined;
+    };
+
+    const ccRecipients = normalizeCc();
+
+    const { html, subject } = this.buildLearnerCourseConfirmationEmailHtml(
+      {
+        courseTitle,
+        ...(courseCode !== undefined ? { courseCode } : {}),
+        ...(serialNumber !== undefined ? { serialNumber } : {}),
+        ...(startDate !== undefined ? { startDate } : {}),
+        ...(endDate !== undefined ? { endDate } : {}),
+        ...(venueName !== undefined ? { venueName } : {}),
+        ...(venueAddress !== undefined ? { venueAddress } : {}),
+        ...(specifiedLocation !== undefined ? { specifiedLocation } : {}),
+        ...(additionalNotes !== undefined ? { additionalNotes } : {}),
+        ...(courseDuration !== undefined && courseDuration !== null ? { courseDuration } : {}),
+        ...(remarks !== undefined && remarks !== null ? { remarks } : {}),
+      },
+      { logoSrc: this.getLogoSrc() },
+    );
+
+    const mailOptions: any = {
+      from: this.mailFromAddress,
+      to: email,
+      subject,
+      ...(ccRecipients ? { cc: ccRecipients } : {}),
+      html,
       attachments: logoAttachment ? [logoAttachment] : [],
     };
 

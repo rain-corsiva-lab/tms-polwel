@@ -95,6 +95,9 @@ router.post('/:id/approve-trainer-assignment', requirePermissions('course-run.ap
 // POST /api/course-runs/:id/reject-trainer-assignment - Reject trainer assignment
 router.post('/:id/reject-trainer-assignment', requirePermissions('course-run.approve'), courseRunController.rejectTrainerAssignment);
 
+// POST /api/course-runs/:id/course-confirmation-email/preview - HTML preview (same template as sent email; does not send)
+router.post('/:id/course-confirmation-email/preview', requirePermissions('course-run.edit'), courseRunController.previewCourseConfirmationEmail);
+
 // POST /api/course-runs/:id/send-course-confirmation-email - Send course confirmation email to learners
 router.post('/:id/send-course-confirmation-email', requirePermissions('course-run.edit'), courseRunController.sendCourseConfirmationEmail);
 
