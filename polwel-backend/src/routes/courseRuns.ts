@@ -44,6 +44,9 @@ router.put('/:id', requirePermissions('course-run.edit'), courseRunController.up
 // POST /api/course-runs/:id/workflow/action - Execute workflow action
 router.post('/:id/workflow/action', requirePermissions('course-run.edit'), courseRunController.performWorkflowAction);
 
+// POST /api/course-runs/:id/course-cancellation-email/preview - Cancellation email HTML preview (does not cancel)
+router.post('/:id/course-cancellation-email/preview', requirePermissions('course-run.edit'), courseRunController.previewCourseCancellationEmail);
+
 // POST /api/course-runs/:id/cancel - Cancel course run
 router.post('/:id/cancel', requirePermissions('course-run.edit'), courseRunController.cancel);
 
@@ -83,6 +86,9 @@ router.put('/:id/trainer-assignments', requirePermissions('course-run.edit'), co
 // PUT /api/course-runs/:id/partner-assignments - Update partner assignments
 router.put('/:id/partner-assignments', requirePermissions('course-run.edit'), courseRunController.updatePartnerAssignments);
 
+// POST /api/course-runs/:id/trainer-assignment-email/preview - HTML preview (same template as sent email; does not send)
+router.post('/:id/trainer-assignment-email/preview', requirePermissions('course-run.edit'), courseRunController.previewTrainerAssignmentEmail);
+
 // POST /api/course-runs/:id/send-trainer-assignment-email - Send trainer assignment emails
 router.post('/:id/send-trainer-assignment-email', requirePermissions('course-run.edit'), courseRunController.sendTrainerAssignmentEmail);
 
@@ -94,6 +100,9 @@ router.post('/:id/approve-trainer-assignment', requirePermissions('course-run.ap
 
 // POST /api/course-runs/:id/reject-trainer-assignment - Reject trainer assignment
 router.post('/:id/reject-trainer-assignment', requirePermissions('course-run.approve'), courseRunController.rejectTrainerAssignment);
+
+// POST /api/course-runs/:id/course-confirmation-email/preview - HTML preview (same template as sent email; does not send)
+router.post('/:id/course-confirmation-email/preview', requirePermissions('course-run.edit'), courseRunController.previewCourseConfirmationEmail);
 
 // POST /api/course-runs/:id/send-course-confirmation-email - Send course confirmation email to learners
 router.post('/:id/send-course-confirmation-email', requirePermissions('course-run.edit'), courseRunController.sendCourseConfirmationEmail);

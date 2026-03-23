@@ -1586,6 +1586,16 @@ export const courseRunsApi = {
     return apiRequest('/course-runs/status-options');
   },
 
+  previewCourseCancellationEmail: async (
+    id: string,
+    payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string }
+  ) => {
+    return apiRequest(`/course-runs/${id}/course-cancellation-email/preview`, {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    });
+  },
+
   cancel: async (id: string, payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string }) => {
     return apiRequest(`/course-runs/${id}/cancel`, {
       method: 'POST',
@@ -1767,6 +1777,17 @@ export const courseRunsApi = {
     });
   },
 
+  /** HTML + subject preview — same template as the sent email (does not send). */
+  previewCourseConfirmationEmail: async (
+    courseRunId: string,
+    payload: { additionalBody?: string }
+  ) => {
+    return apiRequest(`/course-runs/${courseRunId}/course-confirmation-email/preview`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Send course confirmation email to learners
   sendCourseConfirmationEmail: async (
     courseRunId: string,
@@ -1783,6 +1804,23 @@ export const courseRunsApi = {
   sendTrainingAssignmentEmailToLearners: async (courseRunId: string) => {
     return apiRequest(`/course-runs/${courseRunId}/send-training-assignment-email-learners`, {
       method: 'POST',
+    });
+  },
+
+  /** Trainer/partner assignment email HTML preview (same template as send). */
+  previewTrainerAssignmentEmail: async (
+    courseRunId: string,
+    payload: {
+      additionalBody?: string;
+      recipientType?: 'trainer' | 'partner';
+      /** Prefer this — matches `trainers[].id` from the UI (trainer entity id). */
+      trainerId?: string;
+      courseRunTrainerId?: string;
+    }
+  ) => {
+    return apiRequest(`/course-runs/${courseRunId}/trainer-assignment-email/preview`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 

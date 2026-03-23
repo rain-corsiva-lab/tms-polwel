@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -30,6 +30,8 @@ import { cn } from "../lib/utils";
 import { formatDateTime } from "../lib/date";
 import { API_BASE_URL } from "../lib/api";
 import { AbilityContext } from "../lib/casl/Can";
+
+const isQuillEmptyHtml = (val: string) => !val || val.replace(/<[^>]*>/g, "").trim() === "";
 
 // Raw shape from backend
 interface BackendCourseRun {
@@ -241,6 +243,18 @@ const CourseRuns: React.FC = () => {
 
   const [cancelDialog, setCancelDialog] = useState<CancelDialogState>(initialCancelDialogState);
 
+  const [cancelPreviewDebounced, setCancelPreviewDebounced] = useState({
+    reason: "",
+    nextRunDate: "",
+    additionalNotes: "",
+  });
+  const [cancelPreviewHtml, setCancelPreviewHtml] = useState<string | null>(null);
+  const [cancelPreviewSubject, setCancelPreviewSubject] = useState<string | null>(null);
+  const [cancelPreviewLabel, setCancelPreviewLabel] = useState<string | null>(null);
+  const [cancelPreviewLoading, setCancelPreviewLoading] = useState(false);
+  const [cancelPreviewError, setCancelPreviewError] = useState<string | null>(null);
+  const prevCancelOpenRef = useRef(false);
+
   const [workflowDialog, setWorkflowDialog] = useState<WorkflowDialogState>(initialWorkflowDialogState);
 
   // New dialog states for the enhanced workflow
@@ -421,6 +435,80 @@ const CourseRuns: React.FC = () => {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
+
+  useEffect(() => {
+    if (cancelDialog.open && !prevCancelOpenRef.current) {
+      setCancelPreviewDebounced({
+        reason: cancelDialog.reason,
+        nextRunDate: cancelDialog.nextRunDate,
+        additionalNotes: cancelDialog.additionalNotes,
+      });
+    }
+    prevCancelOpenRef.current = cancelDialog.open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync preview inputs only when dialog opens
+  }, [cancelDialog.open]);
+
+  useEffect(() => {
+    if (!cancelDialog.open) return;
+    const t = window.setTimeout(() => {
+      setCancelPreviewDebounced({
+        reason: cancelDialog.reason,
+        nextRunDate: cancelDialog.nextRunDate,
+        additionalNotes: cancelDialog.additionalNotes,
+      });
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [cancelDialog.open, cancelDialog.reason, cancelDialog.nextRunDate, cancelDialog.additionalNotes]);
+
+  useEffect(() => {
+    if (!cancelDialog.open) {
+      setCancelPreviewHtml(null);
+      setCancelPreviewSubject(null);
+      setCancelPreviewLabel(null);
+      setCancelPreviewError(null);
+    }
+  }, [cancelDialog.open]);
+
+  useEffect(() => {
+    if (!cancelDialog.open || !cancelDialog.courseRun) return;
+    let cancelled = false;
+    setCancelPreviewLoading(true);
+    setCancelPreviewError(null);
+    const payload: { reason?: string; nextRunDate?: string; additionalNotes?: string } = {};
+    if (cancelPreviewDebounced.reason.trim()) payload.reason = cancelPreviewDebounced.reason.trim();
+    if (cancelPreviewDebounced.nextRunDate.trim()) payload.nextRunDate = cancelPreviewDebounced.nextRunDate.trim();
+    if (!isQuillEmptyHtml(cancelPreviewDebounced.additionalNotes)) {
+      payload.additionalNotes = cancelPreviewDebounced.additionalNotes;
+    }
+    courseRunsApi
+      .previewCourseCancellationEmail(cancelDialog.courseRun.id, payload)
+      .then((res: any) => {
+        if (cancelled) return;
+        if (res?.success && typeof res.html === "string") {
+          setCancelPreviewHtml(res.html);
+          setCancelPreviewSubject(typeof res.subject === "string" ? res.subject : null);
+          setCancelPreviewLabel(typeof res.previewLabel === "string" ? res.previewLabel : null);
+        } else {
+          setCancelPreviewError(res?.message || res?.error || "Could not load preview");
+          setCancelPreviewHtml(null);
+          setCancelPreviewSubject(null);
+          setCancelPreviewLabel(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setCancelPreviewError(err instanceof Error ? err.message : "Could not load preview");
+        setCancelPreviewHtml(null);
+        setCancelPreviewSubject(null);
+        setCancelPreviewLabel(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCancelPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cancelDialog.open, cancelDialog.courseRun?.id, cancelPreviewDebounced]);
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -646,11 +734,10 @@ const CourseRuns: React.FC = () => {
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
     // Strip Quill empty-state HTML before sending
-    const isQuillEmpty = (val: string) => !val || val.replace(/<[^>]*>/g, "").trim() === "";
     const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string } = {};
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
-    if (!isQuillEmpty(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
+    if (!isQuillEmptyHtml(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
     const payload = Object.keys(payloadObj).length > 0 ? payloadObj : undefined;
 
     setCancelDialog((prev) => ({ ...prev, submitting: true }));
@@ -1640,6 +1727,43 @@ const CourseRuns: React.FC = () => {
                   <p className="text-sm text-gray-600">Scheduled: {formatRange(cancelDialog.courseRun.start, cancelDialog.courseRun.end)}</p>
                 )}
               </div>
+
+              <div className="border rounded-lg overflow-hidden bg-slate-100">
+                <div className="px-3 py-2 border-b bg-white flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-sm">Email preview</h3>
+                  {cancelPreviewLoading && <span className="text-xs text-muted-foreground">Updating…</span>}
+                </div>
+                {cancelPreviewLabel && (
+                  <div className="px-3 py-1.5 bg-amber-50 border-b text-xs text-amber-900 font-medium">{cancelPreviewLabel}</div>
+                )}
+                {cancelPreviewSubject && (
+                  <div className="px-3 py-2 bg-white border-b text-xs">
+                    <span className="text-muted-foreground">Subject: </span>
+                    <span className="font-medium text-foreground break-all">{cancelPreviewSubject}</span>
+                  </div>
+                )}
+                {cancelPreviewError && <div className="p-3 text-sm text-destructive bg-white">{cancelPreviewError}</div>}
+                <div className="relative bg-[#0f172a] min-h-[280px] max-h-[50vh] overflow-auto">
+                  {cancelPreviewLoading && !cancelPreviewHtml && (
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">
+                      Loading preview…
+                    </div>
+                  )}
+                  {cancelPreviewHtml && (
+                    <iframe
+                      title="Course cancellation email preview"
+                      srcDoc={cancelPreviewHtml}
+                      sandbox="allow-same-origin"
+                      className="w-full min-h-[400px] border-0 block bg-white"
+                      style={{ minHeight: "min(50vh, 560px)" }}
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground px-3 py-2 bg-gray-50 border-t">
+                  Sample greeting uses the first enrolled participant&apos;s name when available; assigned trainers receive the same email with their name.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="cancelReason">Cancellation reason</Label>
                 <Textarea
