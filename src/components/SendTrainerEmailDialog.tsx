@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -31,7 +31,8 @@ interface SendTrainerEmailDialogProps {
       trainerEmail?: string;
     }>;
   }>;
-  courseRunDetails: {
+  /** Optional; live preview is loaded from the API. */
+  courseRunDetails?: {
     serialNumber: string;
     courseName: string;
     startDate: string;
@@ -47,13 +48,106 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
   courseRunId,
   trainers,
   partners,
-  courseRunDetails,
   onSuccess,
 }) => {
   const [ccEmails, setCcEmails] = useState("");
   const [additionalBody, setAdditionalBody] = useState("");
+  const [debouncedAdditionalBody, setDebouncedAdditionalBody] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewSubject, setPreviewSubject] = useState<string | null>(null);
+  const [previewLabel, setPreviewLabel] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewRecipientType, setPreviewRecipientType] = useState<"trainer" | "partner">("trainer");
+  const [previewTrainerId, setPreviewTrainerId] = useState<string | null>(null);
+  const prevOpenRef = useRef(false);
+
+  const hasPartners = !!(partners && partners.length > 0);
+  const showTrainerPartnerToggle = hasPartners && trainers.length > 0;
+  const trainerRosterKey = `${trainers.length}:${trainers.map((t) => t.id).join(",")}`;
+
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setDebouncedAdditionalBody(additionalBody);
+    }
+    prevOpenRef.current = open;
+  }, [open, additionalBody]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedAdditionalBody(additionalBody), 400);
+    return () => window.clearTimeout(t);
+  }, [additionalBody]);
+
+  useEffect(() => {
+    if (!open) {
+      setPreviewHtml(null);
+      setPreviewSubject(null);
+      setPreviewLabel(null);
+      setPreviewError(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (trainers.length > 0) {
+      setPreviewRecipientType("trainer");
+      setPreviewTrainerId((prev) =>
+        prev && trainers.some((t) => t.id === prev) ? prev : (trainers[0]?.id ?? null),
+      );
+    } else if (hasPartners) {
+      setPreviewRecipientType("partner");
+      setPreviewTrainerId(null);
+    }
+  }, [open, hasPartners, trainerRosterKey]);
+
+  useEffect(() => {
+    if (!open || !courseRunId) return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    const body = debouncedAdditionalBody.trim() ? debouncedAdditionalBody.trim() : undefined;
+    const payload: {
+      additionalBody?: string;
+      recipientType?: "trainer" | "partner";
+      trainerId?: string;
+    } = {
+      additionalBody: body,
+      recipientType: previewRecipientType,
+    };
+    if (previewRecipientType === "trainer" && previewTrainerId) {
+      payload.trainerId = previewTrainerId;
+    }
+    courseRunsApi
+      .previewTrainerAssignmentEmail(courseRunId, payload)
+      .then((res: any) => {
+        if (cancelled) return;
+        if (res?.success && typeof res.html === "string") {
+          setPreviewHtml(res.html);
+          setPreviewSubject(typeof res.subject === "string" ? res.subject : null);
+          setPreviewLabel(typeof res.previewLabel === "string" ? res.previewLabel : null);
+        } else {
+          setPreviewError(res?.message || res?.error || "Could not load preview");
+          setPreviewHtml(null);
+          setPreviewSubject(null);
+          setPreviewLabel(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setPreviewError(err instanceof Error ? err.message : "Could not load preview");
+        setPreviewHtml(null);
+        setPreviewSubject(null);
+        setPreviewLabel(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, courseRunId, debouncedAdditionalBody, previewRecipientType, previewTrainerId]);
 
   // Internally resolved partner trainers keyed by partnerId
   // This avoids relying on parent state timing and ensures fresh data on open
@@ -225,8 +319,6 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
   };
 
   const totalFees = trainers.reduce((sum, t) => sum + t.baseFee, 0);
-  const hasPartners = partners && partners.length > 0;
-  const isPartnerScenario = hasPartners;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -240,7 +332,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
 
         <div className="space-y-4 py-4">
           {/* Partner Information - Show if partners exist */}
-          {isPartnerScenario && (
+          {hasPartners && (
             <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
               <h3 className="font-semibold text-sm mb-3 text-blue-800">Partner Organization</h3>
               <div className="space-y-3">
@@ -284,45 +376,112 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
             </div>
           )}
 
-          {/* Course Run Summary */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h3 className="font-semibold text-sm mb-3">Email Preview</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Course:</span>
-                <span className="font-medium">{courseRunDetails.courseName}</span>
+          {/* Live HTML preview — same template as sent email */}
+          <div className="border rounded-lg overflow-hidden bg-slate-100">
+            <div className="px-3 py-2 border-b bg-white flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="font-semibold text-sm">Email preview</h3>
+              {previewLoading && <span className="text-xs text-muted-foreground">Updating…</span>}
+            </div>
+
+            {showTrainerPartnerToggle && (
+              <div className="px-3 py-2 bg-white border-b flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+                <span className="text-xs text-muted-foreground shrink-0">Preview as:</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={previewRecipientType === "trainer" ? "default" : "outline"}
+                    onClick={() => setPreviewRecipientType("trainer")}
+                  >
+                    Trainer email
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={previewRecipientType === "partner" ? "default" : "outline"}
+                    onClick={() => setPreviewRecipientType("partner")}
+                  >
+                    Partner email
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Serial Number:</span>
-                <span className="font-medium">{courseRunDetails.serialNumber}</span>
+            )}
+
+            {previewRecipientType === "trainer" && trainers.length > 1 && (
+              <div className="px-3 py-2 bg-white border-b flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                <Label htmlFor="preview-trainer" className="text-xs text-muted-foreground shrink-0">
+                  Trainer
+                </Label>
+                <select
+                  id="preview-trainer"
+                  className="flex h-9 w-full sm:max-w-md rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  value={previewTrainerId ?? ""}
+                  onChange={(e) => setPreviewTrainerId(e.target.value || null)}
+                >
+                  {trainers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Date:</span>
-                <span className="font-medium">
-                  {courseRunDetails.startDate} to {courseRunDetails.endDate}
-                </span>
+            )}
+
+            {previewLabel && (
+              <div className="px-3 py-1.5 bg-amber-50 border-b text-xs text-amber-900">
+                Showing: <span className="font-medium">{previewLabel}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Venue:</span>
-                <span className="font-medium">{courseRunDetails.venue}</span>
+            )}
+
+            {previewSubject && (
+              <div className="px-3 py-2 bg-white border-b text-xs">
+                <span className="text-muted-foreground">Subject: </span>
+                <span className="font-medium text-foreground break-all">{previewSubject}</span>
               </div>
-              <div className="mt-3 pt-3 border-t">
-                <div className="font-semibold mb-2">{isPartnerScenario ? "Assigned Trainers (For Reference)" : `Trainers (${trainers.length})`}:</div>
+            )}
+
+            {previewError && <div className="p-3 text-sm text-destructive bg-white">{previewError}</div>}
+
+            <div className="relative bg-[#0f172a] min-h-[320px] max-h-[55vh] overflow-auto">
+              {previewLoading && !previewHtml && (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">
+                  Loading preview…
+                </div>
+              )}
+              {previewHtml && (
+                <iframe
+                  title="Trainer assignment email preview"
+                  srcDoc={previewHtml}
+                  sandbox="allow-same-origin"
+                  className="w-full min-h-[480px] border-0 block bg-white"
+                  style={{ minHeight: "min(55vh, 640px)" }}
+                />
+              )}
+            </div>
+
+            <div className="p-3 bg-gray-50 border-t space-y-3">
+              <div>
+                <div className="font-semibold text-sm mb-2">
+                  {hasPartners ? "Assigned trainers (for reference)" : `Trainers (${trainers.length})`}
+                </div>
                 <div className="space-y-1">
                   {trainers.map((t) => (
                     <div key={t.id} className="flex justify-between items-center text-xs">
-                      <span className={isPartnerScenario ? "text-gray-600" : ""}>{t.name}</span>
-                      {!isPartnerScenario && <span className="text-gray-600">Fee: {formatCurrency(t.baseFee)}</span>}
+                      <span className={hasPartners ? "text-gray-600" : ""}>{t.name}</span>
+                      {!hasPartners && <span className="text-gray-600">Fee: {formatCurrency(t.baseFee)}</span>}
                     </div>
                   ))}
-                  {!isPartnerScenario && (
-                    <div className="flex justify-between items-center font-semibold pt-2 border-t">
+                  {!hasPartners && trainers.length > 0 && (
+                    <div className="flex justify-between items-center font-semibold pt-2 border-t border-gray-200">
                       <span>Total:</span>
                       <span>{formatCurrency(totalFees)}</span>
                     </div>
                   )}
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Attachments are not shown in this preview; they will be included when you send. CC is not shown in the body but will be applied on send.
+              </p>
             </div>
           </div>
 

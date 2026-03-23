@@ -3073,6 +3073,171 @@ export const courseRunController = {
     }
   },
 
+  /** HTML preview for trainer/partner assignment email (same template as send). Does not send mail. */
+  async previewTrainerAssignmentEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { additionalBody, recipientType: rtBody, courseRunTrainerId, trainerId } = req.body || {};
+
+      if (!id) {
+        res.status(400).json({ success: false, error: 'Course run ID is required' });
+        return;
+      }
+
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id },
+        include: {
+          course: {
+            select: {
+              title: true,
+              courseCode: true,
+              courseTrainers: {
+                select: {
+                  trainerId: true,
+                  remarks: true,
+                },
+              },
+            },
+          },
+          venue: {
+            select: {
+              name: true,
+              address: true,
+            },
+          },
+          courseRunTrainers: {
+            include: {
+              trainer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  partnerOrganization: true,
+                },
+              },
+            },
+          },
+          courseRunPartners: {
+            include: {
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  pointOfContactEmail: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      const hasTrainers = (courseRun.courseRunTrainers || []).length > 0;
+      const hasPartners = (courseRun.courseRunPartners || []).length > 0;
+
+      if (!hasTrainers && !hasPartners) {
+        res.status(400).json({
+          success: false,
+          error: 'No trainers or partners assigned to this course run',
+        });
+        return;
+      }
+
+      let recipientType: 'trainer' | 'partner' =
+        rtBody === 'partner' || rtBody === 'trainer' ? rtBody : hasTrainers ? 'trainer' : 'partner';
+
+      if (recipientType === 'trainer' && !hasTrainers) {
+        recipientType = 'partner';
+      }
+      if (recipientType === 'partner' && !hasPartners) {
+        recipientType = 'trainer';
+      }
+
+      const additionalBodyTrim =
+        typeof additionalBody === 'string' && additionalBody.trim().length > 0 ? additionalBody.trim() : null;
+
+      const courseDetails: Parameters<typeof EmailService.buildTrainerAssignmentEmailHtml>[1] = {};
+      if (courseRun.course?.title) {
+        courseDetails.course = courseRun.course.title;
+      }
+      if (courseRun.serialNumber) {
+        courseDetails.serialNumber = courseRun.serialNumber;
+      }
+      courseDetails.startDate = courseRun.startDatetime ? courseRun.startDatetime.toISOString() : null;
+      courseDetails.endDate = courseRun.endDatetime ? courseRun.endDatetime.toISOString() : null;
+      courseDetails.venue = courseRun.venue?.name || courseRun.specifiedLocation || null;
+      courseDetails.venueAddress = courseRun.venue?.address || null;
+      courseDetails.specifiedLocation = courseRun.specifiedLocation || null;
+
+      let recipientName = 'Trainer';
+      let baseFee = 0;
+      let previewLabel = '';
+
+      if (recipientType === 'trainer') {
+        const assignment =
+          typeof courseRunTrainerId === 'string' && courseRunTrainerId.length > 0
+            ? courseRun.courseRunTrainers.find((a) => a.id === courseRunTrainerId)
+            : typeof trainerId === 'string' && trainerId.length > 0
+              ? courseRun.courseRunTrainers.find((a) => a.trainerId === trainerId)
+              : courseRun.courseRunTrainers[0];
+
+        if (!assignment) {
+          res.status(400).json({ success: false, error: 'Trainer assignment not found for preview' });
+          return;
+        }
+
+        recipientName = assignment.trainer?.name || 'Trainer';
+        baseFee = Number(assignment.trainerBaseAmount || 0);
+        const courseTrainerRecord = (courseRun.course as any)?.courseTrainers?.find(
+          (ct: any) => ct.trainerId === assignment.trainerId,
+        );
+        courseDetails.trainerRemarks = courseTrainerRecord?.remarks || null;
+        previewLabel = `Trainer: ${recipientName}`;
+      } else {
+        const pa = courseRun.courseRunPartners[0];
+        if (!pa?.partner) {
+          res.status(400).json({ success: false, error: 'Partner assignment not found for preview' });
+          return;
+        }
+        recipientName = pa.partner.name || 'Training Partner';
+        previewLabel = `Partner: ${recipientName}`;
+      }
+
+      const { html, subject } = EmailService.buildTrainerAssignmentEmailHtml(
+        recipientName,
+        courseDetails,
+        baseFee,
+        additionalBodyTrim,
+        recipientType,
+        { logoSrc: EmailService.getLogoSrcForWebPreview() },
+      );
+
+      res.json({
+        success: true,
+        html,
+        subject,
+        previewLabel,
+        recipientType,
+      });
+    } catch (error) {
+      console.error('Error building trainer assignment email preview:', error);
+      res
+        .status(500)
+        .json(
+          buildErrorResponse(
+            'courseRunController.previewTrainerAssignmentEmail',
+            'Failed to build email preview',
+            error,
+          ),
+        );
+    }
+  },
+
   // Send trainer assignment email
   async sendTrainerAssignmentEmail(req: Request, res: Response): Promise<void> {
     try {

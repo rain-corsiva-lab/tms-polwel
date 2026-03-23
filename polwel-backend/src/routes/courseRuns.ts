@@ -83,6 +83,9 @@ router.put('/:id/trainer-assignments', requirePermissions('course-run.edit'), co
 // PUT /api/course-runs/:id/partner-assignments - Update partner assignments
 router.put('/:id/partner-assignments', requirePermissions('course-run.edit'), courseRunController.updatePartnerAssignments);
 
+// POST /api/course-runs/:id/trainer-assignment-email/preview - HTML preview (same template as sent email; does not send)
+router.post('/:id/trainer-assignment-email/preview', requirePermissions('course-run.edit'), courseRunController.previewTrainerAssignmentEmail);
+
 // POST /api/course-runs/:id/send-trainer-assignment-email - Send trainer assignment emails
 router.post('/:id/send-trainer-assignment-email', requirePermissions('course-run.edit'), courseRunController.sendTrainerAssignmentEmail);
 

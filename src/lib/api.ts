@@ -1797,6 +1797,23 @@ export const courseRunsApi = {
     });
   },
 
+  /** Trainer/partner assignment email HTML preview (same template as send). */
+  previewTrainerAssignmentEmail: async (
+    courseRunId: string,
+    payload: {
+      additionalBody?: string;
+      recipientType?: 'trainer' | 'partner';
+      /** Prefer this — matches `trainers[].id` from the UI (trainer entity id). */
+      trainerId?: string;
+      courseRunTrainerId?: string;
+    }
+  ) => {
+    return apiRequest(`/course-runs/${courseRunId}/trainer-assignment-email/preview`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Send trainer assignment emails with optional CC and additional body
   sendTrainerAssignmentEmail: async (
     courseRunId: string,
