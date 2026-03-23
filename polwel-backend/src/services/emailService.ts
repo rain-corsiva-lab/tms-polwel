@@ -1371,8 +1371,11 @@ class EmailService {
     }
   }
 
-  static async sendTrainerAssignmentEmail(
-    email: string,
+  /**
+   * Same HTML + subject + plain text as trainer/partner assignment email (single source of truth).
+   * Pass `logoSrc` from getLogoSrcForWebPreview() for browser iframe preview.
+   */
+  static buildTrainerAssignmentEmailHtml(
     name: string,
     courseRunDetails: {
       course?: string;
@@ -1385,21 +1388,16 @@ class EmailService {
       trainerRemarks?: string | null;
     },
     baseFee: number,
-    ccEmails?: string[] | null,
     additionalBody?: string | null,
-    attachments?: any[] | null,
-    recipientType?: 'trainer' | 'partner'
-  ): Promise<{ success: boolean; info?: any; error?: string }> {
-    const transporter = this.getTransporter();
-    const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
-
+    recipientType?: 'trainer' | 'partner',
+    options?: { logoSrc?: string },
+  ): { html: string; subject: string; textBody: string } {
+    const logoSrc = options?.logoSrc ?? this.getLogoSrc();
     const isPartner = recipientType === 'partner';
 
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(amount);
 
-    // Compare only the date portion (YYYY-MM-DD) to detect same-day courses
     const isSameDay = (d1?: string | null, d2?: string | null): boolean => {
       if (!d1 || !d2) return false;
       return d1.substring(0, 10) === d2.substring(0, 10);
@@ -1409,7 +1407,6 @@ class EmailService {
       if (!d) return 'TBD';
       try {
         const dt = new Date(d);
-        // Format as: Friday, 20 February 2026
         return new Intl.DateTimeFormat('en-SG', {
           weekday: 'long',
           day: 'numeric',
@@ -1435,6 +1432,8 @@ class EmailService {
     };
 
     const textBody = `Dear ${name},\n\nPlease refer to the attached documents and the details below regarding the upcoming course, ${courseRunDetails.course || 'N/A'}, for your organisation's reference.\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Day & Date: ${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}\n- Time: ${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}${courseRunDetails.venueAddress ? '\n  ' + courseRunDetails.venueAddress : ''}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Thank you.\n\nRegards,\n\nProfessional Development & Career Services Division\nPOLWEL Co-operative Society Limited\nMain: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares\nStay connected with POLWEL on and view our professional development courses on HRP!`;
+
+    const subject = `Training Assignment & Course Confirmation: ${courseRunDetails.serialNumber || courseRunDetails.course || 'POLWEL'}`;
 
     const html = `<!DOCTYPE html>
     <html lang="en">
@@ -1575,10 +1574,44 @@ class EmailService {
       </body>
     </html>`;
 
+    return { html, subject, textBody };
+  }
+
+  static async sendTrainerAssignmentEmail(
+    email: string,
+    name: string,
+    courseRunDetails: {
+      course?: string;
+      serialNumber?: string;
+      startDate?: string | null;
+      endDate?: string | null;
+      venue?: string | null;
+      venueAddress?: string | null;
+      specifiedLocation?: string | null;
+      trainerRemarks?: string | null;
+    },
+    baseFee: number,
+    ccEmails?: string[] | null,
+    additionalBody?: string | null,
+    attachments?: any[] | null,
+    recipientType?: 'trainer' | 'partner',
+  ): Promise<{ success: boolean; info?: any; error?: string }> {
+    const transporter = this.getTransporter();
+    const logoAttachment = this.getLogoAttachment();
+
+    const { html, subject, textBody } = this.buildTrainerAssignmentEmailHtml(
+      name,
+      courseRunDetails,
+      baseFee,
+      additionalBody,
+      recipientType,
+      { logoSrc: this.getLogoSrc() },
+    );
+
     const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
-      subject: `Training Assignment & Course Confirmation: ${courseRunDetails.serialNumber || courseRunDetails.course || 'POLWEL'}`,
+      subject,
       text: textBody,
       html,
       attachments: logoAttachment ? [logoAttachment] : [],
