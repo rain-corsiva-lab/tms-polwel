@@ -883,6 +883,7 @@ const OrganizationDashboard = () => {
         onOpenChange={setViewLearnersOpen}
         courseRunId={selectedCourseRun?.id || ""}
         courseRunData={selectedCourseRun || {}}
+        displayStatusOverride={selectedCourseRun?.status}
       />
 
       {/* Resource Preview Dialog */}

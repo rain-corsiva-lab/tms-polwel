@@ -1320,6 +1320,15 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
       const start = run.startDatetime ? new Date(run.startDatetime) : null;
       const end = run.endDatetime ? new Date(run.endDatetime) : null;
       const participants = run.courseRunLearners.length;
+
+      // Categorize based on status
+      const completedStatuses = ['COMPLETED', 'INCOMPLETED', 'PENDING_BILLING'];
+      const isCompleted = completedStatuses.includes(run.status) || (end && end < now && !['DRAFT', 'CANCELLED'].includes(run.status));
+
+      // Normalize display status for completed bucket: past end date reads as COMPLETED for the client
+      const displayStatus =
+        isCompleted && end && end < now ? 'COMPLETED' : run.status;
+
       const item = {
         id: run.id,
         courseName: run.course?.title || 'Untitled Course',
@@ -1327,12 +1336,8 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
         startDate: start,
         endDate: end,
         participants,
-        status: run.status,
+        status: displayStatus,
       };
-
-      // Categorize based on status
-      const completedStatuses = ['COMPLETED', 'INCOMPLETED', 'PENDING_BILLING'];
-      const isCompleted = completedStatuses.includes(run.status) || (end && end < now && !['DRAFT', 'CANCELLED'].includes(run.status));
       
       if (isCompleted) {
         completed.push(item);

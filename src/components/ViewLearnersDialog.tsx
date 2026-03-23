@@ -15,6 +15,8 @@ interface ViewLearnersDialogProps {
   onOpenChange: (open: boolean) => void;
   courseRunId: string;
   courseRunData?: any;
+  /** When set (e.g. TC dashboard list from getCoordinatorCourseRunsSelf), shown instead of raw API status */
+  displayStatusOverride?: string;
 }
 
 interface LearnerRecord {
@@ -31,7 +33,7 @@ interface LearnerRecord {
   completionStatus?: string;
 }
 
-const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData }: ViewLearnersDialogProps) => {
+const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, displayStatusOverride }: ViewLearnersDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -100,6 +102,8 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData }: 
 
   const enrolledLearners = learners.filter((l) => l.enrollmentStatus === "ENROLLED");
   const withdrawnLearners = learners.filter((l) => l.enrollmentStatus === "WITHDRAWN");
+
+  const courseRunStatusForDisplay = displayStatusOverride ?? courseRun?.status;
 
   const getStatusBadge = (status: string) => {
     const statusLower = status?.toLowerCase() || "";
@@ -192,15 +196,15 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData }: 
                     </div>
                   )}
 
-                  {/* Status Badge */}
-                  {courseRun?.status && (
+                  {/* Status Badge — prefer coordinator dashboard normalization when provided */}
+                  {courseRunStatusForDisplay && (
                     <div className="flex items-start gap-3">
                       <div className="p-2 bg-orange-50 rounded-lg">
                         <span className="text-sm">📊</span>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Status</p>
-                        <p className="text-sm font-semibold capitalize">{courseRun.status.replace(/_/g, " ")}</p>
+                        <p className="text-sm font-semibold capitalize">{courseRunStatusForDisplay.replace(/_/g, " ")}</p>
                       </div>
                     </div>
                   )}
