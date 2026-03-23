@@ -597,6 +597,13 @@ const cancelCourseRunSchema = z
   })
   .optional();
 
+/** Same fields as cancel form; relaxed limits for rich-text preview (does not cancel the run). */
+const courseCancellationPreviewSchema = z.object({
+  reason: z.string().max(2000).optional(),
+  nextRunDate: z.string().max(200).optional(),
+  additionalNotes: z.string().max(100_000).optional(),
+});
+
 const workflowActionSchema = z.object({
   action: z.string().min(1, 'Action is required.'),
   sendEmails: z.boolean().optional(),
@@ -1395,6 +1402,104 @@ export const courseRunController = {
       res
         .status(500)
         .json(buildErrorResponse('courseRunController.getWorkflowState', 'Failed to load workflow state', error));
+    }
+  },
+
+  /** HTML preview for cancellation email (same template as send). Does not cancel the run. */
+  async previewCourseCancellationEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        res.status(400).json({ success: false, error: 'Course run ID is required' });
+        return;
+      }
+
+      const body = courseCancellationPreviewSchema.parse(req.body ?? {});
+
+      const courseRun = await prisma.courseRun.findFirst({
+        where: { id, deletedAt: null },
+        include: {
+          course: { select: { title: true, courseCode: true } },
+          venue: { select: { name: true } },
+        },
+      });
+
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+
+      const firstEnrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          courseRunId: id,
+          deletedAt: null,
+          enrollmentStatus: { not: 'WITHDRAWN' },
+        },
+        include: { learner: { select: { fullname: true } } },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const learnerName = firstEnrollment?.learner?.fullname?.trim() || 'Participant';
+      const reasonTrim = body.reason?.trim() || '';
+      const nextTrim = body.nextRunDate?.trim() || '';
+      const notesRaw = body.additionalNotes?.trim() || '';
+
+      const content: Parameters<typeof EmailService.buildCourseCancellationEmailHtml>[0] = {
+        learnerName,
+        courseTitle: courseRun.course?.title || 'Course',
+        cancellationReason: reasonTrim || 'unforeseen circumstances',
+      };
+
+      if (courseRun.course?.courseCode) {
+        content.courseCode = courseRun.course.courseCode;
+      }
+      if (courseRun.serialNumber) {
+        content.serialNumber = courseRun.serialNumber;
+      }
+      if (courseRun.startDatetime) {
+        content.startDate = new Date(courseRun.startDatetime);
+      }
+      if (courseRun.endDatetime) {
+        content.endDate = new Date(courseRun.endDatetime);
+      }
+      if (courseRun.venue?.name) {
+        content.venueName = courseRun.venue.name;
+      }
+      if (nextTrim) {
+        content.nextRunDate = nextTrim;
+      }
+      if (notesRaw) {
+        content.additionalNotes = notesRaw;
+      }
+
+      const { html, subject } = EmailService.buildCourseCancellationEmailHtml(content, {
+        logoSrc: EmailService.getLogoSrcForWebPreview(),
+      });
+
+      res.json({
+        success: true,
+        html,
+        subject,
+        previewLabel: `Sample greeting: Dear ${learnerName}`,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: error.issues.map((i) => i.message).join(' '),
+        });
+        return;
+      }
+      console.error('Error building course cancellation email preview:', error);
+      res
+        .status(500)
+        .json(
+          buildErrorResponse(
+            'courseRunController.previewCourseCancellationEmail',
+            'Failed to build email preview',
+            error,
+          ),
+        );
     }
   },
 

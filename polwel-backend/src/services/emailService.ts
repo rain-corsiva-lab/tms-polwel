@@ -2103,27 +2103,27 @@ class EmailService {
     }
   }
 
-  static async sendCourseCancellationEmail(params: {
-    email: string;
-    learnerName: string;
-    courseTitle: string;
-    courseCode?: string;
-    serialNumber?: string;
-    startDate?: Date;
-    endDate?: Date;
-    venueName?: string;
-    cancellationReason?: string;
-    /** Optional next run date text to include in the email, e.g. "15 April 2026" */
-    nextRunDate?: string | null;
-    /** Optional additional notes to include below the course details table */
-    additionalNotes?: string | null;
-  }): Promise<boolean> {
+  /**
+   * Same HTML + subject as the course cancellation email. Use getLogoSrcForWebPreview() in options for iframe preview.
+   */
+  static buildCourseCancellationEmailHtml(
+    params: {
+      learnerName: string;
+      courseTitle: string;
+      courseCode?: string;
+      serialNumber?: string;
+      startDate?: Date;
+      endDate?: Date;
+      venueName?: string;
+      cancellationReason?: string;
+      nextRunDate?: string | null;
+      additionalNotes?: string | null;
+    },
+    options?: { logoSrc?: string },
+  ): { html: string; subject: string } {
     const {
-      email,
       learnerName,
       courseTitle,
-      courseCode,
-      serialNumber,
       startDate,
       endDate,
       venueName,
@@ -2132,9 +2132,7 @@ class EmailService {
       additionalNotes,
     } = params;
 
-    const transporter = this.getTransporter();
-    const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
+    const logoSrc = options?.logoSrc ?? this.getLogoSrc();
 
     const formatDate = (date?: Date) => {
       if (!date) return 'To be confirmed';
@@ -2171,11 +2169,9 @@ class EmailService {
 
     const formatTime = () => '0900 to 1700 hrs';
 
-    const mailOptions: any = {
-      from: this.mailFromAddress,
-      to: email,
-      subject: `Course Cancellation: ${courseTitle}${formatDateForSubject(startDate) ? ` (${formatDateForSubject(startDate)})` : ''}`,
-      html: `
+    const subject = `Course Cancellation: ${courseTitle}${formatDateForSubject(startDate) ? ` (${formatDateForSubject(startDate)})` : ''}`;
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
           <head>
@@ -2240,6 +2236,14 @@ class EmailService {
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${venueName || 'TBD'}</td>
                                 </tr>
+                                ${
+                                  nextRunDate && String(nextRunDate).trim()
+                                    ? `<tr>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Next session</td>
+                                  <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${String(nextRunDate).trim()}</td>
+                                </tr>`
+                                    : ''
+                                }
                                 
                               </table>
 
@@ -2274,7 +2278,62 @@ class EmailService {
             </table>
           </body>
         </html>
-      `,
+      `;
+
+    return { html, subject };
+  }
+
+  static async sendCourseCancellationEmail(params: {
+    email: string;
+    learnerName: string;
+    courseTitle: string;
+    courseCode?: string;
+    serialNumber?: string;
+    startDate?: Date;
+    endDate?: Date;
+    venueName?: string;
+    cancellationReason?: string;
+    nextRunDate?: string | null;
+    additionalNotes?: string | null;
+  }): Promise<boolean> {
+    const {
+      email,
+      learnerName,
+      courseTitle,
+      courseCode,
+      serialNumber,
+      startDate,
+      endDate,
+      venueName,
+      cancellationReason,
+      nextRunDate,
+      additionalNotes,
+    } = params;
+
+    const transporter = this.getTransporter();
+    const logoAttachment = this.getLogoAttachment();
+
+    const { html, subject } = this.buildCourseCancellationEmailHtml(
+      {
+        learnerName,
+        courseTitle,
+        ...(courseCode !== undefined ? { courseCode } : {}),
+        ...(serialNumber !== undefined ? { serialNumber } : {}),
+        ...(startDate !== undefined ? { startDate } : {}),
+        ...(endDate !== undefined ? { endDate } : {}),
+        ...(venueName !== undefined ? { venueName } : {}),
+        ...(cancellationReason !== undefined ? { cancellationReason } : {}),
+        ...(nextRunDate !== undefined && nextRunDate !== null ? { nextRunDate } : {}),
+        ...(additionalNotes !== undefined && additionalNotes !== null ? { additionalNotes } : {}),
+      },
+      { logoSrc: this.getLogoSrc() },
+    );
+
+    const mailOptions: any = {
+      from: this.mailFromAddress,
+      to: email,
+      subject,
+      html,
       attachments: logoAttachment ? [logoAttachment] : [],
     };
 
