@@ -1586,6 +1586,16 @@ export const courseRunsApi = {
     return apiRequest('/course-runs/status-options');
   },
 
+  previewCourseCancellationEmail: async (
+    id: string,
+    payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string }
+  ) => {
+    return apiRequest(`/course-runs/${id}/course-cancellation-email/preview`, {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    });
+  },
+
   cancel: async (id: string, payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string }) => {
     return apiRequest(`/course-runs/${id}/cancel`, {
       method: 'POST',

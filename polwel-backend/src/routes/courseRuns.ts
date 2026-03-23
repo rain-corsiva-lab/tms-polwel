@@ -44,6 +44,9 @@ router.put('/:id', requirePermissions('course-run.edit'), courseRunController.up
 // POST /api/course-runs/:id/workflow/action - Execute workflow action
 router.post('/:id/workflow/action', requirePermissions('course-run.edit'), courseRunController.performWorkflowAction);
 
+// POST /api/course-runs/:id/course-cancellation-email/preview - Cancellation email HTML preview (does not cancel)
+router.post('/:id/course-cancellation-email/preview', requirePermissions('course-run.edit'), courseRunController.previewCourseCancellationEmail);
+
 // POST /api/course-runs/:id/cancel - Cancel course run
 router.post('/:id/cancel', requirePermissions('course-run.edit'), courseRunController.cancel);
 
