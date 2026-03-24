@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/date";
 import { getErrorMessage } from "@/lib/errorHandler";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import Autoplay from "embla-carousel-autoplay";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import PaginationControls from "@/components/ui/pagination";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -265,6 +266,18 @@ const OrganizationDashboard = () => {
   // Count new resources
   const newResourcesCount = resources.filter((r) => r.publishedAt && isNewResource(r.publishedAt)).length;
 
+  const resourceCarouselPlugins = useMemo(() => {
+    if (resources.length <= 1) return [];
+    return [
+      Autoplay({
+        delay: 5_000,
+        // stopOnInteraction true + stopOnMouseEnter true omits mouseleave in embla-autoplay, so hover never resumes
+        stopOnInteraction: false,
+        stopOnMouseEnter: true,
+      }),
+    ];
+  }, [resources.length]);
+
   // Format status label to user-friendly text
   const formatStatusLabel = (status: string): string => {
     const statusMap: Record<string, string> = {
@@ -446,7 +459,11 @@ const OrganizationDashboard = () => {
             </div>
           ) : (
             <div className="relative w-full px-10 sm:px-12">
-              <Carousel opts={{ align: "start", loop: resources.length > 1 }} className="w-full">
+              <Carousel
+                opts={{ align: "start", loop: resources.length > 1 }}
+                plugins={resourceCarouselPlugins}
+                className="w-full"
+              >
                 <CarouselContent className="-ml-2 md:-ml-4">
                   {resources.map((resource) => {
                     const isNew = resource.publishedAt && isNewResource(resource.publishedAt);
