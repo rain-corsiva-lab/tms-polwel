@@ -154,6 +154,15 @@ export default function ResourceLibrary() {
       return;
     }
 
+    if (!editingId && !selectedImage) {
+      toast({
+        title: "Error",
+        description: "Please upload a cover image",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setUploading(true);
 
@@ -370,8 +379,14 @@ export default function ResourceLibrary() {
 
               {/* Cover Image Upload */}
               <div className="space-y-2">
-                <Label htmlFor="resource-image">Cover Image (Optional)</Label>
-                <p className="text-xs text-gray-500">Upload a cover/thumbnail image for this resource. Accepted formats: JPG, PNG, GIF, WebP.</p>
+                <Label htmlFor="resource-image">
+                  Cover Image {!editingId && <span className="text-red-500">*</span>}
+                </Label>
+                <p className="text-xs text-gray-500">
+                  {editingId
+                    ? "Replace the cover image if needed. Accepted formats: JPG, PNG, GIF, WebP."
+                    : "Required. Used as the announcement banner image. Accepted formats: JPG, PNG, GIF, WebP."}
+                </p>
 
                 {/* Show existing image preview when editing */}
                 {(existingImageUrl || selectedImage) && (

@@ -266,7 +266,15 @@ export const resourceLibraryController = {
         });
       }
 
-      if (coverFile && coverFile.size > MAX_COVER_IMAGE_BYTES) {
+      if (!coverFile) {
+        cleanupUploadedFiles(staged);
+        return res.status(400).json({
+          success: false,
+          message: 'Cover image is required',
+        });
+      }
+
+      if (coverFile.size > MAX_COVER_IMAGE_BYTES) {
         cleanupUploadedFiles(staged);
         return res.status(400).json({
           success: false,
@@ -286,15 +294,9 @@ export const resourceLibraryController = {
 
       const b = parsed.data;
       const fileUrl = publicUrlForResourceLibraryFile(pdfFile.filename);
-      let imageUrl: string | null = null;
-      let imageName: string | null = null;
-      let imageSize: number | null = null;
-
-      if (coverFile) {
-        imageUrl = publicUrlForResourceLibraryFile(coverFile.filename);
-        imageName = coverFile.originalname;
-        imageSize = coverFile.size;
-      }
+      const imageUrl = publicUrlForResourceLibraryFile(coverFile.filename);
+      const imageName = coverFile.originalname;
+      const imageSize = coverFile.size;
 
       try {
         const resource = await prisma.resourceLibrary.create({
