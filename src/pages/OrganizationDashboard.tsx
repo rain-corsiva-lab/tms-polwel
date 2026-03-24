@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, BookOpen, Eye, Loader2, CalendarIcon, Download, FileText, Bell, Calendar as CalendarSmall, FileIcon } from "lucide-react";
+import { Users, BookOpen, Eye, Loader2, CalendarIcon, Download, FileText, Bell, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { clientOrganizationsApi } from "@/lib/api";
@@ -13,6 +13,8 @@ import { formatDate } from "@/lib/date";
 import { getErrorMessage } from "@/lib/errorHandler";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import Autoplay from "embla-carousel-autoplay";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import PaginationControls from "@/components/ui/pagination";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -53,6 +55,13 @@ interface Learner {
   courseName?: string;
   courseStartDate?: string | Date;
   courseEndDate?: string | Date;
+}
+
+function getResourceCoverUrl(imageUrl: string | null | undefined): string {
+  if (!imageUrl) return "";
+  if (imageUrl.startsWith("http")) return imageUrl;
+  const base = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001";
+  return `${base}${imageUrl}`;
 }
 
 const OrganizationDashboard = () => {
@@ -204,7 +213,41 @@ const OrganizationDashboard = () => {
     }
   };
 
-  // Helper function to strip HTML tags from description
+  const downloadResourceFile = async (resource: any) => {
+    try {
+      const url = resource.fileUrl.startsWith("http")
+        ? resource.fileUrl
+        : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${resource.fileUrl}`;
+
+      const token = localStorage.getItem("polwel_access_token");
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = resource.fileName || "resource.pdf";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+    } catch (error: any) {
+      console.error("Download error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /** Strip HTML tags from rich-text descriptions */
   const stripHtmlTags = (html: string | null | undefined): string => {
     if (!html) return "";
     const tmp = document.createElement("DIV");
@@ -222,6 +265,18 @@ const OrganizationDashboard = () => {
 
   // Count new resources
   const newResourcesCount = resources.filter((r) => r.publishedAt && isNewResource(r.publishedAt)).length;
+
+  const resourceCarouselPlugins = useMemo(() => {
+    if (resources.length <= 1) return [];
+    return [
+      Autoplay({
+        delay: 5_000,
+        // stopOnInteraction true + stopOnMouseEnter true omits mouseleave in embla-autoplay, so hover never resumes
+        stopOnInteraction: false,
+        stopOnMouseEnter: true,
+      }),
+    ];
+  }, [resources.length]);
 
   // Format status label to user-friendly text
   const formatStatusLabel = (status: string): string => {
@@ -403,79 +458,95 @@ const OrganizationDashboard = () => {
               <p className="text-gray-500">No resources available at this time</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {resources.map((resource) => {
-                const isNew = resource.publishedAt && isNewResource(resource.publishedAt);
-                return (
-                  <Card key={resource.id} className="border border-gray-200 hover:shadow-md transition-shadow relative">
-                    {isNew && <Badge className="absolute top-4 right-4 bg-green-600 text-white px-2 py-0.5 text-xs font-semibold">New</Badge>}
-                    <CardContent className="p-6">
-                      <div className="flex items-start space-x-4 mb-4">
-                        <div className="p-3 bg-blue-50 rounded-lg flex-shrink-0">
-                          <FileIcon className="h-8 w-8 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-gray-900 mb-2">{resource.title}</h3>
-                          <div className="flex items-center text-sm text-gray-600 mb-3">
-                            <CalendarSmall className="h-4 w-4 mr-1.5" />
-                            <span>
-                              {resource.publishedAt
-                                ? new Date(resource.publishedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
-                                : "N/A"}
-                            </span>
+            <div className="relative w-full px-10 sm:px-12">
+              <Carousel
+                opts={{ align: "start", loop: resources.length > 1 }}
+                plugins={resourceCarouselPlugins}
+                className="w-full"
+              >
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {resources.map((resource) => {
+                    const isNew = resource.publishedAt && isNewResource(resource.publishedAt);
+                    const coverSrc = getResourceCoverUrl(resource.imageUrl);
+                    const postedLabel = resource.publishedAt
+                      ? `Posted ${new Date(resource.publishedAt).toLocaleDateString("en-SG", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}`
+                      : "Posted —";
+                    const descPlain = resource.description ? stripHtmlTags(resource.description) : "";
+
+                    return (
+                      <CarouselItem key={resource.id} className="pl-2 md:pl-4 basis-full">
+                        <div className="flex w-full justify-center">
+                          {/* 2.5:1 → max width 800px (h≈320) / 950px (h≈380); centered with equal side margins */}
+                          <div className="relative w-full max-w-[800px] sm:max-w-[950px] aspect-[2.5/1] rounded-xl overflow-hidden border border-gray-200 shadow-md hover:shadow-lg transition-shadow group">
+                            {coverSrc ? (
+                              <>
+                                <div
+                                  className="absolute inset-0 bg-cover bg-center scale-105 group-hover:scale-100 transition-transform duration-500"
+                                  style={{ backgroundImage: `url(${coverSrc})` }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10" />
+                              </>
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-slate-300 via-slate-200 to-slate-400 flex items-center justify-center">
+                                <ImageIcon className="h-20 w-20 text-white/70" aria-hidden />
+                              </div>
+                            )}
+
+                            {isNew && (
+                              <Badge className="absolute top-4 right-4 z-20 bg-green-600 text-white px-2 py-0.5 text-xs font-semibold shadow">
+                                New
+                              </Badge>
+                            )}
+
+                            <div className="absolute inset-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-end justify-between gap-3 p-4 sm:p-5">
+                              <div className="mt-auto w-full max-w-[20rem] sm:w-80 rounded-lg bg-white/80 backdrop-blur-sm border border-white/60 shadow-sm p-3 text-left">
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900 uppercase tracking-tight leading-snug">
+                                  {resource.title}
+                                </h3>
+                                <p className="text-sm text-gray-600 mt-1.5">{postedLabel}</p>
+                                {descPlain ? (
+                                  <p className="text-sm text-gray-700 mt-2 line-clamp-3 leading-relaxed">{descPlain}</p>
+                                ) : (
+                                  <p className="text-sm text-gray-400 mt-2 italic">No description</p>
+                                )}
+                              </div>
+
+                              <div className="mt-auto sm:mt-0 flex gap-2 shrink-0 self-end sm:self-end rounded-lg bg-white/80 backdrop-blur-sm border border-white/60 shadow-sm p-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="secondary"
+                                  className="h-10 w-10 bg-white/80 hover:bg-gray-100 text-gray-900 border border-gray-200"
+                                  title="Download PDF"
+                                  onClick={() => downloadResourceFile(resource)}
+                                >
+                                  <Download className="h-5 w-5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="secondary"
+                                  className="h-10 w-10 bg-white/80 hover:bg-gray-100 text-gray-900 border border-gray-200"
+                                  title="Preview PDF"
+                                  onClick={() => setPreviewResource(resource)}
+                                >
+                                  <Eye className="h-5 w-5" />
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                          {resource.description && <p className="text-sm text-gray-600 line-clamp-2 mb-4">{stripHtmlTags(resource.description)}</p>}
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={async () => {
-                            try {
-                              const url = resource.fileUrl.startsWith("http")
-                                ? resource.fileUrl
-                                : `${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001"}${resource.fileUrl}`;
-
-                              // Fetch file as blob
-                              const token = localStorage.getItem("polwel_access_token");
-                              const response = await fetch(url, {
-                                headers: token ? { Authorization: `Bearer ${token}` } : {},
-                              });
-
-                              if (!response.ok) {
-                                throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
-                              }
-
-                              const blob = await response.blob();
-                              const downloadUrl = window.URL.createObjectURL(blob);
-                              const a = document.createElement("a");
-                              a.href = downloadUrl;
-                              a.download = resource.fileName || "resource.pdf";
-                              document.body.appendChild(a);
-                              a.click();
-                              window.URL.revokeObjectURL(downloadUrl);
-                              document.body.removeChild(a);
-                            } catch (error: any) {
-                              console.error("Download error:", error);
-                              toast({
-                                title: "Error",
-                                description: "Failed to download file",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download PDF
-                        </Button>
-                        <Button variant="outline" size="icon" className="flex-shrink-0" onClick={() => setPreviewResource(resource)} title="Preview">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      </CarouselItem>
+                    );
+                  })}
+                </CarouselContent>
+                <CarouselPrevious className="left-0 border-gray-300" />
+                <CarouselNext className="right-0 border-gray-300" />
+              </Carousel>
             </div>
           )}
         </CardContent>
