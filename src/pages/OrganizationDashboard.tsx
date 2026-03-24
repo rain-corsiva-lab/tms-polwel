@@ -480,8 +480,8 @@ const OrganizationDashboard = () => {
                     return (
                       <CarouselItem key={resource.id} className="pl-2 md:pl-4 basis-full">
                         <div className="flex w-full justify-center">
-                          {/* 2.5:1 → max width 800px (h≈320) / 950px (h≈380); centered with equal side margins */}
-                          <div className="relative w-full max-w-[800px] sm:max-w-[950px] aspect-[2.5/1] rounded-xl overflow-hidden border border-gray-200 shadow-md hover:shadow-lg transition-shadow group">
+                          {/* Fixed height 500px; max width 1200px (2.5:1) when viewport allows */}
+                          <div className="relative h-[500px] w-full max-w-[1400px] rounded-xl overflow-hidden border border-gray-200 shadow-md hover:shadow-lg transition-shadow group">
                             {coverSrc ? (
                               <>
                                 <div
