@@ -388,7 +388,7 @@ const OrganizationDashboard = () => {
   const ongoingCourses = inProgressRuns.length;
 
   return (
-    <div className="pt-[var(--header-height)] p-6 space-y-6">
+    <div className="p-6 flex flex-col gap-6">
       <Header />
       {/* Header */}
       <div className="flex justify-between items-start">
@@ -398,6 +398,23 @@ const OrganizationDashboard = () => {
         </div>
         {getStatusBadge(organization.status)}
       </div>
+
+      {/* Organisation information */}
+      <Card className="bg-white shadow-sm">
+        <CardContent className="p-6">
+          <h2 className="text-xl font-bold text-foreground mb-6">Organisation Information</h2>
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Organisation Name</p>
+              <p className="text-base text-slate-600 mt-1.5">{organization.name}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Business Unit Number</p>
+              <p className="text-base text-slate-600 mt-1.5">{organization.buNumber?.trim() || "—"}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -555,7 +572,7 @@ const OrganizationDashboard = () => {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="details">Organisation Details</TabsTrigger>
+          <TabsTrigger value="details">Organisation Analytics</TabsTrigger>
           <TabsTrigger value="courses">List of Course Runs</TabsTrigger>
           <TabsTrigger value="learners">Participants</TabsTrigger>
         </TabsList>
