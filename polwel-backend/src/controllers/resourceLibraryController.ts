@@ -1,9 +1,66 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
+
+type MulterFile = Express.Multer.File;
 import { z } from 'zod';
 import prisma from '../lib/prisma';
 import path from 'path';
 import fs from 'fs';
+
+const RESOURCE_LIBRARY_URL_PREFIX = '/uploads/resource-library';
+const MAX_COVER_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function publicUrlForResourceLibraryFile(filename: string): string {
+  return `${RESOURCE_LIBRARY_URL_PREFIX}/${filename}`;
+}
+
+function absolutePathFromPublicUrl(publicUrl: string): string | null {
+  if (!publicUrl.startsWith('/uploads/')) return null;
+  return path.join(process.cwd(), publicUrl.replace(/^\//, ''));
+}
+
+function unlinkPublicFile(publicUrl: string | null | undefined): void {
+  if (!publicUrl) return;
+  const abs = absolutePathFromPublicUrl(publicUrl);
+  if (abs && fs.existsSync(abs)) {
+    try {
+      fs.unlinkSync(abs);
+    } catch (e) {
+      console.error('Failed to unlink resource library file:', abs, e);
+    }
+  }
+}
+
+function cleanupUploadedFiles(files: { path: string }[]): void {
+  for (const f of files) {
+    try {
+      if (f.path && fs.existsSync(f.path)) {
+        fs.unlinkSync(f.path);
+      }
+    } catch (e) {
+      console.error('Failed to cleanup multer file:', f.path, e);
+    }
+  }
+}
+
+function getFilesRecord(req: AuthenticatedRequest): Record<string, MulterFile[]> | undefined {
+  return req.files as Record<string, MulterFile[]> | undefined;
+}
+
+const MultipartResourceBodySchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  targetAudience: z.enum(['TRAINING_COORDINATORS', 'ALL_USERS']).default('TRAINING_COORDINATORS'),
+  status: z.enum(['DRAFT', 'PUBLISHED']).default('DRAFT'),
+});
+
+const MultipartResourceUpdateBodySchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  targetAudience: z.enum(['TRAINING_COORDINATORS', 'ALL_USERS']),
+  status: z.enum(['DRAFT', 'PUBLISHED']),
+  clearCoverImage: z.string().optional(),
+});
 
 // Validation schemas
 const ResourceLibraryCreateSchema = z.object({
@@ -181,32 +238,122 @@ export const resourceLibraryController = {
     }
   },
 
-  // Create new resource
+  // Create new resource (JSON with URLs, or multipart/form-data with pdf + optional coverImage)
   async create(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const isMultipart = req.is('multipart/form-data');
+    const files = getFilesRecord(req);
+
+    if (isMultipart) {
+      const pdfFile = files?.pdf?.[0] || files?.file?.[0];
+      const coverFile = files?.coverImage?.[0];
+      const staged: { path: string }[] = [];
+      if (pdfFile) staged.push(pdfFile);
+      if (coverFile) staged.push(coverFile);
+
+      if (!pdfFile) {
+        cleanupUploadedFiles(staged);
+        return res.status(400).json({
+          success: false,
+          message: 'PDF file is required',
+        });
+      }
+
+      if (coverFile && coverFile.size > MAX_COVER_IMAGE_BYTES) {
+        cleanupUploadedFiles(staged);
+        return res.status(400).json({
+          success: false,
+          message: `Cover image must be at most ${MAX_COVER_IMAGE_BYTES / (1024 * 1024)} MB`,
+        });
+      }
+
+      const parsed = MultipartResourceBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        cleanupUploadedFiles(staged);
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: parsed.error.errors,
+        });
+      }
+
+      const b = parsed.data;
+      const fileUrl = publicUrlForResourceLibraryFile(pdfFile.filename);
+      let imageUrl: string | null = null;
+      let imageName: string | null = null;
+      let imageSize: number | null = null;
+
+      if (coverFile) {
+        imageUrl = publicUrlForResourceLibraryFile(coverFile.filename);
+        imageName = coverFile.originalname;
+        imageSize = coverFile.size;
+      }
+
+      try {
+        const resource = await prisma.resourceLibrary.create({
+          data: {
+            title: b.title,
+            description: b.description || null,
+            fileName: pdfFile.originalname,
+            fileUrl,
+            fileSize: pdfFile.size,
+            mimeType: pdfFile.mimetype,
+            imageUrl,
+            imageName,
+            imageSize,
+            targetAudience: b.targetAudience,
+            status: b.status,
+            uploadedBy: userId,
+            publishedAt: b.status === 'PUBLISHED' ? new Date() : null,
+          },
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        });
+
+        return res.status(201).json({
+          success: true,
+          message: 'Resource created successfully',
+          data: resource,
+        });
+      } catch (error) {
+        cleanupUploadedFiles(staged);
+        console.error('🔴 Error creating resource (multipart):', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create resource',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
     try {
       console.log('📥 Create resource called with body:', req.body);
 
-      // Validate input
       const validation = ResourceLibraryCreateSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
-          errors: validation.error.errors
+          errors: validation.error.errors,
         });
       }
 
       const data = validation.data;
-      const userId = req.user?.userId;
 
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not authenticated'
-        });
-      }
-
-      // Create resource
       const resource = await prisma.resourceLibrary.create({
         data: {
           title: data.title,
@@ -221,17 +368,17 @@ export const resourceLibraryController = {
           targetAudience: data.targetAudience,
           status: data.status,
           uploadedBy: userId,
-          publishedAt: data.status === 'PUBLISHED' ? new Date() : null
+          publishedAt: data.status === 'PUBLISHED' ? new Date() : null,
         },
         include: {
           uploader: {
             select: {
               id: true,
               name: true,
-              email: true
-            }
-          }
-        }
+              email: true,
+            },
+          },
+        },
       });
 
       console.log('✅ Resource created:', resource.id);
@@ -239,85 +386,184 @@ export const resourceLibraryController = {
       return res.status(201).json({
         success: true,
         message: 'Resource created successfully',
-        data: resource
+        data: resource,
       });
     } catch (error) {
       console.error('🔴 Error creating resource:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to create resource',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   },
 
-  // Update resource
+  // Update resource (JSON partial, or multipart with optional pdf / coverImage)
   async update(req: AuthenticatedRequest, res: Response): Promise<Response> {
-    try {
-      const { id } = req.params;
+    const { id } = req.params;
 
-      if (!id) {
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Resource ID is required',
+      });
+    }
+
+    const existingResource = await prisma.resourceLibrary.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!existingResource) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found',
+      });
+    }
+
+    const isMultipart = req.is('multipart/form-data');
+    const files = getFilesRecord(req);
+
+    if (isMultipart) {
+      const pdfFile = files?.pdf?.[0] || files?.file?.[0];
+      const coverFile = files?.coverImage?.[0];
+
+      const staged: { path: string }[] = [];
+      if (pdfFile) staged.push(pdfFile);
+      if (coverFile) staged.push(coverFile);
+
+      if (coverFile && coverFile.size > MAX_COVER_IMAGE_BYTES) {
+        cleanupUploadedFiles(staged);
         return res.status(400).json({
           success: false,
-          message: 'Resource ID is required'
+          message: `Cover image must be at most ${MAX_COVER_IMAGE_BYTES / (1024 * 1024)} MB`,
         });
       }
 
-      // Validate input
+      const parsed = MultipartResourceUpdateBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        cleanupUploadedFiles(staged);
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: parsed.error.errors,
+        });
+      }
+
+      const b = parsed.data;
+      const clearCover = b.clearCoverImage === '1' || b.clearCoverImage === 'true';
+      const updateData: Record<string, unknown> = {
+        title: b.title,
+        description: b.description ?? null,
+        targetAudience: b.targetAudience,
+        status: b.status,
+      };
+
+      if (b.status === 'PUBLISHED' && existingResource.status !== 'PUBLISHED') {
+        updateData.publishedAt = new Date();
+      }
+
+      const previousPdfUrl = existingResource.fileUrl;
+      const previousImageUrl = existingResource.imageUrl;
+
+      if (pdfFile) {
+        updateData.fileName = pdfFile.originalname;
+        updateData.fileUrl = publicUrlForResourceLibraryFile(pdfFile.filename);
+        updateData.fileSize = pdfFile.size;
+        updateData.mimeType = pdfFile.mimetype;
+      }
+
+      if (coverFile) {
+        updateData.imageUrl = publicUrlForResourceLibraryFile(coverFile.filename);
+        updateData.imageName = coverFile.originalname;
+        updateData.imageSize = coverFile.size;
+      } else if (clearCover) {
+        updateData.imageUrl = null;
+        updateData.imageName = null;
+        updateData.imageSize = null;
+      }
+
+      try {
+        const updatedResource = await prisma.resourceLibrary.update({
+          where: { id },
+          data: updateData as any,
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        });
+
+        if (pdfFile) {
+          unlinkPublicFile(previousPdfUrl);
+        }
+        if (coverFile) {
+          unlinkPublicFile(previousImageUrl);
+        } else if (clearCover) {
+          unlinkPublicFile(previousImageUrl);
+        }
+
+        return res.json({
+          success: true,
+          message: 'Resource updated successfully',
+          data: updatedResource,
+        });
+      } catch (error) {
+        cleanupUploadedFiles(staged);
+        console.error('Error updating resource (multipart):', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update resource',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    try {
       const validation = ResourceLibraryUpdateSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
-          errors: validation.error.errors
-        });
-      }
-
-      // Check if resource exists
-      const existingResource = await prisma.resourceLibrary.findFirst({
-        where: { id, deletedAt: null }
-      });
-
-      if (!existingResource) {
-        return res.status(404).json({
-          success: false,
-          message: 'Resource not found'
+          errors: validation.error.errors,
         });
       }
 
       const data = validation.data;
 
-      // Update publishedAt if status changes to PUBLISHED
-      const updateData: any = { ...data };
+      const updatePayload: any = { ...data };
       if (data.status === 'PUBLISHED' && existingResource.status !== 'PUBLISHED') {
-        updateData.publishedAt = new Date();
+        updatePayload.publishedAt = new Date();
       }
 
       const updatedResource = await prisma.resourceLibrary.update({
         where: { id },
-        data: updateData,
+        data: updatePayload,
         include: {
           uploader: {
             select: {
               id: true,
               name: true,
-              email: true
-            }
-          }
-        }
+              email: true,
+            },
+          },
+        },
       });
 
       return res.json({
         success: true,
         message: 'Resource updated successfully',
-        data: updatedResource
+        data: updatedResource,
       });
     } catch (error) {
       console.error('Error updating resource:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to update resource',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   },

@@ -189,6 +189,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req, res, next) => {
   // Set timeout to 30 seconds for all requests except file uploads and email sending
   const isLongRunningOperation = req.path.includes('/uploads') || 
+                                   req.path.includes('/resource-library') ||
                                    req.path.includes('/send-course-confirmation-email') ||
                                    req.path.includes('/send-trainer-assignment-email') ||
                                    req.path.includes('/certificates') || // PDF/ZIP generation via Puppeteer

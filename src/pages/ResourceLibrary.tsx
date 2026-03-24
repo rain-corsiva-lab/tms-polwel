@@ -57,6 +57,7 @@ export default function ResourceLibrary() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [hadImageAtEditStart, setHadImageAtEditStart] = useState(false);
   const [description, setDescription] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -143,28 +144,6 @@ export default function ResourceLibrary() {
     if (imgInput) imgInput.value = "";
   };
 
-  const uploadFile = async (file: File): Promise<{ url: string }> => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-    const uploadUrl = `${apiUrl.replace("/api", "")}/api/uploads/media/upload`;
-    const token = localStorage.getItem("polwel_access_token");
-
-    const response = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: "File upload failed" }));
-      throw new Error(errorData.error || "File upload failed");
-    }
-
-    return response.json();
-  };
-
   const onSubmit = async (data: ResourceFormData) => {
     if (!selectedFile && !editingId) {
       toast({
@@ -178,47 +157,27 @@ export default function ResourceLibrary() {
     try {
       setUploading(true);
 
-      let fileUrl = "";
-      let fileName = "";
-      let fileSize = 0;
-      let mimeType = "";
+      const formData = new FormData();
+      formData.append("title", data.title);
+      formData.append("description", description || "");
+      formData.append("targetAudience", data.targetAudience);
+      formData.append("status", data.status);
 
       if (selectedFile) {
-        const uploadResponse = await uploadFile(selectedFile);
-        fileUrl = uploadResponse.url;
-        fileName = selectedFile.name;
-        fileSize = selectedFile.size;
-        mimeType = selectedFile.type;
+        formData.append("pdf", selectedFile);
       }
-
-      // Upload image if a new one was selected
-      let imageUrl: string | null = existingImageUrl ?? null;
-      let imageName: string | null = null;
-      let imageSize: number | null = null;
-
       if (selectedImage) {
-        const imageUploadResponse = await uploadFile(selectedImage);
-        imageUrl = imageUploadResponse.url;
-        imageName = selectedImage.name;
-        imageSize = selectedImage.size;
+        formData.append("coverImage", selectedImage);
       }
-
-      const payload: Record<string, any> = {
-        title: data.title,
-        description: description || undefined,
-        targetAudience: data.targetAudience,
-        status: data.status,
-        imageUrl: imageUrl ?? null,
-        imageName: imageName ?? null,
-        imageSize: imageSize ?? null,
-        ...(selectedFile && { fileName, fileUrl, fileSize, mimeType }),
-      };
+      if (editingId && hadImageAtEditStart && !existingImageUrl && !selectedImage) {
+        formData.append("clearCoverImage", "1");
+      }
 
       if (editingId) {
-        await api.resourceLibraryApi.update(editingId, payload);
+        await api.resourceLibraryApi.update(editingId, formData);
         toast({ title: "Success", description: "Resource updated successfully" });
       } else {
-        await api.resourceLibraryApi.create(payload);
+        await api.resourceLibraryApi.create(formData);
         toast({ title: "Success", description: "Resource uploaded successfully" });
       }
 
@@ -228,6 +187,7 @@ export default function ResourceLibrary() {
       setSelectedFile(null);
       setSelectedImage(null);
       setExistingImageUrl(null);
+      setHadImageAtEditStart(false);
       setEditingId(null);
       const fileInput = document.getElementById("pdf-file") as HTMLInputElement;
       if (fileInput) fileInput.value = "";
@@ -250,11 +210,12 @@ export default function ResourceLibrary() {
     setEditingId(resource.id);
     setValue("title", resource.title);
     setValue("targetAudience", resource.targetAudience);
-    setValue("status", resource.status);
+    setValue("status", resource.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT");
     setDescription(resource.description || "");
     setSelectedFile(null);
     setSelectedImage(null);
     setExistingImageUrl(resource.imageUrl || null);
+    setHadImageAtEditStart(!!resource.imageUrl);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -265,6 +226,7 @@ export default function ResourceLibrary() {
     setSelectedFile(null);
     setSelectedImage(null);
     setExistingImageUrl(null);
+    setHadImageAtEditStart(false);
     const fileInput = document.getElementById("pdf-file") as HTMLInputElement;
     if (fileInput) fileInput.value = "";
     const imgInput = document.getElementById("resource-image") as HTMLInputElement;
