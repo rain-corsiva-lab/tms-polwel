@@ -27,6 +27,9 @@ export const getCoordinatorResources = async (
         fileUrl: true,
         fileSize: true,
         mimeType: true,
+        imageUrl: true,
+        imageName: true,
+        imageSize: true,
         publishedAt: true,
         uploader: {
           select: {
@@ -40,13 +43,17 @@ export const getCoordinatorResources = async (
       }
     });
 
-    // Construct full URLs for resources
+    // Construct full URLs for PDF and cover image (relative paths)
     const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
-    const resourcesWithFullUrls = resources.map(resource => ({
+    const toAbsoluteUrl = (url: string | null): string | null => {
+      if (!url) return null;
+      if (url.startsWith('http')) return url;
+      return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+    const resourcesWithFullUrls = resources.map((resource) => ({
       ...resource,
-      fileUrl: resource.fileUrl && !resource.fileUrl.startsWith('http') 
-        ? `${backendUrl}${resource.fileUrl.startsWith('/') ? '' : '/'}${resource.fileUrl}`
-        : resource.fileUrl
+      fileUrl: toAbsoluteUrl(resource.fileUrl) ?? resource.fileUrl,
+      imageUrl: toAbsoluteUrl(resource.imageUrl),
     }));
 
     res.json({

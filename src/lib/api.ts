@@ -2199,35 +2199,66 @@ export const resourceLibraryApi = {
     return apiRequest(`/resource-library/${id}`);
   },
 
-  create: async (data: {
-    title: string;
-    description?: string;
-    fileName: string;
-    fileUrl: string;
-    fileSize?: number;
-    mimeType?: string;
-    targetAudience?: string;
-    status?: string;
-  }) => {
+  create: async (
+    data:
+      | FormData
+      | {
+          title: string;
+          description?: string;
+          fileName: string;
+          fileUrl: string;
+          fileSize?: number;
+          mimeType?: string;
+          imageUrl?: string | null;
+          imageName?: string | null;
+          imageSize?: number | null;
+          targetAudience?: string;
+          status?: string;
+        },
+  ) => {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      return apiRequest('/resource-library', {
+        method: 'POST',
+        body: data,
+        timeout: 120000,
+      });
+    }
     return apiRequest('/resource-library', {
       method: 'POST',
       body: JSON.stringify(data),
+      timeout: 30000,
     });
   },
 
-  update: async (id: string, data: {
-    title?: string;
-    description?: string;
-    fileName?: string;
-    fileUrl?: string;
-    fileSize?: number;
-    mimeType?: string;
-    targetAudience?: string;
-    status?: string;
-  }) => {
+  update: async (
+    id: string,
+    data:
+      | FormData
+      | {
+          title?: string;
+          description?: string;
+          fileName?: string;
+          fileUrl?: string;
+          fileSize?: number;
+          mimeType?: string;
+          imageUrl?: string | null;
+          imageName?: string | null;
+          imageSize?: number | null;
+          targetAudience?: string;
+          status?: string;
+        },
+  ) => {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      return apiRequest(`/resource-library/${id}`, {
+        method: 'PUT',
+        body: data,
+        timeout: 120000,
+      });
+    }
     return apiRequest(`/resource-library/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+      timeout: 30000,
     });
   },
 
