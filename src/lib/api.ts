@@ -1596,7 +1596,10 @@ export const courseRunsApi = {
     });
   },
 
-  cancel: async (id: string, payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string }) => {
+  cancel: async (
+    id: string,
+    payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[] }
+  ) => {
     return apiRequest(`/course-runs/${id}/cancel`, {
       method: 'POST',
       body: JSON.stringify(payload ?? {}),

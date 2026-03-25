@@ -245,6 +245,7 @@ model CourseRun {
   cancelledBy                    User?                           @relation("CourseRunCancelledBy", fields: [cancelledById], references: [id])
   clientOrganizationId           String?
   clientOrganization             Organization?                    @relation(fields: [clientOrganizationId], references: [id])
+  cancellationAttachments        CourseRunCancellationAttachment[]
 
   @@index([courseId], map: "course_runs_courseId_fkey")
   @@index([venueId], map: "course_runs_venueId_fkey")
@@ -593,12 +594,27 @@ model Media {
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
   deletedAt                    DateTime?
-  confirmationEmailAttachments ConfirmationEmailAttachment[]
-  trainerEmailAttachments      TrainerEmailAttachment[]
-  courseRunLearnersWithdrawn   CourseRunLearner[]            @relation("WithdrawnDocument")
-  courseRunLearnersWaiver      CourseRunLearner[]            @relation("WaiverDocument")
+  confirmationEmailAttachments     ConfirmationEmailAttachment[]
+  trainerEmailAttachments          TrainerEmailAttachment[]
+  courseRunCancellationAttachments CourseRunCancellationAttachment[]
+  courseRunLearnersWithdrawn       CourseRunLearner[]            @relation("WithdrawnDocument")
+  courseRunLearnersWaiver          CourseRunLearner[]            @relation("WaiverDocument")
 
   @@map("media")
+}
+
+model CourseRunCancellationAttachment {
+  id          String    @id @default(cuid())
+  courseRunId String
+  mediaId     String
+  createdAt   DateTime  @default(now())
+  courseRun   CourseRun @relation(fields: [courseRunId], references: [id], onDelete: Cascade)
+  media       Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([courseRunId, mediaId])
+  @@index([courseRunId])
+  @@index([mediaId])
+  @@map("course_run_cancellation_attachments")
 }
 
 model BillingReport {

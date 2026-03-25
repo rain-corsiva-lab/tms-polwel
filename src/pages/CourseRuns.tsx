@@ -15,8 +15,8 @@ import { Badge } from "../components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import PaginationControls from "../components/ui/pagination";
 import DateInput from "../components/ui/date-input";
-import { courseRunsApi, coursesApi } from "../lib/api";
-import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen, Filter } from "lucide-react";
+import { courseRunsApi, coursesApi, API_BASE_URL } from "../lib/api";
+import { MoreHorizontal, Search, Plus, Calendar, MapPin, Users, BookOpen, Filter, Upload, X } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import { SendTrainerEmailDialog } from "../components/SendTrainerEmailDialog";
 import { SendCourseConfirmationEmailDialog } from "../components/SendCourseConfirmationEmailDialog";
@@ -28,7 +28,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/utils";
 import { formatDateTime } from "../lib/date";
-import { API_BASE_URL } from "../lib/api";
 import { AbilityContext } from "../lib/casl/Can";
 
 const isQuillEmptyHtml = (val: string) => !val || val.replace(/<[^>]*>/g, "").trim() === "";
@@ -242,6 +241,7 @@ const CourseRuns: React.FC = () => {
   };
 
   const [cancelDialog, setCancelDialog] = useState<CancelDialogState>(initialCancelDialogState);
+  const [cancelAttachmentFiles, setCancelAttachmentFiles] = useState<File[]>([]);
 
   const [cancelPreviewDebounced, setCancelPreviewDebounced] = useState({
     reason: "",
@@ -717,6 +717,7 @@ const CourseRuns: React.FC = () => {
   };
 
   const openCancelDialog = (courseRun: CourseRunUI) => {
+    setCancelAttachmentFiles([]);
     setCancelDialog({
       open: true,
       courseRun,
@@ -728,21 +729,118 @@ const CourseRuns: React.FC = () => {
   };
 
   const closeCancelDialog = () => {
+    setCancelAttachmentFiles([]);
     setCancelDialog(initialCancelDialogState);
+  };
+
+  const handleCancelFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+
+    const invalidFiles = files.filter((file) => file.size > 25 * 1024 * 1024);
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "File too large",
+        description: `${invalidFiles.length} file(s) exceed 25MB limit`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/zip",
+      "application/x-zip-compressed",
+      "application/x-compressed",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "text/plain",
+    ];
+
+    const invalidTypes = files.filter((file) => {
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      return !isZip && !allowedTypes.includes(file.type);
+    });
+
+    if (invalidTypes.length > 0) {
+      toast({
+        title: "Unsupported file type",
+        description: `${invalidTypes.length} file(s) have unsupported types`,
+        variant: "destructive",
+      });
+    }
+
+    const validFiles = files.filter((file) => {
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      return isZip || allowedTypes.includes(file.type);
+    });
+
+    if (validFiles.length > 0) {
+      setCancelAttachmentFiles((prev) => {
+        const room = Math.max(0, 10 - prev.length);
+        const toAdd = validFiles.slice(0, room);
+        if (toAdd.length < validFiles.length) {
+          toast({
+            title: "Too many attachments",
+            description: "You can attach at most 10 files per cancellation.",
+            variant: "destructive",
+          });
+        }
+        return [...prev, ...toAdd];
+      });
+    }
+
+    e.target.value = "";
+  };
+
+  const removeCancelFile = (index: number) => {
+    setCancelAttachmentFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
     // Strip Quill empty-state HTML before sending
-    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string } = {};
+    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[] } =
+      {};
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
     if (!isQuillEmptyHtml(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
-    const payload = Object.keys(payloadObj).length > 0 ? payloadObj : undefined;
 
     setCancelDialog((prev) => ({ ...prev, submitting: true }));
 
     try {
+      const uploadedAttachmentIds: string[] = [];
+      for (const file of cancelAttachmentFiles) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const token = localStorage.getItem("polwel_access_token");
+        const uploadResponse = await fetch(`${API_BASE_URL}/uploads/email-attachments`, {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+        const uploadData = await uploadResponse.json();
+        const fileId = uploadData.fileId || uploadData.id;
+        if (!fileId) {
+          throw new Error(`No file ID returned for ${file.name}`);
+        }
+        uploadedAttachmentIds.push(fileId);
+      }
+      if (uploadedAttachmentIds.length > 0) {
+        payloadObj.attachmentMediaIds = uploadedAttachmentIds;
+      }
+
+      const payload = Object.keys(payloadObj).length > 0 ? payloadObj : undefined;
+
       await courseRunsApi.cancel(cancelDialog.courseRun.id, payload);
       toast({
         title: "Course run cancelled",
@@ -1774,6 +1872,60 @@ const CourseRuns: React.FC = () => {
                   rows={4}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cancelAttachments">Attachments (Optional)</Label>
+                <div className="border-2 border-dashed rounded-lg p-4">
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-8 w-8 text-gray-400" />
+                    <p className="text-sm text-gray-600">Click to upload files (max 25MB each)</p>
+                    <input
+                      type="file"
+                      id="cancelAttachments"
+                      multiple
+                      onChange={handleCancelFilesSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("cancelAttachments")?.click()}
+                      disabled={cancelDialog.submitting}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Select Files
+                    </Button>
+                  </div>
+
+                  {cancelAttachmentFiles.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm font-medium">{cancelAttachmentFiles.length} file(s) selected:</p>
+                      {cancelAttachmentFiles.map((file, index) => (
+                        <div key={`${file.name}-${index}`} className="flex items-center justify-between bg-white p-2 rounded border">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-sm truncate">{file.name}</span>
+                            <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCancelFile(index)}
+                            disabled={cancelDialog.submitting}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Files are stored with the cancellation record and attached to participant and trainer notification emails when sent.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="nextRunDate">
                   Next Run Date <span className="text-muted-foreground text-xs">(Optional)</span>
