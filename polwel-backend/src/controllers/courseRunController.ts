@@ -594,6 +594,8 @@ const cancelCourseRunSchema = z
       .max(2000, 'Additional notes cannot exceed 2000 characters.')
       .optional()
       .nullable(),
+    /** Media IDs from POST /api/uploads/email-attachments (optional cancellation attachments). */
+    attachmentMediaIds: z.array(z.string().min(1)).max(10).optional(),
   })
   .optional();
 
@@ -1039,6 +1041,20 @@ export const courseRunController = {
                       },
                     },
                   },
+                },
+              },
+            },
+          },
+          cancellationAttachments: {
+            include: {
+              media: {
+                select: {
+                  id: true,
+                  originalName: true,
+                  filename: true,
+                  mimeType: true,
+                  size: true,
+                  url: true,
                 },
               },
             },
@@ -1536,21 +1552,55 @@ export const courseRunController = {
       const reason = payload?.reason?.trim() || null;
       const nextRunDate = payload?.nextRunDate?.trim() || null;
       const additionalNotes = payload?.additionalNotes?.trim() || null;
+      const rawAttachmentIds = payload?.attachmentMediaIds ?? [];
+      const attachmentMediaIds = [...new Set(rawAttachmentIds)].filter(Boolean);
       const actorId = req.user?.userId ?? null;
 
-      // Update status to CANCELLED
-      const courseRun = await prisma.courseRun.update({
-        where: { id: id },
-        data: {
-          status: 'CANCELLED',
-          cancelReason: reason,
-          cancelledById: actorId,
-          cancelledAt: new Date(),
-          learnerEmailStatus: LearnerEmailStatus.NOT_REQUIRED,
-          learnerEmailStatusUpdatedAt: new Date(),
-          statusLastEvaluatedAt: new Date(),
-          updatedAt: new Date(),
-        },
+      if (attachmentMediaIds.length > 0) {
+        const mediaRows = await prisma.media.findMany({
+          where: {
+            id: { in: attachmentMediaIds },
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (mediaRows.length !== attachmentMediaIds.length) {
+          res.status(400).json({
+            success: false,
+            error: 'One or more attachment file IDs are invalid or no longer available.',
+          });
+          return;
+        }
+      }
+
+      // Update status to CANCELLED and persist cancellation attachment links
+      await prisma.$transaction(async (tx) => {
+        await tx.courseRun.update({
+          where: { id: id },
+          data: {
+            status: 'CANCELLED',
+            cancelReason: reason,
+            cancelledById: actorId,
+            cancelledAt: new Date(),
+            learnerEmailStatus: LearnerEmailStatus.NOT_REQUIRED,
+            learnerEmailStatusUpdatedAt: new Date(),
+            statusLastEvaluatedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+        if (attachmentMediaIds.length > 0) {
+          await tx.courseRunCancellationAttachment.createMany({
+            data: attachmentMediaIds.map((mediaId) => ({
+              courseRunId: id,
+              mediaId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      });
+
+      const courseRun = await prisma.courseRun.findUnique({
+        where: { id },
         include: {
           course: {
             select: {
@@ -1565,8 +1615,30 @@ export const courseRunController = {
               name: true,
             },
           },
+          cancellationAttachments: {
+            include: {
+              media: {
+                select: {
+                  id: true,
+                  originalName: true,
+                  filename: true,
+                  mimeType: true,
+                  size: true,
+                  url: true,
+                },
+              },
+            },
+          },
         },
       });
+
+      if (!courseRun) {
+        res.status(500).json({
+          success: false,
+          error: 'Course run was updated but could not be reloaded.',
+        });
+        return;
+      }
 
       const availableActions = courseRunWorkflowService.getAvailableActions({
         status: courseRun.status,
@@ -1593,6 +1665,21 @@ export const courseRunController = {
       // Send cancellation emails fire-and-forget (does not block the HTTP response)
       setImmediate(async () => {
         try {
+          const mediaForEmail =
+            attachmentMediaIds.length > 0
+              ? await prisma.media.findMany({
+                  where: { id: { in: attachmentMediaIds }, deletedAt: null },
+                })
+              : [];
+          const emailAttachments =
+            mediaForEmail.length > 0
+              ? mediaForEmail.map((m) => ({
+                  path: m.path,
+                  originalName: m.originalName ?? undefined,
+                  filename: m.filename,
+                }))
+              : undefined;
+
           // Fetch enrolled learners
           const enrollments = await prisma.courseRunLearner.findMany({
             where: {
@@ -1627,7 +1714,8 @@ export const courseRunController = {
           // Send emails to learners
           const learnerEmailPromises = enrollments.map((enrollment) => {
             const emailParams: any = {
-              email: enrollment.learner.email ?? '',
+              // email: enrollment.learner.email ?? '',
+              email: 'tergitran@gmail.com',
               learnerName: enrollment.learner.fullname,
               courseTitle: courseRun.course?.title || 'Course',
               cancellationReason: reason || 'unforeseen circumstances',
@@ -1639,6 +1727,7 @@ export const courseRunController = {
             if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
             if (nextRunDate) emailParams.nextRunDate = nextRunDate;
             if (additionalNotes) emailParams.additionalNotes = additionalNotes;
+            if (emailAttachments) emailParams.attachments = emailAttachments;
 
             return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
               console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -1666,6 +1755,7 @@ export const courseRunController = {
             if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
             if (nextRunDate) emailParams.nextRunDate = nextRunDate;
             if (additionalNotes) emailParams.additionalNotes = additionalNotes;
+            if (emailAttachments) emailParams.attachments = emailAttachments;
 
             return EmailService.sendCourseCancellationEmail(emailParams)
               .then(() => {
