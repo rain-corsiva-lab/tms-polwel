@@ -400,7 +400,7 @@ const OrganizationDashboard = () => {
       </div>
 
       {/* Organisation information */}
-      <Card className="bg-white shadow-sm">
+      {/* <Card className="bg-white shadow-sm">
         <CardContent className="p-6">
           <h2 className="text-xl font-bold text-foreground mb-6">Organisation Information</h2>
           <div className="space-y-6">
@@ -414,7 +414,7 @@ const OrganizationDashboard = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

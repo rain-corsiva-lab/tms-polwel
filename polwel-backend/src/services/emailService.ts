@@ -2295,6 +2295,7 @@ class EmailService {
     cancellationReason?: string;
     nextRunDate?: string | null;
     additionalNotes?: string | null;
+    attachments?: Array<{ path: string; originalName?: string; filename?: string }>;
   }): Promise<boolean> {
     const {
       email,
@@ -2308,6 +2309,7 @@ class EmailService {
       cancellationReason,
       nextRunDate,
       additionalNotes,
+      attachments,
     } = params;
 
     const transporter = this.getTransporter();
@@ -2337,10 +2339,53 @@ class EmailService {
       attachments: logoAttachment ? [logoAttachment] : [],
     };
 
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      for (const attachment of attachments) {
+        try {
+          if (fs.existsSync(attachment.path)) {
+            const fileBuffer = fs.readFileSync(attachment.path);
+            mailOptions.attachments.push({
+              filename: attachment.originalName || attachment.filename,
+              content: fileBuffer,
+            });
+          } else {
+            console.warn(`(EmailService) Cancellation attachment not found: ${attachment.path}`);
+          }
+        } catch (fileErr) {
+          console.warn('(EmailService) Error adding cancellation attachment:', (fileErr as any)?.message);
+        }
+      }
+    }
+
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — cancellation email would be sent to:', email);
         return true;
+      }
+
+      const hasCustomAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
+      if (hasCustomAttachments && this.isMailjetSmtp()) {
+        const apiAttachments = (mailOptions.attachments || [])
+          .filter((a: any) => Buffer.isBuffer(a.content))
+          .map((a: any) => ({
+            filename: a.filename,
+            content: a.content as Buffer,
+            contentType: a.contentType || 'application/octet-stream',
+          }));
+        const logoInline = this.getLogoMailjetInline();
+
+        const result = await this.sendViaMailjetApi({
+          to: email,
+          from: this.mailFromAddress,
+          subject: mailOptions.subject,
+          html: mailOptions.html as string,
+          attachments: apiAttachments,
+          ...(logoInline ? { inlinedAttachments: [logoInline] } : {}),
+        });
+        if (!result.success) {
+          console.error('(EmailService) Mailjet REST failed for cancellation email:', result.error);
+        }
+        return result.success;
       }
 
       await transporter.sendMail(mailOptions);
