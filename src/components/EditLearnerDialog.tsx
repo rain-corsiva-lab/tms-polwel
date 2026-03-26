@@ -196,11 +196,12 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     const discountPct = Number(enrollment?.discountPercentage ?? 0);
     const initialTotal = typeof enrollment?.totalFees === "number" ? Number(enrollment.totalFees) : computeDiscountedTotal(baseFeeValue, discountPct);
 
-    // Explicitly get coordinator value - respect NULL from database
-    const coordinatorIdFromDb = learner?.trainingCoordinatorId;
-    const coordinatorEmailFromDb = learner?.trainingCoordinator?.email || enrollment?.trainingCoordinator?.email || enrollment?.trainingCoordinatorEmail;
+    // Coordinator lives on CourseRunLearner (enrollment), not on Learner — prefer enrollment
+    const coordinatorIdFromDb = enrollment?.trainingCoordinatorId ?? learner?.trainingCoordinatorId;
+    const coordinatorEmailFromDb =
+      enrollment?.trainingCoordinator?.email ?? learner?.trainingCoordinator?.email ?? enrollment?.trainingCoordinatorEmail;
     const coordinatorPhoneFromDb =
-      learner?.trainingCoordinator?.contactNumber || enrollment?.trainingCoordinator?.contactNumber || enrollment?.trainingCoordinatorPhone;
+      enrollment?.trainingCoordinator?.contactNumber ?? learner?.trainingCoordinator?.contactNumber ?? enrollment?.trainingCoordinatorPhone;
 
     // Resolve organization ID from multiple possible sources
     // (enrollment-level clientOrganizationId takes precedence over learner-level)
@@ -224,6 +225,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       coordinatorPhoneFromDb,
     });
 
+
     setForm((prev) => ({
       ...prev,
       fullName: learner.fullname || "",
@@ -232,7 +234,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       contactNumber: learner.contact || "",
       division: resolvedOrgId || "",
       organizationType: resolvedOrgType || prev.organizationType,
-      departmentName: learner.departmentName || "",
+      departmentName: enrollment?.departmentName ?? learner?.departmentName ?? "",
       buNumber: learner.clientOrganization?.buNumber || enrollment?.clientOrganization?.buNumber || prev.buNumber || "",
       paymentMode: enrollment?.paymentMode || learner.paymentMode || prev.paymentMode || "",
       // Use the value from database directly - don't fall back to previous state
