@@ -770,12 +770,13 @@ const CourseRunDetail: React.FC = () => {
       const totalRow = worksheet.getRow(currentRow);
       totalRow.height = 20;
 
-      // Calculate total fees from all enrolled learners
-      const totalFees = enrolledLearners.reduce((sum) => {
-        const feeAmount = courseRun.baseCourseFee ?? courseRun.contractFees ?? 0;
-        return sum + (typeof feeAmount === "number" ? feeAmount : 0);
-      }, 0);
-      const totalFeesFormatted = formatCurrency(totalFees);
+      // Total "Fees before GST": PER_RUN = one flat course fee for the run; PER_HEAD = sum per participant
+      const unitFeeRaw = courseRun.baseCourseFee ?? courseRun.contractFees ?? 0;
+      const unitFee =
+        typeof unitFeeRaw === "number" && Number.isFinite(unitFeeRaw) ? unitFeeRaw : Number(unitFeeRaw) || 0;
+      const isPerHead = courseRun.courseRunFeeType === "PER_HEAD";
+      const totalFeesAmount = isPerHead ? unitFee * enrolledLearners.length : unitFee;
+      const totalFeesFormatted = formatCurrency(totalFeesAmount);
 
       totalRow.getCell(1).value = "";
       totalRow.getCell(2).value = "Total";
