@@ -203,7 +203,7 @@ export function generateCertificateHTML(data: CertificateData): string {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
       padding: 36px 50px;
       z-index: 10;
     }
