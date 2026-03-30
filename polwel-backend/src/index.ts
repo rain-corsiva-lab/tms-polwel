@@ -271,6 +271,7 @@ app.get('/health', (req, res) => {
 // Short certificate download route (public, no auth required) - Direct to certificate controller
 import { courseRunController } from './controllers/courseRunController';
 app.get('/cert/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
+app.get('/api/cert/:learnerId/:courseRunId', courseRunController.downloadCertificatePublic);
 
 // API Routes
 app.use('/api/auth', authRoutes);

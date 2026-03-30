@@ -1714,8 +1714,7 @@ export const courseRunController = {
           // Send emails to learners
           const learnerEmailPromises = enrollments.map((enrollment) => {
             const emailParams: any = {
-              // email: enrollment.learner.email ?? '',
-              email: 'tergitran@gmail.com',
+              email: enrollment.learner.email ?? '',
               learnerName: enrollment.learner.fullname,
               courseTitle: courseRun.course?.title || 'Course',
               cancellationReason: reason || 'unforeseen circumstances',
@@ -5265,39 +5264,10 @@ export const courseRunController = {
           });
 
           if (completionCourseRun) {
-            const backendUrl = process.env.NODE_ENV === 'Production'
-              ? (process.env.BACKEND_URL || process.env.API_URL || 'https://api.polwel.org')
-              : 'http://localhost:3001';
-            const baseUrl = backendUrl.replace(/\/api$/, '');
-
             const trainerNames = (completionCourseRun.courseRunTrainers || [])
               .map((ct: any) => ct.trainer?.name)
               .filter(Boolean)
               .join(', ');
-
-            // Send completion email to each enrolled learner
-            for (const enrollment of completionCourseRun.courseRunLearners) {
-              const learnerEmail = enrollment.learner?.email?.trim();
-              if (!learnerEmail) continue;
-              try {
-                const emailParams: any = {
-                  email: learnerEmail,
-                  learnerName: enrollment.learner?.fullname || 'Learner',
-                  courseTitle: completionCourseRun.course?.title || 'POLWEL Course',
-                  certificateDownloadUrl: `${baseUrl}/cert/${enrollment.learner?.id}/${courseRunId}`,
-                };
-                if (completionCourseRun.course?.courseCode) emailParams.courseCode = completionCourseRun.course.courseCode;
-                if (completionCourseRun.serialNumber) emailParams.serialNumber = completionCourseRun.serialNumber;
-                if (completionCourseRun.startDatetime) emailParams.startDate = new Date(completionCourseRun.startDatetime);
-                if (completionCourseRun.endDatetime) emailParams.endDate = new Date(completionCourseRun.endDatetime);
-                if (completionCourseRun.endDatetime) emailParams.completionDate = new Date(completionCourseRun.endDatetime);
-                if (trainerNames) emailParams.trainerName = trainerNames;
-                await EmailService.sendCourseCompletionEmail(emailParams);
-                console.log(`[saveBilling] Sent completion email to learner ${learnerEmail}`);
-              } catch (err) {
-                console.error(`[saveBilling] Failed to send completion email to learner ${enrollment.learner?.email}:`, err);
-              }
-            }
 
             // Build trainer completion email params
             const trainerCompletionParams = {
@@ -6072,11 +6042,8 @@ export const courseRunController = {
         return;
       }
 
-      // Use backend URL for certificate downloads - use localhost for development
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? (process.env.BACKEND_URL || process.env.API_URL || 'https://api.polwel.org')
-        : 'http://localhost:3001';
-      const baseUrl = backendUrl.replace(/\/api$/, ''); // Remove /api suffix if present
+      // Use frontend URL for certificate download links so Apache proxy routes them correctly (/api/cert/ → backend)
+      const frontendUrl = (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
       
       const trainerNames = courseRun.courseRunTrainers
         .map((ct: any) => ct.trainer?.name)
@@ -6104,7 +6071,7 @@ export const courseRunController = {
         }
 
         try {
-          const certificateDownloadUrl = `${baseUrl}/cert/${learner?.id}/${id}`;
+          const certificateDownloadUrl = `${frontendUrl}/api/cert/${learner?.id}/${id}`;
 
           const emailParams: any = {
             email,
