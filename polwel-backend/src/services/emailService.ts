@@ -1412,6 +1412,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
+          timeZone: 'Asia/Singapore',
         }).format(dt);
       } catch {
         return String(d);
@@ -1423,8 +1424,8 @@ class EmailService {
       try {
         const startDt = new Date(start);
         const endDt = new Date(end);
-        const startTime = startDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
-        const endTime = endDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+        const startTime = startDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
+        const endTime = endDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
         return `${startTime} to ${endTime} hrs`;
       } catch {
         return '0900 to 1700 hrs';
@@ -1719,7 +1720,8 @@ class EmailService {
 
     const isSameDayLocal = (d1?: Date, d2?: Date): boolean => {
       if (!d1 || !d2) return false;
-      return d1.toISOString().substring(0, 10) === d2.toISOString().substring(0, 10);
+      const opts = { timeZone: 'Asia/Singapore' } as const;
+      return d1.toLocaleDateString('en-CA', opts) === d2.toLocaleDateString('en-CA', opts);
     };
 
     const formatDateWithDay = (date?: Date) => {
@@ -1730,6 +1732,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
+          timeZone: 'Asia/Singapore',
         }).format(date);
       } catch (error) {
         console.warn('Failed to format date for learner confirmation email:', error);
@@ -1744,6 +1747,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
+          timeZone: 'Asia/Singapore',
         }).format(date);
       } catch (error) {
         return '';
@@ -1753,10 +1757,10 @@ class EmailService {
     const formatTime = (start?: Date, end?: Date) => {
       if (!start || !end) return '0900 to 1700 hrs';
       try {
-        const startTime = start.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
-        const endTime = end.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+        const startTime = start.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
+        const endTime = end.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
         const regDate = new Date(start.getTime() - 15 * 60 * 1000);
-        const regTime = regDate.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+        const regTime = regDate.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
         return `${startTime} to ${endTime} hrs <em>(Registration starts at ${regTime})</em>`;
       } catch (error) {
         return '0900 to 1700 hrs';
