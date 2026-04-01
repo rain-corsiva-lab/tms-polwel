@@ -464,7 +464,7 @@ class EmailService {
             <!-- Organization Name -->
             <tr>
               <td style="padding-bottom: 2px;">
-                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development & Career Services Division</p>
+                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development &amp; Career Services Division</p>
               </td>
             </tr>
             <tr>
@@ -474,29 +474,24 @@ class EmailService {
             </tr>
             <!-- Contact Info -->
             <tr>
-              <td style="padding-bottom: 8px;">
+              <td style="padding-bottom: 12px;">
                 <p style="margin: 0; font-size: 12px; color: #374151 !important; line-height: 1.6; font-family: Arial, sans-serif;">
-                  Main: (65) 6235 6428 (Option 4) | 
-                  <a href="https://www.polwel.org.sg" style="color: #3b82f6 !important; text-decoration: none;">www.polwel.org.sg</a> | 
-                  <span style="color: #22c55e !important; font-weight: 600;">#POLWELCares</span>
+                  Main: (65) 6235 6428 (Option 4) |&#160;<a href="https://www.polwel.org.sg" style="color: #374151 !important; text-decoration: underline;">www.polwel.org.sg</a>&#160;|&#160;<span style="color: #374151 !important; font-weight: 600;">#POLWEL</span><span style="color: #14b8a6 !important; font-weight: 600;">Cares</span>
                 </p>
               </td>
             </tr>
-            <!-- Social Media & HRPI -->
+            <!-- Social Media & HRPI — icon badges instead of text links -->
             <tr>
               <td style="padding-bottom: 16px;">
-                <p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif;">
-                  <span style="font-style: italic;">Stay connected with POLWEL on 
-                  <a href="https://www.linkedin.com/company/polwel" style="color: #0077b5 !important; text-decoration: none; font-weight: 600;">LinkedIn</a> and 
-                  <a href="https://www.youtube.com/@polwelsg" style="color: #ff0000 !important; text-decoration: none; font-weight: 600;">YouTube</a> 
-                  and view our professional development courses on HRPI</span>
+                <p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif; font-style: italic; line-height: 2;">
+                  Stay connected with POLWEL on&#160;<a href="https://www.linkedin.com/company/polwel" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;"><span style="display: inline-block; background-color: #f97316; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; color: #ffffff !important; font-size: 10px; font-weight: bold; font-style: normal; font-family: Arial, sans-serif;">in</span></a>&#160;<a href="https://www.youtube.com/@polwelsg" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;"><span style="display: inline-block; background-color: #f97316; border-radius: 4px; width: 28px; height: 20px; text-align: center; line-height: 20px; font-size: 0; vertical-align: middle;"><span style="display: inline-block; width: 0; height: 0; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent #ffffff; vertical-align: middle;"></span></span></a>&#160;and view our professional development courses on HRPI
                 </p>
               </td>
             </tr>
             <!-- Warning -->
             <tr>
               <td style="padding: 16px 0 0 0; border-top: 1px solid #e5e7eb;">
-                <p style="margin: 0; font-size: 10px; color: #dc2626 !important; font-family: Arial, sans-serif; line-height: 1.5;">
+                <p style="margin: 0; font-size: 10px; color: #1f2937 !important; font-family: Arial, sans-serif; line-height: 1.5;">
                   <strong style="font-weight: 700;">WARNING:</strong> Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments.
                 </p>
               </td>
@@ -1484,7 +1479,7 @@ class EmailService {
                             Participants enrolled in the course run have also been disseminated with the relevant materials.
                           </p>
 
-                          <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
+                          <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details :</p>
 
                           <table role="presentation" cellspacing="0" cellpadding="0" border="1" width="100%" style="border: 1px solid #d1d5db; border-collapse: collapse; margin-bottom: 20px;">
                             <tr>
@@ -1545,22 +1540,7 @@ class EmailService {
                             Thank you.
                           </p>
 
-                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0 0 0;">
-                            <tr>
-                              <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
-                                <p style="margin: 0 0 12px 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                  If you are interested to know or register for our other course offerings, please refer to the link &amp; QR code below:
-                                </p>
-                                <div style="text-align: center; margin: 16px 0;">
-                                  <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important; display: block; margin-bottom: 12px;">https://polwel.org.sg/courses/</a>
-                                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://polwel.org.sg/courses/" alt="QR Code for Course Offerings" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
-                                </div>
-                                <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                  Once again, thank you for your support and hope to see you soon in our next workshop!
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
+                          
                         </td>
                       </tr>
                     </table>
@@ -1817,7 +1797,7 @@ class EmailService {
                                 The course details are as follows:
                               </p>
                               
-                              <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
+                              <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details :</p>
                               
                               <table role="presentation" cellspacing="0" cellpadding="0" border="1" width="100%" style="border: 1px solid #d1d5db; border-collapse: collapse; margin-bottom: 20px;">
                                 <tr>
@@ -2218,7 +2198,7 @@ class EmailService {
                                 We regret to inform you that the following course has been cancelled due to ${cancellationReason || 'unforeseen circumstances'}.
                               </p>
 
-                              <p style="margin: 24px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details – The course details are as follows:</p>
+                              <p style="margin: 24px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details :</p>
 
                               <table role="presentation" cellspacing="0" cellpadding="0" border="1" width="100%" style="border: 1px solid #d1d5db; border-collapse: collapse; margin-bottom: 20px;">
                                 <tr>
@@ -2400,32 +2380,26 @@ class EmailService {
     }
   }
 
-  static async sendCourseCompletionEmail(params: {
-    email: string;
-    learnerName: string;
-    courseTitle: string;
-    courseCode?: string;
-    startDate?: Date;
-    endDate?: Date;
-    trainerName?: string;
-    completionDate?: Date;
-    certificateDownloadUrl: string;
-  }): Promise<boolean> {
-    const {
-      email,
-      learnerName,
-      courseTitle,
-      courseCode,
-      startDate,
-      endDate,
-      trainerName,
-      completionDate,
-      certificateDownloadUrl,
-    } = params;
-
-    const transporter = this.getTransporter();
-    const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
+  /**
+   * Build the HTML + subject for the learner course completion / certificate email.
+   * Same source of truth used for both sending and browser iframe preview.
+   * Pass `logoSrc` option with getLogoSrcForWebPreview() when rendering for preview.
+   */
+  static buildCourseCompletionEmailHtml(
+    params: {
+      learnerName: string;
+      courseTitle: string;
+      courseCode?: string;
+      startDate?: Date;
+      endDate?: Date;
+      trainerName?: string;
+      completionDate?: Date;
+      certificateDownloadUrl: string;
+    },
+    options?: { logoSrc?: string },
+  ): { html: string; subject: string } {
+    const { learnerName, courseTitle, courseCode, startDate, endDate, trainerName, completionDate, certificateDownloadUrl } = params;
+    const logoSrc = options?.logoSrc ?? this.getLogoSrc();
 
     const formatDate = (date?: Date) => {
       if (!date) return 'N/A';
@@ -2434,22 +2408,16 @@ class EmailService {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
+          timeZone: 'Asia/Singapore',
         }).format(date);
       } catch (error) {
-        console.warn('Failed to format date for completion email:', error);
         return date.toISOString();
       }
     };
 
-    const mailOptions: any = {
-      from: this.mailFromAddress,
-      to: email,
-      subject: `Congratulations! Certificate of Completion - ${courseTitle}`,
-      headers: {
-        'X-Mailjet-TrackClick': '0',
-        'X-Mailjet-TrackOpen': '0',
-      },
-      html: `
+    const subject = `Congratulations! Certificate of Completion - ${courseTitle}`;
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
           <head>
@@ -2533,7 +2501,7 @@ class EmailService {
                                 <tr>
                                   <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
                                     <p style="margin: 0 0 12px 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                      If you are interested to know or register for our other course offerings, please refer to the link & QR code below:
+                                      If you are interested to know or register for our other course offerings, please refer to the link &amp; QR code below:
                                     </p>
                                     <div style="text-align: center; margin: 16px 0;">
                                       <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important; display: block; margin-bottom: 12px;">https://polwel.org.sg/courses/</a>
@@ -2562,7 +2530,38 @@ class EmailService {
             </table>
           </body>
         </html>
-      `,
+    `;
+
+    return { html, subject };
+  }
+
+  static async sendCourseCompletionEmail(params: {
+    email: string;
+    learnerName: string;
+    courseTitle: string;
+    courseCode?: string;
+    startDate?: Date;
+    endDate?: Date;
+    trainerName?: string;
+    completionDate?: Date;
+    certificateDownloadUrl: string;
+  }): Promise<boolean> {
+    const { email } = params;
+
+    const transporter = this.getTransporter();
+    const logoAttachment = this.getLogoAttachment();
+
+    const { html, subject } = this.buildCourseCompletionEmailHtml(params);
+
+    const mailOptions: any = {
+      from: this.mailFromAddress,
+      to: email,
+      subject,
+      headers: {
+        'X-Mailjet-TrackClick': '0',
+        'X-Mailjet-TrackOpen': '0',
+      },
+      html,
       attachments: logoAttachment ? [logoAttachment] : [],
     };
 
@@ -2570,6 +2569,18 @@ class EmailService {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — completion email would be sent to:', email);
         return true;
+      }
+
+      if (this.isMailjetSmtp()) {
+        const inlined = this.isGraphApiMode() ? [] : (this.getLogoMailjetInline() ? [this.getLogoMailjetInline()!] : []);
+        const result = await this.sendViaMailjetApi({
+          to: email,
+          from: this.mailFromAddress,
+          subject,
+          html,
+          inlinedAttachments: inlined,
+        });
+        return result.success;
       }
 
       await transporter.sendMail(mailOptions);
@@ -2597,9 +2608,10 @@ class EmailService {
     const logoSrc = this.getLogoSrc();
     const logoAttachment = this.getLogoAttachment();
 
+    const SGT = { timeZone: 'Asia/Singapore' } as const;
     const formatDateFull = (d: Date) =>
-      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const isSameDay = (a: Date, b: Date) => a.toISOString().substring(0, 10) === b.toISOString().substring(0, 10);
+      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', ...SGT });
+    const isSameDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
     const dateRange = startDate
       ? (endDate && !isSameDay(startDate, endDate)
           ? `${formatDateFull(startDate)} – ${formatDateFull(endDate)}`
@@ -2648,7 +2660,7 @@ class EmailService {
           </td>
         </tr>
         <!-- Footer -->
-        <tr><td>${footerHtml}</td></tr>
+        ${footerHtml}
       </table>
     </td></tr>
   </table>
