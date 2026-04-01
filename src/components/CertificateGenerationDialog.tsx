@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/errorHandler";
 import { Award, Download, FileDown, Loader2, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { courseRunsApi } from "@/lib/api";
 
 interface Learner {
   id: string;
@@ -193,6 +194,10 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
   const [selectedLearners, setSelectedLearners] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewSubject, setPreviewSubject] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [waiverDialog, setWaiverDialog] = useState<{ open: boolean; learner: Learner | null }>({
     open: false,
     learner: null,
@@ -209,6 +214,43 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
       setSelectedLearners(eligibleLearners.map((l) => l.id));
     }
   }, [open, learners]);
+
+  useEffect(() => {
+    if (!open || !courseRun) {
+      setPreviewHtml(null);
+      setPreviewSubject(null);
+      setPreviewError(null);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    courseRunsApi
+      .previewCertificateEmail(courseRun.id)
+      .then((res: any) => {
+        if (cancelled) return;
+        if (res?.success && typeof res.html === "string") {
+          setPreviewHtml(res.html);
+          setPreviewSubject(typeof res.subject === "string" ? res.subject : null);
+        } else {
+          setPreviewError(res?.message || res?.error || "Could not load preview");
+          setPreviewHtml(null);
+          setPreviewSubject(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setPreviewError(err instanceof Error ? err.message : "Could not load preview");
+        setPreviewHtml(null);
+        setPreviewSubject(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, courseRun?.id]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -457,8 +499,46 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
             )}
           </div>
 
+          {/* Certificate email preview */}
+          <div className="border rounded-lg overflow-hidden bg-slate-100">
+            <div className="px-3 py-2 border-b bg-white flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-sm">Certificate email preview</h3>
+              {previewLoading && <span className="text-xs text-muted-foreground">Loading…</span>}
+            </div>
+            {previewSubject && (
+              <div className="px-3 py-2 bg-white border-b text-xs">
+                <span className="text-muted-foreground">Subject: </span>
+                <span className="font-medium text-foreground break-all">{previewSubject}</span>
+              </div>
+            )}
+            {previewError && (
+              <div className="p-3 text-sm text-destructive bg-white">{previewError}</div>
+            )}
+            <div className="relative bg-[#0f172a] min-h-[280px] max-h-[45vh] overflow-auto">
+              {previewLoading && !previewHtml && (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">
+                  Loading preview…
+                </div>
+              )}
+              {previewHtml && (
+                <iframe
+                  title="Certificate email preview"
+                  srcDoc={previewHtml}
+                  sandbox="allow-same-origin"
+                  className="w-full min-h-[400px] border-0 block bg-white"
+                  style={{ minHeight: "min(45vh, 560px)" }}
+                />
+              )}
+            </div>
+            <div className="p-3 bg-gray-50 border-t text-xs text-muted-foreground">
+              Preview shows the email each learner will receive when certificates are sent (displayed with a placeholder name).
+            </div>
+          </div>
+
           <div className="flex justify-between items-center pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
               Close
             </Button>
             <Button onClick={handleExportZip} disabled={generating || selectedLearners.length === 0}>

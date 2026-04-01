@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { courseRunsApi } from "@/lib/api";
 import { formatDate } from "@/lib/date";
 import { getErrorMessage } from "@/lib/errorHandler";
-import { ArrowLeft, Calendar, MapPin, Users, Save, Plus, Trash2, Loader2, Check, ChevronsUpDown, X } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, Save, Plus, Trash2, Loader2, Check, ChevronsUpDown, X, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Swal from "sweetalert2";
 
@@ -441,7 +441,7 @@ const PostRunDetail = () => {
     return total.toFixed(2);
   };
 
-  const handleSaveBilling = async () => {
+  const handleSaveBilling = async (markAsCompleted: boolean = false) => {
     if (!id) return;
 
     // Validation
@@ -474,21 +474,25 @@ const PostRunDetail = () => {
           learnerIds: entry.learnerIds,
           remarks: entry.remarks,
         })),
+        markAsCompleted,
       };
 
       const response = await courseRunsApi.saveBilling(payload);
 
       if (response?.success) {
-        toast({
-          title: "Success",
-          description: "Billing information saved successfully. Course run marked as completed.",
-        });
-
-        // Refresh data
-        await fetchCourseRunDetails();
-
-        // Navigate back to post run management
-        navigate("/post-run-management");
+        if (markAsCompleted) {
+          toast({
+            title: "Success",
+            description: "Billing saved and course run marked as completed.",
+          });
+          navigate("/post-run-management");
+        } else {
+          toast({
+            title: "Saved",
+            description: "Billing information saved successfully.",
+          });
+          await fetchCourseRunDetails();
+        }
       } else {
         throw new Error(response?.message || "Failed to save billing information");
       }
@@ -1029,19 +1033,34 @@ const PostRunDetail = () => {
                   <CardTitle>Actions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Button onClick={handleSaveBilling} disabled={saving}>
-                    {saving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button variant="outline" onClick={() => handleSaveBilling(false)} disabled={saving}>
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save
+                        </>
+                      )}
+                    </Button>
+                    <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleSaveBilling(true)} disabled={saving}>
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Mark as Completed
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}

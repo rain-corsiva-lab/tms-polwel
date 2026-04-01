@@ -140,4 +140,7 @@ router.post('/:id/certificates/bulk-zip', requirePermissions('post-course-run.vi
 // POST /api/course-runs/:id/certificates/send - Send certificates via email to selected learners
 router.post('/:id/certificates/send', requirePermissions(['post-course-run.edit', 'course-run.edit']), courseRunController.sendCertificatesToLearners);
 
+// POST /api/course-runs/:id/certificates/email-preview - Preview certificate completion email HTML
+router.post('/:id/certificates/email-preview', requirePermissions(['post-course-run.view', 'course-run.edit']), courseRunController.previewCertificateEmail);
+
 export default router;
