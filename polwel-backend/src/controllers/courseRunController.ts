@@ -5072,6 +5072,7 @@ export const courseRunController = {
         venueInvoiceAmount,
         finalRemarks,
         entries,
+        markAsCompleted = false,
       } = req.body;
 
       if (!courseRunId) {
@@ -5217,102 +5218,21 @@ export const courseRunController = {
         },
       });
 
-      const newStatus = unassignedLearnersCount > 0 ? 'INCOMPLETED' : 'COMPLETED';
-      const previousStatus = courseRun.status;
+      if (markAsCompleted) {
+        const newStatus = unassignedLearnersCount > 0 ? 'INCOMPLETED' : 'COMPLETED';
 
-      await prisma.courseRun.update({
-        where: { id: courseRunId },
-        data: { status: newStatus },
-      });
-
-      // Calculate and update billing report status based on course run statuses if connected
-      if (billingReportId) {
-        const calculatedStatus = await calculateBillingReportStatus(billingReportId);
-
-        await prisma.billingReport.update({
-          where: { id: billingReportId },
-          data: {
-            status: calculatedStatus,
-          },
+        await prisma.courseRun.update({
+          where: { id: courseRunId },
+          data: { status: newStatus },
         });
-      }
 
-      // Send completion emails when the course transitions TO COMPLETED for the first time
-      if (newStatus === 'COMPLETED' && previousStatus !== 'COMPLETED') {
-        try {
-          const completionCourseRun = await prisma.courseRun.findUnique({
-            where: { id: courseRunId },
-            include: {
-              course: true,
-              venue: true,
-              courseRunLearners: {
-                where: { deletedAt: null, enrollmentStatus: 'ENROLLED' },
-                include: { learner: true },
-              },
-              courseRunTrainers: {
-                where: { deletedAt: null },
-                include: { trainer: true },
-              },
-              courseRunPartners: {
-                include: {
-                  partner: {
-                    select: { id: true, name: true, email: true, pointOfContactEmail: true },
-                  },
-                },
-              },
-            },
+        // Calculate and update billing report status based on course run statuses if connected
+        if (billingReportId) {
+          const calculatedStatus = await calculateBillingReportStatus(billingReportId);
+          await prisma.billingReport.update({
+            where: { id: billingReportId },
+            data: { status: calculatedStatus },
           });
-
-          if (completionCourseRun) {
-            const trainerNames = (completionCourseRun.courseRunTrainers || [])
-              .map((ct: any) => ct.trainer?.name)
-              .filter(Boolean)
-              .join(', ');
-
-            // Build trainer completion email params
-            const trainerCompletionParams = {
-              courseTitle: completionCourseRun.course?.title || 'POLWEL Course',
-              courseCode: completionCourseRun.course?.courseCode || undefined,
-              serialNumber: completionCourseRun.serialNumber || undefined,
-              startDate: completionCourseRun.startDatetime ? new Date(completionCourseRun.startDatetime) : undefined,
-              endDate: completionCourseRun.endDatetime ? new Date(completionCourseRun.endDatetime) : undefined,
-            };
-
-            // Send completion notification to each trainer
-            for (const assignment of completionCourseRun.courseRunTrainers) {
-              const trainerEmail = assignment.trainer?.email?.trim();
-              if (!trainerEmail) continue;
-              try {
-                await EmailService.sendTrainerCourseCompletionEmail({
-                  email: trainerEmail,
-                  recipientName: assignment.trainer?.name || 'Trainer',
-                  ...trainerCompletionParams,
-                });
-                console.log(`[saveBilling] Sent completion notification to trainer ${trainerEmail}`);
-              } catch (err) {
-                console.error(`[saveBilling] Failed to send completion notification to trainer ${trainerEmail}:`, err);
-              }
-            }
-
-            // Send completion notification to each partner (TC email)
-            for (const cp of completionCourseRun.courseRunPartners || []) {
-              const partnerEmail = (cp.partner?.pointOfContactEmail || cp.partner?.email)?.trim();
-              if (!partnerEmail) continue;
-              try {
-                await EmailService.sendTrainerCourseCompletionEmail({
-                  email: partnerEmail,
-                  recipientName: cp.partner?.name || 'Partner',
-                  ...trainerCompletionParams,
-                });
-                console.log(`[saveBilling] Sent completion notification to partner ${partnerEmail}`);
-              } catch (err) {
-                console.error(`[saveBilling] Failed to send completion notification to partner ${partnerEmail}:`, err);
-              }
-            }
-          }
-        } catch (emailErr) {
-          // Completion emails are non-blocking — billing save already succeeded
-          console.error('[saveBilling] Error sending completion emails:', emailErr);
         }
       }
 
@@ -5324,6 +5244,45 @@ export const courseRunController = {
     } catch (error) {
       console.error('Error saving billing:', error);
       res.status(500).json(buildErrorResponse('courseRunController.saveBilling', 'Failed to save billing information', error));
+    }
+  },
+
+  previewCertificateEmail: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const courseRun = await prisma.courseRun.findFirst({
+        where: { id, deletedAt: null },
+        include: {
+          course: true,
+          courseRunTrainers: {
+            where: { deletedAt: null },
+            include: { trainer: true },
+          },
+        },
+      });
+      if (!courseRun) {
+        res.status(404).json({ success: false, error: 'Course run not found' });
+        return;
+      }
+      const trainerNames = (courseRun.courseRunTrainers || [])
+        .map((ct: any) => ct.trainer?.name)
+        .filter(Boolean)
+        .join(', ');
+      const { html, subject } = EmailService.buildCourseCompletionEmailHtml(
+        {
+          learnerName: 'Sample Learner',
+          courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
+          startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime) : undefined,
+          endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : undefined,
+          trainerName: trainerNames || undefined,
+          completionDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : undefined,
+          certificateDownloadUrl: '#',
+        },
+        { logoSrc: EmailService.getLogoSrcForWebPreview() },
+      );
+      res.json({ success: true, html, subject });
+    } catch (error) {
+      res.status(500).json(buildErrorResponse('courseRunController.previewCertificateEmail', 'Failed to generate certificate email preview', error));
     }
   },
 

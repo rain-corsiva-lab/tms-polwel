@@ -1866,6 +1866,12 @@ export const courseRunsApi = {
     });
   },
 
+  previewCertificateEmail: async (courseRunId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/certificates/email-preview`, {
+      method: 'POST',
+    });
+  },
+
   // Submit waiver form for absent learner
   submitWaiver: async (courseRunId: string, enrollmentId: string, payload: any) => {
     return apiRequest(`/course-runs/${courseRunId}/learners/${enrollmentId}/waiver`, {
