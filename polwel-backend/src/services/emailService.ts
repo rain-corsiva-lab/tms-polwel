@@ -449,57 +449,193 @@ class EmailService {
     return this.getLogoBase64Src();
   }
 
+  /**
+   * Get all email media attachments (logo only, social icons are now embedded as data URIs).
+   * Used by SMTP transport for all email types.
+   */
+  private static getEmailMediaAttachments(): any[] {
+    const attachments: any[] = [];
+    
+    // Always try to provide logo attachment (returns null in Graph API mode where base64 is used)
+    const logoAttachment = this.getLogoAttachment();
+    if (logoAttachment) {
+      attachments.push(logoAttachment);
+      console.log('📎 Logo attachment added');
+    }
+    
+    // Social icons are now embedded as base64 data URIs in the HTML, no attachments needed
+    console.log('📎 Social icons: Embedded as data URIs (no attachments)');
+    console.log('📎 Total attachments for email:', attachments.length);
+    
+    return attachments;
+  }
+
+  // Get LinkedIn and YouTube icons as inline attachments (CID approach - SVG format for smaller size and perfect scaling)
+  private static getSocialIconAttachments(): Array<{ filename: string; path: string; cid: string }> {
+    const attachments: Array<{ filename: string; path: string; cid: string }> = [];
+    const imagesDir = path.join(__dirname, '../../public/images');
+    
+    console.log('🔍 Looking for social icon SVGs in:', imagesDir);
+    
+    const linkedinPath = path.join(imagesDir, 'icons8-linkedin.svg');
+    const youtubePath = path.join(imagesDir, 'icons8-youtube.svg');
+    
+    if (fs.existsSync(linkedinPath)) {
+      console.log('✅ LinkedIn SVG found:', linkedinPath);
+      attachments.push({ filename: 'icons8-linkedin.svg', path: linkedinPath, cid: 'linkedin-icon' });
+    } else {
+      console.log('❌ LinkedIn SVG NOT found:', linkedinPath);
+    }
+    
+    if (fs.existsSync(youtubePath)) {
+      console.log('✅ YouTube SVG found:', youtubePath);
+      attachments.push({ filename: 'icons8-youtube.svg', path: youtubePath, cid: 'youtube-icon' });
+    } else {
+      console.log('❌ YouTube SVG NOT found:', youtubePath);
+    }
+    
+    console.log('📎 Total social icon attachments:', attachments.length);
+    
+    return attachments;
+  }
+
+  /**
+   * Get all email media as Mailjet inline attachments (logo only).
+   * Used by Mailjet REST API transport for all email types.
+   * Social icons are now embedded as data URIs in the HTML instead of attachments.
+   */
+  private static getEmailMediaMailjetInline(): Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> {
+    const inlined: Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> = [];
+    
+    const logoInline = this.getLogoMailjetInline();
+    if (logoInline) {
+      inlined.push(logoInline);
+      console.log('🖼️  Mailjet: Logo inline attachment added');
+    }
+    
+    // Social icons are now embedded as data URIs - no attachments needed
+    console.log('🖼️  Mailjet: Social icons embedded as data URIs');
+    
+    return inlined;
+  }
+
+  // Get social icons as Mailjet inline attachments (for REST API path - SVG format)
+  private static getSocialIconsMailjetInline(): Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> {
+    const inlined: Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> = [];
+    const imagesDir = path.join(__dirname, '../../public/images');
+    
+    const linkedinPath = path.join(imagesDir, 'icons8-linkedin.svg');
+    const youtubePath = path.join(imagesDir, 'icons8-youtube.svg');
+    
+    try {
+      if (fs.existsSync(linkedinPath)) {
+        const b64 = fs.readFileSync(linkedinPath).toString('base64');
+        inlined.push({
+          ContentType: 'image/svg+xml',
+          Filename: 'icons8-linkedin.svg',
+          Base64Content: b64,
+          ContentID: 'linkedin-icon'
+        });
+      }
+      if (fs.existsSync(youtubePath)) {
+        const b64 = fs.readFileSync(youtubePath).toString('base64');
+        inlined.push({
+          ContentType: 'image/svg+xml',
+          Filename: 'icons8-youtube.svg',
+          Base64Content: b64,
+          ContentID: 'youtube-icon'
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not load social icons as inline attachments:', error);
+    }
+    
+    return inlined;
+  }
+
   // Get standardized email footer HTML
+  // Get LinkedIn SVG as base64 data URI (embeds directly in HTML, works with Mailjet SMTP)
+  private static getLinkedInSvgDataUri(): string {
+    try {
+      const svgPath = path.join(__dirname, '../../public/images/icons8-linkedin.svg');
+      if (fs.existsSync(svgPath)) {
+        const svgContent = fs.readFileSync(svgPath, 'utf-8');
+        const base64 = Buffer.from(svgContent).toString('base64');
+        return `data:image/svg+xml;base64,${base64}`;
+      }
+    } catch (err) {
+      console.warn('⚠️  Failed to read LinkedIn SVG:', err);
+    }
+    // Fallback to HTTPS URL
+    return (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '') + '/images/icons8-linkedin.svg';
+  }
+
+  // Get YouTube SVG as base64 data URI (embeds directly in HTML, works with Mailjet SMTP)
+  private static getYouTubeSvgDataUri(): string {
+    try {
+      const svgPath = path.join(__dirname, '../../public/images/icons8-youtube.svg');
+      if (fs.existsSync(svgPath)) {
+        const svgContent = fs.readFileSync(svgPath, 'utf-8');
+        const base64 = Buffer.from(svgContent).toString('base64');
+        return `data:image/svg+xml;base64,${base64}`;
+      }
+    } catch (err) {
+      console.warn('⚠️  Failed to read YouTube SVG:', err);
+    }
+    // Fallback to HTTPS URL
+    return (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '') + '/images/icons8-youtube.svg';
+  }
+
   private static getEmailFooter(): string {
-    return `
-      <tr>
-        <td style="padding: 32px 28px; background-color: #ffffff; border-top: 2px solid #e5e7eb;" bgcolor="#ffffff">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-            <!-- Regards -->
-            <tr>
-              <td style="padding-bottom: 8px;">
-                <p style="margin: 0; font-size: 14px; color: #1f2937 !important; font-family: Arial, sans-serif;">Regards,</p>
-              </td>
-            </tr>
-            <!-- Organization Name -->
-            <tr>
-              <td style="padding-bottom: 2px;">
-                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development &amp; Career Services Division</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding-bottom: 12px;">
-                <p style="margin: 0; font-size: 13px; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Co-operative Society Limited</p>
-              </td>
-            </tr>
-            <!-- Contact Info -->
-            <tr>
-              <td style="padding-bottom: 12px;">
-                <p style="margin: 0; font-size: 12px; color: #374151 !important; line-height: 1.6; font-family: Arial, sans-serif;">
-                  Main: (65) 6235 6428 (Option 4) |&#160;<a href="https://www.polwel.org.sg" style="color: #374151 !important; text-decoration: underline;">www.polwel.org.sg</a>&#160;|&#160;<span style="color: #374151 !important; font-weight: 600;">#POLWEL</span><span style="color: #14b8a6 !important; font-weight: 600;">Cares</span>
-                </p>
-              </td>
-            </tr>
-            <!-- Social Media & HRPI — icon badges instead of text links -->
-            <tr>
-              <td style="padding-bottom: 16px;">
-                <p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif; font-style: italic; line-height: 2;">
-                  Stay connected with POLWEL on&#160;<a href="https://www.linkedin.com/company/polwel" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;"><span style="display: inline-block; background-color: #f97316; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; color: #ffffff !important; font-size: 10px; font-weight: bold; font-style: normal; font-family: Arial, sans-serif;">in</span></a>&#160;<a href="https://www.youtube.com/@polwelsg" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;"><span style="display: inline-block; background-color: #f97316; border-radius: 4px; width: 28px; height: 20px; text-align: center; line-height: 20px; font-size: 0; vertical-align: middle;"><span style="display: inline-block; width: 0; height: 0; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent #ffffff; vertical-align: middle;"></span></span></a>&#160;and view our professional development courses on HRPI
-                </p>
-              </td>
-            </tr>
-            <!-- Warning -->
-            <tr>
-              <td style="padding: 16px 0 0 0; border-top: 1px solid #e5e7eb;">
-                <p style="margin: 0; font-size: 10px; color: #1f2937 !important; font-family: Arial, sans-serif; line-height: 1.5;">
-                  <strong style="font-weight: 700;">WARNING:</strong> Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    `;
+    // Use base64-encoded SVGs embedded as data URIs (works with all email services including Mailjet SMTP)
+    const linkedinIconSrc = this.getLinkedInSvgDataUri();
+    const youtubeIconSrc = this.getYouTubeSvgDataUri();
+    
+    console.log('📧 Footer Mode: Embedded SVG Data URI (works with Mailjet SMTP)');
+    console.log('📧 LinkedIn SVG embedded:', linkedinIconSrc.substring(0, 50) + '...');
+    console.log('📧 YouTube SVG embedded:', youtubeIconSrc.substring(0, 50) + '...');
+    
+    // Build footer with direct string concatenation to avoid template issues
+    let footer = '<tr><td style="padding: 32px 28px; background-color: #ffffff; border-top: 2px solid #e5e7eb;" bgcolor="#ffffff">';
+    footer += '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">';
+    
+    // Regards
+    footer += '<tr><td style="padding-bottom: 8px;"><p style="margin: 0; font-size: 14px; color: #1f2937 !important; font-family: Arial, sans-serif;">Regards,</p></td></tr>';
+    
+    // Organization Name
+    footer += '<tr><td style="padding-bottom: 2px;"><p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development &amp; Career Services Division</p></td></tr>';
+    
+    footer += '<tr><td style="padding-bottom: 12px;"><p style="margin: 0; font-size: 13px; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Co-operative Society Limited</p></td></tr>';
+    
+    // Contact Info
+    footer += '<tr><td style="padding-bottom: 12px;"><p style="margin: 0; font-size: 12px; color: #374151 !important; line-height: 1.6; font-family: Arial, sans-serif;">Main: (65) 6235 6428 (Option 4) |&#160;<a href="https://www.polwel.org.sg" style="color: #374151 !important; text-decoration: underline;">www.polwel.org.sg</a>&#160;|&#160;<span style="color: #374151 !important; font-weight: 600;">#POLWEL</span><span style="color: #2bc425 !important; font-weight: 600;">Cares</span></p></td></tr>';
+    
+    // Social Media & HRPI with icon images
+    footer += '<tr><td style="padding-bottom: 16px;"><p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif; font-style: italic; line-height: 2;">';
+    footer += 'Stay connected with POLWEL on&#160;';
+    footer += '<a href="https://www.linkedin.com/company/polwelco-op/" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;">';
+    footer += '<img src="' + linkedinIconSrc + '" alt="LinkedIn" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0;" />';
+    footer += '</a>&#160;';
+    footer += '<a href="https://www.youtube.com/@POLWELCo-Op" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;">';
+    footer += '<img src="' + youtubeIconSrc + '" alt="YouTube" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0;" />';
+    footer += '</a>&#160;and view our professional development courses on HRPI';
+    footer += '</p></td></tr>';
+    
+    // Warning
+    footer += '<tr><td style="padding: 16px 0 0 0; border-top: 1px solid #e5e7eb;">';
+    footer += '<p style="margin: 0; font-size: 10px; color: #1f2937 !important; font-family: Arial, sans-serif; line-height: 1.5;">';
+    footer += '<strong style="font-weight: 700;">WARNING:</strong> Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments.';
+    footer += '</p></td></tr>';
+    
+    footer += '</table></td></tr>';
+    
+    // Verify the URLs are in the final HTML
+    console.log('✅ Footer contains LinkedIn src:', footer.includes(linkedinIconSrc));
+    console.log('✅ Footer contains YouTube src:', footer.includes(youtubeIconSrc));
+    console.log('   LinkedIn URL:', linkedinIconSrc);
+    console.log('   YouTube URL:', youtubeIconSrc);
+    
+    return footer;
   }
 
   /**
@@ -720,7 +856,6 @@ class EmailService {
   ): Promise<boolean> {
   const transporter = this.getTransporter();
   const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
   const mailOptions: any = {
       from: this.mailFromAddress,
@@ -808,8 +943,22 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
+    
+    // Log the content to verify footer is in final HTML
+    console.log('📧 FINAL EMAIL HTML CHECK:');
+    console.log('   Contains footer comment:', mailOptions.html.includes('<!-- Footer -->'));
+    console.log('   Contains LinkedIn img:', mailOptions.html.includes('linkedin'));
+    console.log('   Contains YouTube img:', mailOptions.html.includes('youtube'));
+    
+    // Check footer section in final HTML
+    const footerStart = mailOptions.html.indexOf('<!-- Footer -->');
+    if (footerStart > 0) {
+      const footerContent = mailOptions.html.substring(footerStart, Math.min(footerStart + 600, mailOptions.html.length));
+      console.log('📧 Footer section (first 600 chars):\n', footerContent);
+    }
+    
     try {
       if (transporter) {
         const info = await transporter.sendMail(mailOptions);
@@ -847,7 +996,6 @@ class EmailService {
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -942,7 +1090,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
     try {
       if (transporter) {
@@ -971,7 +1119,6 @@ class EmailService {
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -1066,7 +1213,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
     try {
       if (transporter) {
@@ -1098,7 +1245,6 @@ class EmailService {
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const friendlyName = name?.trim() ? name : email;
     const formattedExpiry = new Intl.DateTimeFormat('en-GB', {
@@ -1216,7 +1362,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {
@@ -1255,7 +1401,6 @@ class EmailService {
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -1345,7 +1490,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
     try {
       if (transporter) {
@@ -1505,12 +1650,6 @@ class EmailService {
                                 ${courseRunDetails.specifiedLocation && courseRunDetails.venue ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">Specified Location: ${courseRunDetails.specifiedLocation}</span>` : ''}
                               </td>
                             </tr>
-                            <tr>
-                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Note</td>
-                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
-                                For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
-                              </td>
-                            </tr>
                           </table>
 
                           ${!isPartner && baseFee > 0 ? `
@@ -1526,10 +1665,11 @@ class EmailService {
                           ` : ''}
 
                           ${additionalBody ? `
-                          <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Additional Information</p>
+                          
                           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                             <tr>
                               <td style="padding: 16px; background-color: #f9fafb !important; border: 1px solid #e5e7eb;" bgcolor="#f9fafb">
+                              <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Additional Information</p>
                                 <div style="color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalBody}</div>
                               </td>
                             </tr>
@@ -1578,7 +1718,6 @@ class EmailService {
     recipientType?: 'trainer' | 'partner',
   ): Promise<{ success: boolean; info?: any; error?: string }> {
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const { html, subject, textBody } = this.buildTrainerAssignmentEmailHtml(
       name,
@@ -1595,7 +1734,7 @@ class EmailService {
       subject,
       text: textBody,
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
@@ -1835,6 +1974,7 @@ class EmailService {
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
                                   <td style="padding: 16px; background-color: #f3f4f6 !important; border-left: 4px solid #d1d5db;" bgcolor="#f3f4f6">
+                                  <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Additional Information</p>
                                     <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalNotes}</div>
                                   </td>
                                 </tr>
@@ -1927,7 +2067,6 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const normalizeCc = () => {
       if (!cc) return undefined;
@@ -1970,7 +2109,7 @@ class EmailService {
       subject,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     // Add attachments if provided
@@ -2297,7 +2436,6 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const { html, subject } = this.buildCourseCancellationEmailHtml(
       {
@@ -2320,7 +2458,7 @@ class EmailService {
       to: email,
       subject,
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
@@ -2549,7 +2687,6 @@ class EmailService {
     const { email } = params;
 
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const { html, subject } = this.buildCourseCompletionEmailHtml(params);
 
@@ -2562,7 +2699,7 @@ class EmailService {
         'X-Mailjet-TrackOpen': '0',
       },
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {
@@ -2606,7 +2743,6 @@ class EmailService {
   }): Promise<boolean> {
     const { email, recipientName, courseTitle, courseCode, serialNumber, startDate, endDate } = params;
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const SGT = { timeZone: 'Asia/Singapore' } as const;
     const formatDateFull = (d: Date) =>
@@ -2667,7 +2803,7 @@ class EmailService {
 </body>
 </html>`;
 
-    const inlinedAttachments = this.isMailjetSmtp() ? (this.getLogoMailjetInline() ? [this.getLogoMailjetInline()!] : []) : [];
+    const inlinedAttachments = this.isMailjetSmtp() ? this.getEmailMediaMailjetInline() : [];
     const mailOptions: any = {
       from: `"POLWEL Training" <${this.mailFromAddress}>`,
       to: email,
@@ -2677,10 +2813,7 @@ class EmailService {
     };
 
     if (!this.isGraphApiMode()) {
-      const logoAttachmentData = logoAttachment;
-      if (logoAttachmentData) {
-        mailOptions.attachments = [logoAttachmentData];
-      }
+      mailOptions.attachments = this.getEmailMediaAttachments();
     }
 
     try {
@@ -2726,7 +2859,6 @@ class EmailService {
     const { adminEmail, adminName, courseTitle, courseCode, serialNumber, startDate, endDate, reviewUrl } = params;
     const t = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const fmt = (d: Date) =>
       d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -2805,7 +2937,7 @@ class EmailService {
       to: adminEmail,
       subject: `[Action Required] Course Run Pending TA Approval – ${displayCode}: ${courseTitle}`,
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {
@@ -2814,18 +2946,16 @@ class EmailService {
         if (!t2) { console.log(`(EmailService) Graph transport unavailable — TA approval notice to ${adminEmail} skipped`); return false; }
         await t2.sendMail(mailOptions);
       } else if (this.isMailjetSmtp()) {
-        const mjOpts: { to: string; from: string; subject: string; html: string; attachments?: { filename: string; content: Buffer; contentType?: string }[] } = {
+        const result = await this.sendViaMailjetApi({
           to: adminEmail,
           from: this.mailFromAddress,
           subject: mailOptions.subject as string,
           html,
-        };
-        if (logoAttachment) mjOpts.attachments = [logoAttachment as { filename: string; content: Buffer; contentType?: string }];
-        const result = await this.sendViaMailjetApi(mjOpts);
+          inlinedAttachments: this.getEmailMediaMailjetInline(),
+        });
         return result.success;
       } else {
         if (!t) { console.log(`(EmailService) SMTP not configured — TA approval notice to ${adminEmail} skipped`); return false; }
-        if (logoAttachment) mailOptions.attachments = [logoAttachment];
         await t.sendMail(mailOptions);
       }
       console.log(`✅ TA approval notice sent to ${adminEmail}`);
@@ -2849,7 +2979,6 @@ class EmailService {
     const { adminEmail, adminName, learnerName, courseName, serialNumber, submissionDate, reason, waiverRequestUrl } = params;
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const formatDate = (d: Date) => d.toLocaleDateString('en-SG', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -2938,7 +3067,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {

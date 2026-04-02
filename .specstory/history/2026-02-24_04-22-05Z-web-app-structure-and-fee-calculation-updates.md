@@ -14635,3 +14635,117 @@ Let me look at the relevant email builder functions:
 And also the `sendTrainerAssignmentEmail` and `sendLearnerCourseConfirmationEmail` functions.
 
 Let me read those sections in detail to understand how dates are currently being formatted.
+
+---
+
+_**User (2026-04-01 05:39:36Z)**_
+
+Hey can you check something please , so im kinda forgot about all adjustment in this project , so client ask me on the learner course confirmation they want to also CC training cordinator user that related to this learner. but the problem is 1 TC can have 2 or more learners . let say this TC Adam have 3 learners that join to the same course run , then we send the learner course confirmation , then the TC will get CC 3 same course run email right ? thats why we send separate email so 1 we can only send 1 email to that TC instead of 3 , but im affraid im wrong , since this adjustment is a long time ago , i need your help to check our documentations , check our actual system , and also check our ai copilot chat history in #file:.specstory , probably we got a hint in here . and lemme know whats the correct history of this . 
+
+
+also in #file:PostRunDetail.tsx on the billing tab , when we try to hit save button we willl put this course run data status to complete right . now we need to adjust this , so we need to change this button label as 'mark as completed' and change the bg button to green. also we need to add new button with label 'Save' , this button will save the data that we inputted but will still stay to 'pending_billing' status, not completed yet. so exapmle later client when wanna input half of the information he will hit save button , and then next day when they want to fill it fully and its completed then he will hit mark as completed button. please ensure when we save the data , its really store the data in the database and when we comeback to fill the data again it will  fetch the data and prefilled the form field. please develop it carefully . also no email will be trigerred automatically when we change the status to completed #file:courseRunController.ts , last time i ask you this and trainers and partners email is still auto trigerred right (on course completion emails) but i might be wrong that theres no auto trigerr email to trainer or partner on this one before, please check it again, ensure no email auto trigerred in this phase
+
+also on #file:emailService.ts see pasted image 1 , all the emails that have this part of content , i see that they have some different colors on these text and link , one email can have different color iwith other, this is incorrect, we need to standarize all to follow that pasted image 1 looks , please develop it carefully 
+
+also in #file:CertificateGenerationDialog.tsx #file:GenerateCertificatesDialog.tsx , we need to add email preview like what we have in #file:SendCourseConfirmationEmailDialog.tsx , so client can see the preview email template with dynamic data follow the context before they send the email
+
+also in course confirmation email and training assignment email  we can add additional message right, but when we not filling anything in here then additional message or note row table will be hidden too (if i remember correctly its showing on the note table row, but please help me check and ensure it) in the email template . please adjust it 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+This is a large, multi-part request. Let me break down everything the user is asking:
+
+1. **Check TC CC history** - Research how training coordinator CC works in the learner course confirmation email system. Check docs, code, and AI chat history.
+
+2. **PostRunDetail.tsx billing tab**:
+   - Change "Save" button to "Mark as Completed" with green background
+   - Add new "Save" button that saves data but keeps status as PENDING_BILLING
+   - Ensure data is saved to DB and prefilled when returning
+   - **No auto-triggered emails when marking as completed** - check if trainers/partners still get auto emails (the last session we removed learner auto-emails, but kept trainer/partner auto emails - user wants to verify)
+   
+3. **emailService.ts footer standardization** - The footer text/link colors are inconsistent across emails and need to match the provided image.
+
+4. **CertificateGenerationDialog.tsx & GenerateCertificatesDialog.tsx** - Add email preview functionality similar to what exists in SendCourseConfirmationEmailDialog.tsx.
+
+5. **Course confirmation and training assignment emails** - Hide the additional message table row when no message is provided.
+
+I'll start by reviewing the chat history to understand the TC CC implementation, then examine the relevant source files to see the current state before planning out all the changes.
+
+For the PostRunDetail billing buttons, I need to look at the `handleSaveBilling` function to understand how it currently works, then add a separate save operation that doesn't change the status. The footer colors need to be standardized across all email templates. For the certificate dialogs, I'll need to replicate the email preview pattern from the confirmation email dialog. And for the additional message, I need to conditionally hide that row when it's empty.
+
+Let me start by searching through the codebase to gather the context I need for all these changes.
+
+---
+
+_**User (2026-04-01 06:02:07Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+_**User (2026-04-01 06:06:01Z)**_
+
+how about CC email on TC , do you find something in our history ?
+
+_**User (2026-04-01 06:16:56Z)**_
+
+okay good , 
+
+but see pasted image 1 , the color of text and link , also the design still not following the pasted image 2 , please view it carefully and make it looks the same for all emails that have this part of sections  . please develop it carefully , also dhange the preview email too on the #file:SendCourseConfirmationEmailDialog.tsx #file:SendTrainerEmailDialog.tsx #file:GenerateCertificatesDialog.tsx #file:CertificateGenerationDialog.tsx , ensure the preview is always follow the updated template please
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+The user wants me to compare the two images:
+
+**Image 1 (current state - wrong colors/design):**
+- "Regards," text
+- "Professional Development & Career Services Division" (bold)
+- "POLWEL Co-operative Society Limited" 
+- "Main: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares"
+- The LinkedIn/YouTube links are text-based: "Stay connected with POLWEL on **LinkedIn** and **YouTube** and view our professional development courses on HRPI"
+- WARNING section with red text on white background, separated by a line
+
+
+- Background is dark navy blue, but the footer has a white background with incorrect colors
+
+**Image 2 (target design - correct):**
+- Same header structure but with social media icons instead of text links for LinkedIn and YouTube
+- "#POLWELCares" appears in teal/green color
+- The footer styling and color scheme need adjustment to match the target design
+
+The key differences are that Image 1 uses text-based social media links while Image 2 uses actual circular icon images for LinkedIn and YouTube, and the footer background needs to be pure white with proper text colors throughout.
+
+Now I'm looking at the current footer implementation to see what needs to be updated.
+
+---
+
+_**User (2026-04-01 06:29:38Z)**_
+
+hmm this text => Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments. 
+need to change color from red to black 
+
+also youtube link button need to change to orange bg also . and the youtube icon looks weird, can we have actual youtube icon like in the pasted image please
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+The user wants two changes:
+1. Change the WARNING text color from red (`#dc2626`) to black (`#1f2937` or `#000000`)
+2. Change YouTube button background from red (`#cc0000`) to orange (`#f97316`) to match LinkedIn
+3. Use an actual YouTube play button icon that looks like the image (which shows a proper YouTube-style icon with rounded rectangle background)
+
+Looking at the pasted image, the YouTube icon appears to be an orange circle with a white play triangle (▶) inside - same orange as LinkedIn. But the user says "actual youtube icon like in the pasted image" - looking at the image attachment, it shows what appears to be an orange circle with a white play button (triangle) - this matches the orange circle badge style but with the YouTube play icon.
+
+
+The user wants the YouTube button changed to orange and needs a proper YouTube play icon that matches the image they shared - I'll need to use an SVG or a better Unicode character to get that clean play button look instead of the current symbol. I'm looking at the HTML for the YouTube link and noticing the play triangle character might not center properly in such a small space. I should consider switching to a different Unicode character or restructuring this as a proper rounded-rectangle YouTube icon instead of a circle. I'm realizing that email clients block external background images, so embedding the YouTube logo as a base64 SVG data URI in an `<img>` tag is the most reliable approach. I'll create an orange circle with a white play triangle centered inside, matching the image shown.
+
+---
+
+_**User (2026-04-01 06:38:00Z)**_
+
+the youtube logo is broken, see pasted image 1 , please fix it
