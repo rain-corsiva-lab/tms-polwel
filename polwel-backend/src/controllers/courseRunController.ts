@@ -5223,7 +5223,7 @@ export const courseRunController = {
 
         await prisma.courseRun.update({
           where: { id: courseRunId },
-          data: { status: newStatus },
+          data: { status: newStatus, statusUpdatedAt: new Date() },
         });
 
         // Calculate and update billing report status based on course run statuses if connected
@@ -6355,6 +6355,13 @@ export const courseRunController = {
       
       console.log('[PostCourseRuns] Where clause:', JSON.stringify(where, null, 2));
       
+      // Use statusUpdatedAt for completed/cancelled/incompleted runs; endDatetime for pending
+      const completedStatuses = ['COMPLETED', 'CANCELLED', 'INCOMPLETED'];
+      const isCompletedBucket = statusArray.length > 0 && statusArray.every(s => completedStatuses.includes(s));
+      const orderBy = isCompletedBucket
+        ? { statusUpdatedAt: 'desc' as const }
+        : { endDatetime: 'desc' as const };
+
       // Get course runs with all necessary relations
       const courseRuns = await prisma.courseRun.findMany({
         where,
@@ -6385,9 +6392,7 @@ export const courseRunController = {
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy,
         take: Number(limit),
       });
       
@@ -6418,6 +6423,7 @@ export const courseRunController = {
         status: run.status,
         cancelReason: run.cancelReason,
         cancelledAt: run.cancelledAt,
+        statusUpdatedAt: run.statusUpdatedAt,
         baseCourseFee: run.baseCourseFee,
         courseRunFeeType: run.courseRunFeeType,
       }));

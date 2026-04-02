@@ -449,57 +449,176 @@ class EmailService {
     return this.getLogoBase64Src();
   }
 
+  /**
+   * Get all email media attachments (logo only, social icons are now embedded as data URIs).
+   * Used by SMTP transport for all email types.
+   */
+  private static getEmailMediaAttachments(): any[] {
+    const attachments: any[] = [];
+    
+    // Always try to provide logo attachment (returns null in Graph API mode where base64 is used)
+    const logoAttachment = this.getLogoAttachment();
+    if (logoAttachment) {
+      attachments.push(logoAttachment);
+      console.log('📎 Logo attachment added');
+    }
+    
+    // Social icons are now embedded as base64 data URIs in the HTML, no attachments needed
+    console.log('📎 Social icons: Embedded as data URIs (no attachments)');
+    console.log('📎 Total attachments for email:', attachments.length);
+    
+    return attachments;
+  }
+
+  // Get LinkedIn and YouTube icons as inline attachments (CID approach - SVG format for smaller size and perfect scaling)
+  private static getSocialIconAttachments(): Array<{ filename: string; path: string; cid: string }> {
+    const attachments: Array<{ filename: string; path: string; cid: string }> = [];
+    const imagesDir = path.join(__dirname, '../../public/images');
+    
+    console.log('🔍 Looking for social icon SVGs in:', imagesDir);
+    
+    const linkedinPath = path.join(imagesDir, 'icons8-linkedin.svg');
+    const youtubePath = path.join(imagesDir, 'icons8-youtube.svg');
+    
+    if (fs.existsSync(linkedinPath)) {
+      console.log('✅ LinkedIn SVG found:', linkedinPath);
+      attachments.push({ filename: 'icons8-linkedin.svg', path: linkedinPath, cid: 'linkedin-icon' });
+    } else {
+      console.log('❌ LinkedIn SVG NOT found:', linkedinPath);
+    }
+    
+    if (fs.existsSync(youtubePath)) {
+      console.log('✅ YouTube SVG found:', youtubePath);
+      attachments.push({ filename: 'icons8-youtube.svg', path: youtubePath, cid: 'youtube-icon' });
+    } else {
+      console.log('❌ YouTube SVG NOT found:', youtubePath);
+    }
+    
+    console.log('📎 Total social icon attachments:', attachments.length);
+    
+    return attachments;
+  }
+
+  /**
+   * Get all email media as Mailjet inline attachments (logo only).
+   * Used by Mailjet REST API transport for all email types.
+   * Social icons are now embedded as data URIs in the HTML instead of attachments.
+   */
+  private static getEmailMediaMailjetInline(): Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> {
+    const inlined: Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> = [];
+    
+    const logoInline = this.getLogoMailjetInline();
+    if (logoInline) {
+      inlined.push(logoInline);
+      console.log('🖼️  Mailjet: Logo inline attachment added');
+    }
+    
+    // Social icons are now embedded as data URIs - no attachments needed
+    console.log('🖼️  Mailjet: Social icons embedded as data URIs');
+    
+    return inlined;
+  }
+
+  // Get social icons as Mailjet inline attachments (for REST API path - SVG format)
+  private static getSocialIconsMailjetInline(): Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> {
+    const inlined: Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> = [];
+    const imagesDir = path.join(__dirname, '../../public/images');
+    
+    const linkedinPath = path.join(imagesDir, 'icons8-linkedin.svg');
+    const youtubePath = path.join(imagesDir, 'icons8-youtube.svg');
+    
+    try {
+      if (fs.existsSync(linkedinPath)) {
+        const b64 = fs.readFileSync(linkedinPath).toString('base64');
+        inlined.push({
+          ContentType: 'image/svg+xml',
+          Filename: 'icons8-linkedin.svg',
+          Base64Content: b64,
+          ContentID: 'linkedin-icon'
+        });
+      }
+      if (fs.existsSync(youtubePath)) {
+        const b64 = fs.readFileSync(youtubePath).toString('base64');
+        inlined.push({
+          ContentType: 'image/svg+xml',
+          Filename: 'icons8-youtube.svg',
+          Base64Content: b64,
+          ContentID: 'youtube-icon'
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not load social icons as inline attachments:', error);
+    }
+    
+    return inlined;
+  }
+
   // Get standardized email footer HTML
+  // Get LinkedIn icon as HTTPS URL (Mailjet works better with standard URLs)
+  // CRITICAL: For emails, ALWAYS use the public domain, never localhost
+  private static getLinkedInIconUrl(): string {
+    // Use EMAIL_FRONTEND_URL for emails (always public domain), never FRONTEND_URL (local dev)
+    const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+    return emailFrontendUrl + '/images/icons8-linkedin.svg';
+  }
+
+  // Get YouTube icon as HTTPS URL (Mailjet works better with standard URLs)
+  // CRITICAL: For emails, ALWAYS use the public domain, never localhost
+  private static getYouTubeIconUrl(): string {
+    // Use EMAIL_FRONTEND_URL for emails (always public domain), never FRONTEND_URL (local dev)
+    const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+    return emailFrontendUrl + '/images/icons8-youtube.svg';
+  }
+
   private static getEmailFooter(): string {
-    return `
-      <tr>
-        <td style="padding: 32px 28px; background-color: #ffffff; border-top: 2px solid #e5e7eb;" bgcolor="#ffffff">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-            <!-- Regards -->
-            <tr>
-              <td style="padding-bottom: 8px;">
-                <p style="margin: 0; font-size: 14px; color: #1f2937 !important; font-family: Arial, sans-serif;">Regards,</p>
-              </td>
-            </tr>
-            <!-- Organization Name -->
-            <tr>
-              <td style="padding-bottom: 2px;">
-                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development &amp; Career Services Division</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding-bottom: 12px;">
-                <p style="margin: 0; font-size: 13px; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Co-operative Society Limited</p>
-              </td>
-            </tr>
-            <!-- Contact Info -->
-            <tr>
-              <td style="padding-bottom: 12px;">
-                <p style="margin: 0; font-size: 12px; color: #374151 !important; line-height: 1.6; font-family: Arial, sans-serif;">
-                  Main: (65) 6235 6428 (Option 4) |&#160;<a href="https://www.polwel.org.sg" style="color: #374151 !important; text-decoration: underline;">www.polwel.org.sg</a>&#160;|&#160;<span style="color: #374151 !important; font-weight: 600;">#POLWEL</span><span style="color: #14b8a6 !important; font-weight: 600;">Cares</span>
-                </p>
-              </td>
-            </tr>
-            <!-- Social Media & HRPI — icon badges instead of text links -->
-            <tr>
-              <td style="padding-bottom: 16px;">
-                <p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif; font-style: italic; line-height: 2;">
-                  Stay connected with POLWEL on&#160;<a href="https://www.linkedin.com/company/polwel" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;"><span style="display: inline-block; background-color: #f97316; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; color: #ffffff !important; font-size: 10px; font-weight: bold; font-style: normal; font-family: Arial, sans-serif;">in</span></a>&#160;<a href="https://www.youtube.com/@polwelsg" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;"><span style="display: inline-block; background-color: #f97316; border-radius: 4px; width: 28px; height: 20px; text-align: center; line-height: 20px; font-size: 0; vertical-align: middle;"><span style="display: inline-block; width: 0; height: 0; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent #ffffff; vertical-align: middle;"></span></span></a>&#160;and view our professional development courses on HRPI
-                </p>
-              </td>
-            </tr>
-            <!-- Warning -->
-            <tr>
-              <td style="padding: 16px 0 0 0; border-top: 1px solid #e5e7eb;">
-                <p style="margin: 0; font-size: 10px; color: #1f2937 !important; font-family: Arial, sans-serif; line-height: 1.5;">
-                  <strong style="font-weight: 700;">WARNING:</strong> Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    `;
+    // Use HTTPS URLs for social icons - works reliably with Mailjet SMTP and all email clients
+    const linkedinIconSrc = this.getLinkedInIconUrl();
+    const youtubeIconSrc = this.getYouTubeIconUrl();
+    
+    console.log('📧 FOOTER GENERATION START');
+    console.log('   LinkedIn URL:', linkedinIconSrc);
+    console.log('   YouTube URL:', youtubeIconSrc);
+    
+    // Build footer with direct string concatenation to avoid template issues
+    let footer = '<tr><td style="padding: 32px 28px; background-color: #ffffff; border-top: 2px solid #e5e7eb;" bgcolor="#ffffff">';
+    footer += '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">';
+    
+    // Regards
+    footer += '<tr><td style="padding-bottom: 8px;"><p style="margin: 0; font-size: 14px; color: #1f2937 !important; font-family: Arial, sans-serif;">Regards,</p></td></tr>';
+    
+    // Organization Name
+    footer += '<tr><td style="padding-bottom: 2px;"><p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development &amp; Career Services Division</p></td></tr>';
+    
+    footer += '<tr><td style="padding-bottom: 12px;"><p style="margin: 0; font-size: 13px; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Co-operative Society Limited</p></td></tr>';
+    
+    // Contact Info
+    footer += '<tr><td style="padding-bottom: 12px;"><p style="margin: 0; font-size: 12px; color: #374151 !important; line-height: 1.6; font-family: Arial, sans-serif;">Main: (65) 6235 6428 (Option 4) |&#160;<a href="https://www.polwel.org.sg" style="color: #374151 !important; text-decoration: underline;">www.polwel.org.sg</a>&#160;|&#160;<span style="color: #374151 !important; font-weight: 600;">#POLWEL</span><span style="color: #2bc425 !important; font-weight: 600;">Cares</span></p></td></tr>';
+    
+    // Social Media & HRPI with icon images
+    footer += '<tr><td style="padding-bottom: 16px;"><p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif; font-style: italic; line-height: 2;">';
+    footer += 'Stay connected with POLWEL on&#160;';
+    footer += '<a href="https://www.linkedin.com/company/polwelco-op/" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;">';
+    footer += '<img src="' + linkedinIconSrc + '" alt="LinkedIn" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0; margin-bottom : 9px;" />';
+    footer += '</a>&#160;';
+    footer += '<a href="https://www.youtube.com/@POLWELCo-Op" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;">';
+    footer += '<img src="' + youtubeIconSrc + '" alt="YouTube" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0; margin-bottom : 6px;" />';
+    footer += '</a>&#160;and view our professional development courses on HRPI';
+    footer += '</p></td></tr>';
+    
+    // Warning
+    footer += '<tr><td style="padding: 16px 0 0 0; border-top: 1px solid #e5e7eb;">';
+    footer += '<p style="margin: 0; font-size: 10px; color: #1f2937 !important; font-family: Arial, sans-serif; line-height: 1.5;">';
+    footer += '<strong style="font-weight: 700;">WARNING:</strong> Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments.';
+    footer += '</p></td></tr>';
+    
+    footer += '</table></td></tr>';
+    
+    console.log('📧 FOOTER GENERATION END');
+    console.log('   Footer HTML length:', footer.length);
+    console.log('   Contains LinkedIn URL:', footer.includes(linkedinIconSrc) ? '✅' : '❌');
+    console.log('   Contains YouTube URL:', footer.includes(youtubeIconSrc) ? '✅' : '❌');
+    
+    return footer;
   }
 
   /**
@@ -720,7 +839,6 @@ class EmailService {
   ): Promise<boolean> {
   const transporter = this.getTransporter();
   const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
   const mailOptions: any = {
       from: this.mailFromAddress,
@@ -808,10 +926,25 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
+    
+    // Log the content to verify footer is in final HTML
+    console.log('📧 FINAL EMAIL HTML CHECK:');
+    console.log('   Contains footer comment:', mailOptions.html.includes('<!-- Footer -->'));
+    console.log('   Contains LinkedIn img:', mailOptions.html.includes('linkedin'));
+    console.log('   Contains YouTube img:', mailOptions.html.includes('youtube'));
+    
+    // Check footer section in final HTML
+    const footerStart = mailOptions.html.indexOf('<!-- Footer -->');
+    if (footerStart > 0) {
+      const footerContent = mailOptions.html.substring(footerStart, Math.min(footerStart + 600, mailOptions.html.length));
+      console.log('📧 Footer section (first 600 chars):\n', footerContent);
+    }
+    
     try {
       if (transporter) {
+        console.log('📨 Attempting to send trainer setup email via transporter');
         const info = await transporter.sendMail(mailOptions);
         console.log(`✅ Trainer setup email sent to ${email}`);
         console.log(`   Message ID: ${info.messageId}`);
@@ -826,9 +959,10 @@ class EmailService {
         return true;
       }
     } catch (error) {
-      console.error('❌ Error sending trainer setup email:');
+      console.error('❌ CRITICAL: Failed to send trainer setup email');
       console.error('   Recipient:', email);
-      console.error('   Error:', error instanceof Error ? error.message : String(error));
+      console.error('   Error Type:', error?.constructor?.name);
+      console.error('   Error Message:', error instanceof Error ? error.message : String(error));
       if (error instanceof Error && (error as any).code) {
         console.error('   Error Code:', (error as any).code);
       }
@@ -840,128 +974,15 @@ class EmailService {
   }
 
   static async sendCoordinatorSetupEmail(
-    email: string,
-    name: string,
-    setupUrl: string,
-    organizationName: string
+    _email: string,
+    _name: string,
+    _setupUrl: string,
+    _organizationName: string
   ): Promise<boolean> {
-    const transporter = this.getTransporter();
-    const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
-
-    const mailOptions: any = {
-      from: this.mailFromAddress,
-      to: email,
-      subject: 'Welcome to POLWEL - Complete Your Training Coordinator Setup',
-      html: `
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <!--[if mso]>
-            <noscript>
-              <xml>
-                <o:OfficeDocumentSettings>
-                  <o:PixelsPerInch>96</o:PixelsPerInch>
-                </o:OfficeDocumentSettings>
-              </xml>
-            </noscript>
-            <![endif]-->
-            <title>POLWEL Coordinator Setup</title>
-          </head>
-          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0; background-color: #0f172a;" bgcolor="#0f172a">
-              <tr>
-                <td align="center" style="padding: 32px 16px;">
-                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
-                    <tr>
-                      <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
-                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none; margin: 0 auto;" /></div>
-                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
-                        <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">Complete Your Training Coordinator Setup</p>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 32px 28px; background-color: #ffffff;" bgcolor="#ffffff">
-                        <p style="font-size: 16px; margin: 0 0 16px 0; color: #1f2937 !important; font-family: Arial, sans-serif;">Hello ${name},</p>
-                        <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151 !important; line-height: 1.7; font-family: Arial, sans-serif;">Welcome to the POLWEL Training Management System! You've been added as a Training Coordinator for:</p>
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                          <tr>
-                            <td align="center" style="padding: 12px 0;">
-                              <span style="display: inline-block; background-color: #f8fafc; border: 1px solid #e5e7eb; color: #374151 !important; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-family: Arial, sans-serif;" bgcolor="#f8fafc">🏢 ${organizationName}</span>
-                            </td>
-                          </tr>
-                        </table>
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
-                          <tr>
-                            <td style="padding: 24px; background-color: #f8fafc; border: 1px solid #e5e7eb;" bgcolor="#f8fafc" align="center">
-                              <a href="${setupUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; font-family: Arial, sans-serif;" bgcolor="#3b82f6">Complete Coordinator Setup</a>
-                            </td>
-                          </tr>
-                        </table>
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0; background-color: #f8fafc; border: 1px solid #e2e8f0;" bgcolor="#f8fafc">
-                          <tr>
-                            <td style="padding: 20px 24px;">
-                              <p style="margin: 0 0 12px 0; font-size: 14px; color: #1f2937 !important; font-weight: 600; font-family: Arial, sans-serif;">Your coordinator access includes:</p>
-                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
-                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">1</span>
-                                    Manage training bookings and course runs.
-                                  </td>
-                                </tr>
-                                <tr>
-                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
-                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">2</span>
-                                    Coordinate learner enrollments and attendance.
-                                  </td>
-                                </tr>
-                                <tr>
-                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
-                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">3</span>
-                                    Access organization-specific reports and data.
-                                  </td>
-                                </tr>
-                              </table>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 24px 28px 30px; text-align: center; background-color: #0f172a;" bgcolor="#0f172a">
-                        <p style="margin: 0; font-size: 12px; color: #94a3b8 !important; font-family: Arial, sans-serif;">&copy; ${new Date().getFullYear()} POLWEL Training Management System. All rights reserved.</p>
-                        <p style="margin: 18px 0 0 0; font-size: 12px; color: #cbd5e1 !important; font-family: Arial, sans-serif;">Need help? Email <a href="mailto:pdcs@polwel.org.sg" style="color: #9ca3af !important; text-decoration: none;">pdcs@polwel.org.sg</a></p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </body>
-        </html>
-      `,
-      attachments: logoAttachment ? [logoAttachment] : [],
-    };
-    try {
-      if (transporter) {
-        await transporter.sendMail(mailOptions);
-        console.log(`Coordinator setup email sent to ${email}`);
-        return true;
-      } else {
-        console.log('=== COORDINATOR SETUP EMAIL (Development Mode) ===');
-        console.log(`To: ${email}`);
-        console.log(`Name: ${name}`);
-        console.log(`Organization: ${organizationName}`);
-        console.log(`Setup URL: ${setupUrl}`);
-        console.log('=============================================');
-        return true;
-      }
-    } catch (error) {
-      console.error('Error sending coordinator setup email:', error);
-      return false;
-    }
+    // TC onboarding emails are currently disabled per client request.
+    // Training Coordinators should NOT receive any onboarding email at this time.
+    console.log(`[EmailService] TC onboarding email skipped (disabled) for: ${_email}`);
+    return true;
   }
 
   static async sendPasswordResetEmail(
@@ -971,7 +992,6 @@ class EmailService {
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -1066,7 +1086,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
     try {
       if (transporter) {
@@ -1098,7 +1118,6 @@ class EmailService {
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const friendlyName = name?.trim() ? name : email;
     const formattedExpiry = new Intl.DateTimeFormat('en-GB', {
@@ -1216,7 +1235,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {
@@ -1255,7 +1274,6 @@ class EmailService {
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -1345,7 +1363,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
     try {
       if (transporter) {
@@ -1505,12 +1523,6 @@ class EmailService {
                                 ${courseRunDetails.specifiedLocation && courseRunDetails.venue ? `<span style="display: block; margin-top: 4px; font-size: 13px; color: #6b7280 !important; line-height: 1.5; font-family: Arial, sans-serif !important;">Specified Location: ${courseRunDetails.specifiedLocation}</span>` : ''}
                               </td>
                             </tr>
-                            <tr>
-                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Note</td>
-                              <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">
-                                For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #4b5563 !important; text-decoration: none;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
-                              </td>
-                            </tr>
                           </table>
 
                           ${!isPartner && baseFee > 0 ? `
@@ -1526,10 +1538,11 @@ class EmailService {
                           ` : ''}
 
                           ${additionalBody ? `
-                          <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Additional Information</p>
+                          
                           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                             <tr>
                               <td style="padding: 16px; background-color: #f9fafb !important; border: 1px solid #e5e7eb;" bgcolor="#f9fafb">
+                              <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Additional Information</p>
                                 <div style="color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalBody}</div>
                               </td>
                             </tr>
@@ -1578,7 +1591,6 @@ class EmailService {
     recipientType?: 'trainer' | 'partner',
   ): Promise<{ success: boolean; info?: any; error?: string }> {
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const { html, subject, textBody } = this.buildTrainerAssignmentEmailHtml(
       name,
@@ -1595,7 +1607,7 @@ class EmailService {
       subject,
       text: textBody,
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
@@ -1835,6 +1847,7 @@ class EmailService {
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
                                   <td style="padding: 16px; background-color: #f3f4f6 !important; border-left: 4px solid #d1d5db;" bgcolor="#f3f4f6">
+                                  <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Additional Information</p>
                                     <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">${additionalNotes}</div>
                                   </td>
                                 </tr>
@@ -1927,7 +1940,6 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const normalizeCc = () => {
       if (!cc) return undefined;
@@ -1970,7 +1982,7 @@ class EmailService {
       subject,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     // Add attachments if provided
@@ -2297,7 +2309,6 @@ class EmailService {
     } = params;
 
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const { html, subject } = this.buildCourseCancellationEmailHtml(
       {
@@ -2320,7 +2331,7 @@ class EmailService {
       to: email,
       subject,
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
@@ -2549,7 +2560,6 @@ class EmailService {
     const { email } = params;
 
     const transporter = this.getTransporter();
-    const logoAttachment = this.getLogoAttachment();
 
     const { html, subject } = this.buildCourseCompletionEmailHtml(params);
 
@@ -2562,7 +2572,7 @@ class EmailService {
         'X-Mailjet-TrackOpen': '0',
       },
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {
@@ -2606,7 +2616,6 @@ class EmailService {
   }): Promise<boolean> {
     const { email, recipientName, courseTitle, courseCode, serialNumber, startDate, endDate } = params;
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const SGT = { timeZone: 'Asia/Singapore' } as const;
     const formatDateFull = (d: Date) =>
@@ -2667,7 +2676,7 @@ class EmailService {
 </body>
 </html>`;
 
-    const inlinedAttachments = this.isMailjetSmtp() ? (this.getLogoMailjetInline() ? [this.getLogoMailjetInline()!] : []) : [];
+    const inlinedAttachments = this.isMailjetSmtp() ? this.getEmailMediaMailjetInline() : [];
     const mailOptions: any = {
       from: `"POLWEL Training" <${this.mailFromAddress}>`,
       to: email,
@@ -2677,10 +2686,7 @@ class EmailService {
     };
 
     if (!this.isGraphApiMode()) {
-      const logoAttachmentData = logoAttachment;
-      if (logoAttachmentData) {
-        mailOptions.attachments = [logoAttachmentData];
-      }
+      mailOptions.attachments = this.getEmailMediaAttachments();
     }
 
     try {
@@ -2726,7 +2732,6 @@ class EmailService {
     const { adminEmail, adminName, courseTitle, courseCode, serialNumber, startDate, endDate, reviewUrl } = params;
     const t = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const fmt = (d: Date) =>
       d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -2805,7 +2810,7 @@ class EmailService {
       to: adminEmail,
       subject: `[Action Required] Course Run Pending TA Approval – ${displayCode}: ${courseTitle}`,
       html,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {
@@ -2814,18 +2819,16 @@ class EmailService {
         if (!t2) { console.log(`(EmailService) Graph transport unavailable — TA approval notice to ${adminEmail} skipped`); return false; }
         await t2.sendMail(mailOptions);
       } else if (this.isMailjetSmtp()) {
-        const mjOpts: { to: string; from: string; subject: string; html: string; attachments?: { filename: string; content: Buffer; contentType?: string }[] } = {
+        const result = await this.sendViaMailjetApi({
           to: adminEmail,
           from: this.mailFromAddress,
           subject: mailOptions.subject as string,
           html,
-        };
-        if (logoAttachment) mjOpts.attachments = [logoAttachment as { filename: string; content: Buffer; contentType?: string }];
-        const result = await this.sendViaMailjetApi(mjOpts);
+          inlinedAttachments: this.getEmailMediaMailjetInline(),
+        });
         return result.success;
       } else {
         if (!t) { console.log(`(EmailService) SMTP not configured — TA approval notice to ${adminEmail} skipped`); return false; }
-        if (logoAttachment) mailOptions.attachments = [logoAttachment];
         await t.sendMail(mailOptions);
       }
       console.log(`✅ TA approval notice sent to ${adminEmail}`);
@@ -2849,7 +2852,6 @@ class EmailService {
     const { adminEmail, adminName, learnerName, courseName, serialNumber, submissionDate, reason, waiverRequestUrl } = params;
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
-    const logoAttachment = this.getLogoAttachment();
 
     const formatDate = (d: Date) => d.toLocaleDateString('en-SG', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -2938,7 +2940,7 @@ class EmailService {
           </body>
         </html>
       `,
-      attachments: logoAttachment ? [logoAttachment] : [],
+      attachments: this.getEmailMediaAttachments(),
     };
 
     try {

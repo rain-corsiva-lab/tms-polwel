@@ -239,6 +239,7 @@ model CourseRun {
   cancelReason                   String?                         @db.Text
   cancelledById                  String?
   cancelledAt                    DateTime?
+  statusUpdatedAt                DateTime?
   learnerEmailStatus             LearnerEmailStatus              @default(PENDING)
   learnerEmailStatusUpdatedAt    DateTime?
   statusLastEvaluatedAt          DateTime?
