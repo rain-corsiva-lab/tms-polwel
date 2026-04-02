@@ -41,6 +41,7 @@ interface CourseRunApiRecord {
   status: string;
   cancelReason?: string | null;
   cancelledAt?: string | null;
+  statusUpdatedAt?: string | null;
 }
 
 interface CourseRunRow {
@@ -58,6 +59,7 @@ interface CourseRunRow {
   status: string;
   cancelReason?: string | null;
   cancelledAt?: Date | null;
+  statusUpdatedAt?: Date | null;
 }
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
@@ -175,6 +177,7 @@ const mapCourseRun = (run: CourseRunApiRecord): CourseRunRow => {
     status: run.status,
     cancelReason: run.cancelReason,
     cancelledAt,
+    statusUpdatedAt: run.statusUpdatedAt ? new Date(run.statusUpdatedAt) : null,
   };
 };
 
@@ -529,6 +532,7 @@ const PostRunManagement: React.FC = () => {
                   </PopoverContent>
                 </Popover>
               </TableHead>
+              {showGenerateBilling && <TableHead className="min-w-[120px]">Completed At</TableHead>}
               <TableHead className="w-[60px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -571,6 +575,21 @@ const PostRunManagement: React.FC = () => {
                     </div>
                   )}
                 </TableCell>
+                {showGenerateBilling && (
+                  <TableCell>
+                    {run.statusUpdatedAt ? (
+                      <div className="text-sm text-foreground">
+                        {run.statusUpdatedAt.toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="text-right">
                   <SafeDropdownMenu>
                     <DropdownMenuTrigger asChild>
