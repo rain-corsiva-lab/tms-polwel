@@ -554,46 +554,30 @@ class EmailService {
   }
 
   // Get standardized email footer HTML
-  // Get LinkedIn SVG as base64 data URI (embeds directly in HTML, works with Mailjet SMTP)
-  private static getLinkedInSvgDataUri(): string {
-    try {
-      const svgPath = path.join(__dirname, '../../public/images/icons8-linkedin.svg');
-      if (fs.existsSync(svgPath)) {
-        const svgContent = fs.readFileSync(svgPath, 'utf-8');
-        const base64 = Buffer.from(svgContent).toString('base64');
-        return `data:image/svg+xml;base64,${base64}`;
-      }
-    } catch (err) {
-      console.warn('⚠️  Failed to read LinkedIn SVG:', err);
-    }
-    // Fallback to HTTPS URL
-    return (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '') + '/images/icons8-linkedin.svg';
+  // Get LinkedIn icon as HTTPS URL (Mailjet works better with standard URLs)
+  // CRITICAL: For emails, ALWAYS use the public domain, never localhost
+  private static getLinkedInIconUrl(): string {
+    // Use EMAIL_FRONTEND_URL for emails (always public domain), never FRONTEND_URL (local dev)
+    const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+    return emailFrontendUrl + '/images/icons8-linkedin.svg';
   }
 
-  // Get YouTube SVG as base64 data URI (embeds directly in HTML, works with Mailjet SMTP)
-  private static getYouTubeSvgDataUri(): string {
-    try {
-      const svgPath = path.join(__dirname, '../../public/images/icons8-youtube.svg');
-      if (fs.existsSync(svgPath)) {
-        const svgContent = fs.readFileSync(svgPath, 'utf-8');
-        const base64 = Buffer.from(svgContent).toString('base64');
-        return `data:image/svg+xml;base64,${base64}`;
-      }
-    } catch (err) {
-      console.warn('⚠️  Failed to read YouTube SVG:', err);
-    }
-    // Fallback to HTTPS URL
-    return (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '') + '/images/icons8-youtube.svg';
+  // Get YouTube icon as HTTPS URL (Mailjet works better with standard URLs)
+  // CRITICAL: For emails, ALWAYS use the public domain, never localhost
+  private static getYouTubeIconUrl(): string {
+    // Use EMAIL_FRONTEND_URL for emails (always public domain), never FRONTEND_URL (local dev)
+    const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+    return emailFrontendUrl + '/images/icons8-youtube.svg';
   }
 
   private static getEmailFooter(): string {
-    // Use base64-encoded SVGs embedded as data URIs (works with all email services including Mailjet SMTP)
-    const linkedinIconSrc = this.getLinkedInSvgDataUri();
-    const youtubeIconSrc = this.getYouTubeSvgDataUri();
+    // Use HTTPS URLs for social icons - works reliably with Mailjet SMTP and all email clients
+    const linkedinIconSrc = this.getLinkedInIconUrl();
+    const youtubeIconSrc = this.getYouTubeIconUrl();
     
-    console.log('📧 Footer Mode: Embedded SVG Data URI (works with Mailjet SMTP)');
-    console.log('📧 LinkedIn SVG embedded:', linkedinIconSrc.substring(0, 50) + '...');
-    console.log('📧 YouTube SVG embedded:', youtubeIconSrc.substring(0, 50) + '...');
+    console.log('📧 FOOTER GENERATION START');
+    console.log('   LinkedIn URL:', linkedinIconSrc);
+    console.log('   YouTube URL:', youtubeIconSrc);
     
     // Build footer with direct string concatenation to avoid template issues
     let footer = '<tr><td style="padding: 32px 28px; background-color: #ffffff; border-top: 2px solid #e5e7eb;" bgcolor="#ffffff">';
@@ -614,10 +598,10 @@ class EmailService {
     footer += '<tr><td style="padding-bottom: 16px;"><p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif; font-style: italic; line-height: 2;">';
     footer += 'Stay connected with POLWEL on&#160;';
     footer += '<a href="https://www.linkedin.com/company/polwelco-op/" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;">';
-    footer += '<img src="' + linkedinIconSrc + '" alt="LinkedIn" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0;" />';
+    footer += '<img src="' + linkedinIconSrc + '" alt="LinkedIn" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0; margin-bottom : 9px;" />';
     footer += '</a>&#160;';
     footer += '<a href="https://www.youtube.com/@POLWELCo-Op" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;">';
-    footer += '<img src="' + youtubeIconSrc + '" alt="YouTube" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0;" />';
+    footer += '<img src="' + youtubeIconSrc + '" alt="YouTube" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0; margin-bottom : 6px;" />';
     footer += '</a>&#160;and view our professional development courses on HRPI';
     footer += '</p></td></tr>';
     
@@ -629,11 +613,10 @@ class EmailService {
     
     footer += '</table></td></tr>';
     
-    // Verify the URLs are in the final HTML
-    console.log('✅ Footer contains LinkedIn src:', footer.includes(linkedinIconSrc));
-    console.log('✅ Footer contains YouTube src:', footer.includes(youtubeIconSrc));
-    console.log('   LinkedIn URL:', linkedinIconSrc);
-    console.log('   YouTube URL:', youtubeIconSrc);
+    console.log('📧 FOOTER GENERATION END');
+    console.log('   Footer HTML length:', footer.length);
+    console.log('   Contains LinkedIn URL:', footer.includes(linkedinIconSrc) ? '✅' : '❌');
+    console.log('   Contains YouTube URL:', footer.includes(youtubeIconSrc) ? '✅' : '❌');
     
     return footer;
   }
@@ -961,6 +944,7 @@ class EmailService {
     
     try {
       if (transporter) {
+        console.log('📨 Attempting to send trainer setup email via transporter');
         const info = await transporter.sendMail(mailOptions);
         console.log(`✅ Trainer setup email sent to ${email}`);
         console.log(`   Message ID: ${info.messageId}`);
@@ -975,9 +959,10 @@ class EmailService {
         return true;
       }
     } catch (error) {
-      console.error('❌ Error sending trainer setup email:');
+      console.error('❌ CRITICAL: Failed to send trainer setup email');
       console.error('   Recipient:', email);
-      console.error('   Error:', error instanceof Error ? error.message : String(error));
+      console.error('   Error Type:', error?.constructor?.name);
+      console.error('   Error Message:', error instanceof Error ? error.message : String(error));
       if (error instanceof Error && (error as any).code) {
         console.error('   Error Code:', (error as any).code);
       }
