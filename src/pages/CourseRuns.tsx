@@ -2208,6 +2208,10 @@ const CourseRuns: React.FC = () => {
                 name: l.learner?.fullname || "Unknown",
                 email: l.learner?.email || "",
                 organizationName: l.learner?.organization?.name || "N/A",
+                trainingCoordinatorId: l.trainingCoordinator?.id ?? null,
+                trainingCoordinatorName: l.trainingCoordinator?.name ?? null,
+                trainingCoordinatorEmail: l.trainingCoordinator?.email ?? null,
+                paymentMode: l.paymentMode ?? null,
               })) || []
           }
           courseRunDetails={{

@@ -4112,26 +4112,52 @@ export const courseRunController = {
 
       let successCount = 0;
       let failedCount = 0;
-      // Map from lowercase TC email → TC details; used to send one email per TC at the end
-      const tcEmailMap = new Map<string, { email: string; name: string }>();
+
+      // ── Group enrollments by Training Coordinator ──────────────────────────
+      // Key: TC user ID (non-self-pay with TC) | 'NO_TC' (self-pay or no TC).
+      // Each group sends ONE email: to = all learner emails, cc = TC email.
+      const tcGroups = new Map<string, {
+        tc: { id: string; email: string; name: string } | null;
+        enrollments: typeof courseRun.courseRunLearners;
+      }>();
 
       for (const enrollment of courseRun.courseRunLearners) {
-        const now = new Date();
-        const learnerEmail = enrollment.learner?.email?.trim();
-        const learnerName = enrollment.learner?.fullname || 'Learner';
-        const trainingCoordinator = enrollment.trainingCoordinator;
         const isSelfPayment = enrollment.paymentMode === 'SELF_SPONSORED';
+        const tc = (!isSelfPayment && enrollment.trainingCoordinator?.email?.trim())
+          ? enrollment.trainingCoordinator
+          : null;
+        const groupKey = tc ? tc.id : 'NO_TC';
+        if (!tcGroups.has(groupKey)) {
+          tcGroups.set(groupKey, {
+            tc: tc ? { id: tc.id, email: tc.email!.trim(), name: tc.name || 'Training Coordinator' } : null,
+            enrollments: [],
+          });
+        }
+        tcGroups.get(groupKey)!.enrollments.push(enrollment);
+      }
 
-        if (!learnerEmail) {
+      // ── For each TC group, send one grouped email ──────────────────────────
+      for (const [, group] of tcGroups) {
+        const now = new Date();
+
+        // Split into learners with and without email
+        const withEmail: typeof group.enrollments = [];
+        const withoutEmail: typeof group.enrollments = [];
+        for (const enrollment of group.enrollments) {
+          if (enrollment.learner?.email?.trim()) {
+            withEmail.push(enrollment);
+          } else {
+            withoutEmail.push(enrollment);
+          }
+        }
+
+        // Mark no-email learners as FAILED
+        for (const enrollment of withoutEmail) {
           failedCount += 1;
           await prisma.courseRunLearner.update({
             where: { id: enrollment.id },
-            data: {
-              confirmationEmailStatus: 'FAILED',
-              confirmationEmailLastSentAt: now,
-            },
+            data: { confirmationEmailStatus: 'FAILED', confirmationEmailLastSentAt: now },
           });
-
           const emailHistory = await prisma.confirmationEmailHistory.create({
             data: {
               courseRunLearnersId: enrollment.id,
@@ -4139,230 +4165,111 @@ export const courseRunController = {
               remarks: 'Skipped sending confirmation email. Reason: Missing learner email address.',
             },
           });
-
-          // Create attachment records for all attachments
           if (attachmentIds && Array.isArray(attachmentIds)) {
             for (const attId of attachmentIds) {
               await prisma.confirmationEmailAttachment.create({
-                data: {
-                  emailHistoryId: emailHistory.id,
-                  mediaId: attId,
-                },
+                data: { emailHistoryId: emailHistory.id, mediaId: attId },
               });
             }
           }
-          continue;
         }
 
+        if (withEmail.length === 0) continue;
+
+        // Build the grouped email payload
+        const learnerEmails = withEmail.map((e) => e.learner.email!.trim());
+        const tcCc = group.tc ? [group.tc.email] : [];
+        const allCc = [...tcCc, ...ccList];
+
+        const emailPayload: Parameters<typeof EmailService.sendLearnerCourseConfirmationEmail>[0] = {
+          email: learnerEmails,
+          learnerName: 'Participants',
+          courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
+        };
+
+        if (courseRun.course?.courseCode) emailPayload.courseCode = courseRun.course.courseCode;
+        if (courseRun.serialNumber) emailPayload.serialNumber = courseRun.serialNumber;
+        if (courseRun.startDatetime) emailPayload.startDate = new Date(courseRun.startDatetime);
+        if (courseRun.endDatetime) emailPayload.endDate = new Date(courseRun.endDatetime);
+        const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
+        if (venueName) emailPayload.venueName = venueName;
+        if (courseRun.venue?.address) emailPayload.venueAddress = courseRun.venue.address;
+        if (courseRun.specifiedLocation) emailPayload.specifiedLocation = courseRun.specifiedLocation;
+        if (additionalNotes) emailPayload.additionalNotes = additionalNotes;
+        if (courseRun.course?.duration) {
+          const dur = parseFloat(String(courseRun.course.duration));
+          const durType = courseRun.course.durationType || 'days';
+          const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+          emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
+        }
+        if (allCc.length > 0) emailPayload.cc = allCc;
+        if (attachments && attachments.length > 0) emailPayload.attachments = attachments;
+        if (courseRun.remarks) emailPayload.remarks = courseRun.remarks;
+
+        console.log(`[sendCourseConfirmationEmail] Sending grouped email to ${learnerEmails.length} learner(s)${group.tc ? ` (TC: ${group.tc.email})` : ' (no TC)'}`);
+
         try {
-          const emailPayload: Parameters<typeof EmailService.sendLearnerCourseConfirmationEmail>[0] = {
-            email: learnerEmail,
-            learnerName,
-            courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
-          };
-
-          if (courseRun.course?.courseCode) {
-            emailPayload.courseCode = courseRun.course.courseCode;
-          }
-
-          if (courseRun.serialNumber) {
-            emailPayload.serialNumber = courseRun.serialNumber;
-          }
-
-          if (courseRun.startDatetime) {
-            emailPayload.startDate = new Date(courseRun.startDatetime);
-          }
-
-          if (courseRun.endDatetime) {
-            emailPayload.endDate = new Date(courseRun.endDatetime);
-          }
-
-          const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
-          if (venueName) {
-            emailPayload.venueName = venueName;
-          }
-
-          if (courseRun.venue?.address) {
-            emailPayload.venueAddress = courseRun.venue.address;
-          }
-
-          if (courseRun.specifiedLocation) {
-            emailPayload.specifiedLocation = courseRun.specifiedLocation;
-          }
-
-          if (additionalNotes) {
-            emailPayload.additionalNotes = additionalNotes;
-          }
-
-          if (courseRun.course?.duration) {
-            const dur = parseFloat(String(courseRun.course.duration));
-            const durType = courseRun.course.durationType || 'days';
-            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
-            emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
-          }
-
-          // Only apply admin-provided CC (never auto-CC the TC here — TC gets their own separate email below)
-          if (ccList.length > 0) {
-            emailPayload.cc = ccList;
-          }
-
-          if (attachments && attachments.length > 0) {
-            emailPayload.attachments = attachments;
-          }
-
-          if (courseRun.remarks) {
-            emailPayload.remarks = courseRun.remarks;
-          }
-
-          console.log('emailPayload', emailPayload);
           const didSend = await EmailService.sendLearnerCourseConfirmationEmail(emailPayload);
-
           const status = didSend ? 'SENT' : 'FAILED';
+          if (didSend) successCount += 1; else failedCount += 1;
 
-          await prisma.courseRunLearner.update({
-            where: { id: enrollment.id },
-            data: {
-              confirmationEmailStatus: status,
-              confirmationEmailLastSentAt: now,
-            },
-          });
+          const remarksText = didSend
+            ? `Grouped confirmation email sent to: ${learnerEmails.join(', ')}${group.tc ? `. CC: ${group.tc.email}` : ''}.`
+            : `Failed to send grouped confirmation email to: ${learnerEmails.join(', ')}.`;
 
-          const emailHistory2 = await prisma.confirmationEmailHistory.create({
-            data: {
-              courseRunLearnersId: enrollment.id,
-              courseRunId: id,
-              remarks: didSend
-                ? `Confirmation email sent successfully to ${learnerEmail}.`
-                : `Failed to send confirmation email to ${learnerEmail}.`,
-            },
-          });
-
-          // Create attachment records for all attachments
-          if (attachmentIds && Array.isArray(attachmentIds)) {
-            for (const attId of attachmentIds) {
-              await prisma.confirmationEmailAttachment.create({
-                data: {
-                  emailHistoryId: emailHistory2.id,
-                  mediaId: attId,
-                },
-              });
-            }
-          }
-
-          if (didSend) {
-            successCount += 1;
-          } else {
-            failedCount += 1;
-          }
-
-          // Collect TC for a separate consolidated email — skip self-payment learners
-          if (!isSelfPayment && trainingCoordinator?.email?.trim()) {
-            const tcEmail = trainingCoordinator.email.trim().toLowerCase();
-            if (!tcEmailMap.has(tcEmail)) {
-              tcEmailMap.set(tcEmail, {
-                email: trainingCoordinator.email.trim(),
-                name: trainingCoordinator.name || 'Training Coordinator',
-              });
+          for (const enrollment of withEmail) {
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { confirmationEmailStatus: status, confirmationEmailLastSentAt: now },
+            });
+            const emailHistory = await prisma.confirmationEmailHistory.create({
+              data: { courseRunLearnersId: enrollment.id, courseRunId: id, remarks: remarksText },
+            });
+            if (attachmentIds && Array.isArray(attachmentIds)) {
+              for (const attId of attachmentIds) {
+                await prisma.confirmationEmailAttachment.create({
+                  data: { emailHistoryId: emailHistory.id, mediaId: attId },
+                });
+              }
             }
           }
         } catch (sendError) {
           failedCount += 1;
-
-          await prisma.courseRunLearner.update({
-            where: { id: enrollment.id },
-            data: {
-              confirmationEmailStatus: 'FAILED',
-              confirmationEmailLastSentAt: now,
-            },
-          });
-
-          const emailHistory3 = await prisma.confirmationEmailHistory.create({
-            data: {
-              courseRunLearnersId: enrollment.id,
-              courseRunId: id,
-              remarks: `Failed to send confirmation email to ${learnerEmail}. Error: ${
-                sendError instanceof Error ? sendError.message : 'Unknown error'
-              }`,
-            },
-          });
-
-          // Create attachment records for all attachments
-          if (attachmentIds && Array.isArray(attachmentIds)) {
-            for (const attId of attachmentIds) {
-              await prisma.confirmationEmailAttachment.create({
-                data: {
-                  emailHistoryId: emailHistory3.id,
-                  mediaId: attId,
-                },
-              });
+          const errMsg = sendError instanceof Error ? sendError.message : 'Unknown error';
+          for (const enrollment of withEmail) {
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { confirmationEmailStatus: 'FAILED', confirmationEmailLastSentAt: now },
+            });
+            const emailHistory = await prisma.confirmationEmailHistory.create({
+              data: {
+                courseRunLearnersId: enrollment.id,
+                courseRunId: id,
+                remarks: `Failed to send grouped confirmation email. Error: ${errMsg}`,
+              },
+            });
+            if (attachmentIds && Array.isArray(attachmentIds)) {
+              for (const attId of attachmentIds) {
+                await prisma.confirmationEmailAttachment.create({
+                  data: { emailHistoryId: emailHistory.id, mediaId: attId },
+                });
+              }
             }
           }
         }
       }
 
-      // Send one confirmation email per unique TC (instead of CC-ing on every learner email)
-      for (const [, tc] of tcEmailMap) {
-        try {
-          const tcEmailPayload: Parameters<typeof EmailService.sendLearnerCourseConfirmationEmail>[0] = {
-            email: tc.email,
-            learnerName: tc.name,
-            courseTitle: courseRun.course?.title || courseRun.serialNumber || 'POLWEL Course',
-          };
-          if (courseRun.course?.courseCode) tcEmailPayload.courseCode = courseRun.course.courseCode;
-          if (courseRun.serialNumber) tcEmailPayload.serialNumber = courseRun.serialNumber;
-          if (courseRun.startDatetime) tcEmailPayload.startDate = new Date(courseRun.startDatetime);
-          if (courseRun.endDatetime) tcEmailPayload.endDate = new Date(courseRun.endDatetime);
-          const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
-          if (venueName) tcEmailPayload.venueName = venueName;
-          if (courseRun.venue?.address) tcEmailPayload.venueAddress = courseRun.venue.address;
-          if (courseRun.specifiedLocation) tcEmailPayload.specifiedLocation = courseRun.specifiedLocation;
-          if (additionalNotes) tcEmailPayload.additionalNotes = additionalNotes;
-          if (courseRun.course?.duration) {
-            const dur = parseFloat(String(courseRun.course.duration));
-            const durType = courseRun.course.durationType || 'days';
-            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
-            tcEmailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
-          }
-          if (attachments && attachments.length > 0) tcEmailPayload.attachments = attachments;
-          const tcSent = await EmailService.sendLearnerCourseConfirmationEmail(tcEmailPayload);
-          if (tcSent) {
-            successCount += 1;
-          } else {
-            failedCount += 1;
-          }
-          console.log(`[sendCourseConfirmationEmail] TC email ${tcSent ? 'sent' : 'failed'} → ${tc.email}`);
-        } catch (tcErr) {
-          failedCount += 1;
-          console.error(`[sendCourseConfirmationEmail] Failed to send TC email to ${tc.email}:`, tcErr);
-        }
-      }
-
-      // Check if BOTH trainer and confirmation emails have been sent
-      // If yes, update status to CONFIRMED
+      // ── Auto-transition to CONFIRMED when both trainer and confirmation emails are sent ──
       const trainerEmailsSent = await prisma.trainerAssignmentEmailHistory.count({
-        where: {
-          courseRunId: id,
-          deletedAt: null,
-        },
+        where: { courseRunId: id, deletedAt: null },
       });
-
       const hasTrainers = await prisma.courseRunTrainer.count({
-        where: {
-          courseRunId: id,
-          deletedAt: null,
-        },
+        where: { courseRunId: id, deletedAt: null },
       });
-
-      // If we have trainers and trainer emails have been sent (at least one history record per trainer)
-      // AND confirmation emails have been sent (we just sent them)
-      // Then update status to CONFIRMED
       if (hasTrainers > 0 && trainerEmailsSent >= hasTrainers) {
         await prisma.courseRun.update({
           where: { id },
-          data: {
-            status: 'CONFIRMED',
-            statusLastEvaluatedAt: new Date(),
-          },
+          data: { status: 'CONFIRMED', statusLastEvaluatedAt: new Date() },
         });
         console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
       }
@@ -4371,7 +4278,7 @@ export const courseRunController = {
       if (!res.headersSent) {
         res.json({
           success: true,
-          message: `Course confirmation emails processed. Success: ${successCount}, Failed: ${failedCount}`,
+          message: `Course confirmation emails processed. ${successCount} email(s) sent, ${failedCount} failure(s).`,
           emailsSent: successCount,
           failures: failedCount,
         });

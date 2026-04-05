@@ -1903,7 +1903,8 @@ class EmailService {
   }
 
   static async sendLearnerCourseConfirmationEmail(params: {
-    email: string;
+    /** Single recipient or array of recipients (grouped email). */
+    email: string | string[];
     learnerName: string;
     courseTitle: string;
     courseCode?: string;
@@ -1978,7 +1979,7 @@ class EmailService {
 
     const mailOptions: any = {
       from: this.mailFromAddress,
-      to: email,
+      to: Array.isArray(email) ? email.join(', ') : email,
       subject,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
       html,
@@ -2027,7 +2028,7 @@ class EmailService {
       console.log('╔════════════════════════════════════════════════════════════════╗');
       console.log('║ 📧 SENDING COURSE CONFIRMATION EMAIL - DETAILED LOG           ║');
       console.log('╚════════════════════════════════════════════════════════════════╝');
-      console.log('📬 To:', email, '| Course:', courseTitle);
+      console.log('📬 To:', Array.isArray(email) ? email.join(', ') : email, '| Course:', courseTitle);
       console.log('   Subject:', mailOptions.subject);
       if (ccRecipients) console.log('   CC:', ccRecipients.join(', '));
       console.log('   Attachments:', mailOptions.attachments?.length || 0, 'file(s)');
