@@ -1528,14 +1528,31 @@ export const resendCoordinatorSetup = async (req: AuthenticatedRequest, res: Res
       }
     });
 
-    // TC onboarding emails are currently disabled per client request.
-    // Training Coordinators should NOT receive any onboarding email at this time.
-    console.log(`[resendCoordinatorSetup] TC onboarding email is disabled — skipping resend for: ${coordinator.email}`);
-    return res.json({
-      success: false,
-      message: 'TC onboarding emails are currently disabled. No email was sent.',
-      setupTokenResent: false
-    });
+    // Send setup email
+    try {
+      if (process.env.ENABLE_TC_ONBOARDING_EMAIL !== 'true') {
+        console.log(`[resendCoordinatorSetup] TC onboarding email is disabled (ENABLE_TC_ONBOARDING_EMAIL != true) — skipping for: ${coordinator.email}`);
+        return res.json({
+          success: false,
+          message: 'TC onboarding emails are currently disabled. No email was sent.',
+          setupTokenResent: false,
+        });
+      }
+
+      const setupUrl = `${process.env.FRONTEND_URL}/onboarding/${setupToken}`;
+      await EmailService.sendCoordinatorSetupEmail(coordinator.email, coordinator.name, setupUrl, organization.name);
+
+      console.log(`🔄 Coordinator setup email resent to: ${coordinator.email}`);
+
+      return res.json({
+        success: true,
+        message: 'Setup email has been resent successfully',
+        setupTokenResent: true,
+      });
+    } catch (emailError) {
+      console.error('Failed to resend coordinator setup email:', emailError);
+      return errorResponse(res, 500, 'Failed to send setup email. Please try again.');
+    }
 
   } catch (error) {
     console.error('Resend coordinator setup error:', error);

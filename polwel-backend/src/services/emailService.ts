@@ -974,15 +974,134 @@ class EmailService {
   }
 
   static async sendCoordinatorSetupEmail(
-    _email: string,
-    _name: string,
-    _setupUrl: string,
-    _organizationName: string
+    email: string,
+    name: string,
+    setupUrl: string,
+    organizationName: string
   ): Promise<boolean> {
-    // TC onboarding emails are currently disabled per client request.
-    // Training Coordinators should NOT receive any onboarding email at this time.
-    console.log(`[EmailService] TC onboarding email skipped (disabled) for: ${_email}`);
-    return true;
+    // Controlled by env var ENABLE_TC_ONBOARDING_EMAIL.
+    // Set to 'true' to re-enable; any other value (or absent) keeps it disabled.
+    if (process.env.ENABLE_TC_ONBOARDING_EMAIL !== 'true') {
+      console.log(`[EmailService] TC onboarding email skipped (ENABLE_TC_ONBOARDING_EMAIL != true) for: ${email}`);
+      return true;
+    }
+
+    const transporter = this.getTransporter();
+    const logoSrc = this.getLogoSrc();
+
+    const mailOptions: any = {
+      from: this.mailFromAddress,
+      to: email,
+      subject: 'Welcome to POLWEL - Complete Your Training Coordinator Setup',
+      html: `
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <!--[if mso]>
+            <noscript>
+              <xml>
+                <o:OfficeDocumentSettings>
+                  <o:PixelsPerInch>96</o:PixelsPerInch>
+                </o:OfficeDocumentSettings>
+              </xml>
+            </noscript>
+            <![endif]-->
+            <title>POLWEL Coordinator Setup</title>
+          </head>
+          <body style="margin: 0 !important; padding: 0 !important; background-color: #0f172a !important; font-family: Arial, sans-serif !important;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0; background-color: #0f172a;" bgcolor="#0f172a">
+              <tr>
+                <td align="center" style="padding: 32px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width: 560px; background-color: #ffffff;" bgcolor="#ffffff">
+                    <tr>
+                      <td style="padding: 32px 28px 24px; background-color: #ffffff; border-bottom: 2px solid #f3f4f6;" bgcolor="#ffffff" align="center">
+                        <div style="text-align: center; margin-bottom: 12px;"><img src="${logoSrc}" alt="POLWEL Logo" width="117" height="48" border="0" style="display: block; height: 48px; width: 117px; max-width: 117px; border: 0; outline: none; margin: 0 auto;" /></div>
+                        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937 !important; font-family: Arial, sans-serif;">Welcome to POLWEL!</h1>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280 !important; font-family: Arial, sans-serif;">Complete Your Training Coordinator Setup</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 32px 28px; background-color: #ffffff;" bgcolor="#ffffff">
+                        <p style="font-size: 16px; margin: 0 0 16px 0; color: #1f2937 !important; font-family: Arial, sans-serif;">Hello ${name},</p>
+                        <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151 !important; line-height: 1.7; font-family: Arial, sans-serif;">Welcome to the POLWEL Training Management System! You've been added as a Training Coordinator for:</p>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td align="center" style="padding: 12px 0;">
+                              <span style="display: inline-block; background-color: #f8fafc; border: 1px solid #e5e7eb; color: #374151 !important; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-family: Arial, sans-serif;" bgcolor="#f8fafc">🏢 ${organizationName}</span>
+                            </td>
+                          </tr>
+                        </table>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                          <tr>
+                            <td style="padding: 24px; background-color: #f8fafc; border: 1px solid #e5e7eb;" bgcolor="#f8fafc" align="center">
+                              <a href="${setupUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; font-family: Arial, sans-serif;" bgcolor="#3b82f6">Complete Coordinator Setup</a>
+                            </td>
+                          </tr>
+                        </table>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0; background-color: #f8fafc; border: 1px solid #e2e8f0;" bgcolor="#f8fafc">
+                          <tr>
+                            <td style="padding: 20px 24px;">
+                              <p style="margin: 0 0 12px 0; font-size: 14px; color: #1f2937 !important; font-weight: 600; font-family: Arial, sans-serif;">Your coordinator access includes:</p>
+                              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">1</span>
+                                    Manage training bookings and course runs.
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">2</span>
+                                    Coordinate learner enrollments and attendance.
+                                  </td>
+                                </tr>
+                                <tr>
+<td style="padding: 5px 0; font-size: 13px; color: #475569 !important; font-family: Arial, sans-serif;">
+                                    <span style="display: inline-block; min-width: 18px; height: 18px; background-color: #525252; color: #ffffff !important; font-weight: 700; font-size: 11px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 10px;" bgcolor="#525252">3</span>
+                                    Access organization-specific reports and data.
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 24px 28px 30px; text-align: center; background-color: #0f172a;" bgcolor="#0f172a">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8 !important; font-family: Arial, sans-serif;">&copy; ${new Date().getFullYear()} POLWEL Training Management System. All rights reserved.</p>
+                        <p style="margin: 18px 0 0 0; font-size: 12px; color: #cbd5e1 !important; font-family: Arial, sans-serif;">Need help? Email <a href="mailto:pdcs@polwel.org.sg" style="color: #9ca3af !important; text-decoration: none;">pdcs@polwel.org.sg</a></p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `,
+      attachments: this.getEmailMediaAttachments(),
+    };
+    try {
+      if (transporter) {
+        await transporter.sendMail(mailOptions);
+        console.log(`Coordinator setup email sent to ${email}`);
+        return true;
+      } else {
+        console.log('=== COORDINATOR SETUP EMAIL (Development Mode) ===');
+        console.log(`To: ${email}`);
+        console.log(`Name: ${name}`);
+        console.log(`Organization: ${organizationName}`);
+        console.log(`Setup URL: ${setupUrl}`);
+        console.log('=============================================');
+        return true;
+      }
+    } catch (error) {
+      console.error('Error sending coordinator setup email:', error);
+      return false;
+    }
   }
 
   static async sendPasswordResetEmail(

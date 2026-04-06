@@ -19,3 +19,53 @@ _**Agent (copilot/claude-sonnet-4.6)**_
 Let me start by understanding the project structure and the specstory history, then look at the email service to understand what changes need to be made.
 
 Let me first read the specstory history files to understand the project context, then look at the email service in detail.
+
+---
+
+_**User (2026-04-05 16:58:06Z)**_
+
+so in #file:emailService.ts #file:SendCourseConfirmationEmailDialog.tsx currently we have these concept , let say we have these learner : 
+Learner A - Training Coordinator Adam 
+Learner B - Training Coordinator Adam 
+Learner C - Training Coordinator John 
+Learner D - Training Coordinator John 
+Learner E - Training Coordinator Celine 
+
+so currently with these 5 learners, when we trigger to send course confirmation for all of these , we will send 8 different emails for these , 5 for learners, 3 for Training coordinator. 
+
+but now we need to change the concept, now we just need to send 3 emails , its depends on the training coordinators, in this case these emails are : 
+1. to : LearnerA@email.com , LearnerB@email.com | cc : TrainingCoordinatorAdam@email.com
+2. to : LearnerC@email.com, LearnerD@email.com | cc : TrainingCoordinatorJohn@email.com
+3. to LearnerE@emailcom | cc : TrainingCoordinatorCeline@email.com
+
+so it will be depends on training coordinator, leanrer with same training coordinator will be grouped into 1 email but multiple 'to' 
+
+you understand right ? please develop it carefully , please be carefull that in #file:SendCourseConfirmationEmailDialog.tsx sometimes we can select spesific learners to send the email , sometimes we can select all learner of this course run to send the email . so please understand our code structure first, then dothe changes 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+Let me understand the current system and what needs to change:
+
+**Current behavior:**
+- For 5 learners on the same course run, 8 emails are sent:
+  - 5 individual emails to each learner
+  - 3 emails to each unique Training Coordinator (TC)
+
+**New behavior:**
+- Group learners by their Training Coordinator
+- Send 3 emails (one per TC group):
+  - Email 1: `to: [learnerA, learnerB]`, `cc: [TC Adam]`
+  - Email 2: `to: [learnerC, learnerD]`, `cc: [TC John]`
+  - Email 3: `to: [learnerE]`, `cc: [TC Celine]`
+
+Now I need to trace through the codebase to see where these emails are being sent. I'll start by looking at the frontend dialog component, then work through the backend service and API layer to understand the full flow.
+
+---
+
+_**User (2026-04-06 04:27:54Z)**_
+
+oh yeah remember when we disable setup onboarding email on training coordinator, it is temporary changes, so i need your help to dev the backup or something like that so when i enable it again , i can do it easily with best practice please help me dev this carefully
