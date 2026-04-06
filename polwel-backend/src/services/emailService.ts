@@ -572,9 +572,25 @@ class EmailService {
     return emailFrontendUrl + '/images/icons8-youtube-50.png';
   }
 
-  // Get QR code image URL (served as a static asset from the frontend)
-  // CRITICAL: For emails, ALWAYS use the public domain, never localhost
-  private static getQrCodeUrl(): string {
+  // Get QR code as a base64 data URI.
+  // Reads qr-polwel-go-course.jpg from the public/images directory at call time so it
+  // works in both web preview (file on disk) and production email sends.
+  // Falls back to the HTTPS URL if the file cannot be read.
+  private static getQrCodeSrc(): string {
+    const possiblePaths = [
+      path.join(__dirname, '../../public/images/qr-polwel-go-course.jpg'),
+      path.join(process.cwd(), 'public/images/qr-polwel-go-course.jpg'),
+      path.join(process.cwd(), '../public/images/qr-polwel-go-course.jpg'),
+    ];
+    for (const p of possiblePaths) {
+      try {
+        if (fs.existsSync(p)) {
+          const b64 = fs.readFileSync(p).toString('base64');
+          return `data:image/jpeg;base64,${b64}`;
+        }
+      } catch { /* ignore */ }
+    }
+    // Fallback to HTTPS URL when file is not on disk (e.g. Graph API cloud runner)
     const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
     return emailFrontendUrl + '/images/qr-polwel-go-course.jpg';
   }
@@ -2554,9 +2570,17 @@ class EmailService {
       }
     };
 
+    // Compare calendar dates (SGT) rather than exact timestamps so that a single-day
+    // course (e.g. start 09:00, end 17:00 on the same date) isn't displayed twice.
+    const isSameCalendarDay = (a?: Date, b?: Date) => {
+      if (!a || !b) return false;
+      const SGT = { timeZone: 'Asia/Singapore' };
+      return a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
+    };
+
     // Build date string for subject: "19 Mar 2026" or "19 Mar 2026 - 20 Mar 2026"
     const dateStr = startDate
-      ? (endDate && startDate.getTime() !== endDate.getTime()
+      ? (endDate && !isSameCalendarDay(startDate, endDate)
           ? `${formatDate(startDate)} - ${formatDate(endDate)}`
           : formatDate(startDate))
       : '';
@@ -2618,7 +2642,7 @@ class EmailService {
                                 </tr>
                                 <tr>
                                   <td style="padding: 12px 16px; ${trainerName ? 'border-bottom: 1px solid #e5e7eb; ' : ''}color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Date:</td>
-                                  <td style="padding: 12px 16px; ${trainerName ? 'border-bottom: 1px solid #e5e7eb; ' : ''}color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' - ' + formatDate(endDate) : ''}</td>
+                                  <td style="padding: 12px 16px; ${trainerName ? 'border-bottom: 1px solid #e5e7eb; ' : ''}color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(startDate)}${endDate && !isSameCalendarDay(startDate, endDate) ? ' - ' + formatDate(endDate) : ''}</td>
                                 </tr>
                                 ${trainerName ? `<tr>
                                   <td style="padding: 12px 16px; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Trainer:</td>
@@ -2649,7 +2673,7 @@ class EmailService {
                                     </p>
                                     <div style="text-align: center; margin: 16px 0;">
                                       <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important; display: block; margin-bottom: 12px;">https://polwel.org.sg/courses/</a>
-                                      <img src="${this.getQrCodeUrl()}" alt="POLWEL Courses QR Code" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
+                                      <img src="${this.getQrCodeSrc()}" alt="POLWEL Courses QR Code" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
                                     </div>
                                     <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important; text-align: center;">
                                       Once again, thank you for your support and hope to see you soon in our next workshop!

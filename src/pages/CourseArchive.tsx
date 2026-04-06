@@ -26,6 +26,8 @@ interface Course {
   defaultCourseFee: number;
   minParticipants?: number;
   certificates: string;
+  description?: string | null;
+  learningObjectives?: string | null;
   status?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -286,6 +288,8 @@ const CourseArchive = () => {
         DefaultFee: course.defaultCourseFee,
         MinParticipants: course.minParticipants || "N/A",
         Certificates: course.certificates,
+        Description: course.description ? course.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : "",
+        LearningObjectives: course.learningObjectives ? course.learningObjectives.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : "",
         Status: course.status || "ACTIVE",
         CreatedDate: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "N/A",
       }));
