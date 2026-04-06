@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -19,6 +19,10 @@ interface SendCourseConfirmationEmailDialogProps {
     name: string;
     email: string;
     organizationName: string;
+    trainingCoordinatorId?: string | null;
+    trainingCoordinatorName?: string | null;
+    trainingCoordinatorEmail?: string | null;
+    paymentMode?: string | null;
   }>;
   /** Optional; preview is loaded from the API. Callers may omit. */
   courseRunDetails?: {
@@ -30,6 +34,65 @@ interface SendCourseConfirmationEmailDialogProps {
   };
   onSuccess: () => void;
 }
+
+/** Groups learners by Training Coordinator and renders a structured recipients summary. */
+const RecipientsGrouped: React.FC<{
+  learners: SendCourseConfirmationEmailDialogProps["learners"];
+}> = ({ learners }) => {
+  const groups = useMemo(() => {
+    const map = new Map<
+      string,
+      { tcName: string | null; tcEmail: string | null; learners: typeof learners }
+    >();
+    for (const l of learners) {
+      const isSelfPay = l.paymentMode === "SELF_SPONSORED";
+      const key = !isSelfPay && l.trainingCoordinatorId ? l.trainingCoordinatorId : "NO_TC";
+      if (!map.has(key)) {
+        map.set(key, {
+          tcName: key !== "NO_TC" ? l.trainingCoordinatorName ?? null : null,
+          tcEmail: key !== "NO_TC" ? l.trainingCoordinatorEmail ?? null : null,
+          learners: [],
+        });
+      }
+      map.get(key)!.learners.push(l);
+    }
+    return map;
+  }, [learners]);
+
+  const emailCount = groups.size;
+
+  return (
+    <>
+      <div className="font-semibold text-sm mb-2">
+        Recipients ({learners.length} learner{learners.length !== 1 ? "s" : ""} ·{" "}
+        <span className="text-blue-600">
+          {emailCount} email{emailCount !== 1 ? "s" : ""} to be sent
+        </span>)
+      </div>
+      <div className="space-y-2 max-h-44 overflow-y-auto text-xs">
+        {Array.from(groups.entries()).map(([key, group]) => (
+          <div key={key} className="border rounded p-2 bg-white">
+            <div className="font-semibold text-gray-700 mb-1">
+              {key !== "NO_TC"
+                ? `TC: ${group.tcName || "Unknown TC"}${group.tcEmail ? ` (${group.tcEmail})` : ""}`
+                : "No Training Coordinator"}
+            </div>
+            <div className="text-gray-600 break-all">
+              <span className="font-medium">To: </span>
+              {group.learners.map((l) => l.email || "No email").join(", ")}
+            </div>
+            {group.tcEmail && key !== "NO_TC" && (
+              <div className="text-gray-500 mt-0.5">
+                <span className="font-medium">CC: </span>
+                {group.tcEmail}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
 
 export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationEmailDialogProps> = ({
   open,
@@ -283,17 +346,7 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
               )}
             </div>
             <div className="p-3 bg-gray-50 border-t">
-              <div className="font-semibold text-sm mb-2">Recipients ({learners.length})</div>
-              <div className="space-y-1 max-h-36 overflow-y-auto text-xs">
-                {learners.map((learner) => (
-                  <div key={learner.id} className="flex justify-between items-start py-1 border-b last:border-b-0 border-gray-200">
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-medium truncate">{learner.name}</span>
-                      <span className="text-gray-500 truncate">{learner.email || "No email"}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <RecipientsGrouped learners={learners} />
               <p className="text-xs text-muted-foreground mt-2">
                 Attachments are not shown in this preview; they will be included when you send.
               </p>

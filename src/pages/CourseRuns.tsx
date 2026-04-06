@@ -804,8 +804,7 @@ const CourseRuns: React.FC = () => {
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
     // Strip Quill empty-state HTML before sending
-    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[] } =
-      {};
+    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[] } = {};
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
     if (!isQuillEmptyHtml(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
@@ -1831,9 +1830,7 @@ const CourseRuns: React.FC = () => {
                   <h3 className="font-semibold text-sm">Email preview</h3>
                   {cancelPreviewLoading && <span className="text-xs text-muted-foreground">Updating…</span>}
                 </div>
-                {cancelPreviewLabel && (
-                  <div className="px-3 py-1.5 bg-amber-50 border-b text-xs text-amber-900 font-medium">{cancelPreviewLabel}</div>
-                )}
+                {cancelPreviewLabel && <div className="px-3 py-1.5 bg-amber-50 border-b text-xs text-amber-900 font-medium">{cancelPreviewLabel}</div>}
                 {cancelPreviewSubject && (
                   <div className="px-3 py-2 bg-white border-b text-xs">
                     <span className="text-muted-foreground">Subject: </span>
@@ -1843,9 +1840,7 @@ const CourseRuns: React.FC = () => {
                 {cancelPreviewError && <div className="p-3 text-sm text-destructive bg-white">{cancelPreviewError}</div>}
                 <div className="relative bg-[#0f172a] min-h-[280px] max-h-[50vh] overflow-auto">
                   {cancelPreviewLoading && !cancelPreviewHtml && (
-                    <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">
-                      Loading preview…
-                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">Loading preview…</div>
                   )}
                   {cancelPreviewHtml && (
                     <iframe
@@ -1879,13 +1874,7 @@ const CourseRuns: React.FC = () => {
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="h-8 w-8 text-gray-400" />
                     <p className="text-sm text-gray-600">Click to upload files (max 25MB each)</p>
-                    <input
-                      type="file"
-                      id="cancelAttachments"
-                      multiple
-                      onChange={handleCancelFilesSelect}
-                      className="hidden"
-                    />
+                    <input type="file" id="cancelAttachments" multiple onChange={handleCancelFilesSelect} className="hidden" />
                     <Button
                       type="button"
                       variant="outline"
@@ -1907,13 +1896,7 @@ const CourseRuns: React.FC = () => {
                             <span className="text-sm truncate">{file.name}</span>
                             <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeCancelFile(index)}
-                            disabled={cancelDialog.submitting}
-                          >
+                          <Button type="button" variant="ghost" size="sm" onClick={() => removeCancelFile(index)} disabled={cancelDialog.submitting}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
@@ -2208,6 +2191,10 @@ const CourseRuns: React.FC = () => {
                 name: l.learner?.fullname || "Unknown",
                 email: l.learner?.email || "",
                 organizationName: l.learner?.organization?.name || "N/A",
+                trainingCoordinatorId: l.trainingCoordinator?.id ?? null,
+                trainingCoordinatorName: l.trainingCoordinator?.name ?? null,
+                trainingCoordinatorEmail: l.trainingCoordinator?.email ?? null,
+                paymentMode: l.paymentMode ?? null,
               })) || []
           }
           courseRunDetails={{
