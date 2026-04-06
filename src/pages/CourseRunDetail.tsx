@@ -3161,6 +3161,10 @@ const CourseRunDetail: React.FC = () => {
                 name: l.learner.fullname,
                 email: l.learner.email,
                 organizationName: l.clientOrganization?.name || "N/A",
+                trainingCoordinatorId: l.trainingCoordinator?.id ?? null,
+                trainingCoordinatorName: l.trainingCoordinator?.name ?? null,
+                trainingCoordinatorEmail: l.trainingCoordinator?.email ?? null,
+                paymentMode: l.paymentMode ?? null,
               })) || []
           }
           courseRunDetails={{
