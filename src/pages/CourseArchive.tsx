@@ -42,7 +42,7 @@ const CourseArchive = () => {
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const [exporting, setExporting] = useState(false);
-  
+
   // Pagination state
   const [pagination, setPagination] = useState({
     page: 1,
@@ -83,7 +83,7 @@ const CourseArchive = () => {
         setLoading((prev) => ({ ...prev, categories: true }));
         const categoriesResponse = await referencesApi.getCategories();
         setCategories(
-          categoriesResponse.success && categoriesResponse.data && Array.isArray(categoriesResponse.data.categories) ? categoriesResponse.data.categories : []
+          categoriesResponse.success && categoriesResponse.data && Array.isArray(categoriesResponse.data.categories) ? categoriesResponse.data.categories : [],
         );
 
         // Load courses and venues
@@ -96,7 +96,7 @@ const CourseArchive = () => {
             category: selectedCategory !== "all" ? selectedCategory : undefined,
             certificates: selectedCertificate !== "all" ? selectedCertificate : undefined,
           }),
-          referencesApi.getVenues().catch(() => null)
+          referencesApi.getVenues().catch(() => null),
         ]);
         console.log("Courses API response:", coursesResponse);
 
@@ -113,7 +113,7 @@ const CourseArchive = () => {
         }
 
         setCourses(coursesData);
-        
+
         // Update pagination state
         setPagination({
           page: coursesResponse.pagination?.currentPage || pagination.page,
@@ -125,12 +125,12 @@ const CourseArchive = () => {
         const vData = Array.isArray(venuesResponse?.data?.venues)
           ? venuesResponse.data.venues
           : Array.isArray(venuesResponse?.data)
-          ? venuesResponse.data
-          : Array.isArray(venuesResponse?.venues)
-          ? venuesResponse.venues
-          : Array.isArray(venuesResponse)
-          ? venuesResponse
-          : [];
+            ? venuesResponse.data
+            : Array.isArray(venuesResponse?.venues)
+              ? venuesResponse.venues
+              : Array.isArray(venuesResponse)
+                ? venuesResponse
+                : [];
 
         const map: Record<string, string> = {};
         for (const v of vData) {
@@ -256,7 +256,7 @@ const CourseArchive = () => {
         coursesData = coursesResponse;
       }
       setCourses(coursesData);
-      
+
       // Update pagination state
       setPagination({
         page: coursesResponse.pagination?.currentPage || pagination.page,
@@ -288,8 +288,18 @@ const CourseArchive = () => {
         DefaultFee: course.defaultCourseFee,
         MinParticipants: course.minParticipants || "N/A",
         Certificates: course.certificates,
-        Description: course.description ? course.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : "",
-        LearningObjectives: course.learningObjectives ? course.learningObjectives.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : "",
+        Description: course.description
+          ? course.description
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+          : "",
+        LearningObjectives: course.learningObjectives
+          ? course.learningObjectives
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+          : "",
         Status: course.status || "ACTIVE",
         CreatedDate: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "N/A",
       }));
@@ -381,8 +391,8 @@ const CourseArchive = () => {
             }
             return val ? String(val) : "";
           })
-          .filter(Boolean)
-      )
+          .filter(Boolean),
+      ),
     );
     return values.sort();
   };
@@ -879,7 +889,7 @@ const CourseArchive = () => {
               </TableBody>
             </Table>
           )}
-          
+
           {/* Pagination Controls */}
           <div className="border-t pt-4 mt-4">
             <PaginationControls
