@@ -13,7 +13,7 @@ const CourseCreateSchema = z.object({
   courseCode: z.string().trim().max(5, "Course code must be at most 5 characters"),
   description: z.string().optional(),
   learningObjectives: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
+  category: z.string().optional().nullable(),
   objectives: z.union([z.array(z.string()), z.any()]).default([]),
   targetAudience: z.string().optional(),
   prerequisites: z.union([z.array(z.string()), z.any()]).default([]),

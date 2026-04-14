@@ -1637,9 +1637,7 @@ class EmailService {
                               ? `Please refer to the attached documents and the details below regarding the upcoming course for your reference.`
                               : `Please refer to the attached documents and details for the upcoming course.`}
                           </p>
-                          <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                            Participants enrolled in the course run have also been disseminated with the relevant materials.
-                          </p>
+                         
 
                           <p style="margin: 20px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details :</p>
 
@@ -2671,10 +2669,19 @@ class EmailService {
                                     <p style="margin: 0 0 12px 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important; text-align: center;">
                                       If you are interested to know or register for our other course offerings, please refer to the link &amp; QR code below:
                                     </p>
-                                    <div style="text-align: center; margin: 16px 0;">
-                                      <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important; display: block; margin-bottom: 12px;">https://polwel.org.sg/courses/</a>
-                                      <img src="${this.getQrCodeSrc()}" alt="POLWEL Courses QR Code" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
-                                    </div>
+                                    <!-- Outlook-safe table layout for vertical stacking -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 16px auto 0 auto;">
+                                      <tr>
+                                        <td align="center" style="padding-bottom: 12px;">
+                                          <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important;">https://polwel.org.sg/courses/</a>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td align="center">
+                                          <img src="${this.getQrCodeSrc()}" alt="POLWEL Courses QR Code" width="150" height="150" style="display: block; width: 150px; height: 150px; border: 0;" />
+                                        </td>
+                                      </tr>
+                                    </table>
                                     <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important; text-align: center;">
                                       Once again, thank you for your support and hope to see you soon in our next workshop!
                                     </p>

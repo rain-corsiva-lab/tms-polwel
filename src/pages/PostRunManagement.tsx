@@ -72,7 +72,11 @@ interface CourseRunBucketState {
   page: number;
   perPage: number;
   search: string;
+  startDate: string;
+  endDate: string;
   setSearch: StateSetter<string>;
+  setStartDate: StateSetter<string>;
+  setEndDate: StateSetter<string>;
   setPage: StateSetter<number>;
   setPerPage: StateSetter<number>;
   refetch: () => void;
@@ -190,6 +194,8 @@ function useCourseRunBucket(statuses: string | string[]): CourseRunBucketState {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
 
@@ -205,12 +211,12 @@ function useCourseRunBucket(statuses: string | string[]): CourseRunBucketState {
     return () => window.clearTimeout(handle);
   }, [search]);
 
-  // Reset page when search changes
+  // Reset page when search or date filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, startDate, endDate]);
 
-  // Main data fetching effect
+  // Main data fetching effect — server-side pagination + filtering
   useEffect(() => {
     let cancelled = false;
 
@@ -219,7 +225,6 @@ function useCourseRunBucket(statuses: string | string[]): CourseRunBucketState {
       setError(null);
 
       try {
-        // Use dedicated post-course-runs endpoint that bypasses caching
         const statusParam = statusArrayRef.current.join(",");
 
         console.log("[PostRunManagement] Fetching with statuses:", statusParam);
@@ -227,32 +232,24 @@ function useCourseRunBucket(statuses: string | string[]): CourseRunBucketState {
         const response = await courseRunsApi.getPostCourseRuns({
           statuses: statusParam,
           search: debouncedSearch || undefined,
-          limit: 1000,
+          page,
+          limit: perPage,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         });
 
         if (cancelled) return;
-
-        console.log("[PostRunManagement] Response:", response);
 
         if (!response || response.success !== true) {
           throw new Error(response?.error || response?.message || "Failed to load course runs");
         }
 
         const rawRuns: CourseRunApiRecord[] = Array.isArray(response.courseRuns) ? response.courseRuns : [];
-
-        console.log("[PostRunManagement] Raw runs count:", rawRuns.length);
-
         const mapped = rawRuns.map(mapCourseRun);
 
-        // Apply client-side pagination
-        const startIdx = (page - 1) * perPage;
-        const endIdx = startIdx + perPage;
-        const paginatedRuns = mapped.slice(startIdx, endIdx);
-
-        console.log("[PostRunManagement] Setting runs:", paginatedRuns.length, "total:", mapped.length);
-
-        setRuns(paginatedRuns);
-        setTotal(mapped.length);
+        setRuns(mapped);
+        // Use server-side total when available, fall back to array length
+        setTotal(typeof response.total === "number" ? response.total : mapped.length);
       } catch (err: any) {
         if (cancelled) return;
         const message = err?.message || "Failed to load course runs";
@@ -278,7 +275,7 @@ function useCourseRunBucket(statuses: string | string[]): CourseRunBucketState {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, perPage, debouncedSearch, refreshToken]);
+  }, [page, perPage, debouncedSearch, startDate, endDate, refreshToken]);
 
   const refetch = useCallback(() => {
     setRefreshToken((token) => token + 1);
@@ -292,7 +289,11 @@ function useCourseRunBucket(statuses: string | string[]): CourseRunBucketState {
     page,
     perPage,
     search,
+    startDate,
+    endDate,
     setSearch,
+    setStartDate,
+    setEndDate,
     setPage,
     setPerPage,
     refetch,
@@ -439,9 +440,16 @@ const PostRunManagement: React.FC = () => {
       return (
         <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
           <p>{emptyMessage}</p>
-          {bucket.search && (
-            <Button variant="outline" onClick={() => bucket.setSearch("")}>
-              Clear search
+          {(bucket.search || bucket.startDate || bucket.endDate) && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                bucket.setSearch("");
+                bucket.setStartDate("");
+                bucket.setEndDate("");
+              }}
+            >
+              Clear filters
             </Button>
           )}
         </div>
@@ -664,15 +672,47 @@ const PostRunManagement: React.FC = () => {
                 {pendingBucket.total} run{pendingBucket.total === 1 ? "" : "s"} awaiting billing actions.
               </CardDescription>
             </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-              <div className="relative w-full sm:w-64">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="flex w-full flex-col gap-3 sm:w-auto">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative w-full sm:w-64">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={pendingBucket.search}
+                    onChange={(event) => pendingBucket.setSearch(event.target.value)}
+                    placeholder="Search course runs"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
+                  Start date from
+                </div>
                 <Input
-                  value={pendingBucket.search}
-                  onChange={(event) => pendingBucket.setSearch(event.target.value)}
-                  placeholder="Search course runs"
-                  className="pl-9"
+                  type="date"
+                  value={pendingBucket.startDate}
+                  onChange={(e) => pendingBucket.setStartDate(e.target.value)}
+                  className="w-full sm:w-40"
                 />
+                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
+                  to
+                </div>
+                <Input
+                  type="date"
+                  value={pendingBucket.endDate}
+                  onChange={(e) => pendingBucket.setEndDate(e.target.value)}
+                  className="w-full sm:w-40"
+                />
+                {(pendingBucket.startDate || pendingBucket.endDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { pendingBucket.setStartDate(""); pendingBucket.setEndDate(""); }}
+                    className="text-muted-foreground"
+                  >
+                    Clear dates
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -696,15 +736,47 @@ const PostRunManagement: React.FC = () => {
                 {completedBucket.total} run{completedBucket.total === 1 ? "" : "s"} marked as completed.
               </CardDescription>
             </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-              <div className="relative w-full sm:w-64">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="flex w-full flex-col gap-3 sm:w-auto">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative w-full sm:w-64">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={completedBucket.search}
+                    onChange={(event) => completedBucket.setSearch(event.target.value)}
+                    placeholder="Search completed runs"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
+                  Start date from
+                </div>
                 <Input
-                  value={completedBucket.search}
-                  onChange={(event) => completedBucket.setSearch(event.target.value)}
-                  placeholder="Search completed runs"
-                  className="pl-9"
+                  type="date"
+                  value={completedBucket.startDate}
+                  onChange={(e) => completedBucket.setStartDate(e.target.value)}
+                  className="w-full sm:w-40"
                 />
+                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
+                  to
+                </div>
+                <Input
+                  type="date"
+                  value={completedBucket.endDate}
+                  onChange={(e) => completedBucket.setEndDate(e.target.value)}
+                  className="w-full sm:w-40"
+                />
+                {(completedBucket.startDate || completedBucket.endDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { completedBucket.setStartDate(""); completedBucket.setEndDate(""); }}
+                    className="text-muted-foreground"
+                  >
+                    Clear dates
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>

@@ -147,8 +147,8 @@ const PostRunDetail = () => {
   const [learnerSearch, setLearnerSearch] = useState<{ [key: number]: string }>({});
   const [attendeesCount, setAttendeesCount] = useState<number>(0);
 
-  // Check if course run is completed (view-only mode)
-  const isCompleted = courseRun?.status === "COMPLETED";
+  // Billing form is always editable regardless of course run status
+  const isCompleted = false;
 
   const [billingForm, setBillingForm] = useState<BillingFormData>(() => createEmptyBillingForm());
 
@@ -549,8 +549,8 @@ const PostRunDetail = () => {
               {courseRun.course?.courseCode || courseRun.serialNumber} • {courseRun.courseRunType || courseRun.course?.category || "—"}
             </p>
           </div>
-          <Badge className={courseRun.status === "COMPLETED" ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-800"}>
-            {courseRun.status === "COMPLETED" ? "Completed" : "Pending Billing"}
+          <Badge className={courseRun.status === "COMPLETED" ? "bg-emerald-600 text-white" : courseRun.status === "INCOMPLETED" ? "bg-orange-100 text-orange-800" : courseRun.status === "CANCELLED" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}>
+            {courseRun.status === "COMPLETED" ? "Completed" : courseRun.status === "INCOMPLETED" ? "Incomplete" : courseRun.status === "CANCELLED" ? "Cancelled" : "Pending Billing"}
           </Badge>
         </div>
       </div>
