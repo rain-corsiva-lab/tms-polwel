@@ -1559,3 +1559,40 @@ export const resendCoordinatorSetup = async (req: AuthenticatedRequest, res: Res
       return errorResponse(res, 500, 'Internal server error');
   }
 };
+
+// ─── BU Number Options ───────────────────────────────────────────────────────
+
+export const getBuNumbers = async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const buNumbers = await prisma.buNumberOption.findMany({
+      orderBy: { value: 'asc' },
+    });
+    return res.json({ success: true, buNumbers: buNumbers.map((b) => b.value) });
+  } catch (error) {
+    console.error('Get BU numbers error:', error);
+    return errorResponse(res, 500, 'Internal server error');
+  }
+};
+
+export const createBuNumber = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { value } = req.body;
+    if (!value || typeof value !== 'string' || !value.trim()) {
+      return errorResponse(res, 400, 'BU number value is required');
+    }
+    const trimmed = value.trim().toUpperCase();
+    // Basic format check: alphanumeric only
+    if (!/^[A-Z0-9]+$/.test(trimmed)) {
+      return errorResponse(res, 400, 'BU number must contain only letters and digits');
+    }
+    const existing = await prisma.buNumberOption.findUnique({ where: { value: trimmed } });
+    if (existing) {
+      return res.json({ success: true, buNumber: trimmed, created: false });
+    }
+    await prisma.buNumberOption.create({ data: { value: trimmed } });
+    return res.status(201).json({ success: true, buNumber: trimmed, created: true });
+  } catch (error) {
+    console.error('Create BU number error:', error);
+    return errorResponse(res, 500, 'Internal server error');
+  }
+};

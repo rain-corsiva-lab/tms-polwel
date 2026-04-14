@@ -1318,6 +1318,19 @@ export const clientOrganizationsApi = {
   getDivisionsByLearnersRanking: async (organizationId: string) => {
     return apiRequest(`/client-organizations/${organizationId}/analytics/divisions-by-learners`);
   },
+
+  // BU Number options
+  getBuNumbers: async (): Promise<string[]> => {
+    const res = await apiRequest('/client-organizations/bu-numbers');
+    return res?.buNumbers ?? [];
+  },
+
+  createBuNumber: async (value: string) => {
+    return apiRequest('/client-organizations/bu-numbers', {
+      method: 'POST',
+      body: JSON.stringify({ value }),
+    });
+  },
 };
 
 // Organizations API (general)
@@ -1504,7 +1517,10 @@ export const courseRunsApi = {
   getPostCourseRuns: async (params: {
     statuses?: string;
     search?: string;
+    page?: number;
     limit?: number;
+    startDate?: string;
+    endDate?: string;
   } = {}) => {
     const queryParams = new URLSearchParams();
 
