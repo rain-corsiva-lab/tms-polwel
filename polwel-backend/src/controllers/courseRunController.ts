@@ -3689,8 +3689,10 @@ export const courseRunController = {
 
       // If we have learners and confirmation emails have been sent
       // AND trainer emails have been sent (we just sent them)
-      // Then update status to CONFIRMED
-      if (hasLearners > 0 && confirmationEmailsSent >= hasLearners) {
+      // Then update status to CONFIRMED.
+      // For TALKS (no learners), transition to CONFIRMED immediately after trainer email is sent.
+      const isTalks = courseRun.courseRunType === 'TALKS';
+      if (isTalks || (hasLearners > 0 && confirmationEmailsSent >= hasLearners)) {
         await prisma.courseRun.update({
           where: { id },
           data: {
@@ -3698,7 +3700,11 @@ export const courseRunController = {
             statusLastEvaluatedAt: new Date(),
           },
         });
-        console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
+        console.log(
+          `Course run ${id} status updated to CONFIRMED${
+            isTalks ? ' (TALKS — no learners required)' : ' after both trainer and confirmation emails sent'
+          }.`,
+        );
       } else {
         console.log(`Trainer assignment emails sent for course run ${id}. Waiting for confirmation emails before moving to CONFIRMED status.`);
       }
