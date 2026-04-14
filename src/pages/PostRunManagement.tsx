@@ -665,55 +665,40 @@ const PostRunManagement: React.FC = () => {
 
       <div className="space-y-6">
         <Card>
-          <CardHeader className="gap-4 md:flex md:flex-row md:items-start md:justify-between">
-            <div>
+          <CardHeader className="flex flex-col gap-3 pb-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex-shrink-0">
               <CardTitle className="text-xl">Pending Billing Runs</CardTitle>
               <CardDescription>
                 {pendingBucket.total} run{pendingBucket.total === 1 ? "" : "s"} awaiting billing actions.
               </CardDescription>
             </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="relative w-full sm:w-64">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={pendingBucket.search}
-                    onChange={(event) => pendingBucket.setSearch(event.target.value)}
-                    placeholder="Search course runs"
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                  Start date from
-                </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  type="date"
-                  value={pendingBucket.startDate}
-                  onChange={(e) => pendingBucket.setStartDate(e.target.value)}
-                  className="w-full sm:w-40"
+                  value={pendingBucket.search}
+                  onChange={(event) => pendingBucket.setSearch(event.target.value)}
+                  placeholder="Search course runs"
+                  className="pl-9"
                 />
-                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                  to
-                </div>
-                <Input
-                  type="date"
-                  value={pendingBucket.endDate}
-                  onChange={(e) => pendingBucket.setEndDate(e.target.value)}
-                  className="w-full sm:w-40"
-                />
-                {(pendingBucket.startDate || pendingBucket.endDate) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { pendingBucket.setStartDate(""); pendingBucket.setEndDate(""); }}
-                    className="text-muted-foreground"
-                  >
-                    Clear dates
-                  </Button>
-                )}
               </div>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
+              <Input type="date" value={pendingBucket.startDate} onChange={(e) => pendingBucket.setStartDate(e.target.value)} className="w-36" />
+              <span className="text-sm text-muted-foreground">to</span>
+              <Input type="date" value={pendingBucket.endDate} onChange={(e) => pendingBucket.setEndDate(e.target.value)} className="w-36" />
+              {(pendingBucket.startDate || pendingBucket.endDate) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    pendingBucket.setStartDate("");
+                    pendingBucket.setEndDate("");
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -729,55 +714,40 @@ const PostRunManagement: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader className="gap-4 md:flex md:flex-row md:items-start md:justify-between">
-            <div>
+          <CardHeader className="flex flex-col gap-3 pb-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex-shrink-0">
               <CardTitle className="text-xl">Completed Course Runs</CardTitle>
               <CardDescription>
                 {completedBucket.total} run{completedBucket.total === 1 ? "" : "s"} marked as completed.
               </CardDescription>
             </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="relative w-full sm:w-64">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={completedBucket.search}
-                    onChange={(event) => completedBucket.setSearch(event.target.value)}
-                    placeholder="Search completed runs"
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                  Start date from
-                </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  type="date"
-                  value={completedBucket.startDate}
-                  onChange={(e) => completedBucket.setStartDate(e.target.value)}
-                  className="w-full sm:w-40"
+                  value={completedBucket.search}
+                  onChange={(event) => completedBucket.setSearch(event.target.value)}
+                  placeholder="Search completed runs"
+                  className="pl-9"
                 />
-                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                  to
-                </div>
-                <Input
-                  type="date"
-                  value={completedBucket.endDate}
-                  onChange={(e) => completedBucket.setEndDate(e.target.value)}
-                  className="w-full sm:w-40"
-                />
-                {(completedBucket.startDate || completedBucket.endDate) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { completedBucket.setStartDate(""); completedBucket.setEndDate(""); }}
-                    className="text-muted-foreground"
-                  >
-                    Clear dates
-                  </Button>
-                )}
               </div>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
+              <Input type="date" value={completedBucket.startDate} onChange={(e) => completedBucket.setStartDate(e.target.value)} className="w-36" />
+              <span className="text-sm text-muted-foreground">to</span>
+              <Input type="date" value={completedBucket.endDate} onChange={(e) => completedBucket.setEndDate(e.target.value)} className="w-36" />
+              {(completedBucket.startDate || completedBucket.endDate) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    completedBucket.setStartDate("");
+                    completedBucket.setEndDate("");
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

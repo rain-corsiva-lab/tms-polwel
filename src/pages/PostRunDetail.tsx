@@ -549,8 +549,24 @@ const PostRunDetail = () => {
               {courseRun.course?.courseCode || courseRun.serialNumber} • {courseRun.courseRunType || courseRun.course?.category || "—"}
             </p>
           </div>
-          <Badge className={courseRun.status === "COMPLETED" ? "bg-emerald-600 text-white" : courseRun.status === "INCOMPLETED" ? "bg-orange-100 text-orange-800" : courseRun.status === "CANCELLED" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}>
-            {courseRun.status === "COMPLETED" ? "Completed" : courseRun.status === "INCOMPLETED" ? "Incomplete" : courseRun.status === "CANCELLED" ? "Cancelled" : "Pending Billing"}
+          <Badge
+            className={
+              courseRun.status === "COMPLETED"
+                ? "bg-emerald-600 text-white"
+                : courseRun.status === "INCOMPLETED"
+                  ? "bg-orange-100 text-orange-800"
+                  : courseRun.status === "CANCELLED"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-amber-100 text-amber-800"
+            }
+          >
+            {courseRun.status === "COMPLETED"
+              ? "Completed"
+              : courseRun.status === "INCOMPLETED"
+                ? "Incomplete"
+                : courseRun.status === "CANCELLED"
+                  ? "Cancelled"
+                  : "Pending Billing"}
           </Badge>
         </div>
       </div>
@@ -1027,26 +1043,26 @@ const PostRunDetail = () => {
             </Card>
 
             {/* Actions */}
-            {!isCompleted && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2 flex-wrap">
-                    <Button variant="outline" onClick={() => handleSaveBilling(false)} disabled={saving}>
-                      {saving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save
-                        </>
-                      )}
-                    </Button>
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" onClick={() => handleSaveBilling(false)} disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save
+                      </>
+                    )}
+                  </Button>
+                  {courseRun.status !== "COMPLETED" && (
                     <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleSaveBilling(true)} disabled={saving}>
                       {saving ? (
                         <>
@@ -1060,10 +1076,10 @@ const PostRunDetail = () => {
                         </>
                       )}
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>
