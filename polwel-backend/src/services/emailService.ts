@@ -572,27 +572,16 @@ class EmailService {
     return emailFrontendUrl + '/images/icons8-youtube-50.png';
   }
 
-  // Get QR code as a base64 data URI.
-  // Reads qr-polwel-go-course.jpg from the public/images directory at call time so it
-  // works in both web preview (file on disk) and production email sends.
-  // Falls back to the HTTPS URL if the file cannot be read.
+  // Get QR code image source.
+  // Returns an HTTPS URL to the QR code image from the public domain.
+  // Gmail and other email clients strip data: URIs from img src, so we must use a public HTTPS URL.
+  // The QR code file is served from /public/images/qr-polwel-go-course.jpg on the frontend server.
   private static getQrCodeSrc(): string {
-    const possiblePaths = [
-      path.join(__dirname, '../../public/images/qr-polwel-go-course.jpg'),
-      path.join(process.cwd(), 'public/images/qr-polwel-go-course.jpg'),
-      path.join(process.cwd(), '../public/images/qr-polwel-go-course.jpg'),
-    ];
-    for (const p of possiblePaths) {
-      try {
-        if (fs.existsSync(p)) {
-          const b64 = fs.readFileSync(p).toString('base64');
-          return `data:image/jpeg;base64,${b64}`;
-        }
-      } catch { /* ignore */ }
-    }
-    // Fallback to HTTPS URL when file is not on disk (e.g. Graph API cloud runner)
-    const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
-    return emailFrontendUrl + '/images/qr-polwel-go-course.jpg';
+    // Use EMAIL_FRONTEND_URL for email (external access), fallback to https://tms.polwel.org.sg if not set
+    const baseUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+    const qrImageUrl = `${baseUrl}/images/qr-polwel-go-course.jpg`;
+    console.log(`✓ QR Code URL: ${qrImageUrl}`);
+    return qrImageUrl;
   }
 
   private static getEmailFooter(): string {
