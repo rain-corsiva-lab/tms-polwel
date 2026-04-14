@@ -3689,8 +3689,10 @@ export const courseRunController = {
 
       // If we have learners and confirmation emails have been sent
       // AND trainer emails have been sent (we just sent them)
-      // Then update status to CONFIRMED
-      if (hasLearners > 0 && confirmationEmailsSent >= hasLearners) {
+      // Then update status to CONFIRMED.
+      // For TALKS (no learners), transition to CONFIRMED immediately after trainer email is sent.
+      const isTalks = courseRun.courseRunType === 'TALKS';
+      if (isTalks || (hasLearners > 0 && confirmationEmailsSent >= hasLearners)) {
         await prisma.courseRun.update({
           where: { id },
           data: {
@@ -3698,7 +3700,11 @@ export const courseRunController = {
             statusLastEvaluatedAt: new Date(),
           },
         });
-        console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
+        console.log(
+          `Course run ${id} status updated to CONFIRMED${
+            isTalks ? ' (TALKS — no learners required)' : ' after both trainer and confirmation emails sent'
+          }.`,
+        );
       } else {
         console.log(`Trainer assignment emails sent for course run ${id}. Waiting for confirmation emails before moving to CONFIRMED status.`);
       }
@@ -6236,9 +6242,9 @@ export const courseRunController = {
   // Returns PENDING_BILLING, IN_PROGRESS, COMPLETED, CANCELLED runs without caching
   getPostCourseRuns: async (req: Request, res: Response) => {
     try {
-      const { statuses, search, page = 1, limit = 1000 } = req.query;
+      const { statuses, search, page = 1, limit = 50, startDate, endDate } = req.query;
       
-      console.log('[PostCourseRuns] Request params:', { statuses, search, page, limit });
+      console.log('[PostCourseRuns] Request params:', { statuses, search, page, limit, startDate, endDate });
       
       // Parse statuses - expect comma-separated string
       let statusArray: CourseStatus[] = [];
@@ -6270,6 +6276,20 @@ export const courseRunController = {
           { venue: { name: { contains: searchTerm } } },
         ];
       }
+
+      // Add date range filters
+      if (typeof startDate === 'string' && startDate) {
+        where.startDatetime = {
+          ...where.startDatetime,
+          gte: new Date(startDate),
+        };
+      }
+      if (typeof endDate === 'string' && endDate) {
+        where.endDatetime = {
+          ...where.endDatetime,
+          lte: new Date(endDate + 'T23:59:59.999Z'),
+        };
+      }
       
       console.log('[PostCourseRuns] Where clause:', JSON.stringify(where, null, 2));
       
@@ -6281,38 +6301,46 @@ export const courseRunController = {
         : { endDatetime: 'desc' as const };
 
       // Get course runs with all necessary relations
-      const courseRuns = await prisma.courseRun.findMany({
-        where,
-        include: {
-          course: {
-            select: {
-              id: true,
-              title: true,
-              courseCode: true,
-              category: true,
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit) || 50;
+      const skip = (pageNum - 1) * limitNum;
+
+      const [total, courseRuns] = await Promise.all([
+        prisma.courseRun.count({ where }),
+        prisma.courseRun.findMany({
+          where,
+          include: {
+            course: {
+              select: {
+                id: true,
+                title: true,
+                courseCode: true,
+                category: true,
+              },
             },
-          },
-          venue: {
-            select: {
-              id: true,
-              name: true,
-              address: true,
+            venue: {
+              select: {
+                id: true,
+                name: true,
+                address: true,
+              },
             },
-          },
-          _count: {
-            select: {
-              courseRunLearners: {
-                where: {
-                  enrollmentStatus: 'ENROLLED',
-                  deletedAt: null,
+            _count: {
+              select: {
+                courseRunLearners: {
+                  where: {
+                    enrollmentStatus: 'ENROLLED',
+                    deletedAt: null,
+                  },
                 },
               },
             },
           },
-        },
-        orderBy,
-        take: Number(limit),
-      });
+          orderBy,
+          skip,
+          take: limitNum,
+        }),
+      ]);
       
       console.log('[PostCourseRuns] Found', courseRuns.length, 'runs');
       
@@ -6355,7 +6383,13 @@ export const courseRunController = {
       res.status(200).json({
         success: true,
         courseRuns: formattedRuns,
-        total: formattedRuns.length,
+        total,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+        },
       });
     } catch (error) {
       console.error('[PostCourseRuns] Error:', error);

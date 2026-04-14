@@ -119,6 +119,15 @@ model Organization {
   @@map("organizations")
 }
 
+model BuNumberOption {
+  id        String   @id @default(cuid())
+  value     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bu_number_options")
+}
+
 model Course {
   id                 String          @id @default(cuid())
   title              String

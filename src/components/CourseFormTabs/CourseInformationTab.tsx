@@ -68,7 +68,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
           <p className="text-[10px] text-muted-foreground">Maximum 5 characters (auto uppercased)</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="category">Course Category *</Label>
+          <Label htmlFor="category">Course Category</Label>
           <Select value={formData.category} onValueChange={(value) => onInputChange("category", value)}>
             <SelectTrigger>
               <SelectValue placeholder={loading?.categories ? "Loading..." : "Select category"} />

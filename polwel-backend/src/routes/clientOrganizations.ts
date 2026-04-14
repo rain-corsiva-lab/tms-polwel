@@ -17,6 +17,8 @@ import {
   resendCoordinatorSetup,
   getCoordinatorCourseRunsSelf,
   getOrganizationLearnersSelf,
+  getBuNumbers,
+  createBuNumber,
 } from '../controllers/clientOrganizationsController';
 import {
   getCoursesByLearnersRanking,
@@ -28,6 +30,10 @@ const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
+
+// BU Number options (dynamic list)
+router.get('/bu-numbers', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getBuNumbers);
+router.post('/bu-numbers', authorizeRoles('POLWEL'), requirePermissions('clients.create'), createBuNumber);
 
 // Statistics and utilities routes
 router.get('/stats', authorizeRoles('POLWEL'), getOrganizationStats);

@@ -314,9 +314,7 @@ const CourseForm: React.FC = () => {
       errors.push("Course title is required");
     }
 
-    if (!formData.category?.trim()) {
-      errors.push("Course category is required");
-    }
+    // Category is optional — no validation required
 
     if (!formData.duration?.trim()) {
       errors.push("Duration is required");

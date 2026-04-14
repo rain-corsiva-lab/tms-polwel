@@ -1732,8 +1732,8 @@ const CourseRuns: React.FC = () => {
                               <>
                                 {/* <DropdownMenuSeparator /> */}
                                 {/* <DropdownMenuLabel>Email Actions</DropdownMenuLabel> */}
-                                {/* For TALKS: Hide "Send Course Confirmation Email" if trainer assignment email has been sent */}
-                                {!(courseRun.courseType === "TALKS" && courseRun.hasTrainerAssignmentEmailSent) && (
+                                {/* For TALKS: Never show "Send Course Confirmation Email" (no learners in TALKS) */}
+                                {courseRun.courseType !== "TALKS" && (
                                   <DropdownMenuItem onClick={() => openEmailDialog(courseRun, "course_confirmation")}>
                                     Send Course Confirmation Email
                                   </DropdownMenuItem>
