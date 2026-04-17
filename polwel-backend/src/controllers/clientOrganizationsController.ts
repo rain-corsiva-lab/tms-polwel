@@ -1596,3 +1596,68 @@ export const createBuNumber = async (req: AuthenticatedRequest, res: Response) =
     return errorResponse(res, 500, 'Internal server error');
   }
 };
+
+export const updateBuNumber = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const currentValue = typeof req.params.value === 'string' ? req.params.value.trim().toUpperCase() : '';
+    const { newValue } = req.body;
+
+    if (!currentValue) {
+      return errorResponse(res, 400, 'Current BU number value is required');
+    }
+
+    if (!newValue || typeof newValue !== 'string' || !newValue.trim()) {
+      return errorResponse(res, 400, 'New BU number value is required');
+    }
+
+    const trimmedNewValue = newValue.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]+$/.test(trimmedNewValue)) {
+      return errorResponse(res, 400, 'BU number must contain only letters and digits');
+    }
+
+    if (trimmedNewValue === currentValue) {
+      return res.json({ success: true, buNumber: trimmedNewValue, updated: false });
+    }
+
+    const existing = await prisma.buNumberOption.findUnique({ where: { value: trimmedNewValue } });
+    if (existing) {
+      return errorResponse(res, 409, 'BU number already exists');
+    }
+
+    const current = await prisma.buNumberOption.findUnique({ where: { value: currentValue } });
+    if (!current) {
+      return errorResponse(res, 404, 'BU number option not found');
+    }
+
+    await prisma.buNumberOption.update({
+      where: { value: currentValue },
+      data: { value: trimmedNewValue },
+    });
+
+    return res.json({ success: true, buNumber: trimmedNewValue, updated: true });
+  } catch (error) {
+    console.error('Update BU number error:', error);
+    return errorResponse(res, 500, 'Internal server error');
+  }
+};
+
+export const deleteBuNumber = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const value = typeof req.params.value === 'string' ? req.params.value.trim().toUpperCase() : '';
+    if (!value) {
+      return errorResponse(res, 400, 'BU number value is required');
+    }
+
+    const existing = await prisma.buNumberOption.findUnique({ where: { value } });
+    if (!existing) {
+      return errorResponse(res, 404, 'BU number option not found');
+    }
+
+    await prisma.buNumberOption.delete({ where: { value } });
+    return res.json({ success: true, deleted: true, buNumber: value });
+  } catch (error) {
+    console.error('Delete BU number error:', error);
+    return errorResponse(res, 500, 'Internal server error');
+  }
+};
