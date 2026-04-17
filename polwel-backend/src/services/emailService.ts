@@ -1742,7 +1742,8 @@ class EmailService {
     };
 
     if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
-      mailOptions.cc = ccEmails.join(', ');
+      // mailOptions.cc = ccEmails.join(', ');
+      mailOptions.cc = ccEmails;
     }
 
     // Preload all file attachments as buffers for reliable sending
