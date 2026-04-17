@@ -2110,7 +2110,8 @@ class EmailService {
 
     const mailOptions: any = {
       from: this.mailFromAddress,
-      to: Array.isArray(email) ? email.join(', ') : email,
+      to:  email,
+      // to: Array.isArray(email) ? email.join(', ') : email,
       subject,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
       html,
