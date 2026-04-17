@@ -69,6 +69,8 @@ const uploadEmailAttachment = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'text/plain',
       'image/jpeg',
       'image/png',
@@ -79,7 +81,10 @@ const uploadEmailAttachment = multer({
       'application/octet-stream', // Sometimes used for zip files
     ];
 
-    if (allowed.includes(file.mimetype)) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const allowedByExt = ext === '.ppt' || ext === '.pptx';
+
+    if (allowed.includes(file.mimetype) || allowedByExt) {
       cb(null, true);
     } else {
       cb(new Error(`File type not allowed: ${file.mimetype}`));
