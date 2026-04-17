@@ -19,6 +19,8 @@ import {
   getOrganizationLearnersSelf,
   getBuNumbers,
   createBuNumber,
+  updateBuNumber,
+  deleteBuNumber,
 } from '../controllers/clientOrganizationsController';
 import {
   getCoursesByLearnersRanking,
@@ -34,6 +36,8 @@ router.use(authenticateToken);
 // BU Number options (dynamic list)
 router.get('/bu-numbers', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), getBuNumbers);
 router.post('/bu-numbers', authorizeRoles('POLWEL'), requirePermissions('clients.create'), createBuNumber);
+router.put('/bu-numbers/:value', authorizeRoles('POLWEL'), requirePermissions('clients.edit'), updateBuNumber);
+router.delete('/bu-numbers/:value', authorizeRoles('POLWEL'), requirePermissions('clients.delete'), deleteBuNumber);
 
 // Statistics and utilities routes
 router.get('/stats', authorizeRoles('POLWEL'), getOrganizationStats);
