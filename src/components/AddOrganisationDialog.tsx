@@ -1,22 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Building2, ChevronsUpDown, Check, Loader2 } from "lucide-react";
+import { Plus, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { clientOrganizationsApi } from "@/lib/api";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { BuNumberSelect } from "@/components/BuNumberSelect";
 
 export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisationCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [buNumbers, setBuNumbers] = useState<string[]>([]);
-  const [buLoading, setBuLoading] = useState(false);
-  const [buComboOpen, setBuComboOpen] = useState(false);
-  const [buSearch, setBuSearch] = useState("");
   const [formData, setFormData] = useState({
     organisationName: "",
     organisationType: "POLWEL" as "POLWEL" | "SPF" | "PUBLIC_SECTOR" | "PRIVATE_SECTOR",
@@ -25,41 +20,6 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
   });
 
   const { toast } = useToast();
-  const buInputRef = useRef<HTMLInputElement>(null);
-
-  // Fetch BU numbers when dialog opens
-  useEffect(() => {
-    if (!open) return;
-    setBuLoading(true);
-    clientOrganizationsApi
-      .getBuNumbers()
-      .then((list) => setBuNumbers(list))
-      .catch(() => setBuNumbers([]))
-      .finally(() => setBuLoading(false));
-  }, [open]);
-
-  const filteredBuNumbers = buNumbers.filter((bn) => bn.toLowerCase().includes(buSearch.toLowerCase()));
-
-  // Whether buSearch is a new value not in the list
-  const isNewBuNumber = buSearch.trim().length > 0 && !buNumbers.some((bn) => bn.toLowerCase() === buSearch.trim().toLowerCase());
-
-  const handleSelectBuNumber = (value: string) => {
-    setFormData((prev) => ({ ...prev, buNumber: value }));
-    setBuSearch("");
-    setBuComboOpen(false);
-  };
-
-  const handleCreateAndSelectBuNumber = async () => {
-    const trimmed = buSearch.trim().toUpperCase();
-    if (!trimmed) return;
-    try {
-      await clientOrganizationsApi.createBuNumber(trimmed);
-      setBuNumbers((prev) => [...prev, trimmed].sort());
-      handleSelectBuNumber(trimmed);
-    } catch {
-      toast({ title: "Error", description: "Failed to add BU number.", variant: "destructive" });
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +62,6 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
         requireBuNumber: false,
         buNumber: "",
       });
-      setBuSearch("");
       setOpen(false);
 
       if (onOrganisationCreated) {
@@ -191,55 +150,7 @@ export function AddOrganisationDialog({ onOrganisationCreated }: { onOrganisatio
           {formData.requireBuNumber && (
             <div>
               <Label>BU Number *</Label>
-              <Popover open={buComboOpen} onOpenChange={setBuComboOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={buComboOpen} className="w-full justify-between mt-1" type="button">
-                    <span className={cn(!formData.buNumber && "text-muted-foreground")}>{formData.buNumber || "Select or type BU number"}</span>
-                    {buLoading ? <Loader2 className="ml-2 h-4 w-4 animate-spin opacity-50" /> : <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="!p-0 !bg-white !border !border-gray-200 !shadow-lg !rounded-md" align="start">
-                  <div className="!p-2 !border-b !bg-white !border-gray-200">
-                    <Input
-                      ref={buInputRef}
-                      placeholder="Search or type new BU number..."
-                      value={buSearch}
-                      onChange={(e) => setBuSearch(e.target.value)}
-                      className="h-8"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="max-h-52 overflow-y-auto !py-1 !bg-white">
-                    {filteredBuNumbers.map((bn) => (
-                      <button
-                        key={bn}
-                        type="button"
-                        onClick={() => handleSelectBuNumber(bn)}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-3 py-1.5 text-sm !text-black !bg-white hover:!bg-gray-100 cursor-pointer",
-                          formData.buNumber === bn && "!bg-gray-100 font-medium",
-                        )}
-                      >
-                        <Check className={cn("h-4 w-4 !text-gray-600", formData.buNumber === bn ? "opacity-100" : "opacity-0")} />
-                        {bn}
-                      </button>
-                    ))}
-                    {isNewBuNumber && (
-                      <button
-                        type="button"
-                        onClick={handleCreateAndSelectBuNumber}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-sm !text-blue-600 !bg-white hover:!bg-gray-100 cursor-pointer"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add &quot;{buSearch.trim().toUpperCase()}&quot;
-                      </button>
-                    )}
-                    {filteredBuNumbers.length === 0 && !isNewBuNumber && (
-                      <div className="px-3 py-4 text-sm !text-gray-600 text-center !bg-white">No results</div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <BuNumberSelect value={formData.buNumber} onChange={(nextBuNumber) => setFormData((prev) => ({ ...prev, buNumber: nextBuNumber }))} />
               {formData.buNumber && <p className="text-xs text-muted-foreground mt-1">Selected: {formData.buNumber}</p>}
             </div>
           )}

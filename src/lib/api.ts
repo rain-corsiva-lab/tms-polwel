@@ -1331,6 +1331,19 @@ export const clientOrganizationsApi = {
       body: JSON.stringify({ value }),
     });
   },
+
+  updateBuNumber: async (currentValue: string, newValue: string) => {
+    return apiRequest(`/client-organizations/bu-numbers/${encodeURIComponent(currentValue)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ newValue }),
+    });
+  },
+
+  deleteBuNumber: async (value: string) => {
+    return apiRequest(`/client-organizations/bu-numbers/${encodeURIComponent(value)}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Organizations API (general)
