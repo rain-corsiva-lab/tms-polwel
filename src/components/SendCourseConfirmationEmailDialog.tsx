@@ -188,16 +188,21 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       "image/jpeg",
       "image/png",
       "image/gif",
       "text/plain",
     ];
 
+    const allowedByExtension = (name: string) => {
+      const n = name.toLowerCase();
+      return n.endsWith(".zip") || n.endsWith(".ppt") || n.endsWith(".pptx");
+    };
+
     const invalidTypes = files.filter((file) => {
-      // Allow zip files by extension check as well
-      const isZip = file.name.toLowerCase().endsWith(".zip");
-      return !isZip && !allowedTypes.includes(file.type);
+      return !allowedByExtension(file.name) && !allowedTypes.includes(file.type);
     });
 
     if (invalidTypes.length > 0) {
@@ -210,8 +215,7 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
 
     // Add only valid files
     const validFiles = files.filter((file) => {
-      const isZip = file.name.toLowerCase().endsWith(".zip");
-      return isZip || allowedTypes.includes(file.type);
+      return allowedByExtension(file.name) || allowedTypes.includes(file.type);
     });
 
     if (validFiles.length > 0) {

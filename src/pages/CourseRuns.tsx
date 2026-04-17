@@ -755,15 +755,21 @@ const CourseRuns: React.FC = () => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       "image/jpeg",
       "image/png",
       "image/gif",
       "text/plain",
     ];
 
+    const allowedByExtension = (name: string) => {
+      const n = name.toLowerCase();
+      return n.endsWith(".zip") || n.endsWith(".ppt") || n.endsWith(".pptx");
+    };
+
     const invalidTypes = files.filter((file) => {
-      const isZip = file.name.toLowerCase().endsWith(".zip");
-      return !isZip && !allowedTypes.includes(file.type);
+      return !allowedByExtension(file.name) && !allowedTypes.includes(file.type);
     });
 
     if (invalidTypes.length > 0) {
@@ -775,8 +781,7 @@ const CourseRuns: React.FC = () => {
     }
 
     const validFiles = files.filter((file) => {
-      const isZip = file.name.toLowerCase().endsWith(".zip");
-      return isZip || allowedTypes.includes(file.type);
+      return allowedByExtension(file.name) || allowedTypes.includes(file.type);
     });
 
     if (validFiles.length > 0) {
