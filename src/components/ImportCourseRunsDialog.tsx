@@ -1,41 +1,35 @@
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, Loader2, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { importApi } from "@/lib/api";
 
 interface PreviewRow {
   rowNum: number;
   courseTitle: string;
+  courseRunType: string;
   startDate: string;
   endDate: string;
-  learnerName: string;
-  orgName: string;
-  email: string;
-  paymentMethod: string;
-  buNumber: string;
-  invoice: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  venueType: string;
+  venue: string;
+  trainer1: string;
+  trainer2: string;
+  defaultCost: string;
 }
 
 interface ImportResults {
   total: number;
-  learnersCreated: number;
-  learnersUpdated: number;
-  enrollmentsCreated: number;
-  enrollmentsUpdated: number;
+  created: number;
+  updated: number;
   skipped: number;
   errors: Array<{ row: number; reason: string }>;
 }
 
-export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: () => void }) {
+export function ImportCourseRunsDialog({ onImportComplete }: { onImportComplete?: () => void }) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -80,7 +74,7 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
     if (!file) return;
     setPreviewing(true);
     try {
-      const data = await importApi.previewLearners(file);
+      const data = await importApi.previewCourseRuns(file);
       setPreviewRows(data.rows ?? []);
       setTotalRows(data.totalRows ?? 0);
       setStep("preview");
@@ -96,7 +90,7 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
     if (!file) return;
     setImporting(true);
     try {
-      const data = await importApi.importLearners(file);
+      const data = await importApi.importCourseRuns(file);
       setResults(data.results);
       setStep("result");
       if (onImportComplete) onImportComplete();
@@ -113,29 +107,31 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2">
-          <Users className="h-4 w-4" />
-          Import Learners
+          <FileSpreadsheet className="h-4 w-4" />
+          Import Course Runs
         </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Import Learners from Excel</DialogTitle>
+          <DialogTitle>Import Course Runs from Excel</DialogTitle>
           <DialogDescription>
-            Upload an .xlsx file with columns: Course Title, Course Start Date, Course End Date,
-            Name, Client Organisation Name, Division, Department, Designation, Email, Contact,
-            Payment Method, BU Number, Training Coordinator Name/Email, Discount Name, Fees Remarks,
-            Invoice, Invoice Remarks, Remarks
+            Upload an .xlsx file with columns: Course Title, Course Run Type, Start Date, End Date, Start Time, End Time, Course Status, Venue Type, Venue,
+            Specified Location, Individual Registration Required, Dedicated Division, Trainer1, Trainer2, Default Cost, Fee Type
           </DialogDescription>
         </DialogHeader>
 
+        {/* Step 1: Upload */}
         {step === "upload" && (
           <div className="space-y-4">
             <div
               className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors cursor-pointer ${
                 dragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50"
               }`}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
@@ -148,7 +144,10 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
                   <button
                     type="button"
                     className="ml-1 rounded-full p-0.5 hover:bg-red-100"
-                    onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                    }}
                   >
                     <X className="h-4 w-4 text-red-500" />
                   </button>
@@ -169,7 +168,9 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => handleClose(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => handleClose(false)}>
+                Cancel
+              </Button>
               <Button onClick={handlePreview} disabled={!file || previewing}>
                 {previewing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Preview Data
@@ -178,6 +179,7 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
           </div>
         )}
 
+        {/* Step 2: Preview */}
         {step === "preview" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -194,28 +196,32 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
                 <thead className="bg-muted">
                   <tr>
                     <th className="px-2 py-2 text-left font-medium">#</th>
-                    <th className="px-2 py-2 text-left font-medium">Course</th>
-                    <th className="px-2 py-2 text-left font-medium">Start Date</th>
-                    <th className="px-2 py-2 text-left font-medium">Learner Name</th>
-                    <th className="px-2 py-2 text-left font-medium">Organisation</th>
-                    <th className="px-2 py-2 text-left font-medium">Email</th>
-                    <th className="px-2 py-2 text-left font-medium">Payment</th>
-                    <th className="px-2 py-2 text-left font-medium">BU No.</th>
-                    <th className="px-2 py-2 text-left font-medium">Invoice</th>
+                    <th className="px-2 py-2 text-left font-medium">Course Title</th>
+                    <th className="px-2 py-2 text-left font-medium">Type</th>
+                    <th className="px-2 py-2 text-left font-medium">Start</th>
+                    <th className="px-2 py-2 text-left font-medium">End</th>
+                    <th className="px-2 py-2 text-left font-medium">Status</th>
+                    <th className="px-2 py-2 text-left font-medium">Venue</th>
+                    <th className="px-2 py-2 text-left font-medium">Trainer1</th>
+                    <th className="px-2 py-2 text-left font-medium">Cost</th>
                   </tr>
                 </thead>
                 <tbody>
                   {previewRows.map((r, i) => (
                     <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-muted/30"}>
                       <td className="px-2 py-1 text-muted-foreground">{r.rowNum}</td>
-                      <td className="px-2 py-1 max-w-[160px] truncate font-medium">{r.courseTitle}</td>
-                      <td className="px-2 py-1 whitespace-nowrap">{r.startDate}</td>
-                      <td className="px-2 py-1 max-w-[120px] truncate">{r.learnerName}</td>
-                      <td className="px-2 py-1 max-w-[120px] truncate">{r.orgName}</td>
-                      <td className="px-2 py-1 max-w-[120px] truncate">{r.email}</td>
-                      <td className="px-2 py-1 max-w-[100px] truncate">{r.paymentMethod}</td>
-                      <td className="px-2 py-1">{r.buNumber}</td>
-                      <td className="px-2 py-1">{r.invoice}</td>
+                      <td className="px-2 py-1 font-medium max-w-[180px] truncate">{r.courseTitle}</td>
+                      <td className="px-2 py-1">{r.courseRunType}</td>
+                      <td className="px-2 py-1 whitespace-nowrap">
+                        {r.startDate} {r.startTime}
+                      </td>
+                      <td className="px-2 py-1 whitespace-nowrap">
+                        {r.endDate} {r.endTime}
+                      </td>
+                      <td className="px-2 py-1">{r.status}</td>
+                      <td className="px-2 py-1 max-w-[120px] truncate">{r.venue}</td>
+                      <td className="px-2 py-1 max-w-[100px] truncate">{r.trainer1}</td>
+                      <td className="px-2 py-1">{r.defaultCost}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -223,7 +229,9 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => handleClose(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => handleClose(false)}>
+                Cancel
+              </Button>
               <Button onClick={handleImport} disabled={importing}>
                 {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Import {totalRows} Rows
@@ -232,32 +240,25 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
           </div>
         )}
 
+        {/* Step 3: Results */}
         {step === "result" && results && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-2xl font-bold">{results.total}</p>
                 <p className="text-xs text-muted-foreground">Total Rows</p>
               </div>
               <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
-                <p className="text-2xl font-bold text-green-700">{results.learnersCreated}</p>
-                <p className="text-xs text-green-600">New Learners</p>
+                <p className="text-2xl font-bold text-green-700">{results.created}</p>
+                <p className="text-xs text-green-600">Created</p>
               </div>
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
-                <p className="text-2xl font-bold text-blue-700">{results.learnersUpdated}</p>
-                <p className="text-xs text-blue-600">Learners Updated</p>
-              </div>
-              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
-                <p className="text-2xl font-bold text-green-700">{results.enrollmentsCreated}</p>
-                <p className="text-xs text-green-600">Enrollments Created</p>
-              </div>
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
-                <p className="text-2xl font-bold text-blue-700">{results.enrollmentsUpdated}</p>
-                <p className="text-xs text-blue-600">Enrollments Updated</p>
+                <p className="text-2xl font-bold text-blue-700">{results.updated}</p>
+                <p className="text-xs text-blue-600">Updated</p>
               </div>
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
                 <p className="text-2xl font-bold text-amber-700">{results.skipped}</p>
-                <p className="text-xs text-amber-600">Skipped / Errors</p>
+                <p className="text-xs text-amber-600">Skipped</p>
               </div>
             </div>
 
@@ -269,7 +270,9 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
                 </div>
                 <ul className="text-xs text-red-600 space-y-1 max-h-40 overflow-y-auto">
                   {results.errors.map((e, i) => (
-                    <li key={i}>Row {e.row}: {e.reason}</li>
+                    <li key={i}>
+                      Row {e.row}: {e.reason}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -283,7 +286,9 @@ export function ImportLearnersDialog({ onImportComplete }: { onImportComplete?: 
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={reset}>Import Another File</Button>
+              <Button variant="ghost" onClick={reset}>
+                Import Another File
+              </Button>
               <Button onClick={() => handleClose(false)}>Done</Button>
             </div>
           </div>

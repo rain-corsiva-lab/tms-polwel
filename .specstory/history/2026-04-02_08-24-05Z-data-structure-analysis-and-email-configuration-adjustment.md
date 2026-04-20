@@ -145,3 +145,284 @@ Let me analyze the issues:
 9. **Two potential solutions**: I could either embed the QR code as base64 directly in the HTML so it works everywhere, or use a proper URL that resolves correctly in the preview context. The previous implementation used an external QR code API (`qrserver.com`), but the user wants to use the local image instead.
 
 10. **Best approach for email compatibility**: Since the POLWEL logo already uses base64 encoding (there's even a `POLWEL_LOGO_BASE64_DATA_URI` constant), I should follow the same pattern for the QR code. This ensures it works in both the preview and in actual
+
+---
+
+_**User (2026-04-14 01:55:19Z)**_
+
+very good , now help me do some other things : 
+
+- in #file:PostRunManagement.tsx we need to add search and start date to end date range filter feature like what we have on #file:CourseRuns.tsx , this will applied on  both pending billing and completed section (so per section got 1 different search and function), plesae develop it properly and carefully 
+
+- also i dont know why but in outlook the qr codes is look like in pasted image 1, its looks like th div flow is horizontally instead vertically , we need to make it like flex flow column so all will be centered , please dev it for both gmail and outlook working and showing properly 
+
+- also in #file:PostRunManagement.tsx #file:PostRunDetail.tsx when the status of the course run is completed, we need to change it editable and can save it properly , since currently is not editable. plesae develop it properly 
+
+- see pasted image 2 , #file:AddOrganisationDialog.tsx , client want to be able to add new BU number that is not on the list , so these BU number optionwe will need to add new table in it and store it into database , and we able to create new BU number on this front end field for this new organisation data  and store it to database fof a new option , please develop it properly and carefully 
+
+in #file:CourseForm.tsx for both add and edit course , we now need to change the course category to optional , please help me carefully dev this change on front end, backend, and database , ensure all working properly and carefully this 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+_**User (2026-04-14 02:15:15Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+_**User (2026-04-14 03:11:30Z)**_
+
+also in #file:courseRunWorkflowService.ts #file:courseRunController.ts #file:CourseRuns.tsx currently when we are in the pending confirmation email , we need to send all confirmation email to learners and send trainer assignment email first and then it will be change the status to 'Confirmed', this is currently correct but now on the course run type 'TALKS' , since we will dont have any learners in this course run type , when pending confirmation email status , we will only need to send trainer email to make it 'Confirmed' status. also in front end in #file:CourseRuns.tsx the tooltip we will not showing 'Send Course confirmation email' function special for TALKS. 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+_**User (2026-04-14 03:32:02Z)**_
+
+hmm the #file:PostRunManagement.tsx search feature and date range filter looks not good in UI UX , please make it all in 1 row , in the same row with section title , for both search and date range filter 
+
+also in #file:PostRunDetail.tsx when status is completede , we need to only have save button , no need mark as completed , since its already ccompleted. and save button will be as simple as save the updated data 
+
+also see pasted image 2 , #file:AddOrganisationDialog.tsx i still dont see field to create new BU Number , plesae fix it , also with frontend backend and database
+
+and no need to commit or push it , i will do it my self 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+Let me analyze the three requests:
+
+1. **PostRunManagement.tsx** - Put search + date range filter in the same row as section title
+2. **PostRunDetail.tsx** - When status is "COMPLETED", only show Save button (no "Mark as Completed")
+3. **AddOrganisationDialog.tsx** - Fix the BU Number creation - the combobox with "Add new BU number" functionality isn't showing properly
+
+Let me start by reading the relevant files to understand the current state.
+
+---
+
+_**User (2026-04-14 03:56:51Z)**_
+
+okay in #file:AddOrganisationDialog.tsx see pasted image 1 , the select field options background looks weird using dark blue , we need to change it to use white bckground and black text like useually . please ensure all working properly and showing properly 
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+The issue is that `bg-accent` in this project resolves to the dark navy color, and `PopoverContent` isn't explicitly set to a white background. I'll fix both:
+</details></think>
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+<tool-use data-tool-type="generic" data-tool-name="replace_string_in_file"><details>
+<summary>Tool use: **replace_string_in_file**</summary>
+
+**Input:**
+
+- filePath: `/home/kukuh/webprojects/polwel/src/components/AddOrganisationDialog.tsx`
+- newString:
+
+```
+                <PopoverContent className="w-full p-0 bg-white border shadow-md" align="start">
+                  <div className="p-2 border-b bg-white">
+                    <Input
+                      ref={buInputRef}
+                      placeholder="Search or type new BU number..."
+                      value={buSearch}
+                      onChange={(e) => setBuSearch(e.target.value)}
+                      className="h-8"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="max-h-52 overflow-y-auto py-1 bg-white">
+                    {filteredBuNumbers.map((bn) => (
+                      <button
+                        key={bn}
+                        type="button"
+                        onClick={() => handleSelectBuNumber(bn)}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-900 hover:bg-gray-100 cursor-pointer",
+                          formData.buNumber === bn && "bg-gray-100 font-medium",
+                        )}
+                      >
+                        <Check className={cn("h-4 w-4 text-gray-700", formData.buNumber === bn ? "opacity-100" : "opacity-0")} />
+                        {bn}
+                      </button>
+                    ))}
+                    {isNewBuNumber && (
+                      <button
+                        type="button"
+                        onClick={handleCreateAndSelectBuNumber}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-gray-100 cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add &quot;{buSearch.trim().toUpperCase()}&quot;
+                      </button>
+                    )}
+                    {filteredBuNumbers.length === 0 && !isNewBuNumber && <div className="px-3 py-4 text-sm text-gray-500 text-center">No results</div>}
+                  </div>
+                </PopoverContent>
+```
+
+- oldString:
+
+```
+                <PopoverContent className="w-full p-0" align="start">
+                  <div className="p-2 border-b">
+                    <Input
+                      ref={buInputRef}
+                      placeholder="Search or type new BU number..."
+                      value={buSearch}
+                      onChange={(e) => setBuSearch(e.target.value)}
+                      className="h-8"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="max-h-52 overflow-y-auto py-1">
+                    {filteredBuNumbers.map((bn) => (
+                      <button
+                        key={bn}
+                        type="button"
+                        onClick={() => handleSelectBuNumber(bn)}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer",
+                          formData.buNumber === bn && "bg-accent",
+                        )}
+                      >
+                        <Check className={cn("h-4 w-4", formData.buNumber === bn ? "opacity-100" : "opacity-0")} />
+                        {bn}
+                      </button>
+                    ))}
+                    {isNewBuNumber && (
+                      <button
+                        type="button"
+                        onClick={handleCreateAndSelectBuNumber}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer text-primary"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add &quot;{buSearch.trim().toUpperCase()}&quot;
+                      </button>
+                    )}
+                    {filteredBuNumbers.length === 0 && !isNewBuNumber && <div className="px-3 py-4 text-sm text-muted-foreground text-center">No results</div>}
+                  </div>
+                </PopoverContent>
+```
+
+
+</details></tool-use>
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+The user wants to fix the dropdown options background in the BU Number combobox. Looking at the screenshot, the popover dropdown shows dark blue background with white text, which looks wrong. The issue is likely with the `hover:bg-accent` class or the overall styling of the popover content.
+
+Looking at the current code in AddOrganisationDialog.tsx, the buttons in the dropdown use:
+```
+className={cn(
+  "w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer",
+  formData.buNumber === bn && "bg-accent",
+)}
+```
+
+The problem is likely that the `PopoverContent` or its parent doesn't have a background color explicitly set, and it's inheriting the dark theme or some other styling. The `PopoverContent` needs `bg-white` or `bg-popover text-popover-foreground` explicitly.
+
+
+Looking more closely at the screenshot, the dropdown list definitely has that dark navy background showing through. The PopoverContent is probably using the default shadcn/ui styling with `bg-popover text-popover-foreground`, but it seems the popover variant in this project's theme is configured to be dark. The `bg-accent` class on the selected item might be conflicting with the overall popover styling, so I need to check what the actual color values are for these CSS variables.
+
+The straightforward solution is to override the PopoverContent with explicit `bg-white` and ensure the text colors contrast properly against a white background, then make sure the list items and buttons also have appropriate styling for that lighter background.
+
+---
+
+_**User (2026-04-14 03:58:58Z)**_
+
+its still the same, not fixed, please fix it properly , ensure its showing correctly 
+
+_**User (2026-04-14 04:03:02Z)**_
+
+still not fixed, i think this is the case , see pasted image plesae ifx it
+
+---
+
+_**Agent (copilot/claude-haiku-4.5)**_
+
+Looking at the image, I can see the issue clearly now. The DevTools on the right shows:
+
+```
+[role="dialog"]
+button:not([class*="ghost"]):not([class*="outline"]):not([class*="secondary"]) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(0 26 69 / var(--tw-bg-opacity, 1));
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+}
+```
+
+And then:
+
+`.!\text-black {
+  color: rgb(0 0 0 / var(--tw-text-opacity, 1)) !important;
+}`
+
+So the button elements inside the popover are being styled with a dark blue background by some dialog-level CSS rule that targets buttons. The `!text-black` is being applied but it's not overriding the background color.
+
+The issue is that the `<button>` elements inside the PopoverContent are matching a selector that applies dark blue backgrounds to buttons within dialogs. I need to add `!bg-white` directly to the button elements to override this.
+
+Let me update the button styling with `!bg-white` to force white background on the buttons themselves.
+
+---
+
+_**User (2026-04-14 05:03:10Z)**_
+
+eh polwel course qr code got error ncaught (in promise) lfmessage: "Error from fetchhandler.js URL - https://mail.google.com/mail/u/0/#inbox/FMfcgzQgLPNbppzLDDRDzvRTGLrCDklg"stack: "Error: Error from fetchhandler.js URL - https://mail.google.com/mail/u/0/#inbox/FMfcgzQgLPNbppzLDDRDzvRTGLrCDklg\n    at new lf (https://mail.google.com/mail/u/0/sw.js?offline_allowed=1:106:864)\n    at https://mail.google.com/mail/u/0/sw.js?offline_allowed=1:187:217"[[Prototype]]: ErrorUnderstand this error
+
+the qr image is broken ,#file:emailService.ts plese fix it properly
+
+---
+
+_**Agent (copilot/claude-haiku-4.5)**_
+
+The user is reporting an error with a QR code image in the email service. The error seems to be related to fetching a URL for the QR code. Let me first look at the emailService.ts file to understand the issue.
+
+The error message shows:
+```
+Uncaught (in promise) lfmessage: "Error from fetchhandler.js URL - https://mail.google.com/mail/u/0/#inbox/FMfcgzQgLPNbppzLDDRDzvRTGLrCDklg"
+```
+
+This suggests that the QR code image URL might be pointing to an incorrect location or failing to fetch. Based on the previous conversation summary, we know that:
+
+1. The QR code is stored as a base64 data URI from disk: `public/images/qr-polwel-go-course.jpg`
+2. It was previously using a `<div>` layout that was changed to `<table>` for Outlook compatibility
+3. The QR code is embedded as base64 in emails
+
+The issue is likely that the QR code is being referenced as a URL instead of being properly embedded as base64. Let me check the emailService.ts file first to understand the current implementation.
+
+---
+
+_**User (2026-04-14 05:11:33Z)**_
+
+hmm still not showing , i see that we have around 4 attachment in inbox , but when  i see the detail , see pasted image 2 , its only 1 attachment and the qr code is not showing properly inside the content #file:emailService.ts 
+
+---
+
+_**Agent (copilot/claude-haiku-4.5)**_
+
+The user is saying that the QR code is still not showing properly in the email. Looking at the pasted image, I can see:
+1. The email is showing "POLWEL Training Sys." in the inbox
+2. There are attachments listed: polwel-logo.png and Certificate_Lan... with +2
+3. When viewing the detail (second image), it shows the email content with a placeholder for "POLWEL Courses QR Code" but the image is not rendering
+
+The issue is that the QR code is being embedded as a base64 data URI, but Gmail might be stripping it or not rendering it properly. Looking at the code in emailService.ts, the `getQrCodeSrc()` method returns either:
+1. A base64 data URI: `data:image/jpeg;base64,${base64Image}`
+2. Or falls back to an HTTPS URL
+
+The problem is likely that:
+1. The base64 data URI is too large
+2. Gmail is stripping data URIs
+3. The image is being embedded but not in a format Gmail supports
+
+Looking at the previous code for the logo and social icons, I see they use different approaches:
+- Logo uses HTTPS URL for Graph API/Outlook mode
+- Social icons are embedded as data URIs in HTML
+
+For the QR code, since it's in the completion email footer section and needs to be visible in all clients including Gmail, we should use an HTTPS URL instead of base64 embedding.
+
+Let me look at the `getQrCodeSrc()` implementation and modify it to use the HTTPS URL approach instead of base64.
