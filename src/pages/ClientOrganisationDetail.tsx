@@ -32,6 +32,7 @@ import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
 import { EditCoordinatorDialog } from "@/components/EditCoordinatorDialog";
 import { LearnerDetailsDialog } from "@/components/LearnerDetailsDialog";
+import { BuNumberSelect } from "@/components/BuNumberSelect";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { clientOrganizationsApi } from "@/lib/api";
@@ -635,7 +636,7 @@ const ClientOrganisationDetail = () => {
                 <div>
                   <Label htmlFor="businessUnitNumber">Business Unit Number</Label>
                   {isEditing ? (
-                    <Input id="businessUnitNumber" value={formData.buNumber} onChange={(e) => setFormData((prev) => ({ ...prev, buNumber: e.target.value }))} />
+                    <BuNumberSelect value={formData.buNumber} onChange={(nextBuNumber) => setFormData((prev) => ({ ...prev, buNumber: nextBuNumber }))} />
                   ) : (
                     <p className="mt-1 text-sm text-muted-foreground">{organization?.buNumber || "N/A"}</p>
                   )}
