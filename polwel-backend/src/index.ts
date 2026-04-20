@@ -43,6 +43,7 @@ import dashboardRoutes from './routes/dashboard';
 import resourceLibraryRoutes from './routes/resourceLibrary';
 import reportingRoutes from './routes/reporting';
 import testEmailRoutes from './routes/testEmail';
+import importRoutes from './routes/import';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -297,6 +298,7 @@ app.use('/api/uploads', uploadsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/resource-library', resourceLibraryRoutes);
 app.use('/api/reporting', reportingRoutes);
+app.use('/api/import', authenticate, importRoutes);
 app.use('/api', testEmailRoutes); // Test email endpoint (no auth for debugging)
 
 // Error handling middleware

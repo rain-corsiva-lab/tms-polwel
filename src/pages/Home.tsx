@@ -12,6 +12,8 @@ import { DollarSign, AlertCircle, CheckSquare, Mail, ArrowRight, Download, Calen
 import { dashboardApi } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/date";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { ImportCourseRunsDialog } from "@/components/ImportCourseRunsDialog";
+import { ImportLearnersDialog } from "@/components/ImportLearnersDialog";
 
 // Action Item Card Component with hover animation
 interface ActionItemCardProps {
@@ -740,6 +742,20 @@ function DashboardContent() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Data Import Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Import</CardTitle>
+          <CardDescription>Import course runs or learner enrollments from an Excel file.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <ImportCourseRunsDialog />
+            <ImportLearnersDialog />
+          </div>
         </CardContent>
       </Card>
     </div>

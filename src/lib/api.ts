@@ -2420,6 +2420,29 @@ export const reportingApi = {
   },
 };
 
+export const importApi = {
+  previewCourseRuns: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-runs/preview', { method: 'POST', body: formData, timeout: 60000 });
+  },
+  importCourseRuns: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-runs', { method: 'POST', body: formData, timeout: 120000 });
+  },
+  previewLearners: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/learners/preview', { method: 'POST', body: formData, timeout: 60000 });
+  },
+  importLearners: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/learners', { method: 'POST', body: formData, timeout: 120000 });
+  },
+};
+
 export {
   API_BASE_URL,
 };
@@ -2439,4 +2462,5 @@ export default {
   waiversApi,
   resourceLibraryApi,
   reportingApi,
+  importApi,
 };
