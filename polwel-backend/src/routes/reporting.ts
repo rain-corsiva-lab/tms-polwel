@@ -33,4 +33,7 @@ router.get('/run-details/:id', reportingController.getRunDetails);
 // Filter options
 router.get('/filter-options', reportingController.getFilterOptions);
 
+// Learner Report Excel download
+router.get('/learner-report', reportingController.downloadLearnerReport);
+
 export default router;

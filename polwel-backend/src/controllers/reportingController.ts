@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { Prisma, CourseStatus } from '@prisma/client';
+import ExcelJS from 'exceljs';
 
 // Helper function to get quarter from date
 const getQuarter = (date: Date | null): string => {
@@ -1039,6 +1040,256 @@ export const getFilterOptions = async (req: AuthenticatedRequest, res: Response)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch filter options',
+    });
+  }
+};
+
+// ─── Learner Report Export ────────────────────────────────────────────────────
+
+const PAYMENT_MODE_LABELS: Record<string, string> = {
+  COMPANY_BILLING: 'Company Billing',
+  CREDIT_CARD: 'Credit Card',
+  BANK_TRANSFER: 'Bank Transfer',
+  ULTF: 'Unit Local Training Fund (ULTF)',
+  TRANSITION_DOLLARS: 'Transition Dollars',
+  SELF_SPONSORED: 'Self Sponsored',
+  GOVERNMENT_FUNDING: 'Government Funding',
+  NOT_APPLICABLE: 'Not Applicable',
+};
+
+const COURSE_RUN_TYPE_LABELS: Record<string, string> = {
+  OPEN: 'Open',
+  DEDICATED: 'Dedicated',
+  TALKS: 'TALKS',
+  CUSTOMIZED: 'Customized',
+};
+
+function formatDt(dt: Date | null): string {
+  if (!dt) return '';
+  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/**
+ * GET /api/reporting/learner-report
+ * Downloads an Excel (.xlsx) report of all learner enrollments across all course runs.
+ * 
+ * Optional query filters:
+ *   - startDate  (YYYY-MM-DD) – filter course runs starting on/after this date
+ *   - endDate    (YYYY-MM-DD) – filter course runs starting on/before this date
+ *   - status     – comma-separated CourseStatus values (e.g. "COMPLETED,ACTIVE")
+ */
+export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { startDate, endDate, status } = req.query as Record<string, string | undefined>;
+
+    // Build date range filter
+    const dateFilter: Prisma.DateTimeNullableFilter<'CourseRun'> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
+
+    // Build status filter
+    const statusFilter: Prisma.EnumCourseStatusFilter<'CourseRun'> | undefined = status
+      ? { in: status.split(',').map(s => s.trim()) as CourseStatus[] }
+      : undefined;
+
+    const whereClause: Prisma.CourseRunWhereInput = {
+      deletedAt: null,
+      ...(Object.keys(dateFilter).length > 0 ? { startDatetime: dateFilter } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
+    };
+
+    // Fetch all course runs with all required associations
+    const courseRuns = await prisma.courseRun.findMany({
+      where: whereClause,
+      orderBy: [{ startDatetime: 'asc' }, { course: { title: 'asc' } }],
+      include: {
+        course: { select: { title: true } },
+        courseRunTrainers: {
+          where: { deletedAt: null },
+          include: { trainer: { select: { name: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        courseRunBilling: {
+          include: {
+            billingReport: { select: { billingMonth: true } },
+          },
+        },
+        courseRunLearners: {
+          where: { deletedAt: null, enrollmentStatus: { not: 'WITHDRAWN' } },
+          orderBy: [{ learner: { fullname: 'asc' } }],
+          include: {
+            learner: { select: { fullname: true, designation: true } },
+            clientOrganization: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    // Flatten to one row per learner per course run
+    type ReportRow = {
+      courseTitle: string;
+      startDate: string;
+      endDate: string;
+      trainers: string;
+      learnerName: string;
+      organisation: string;
+      buNumber: string;
+      designation: string;
+      paymentMethod: string;
+      runType: string;
+      billingMonth: string;
+    };
+
+    const rows: ReportRow[] = [];
+
+    for (const run of courseRuns) {
+      const courseTitle = run.course?.title ?? '';
+      const startDt = formatDt(run.startDatetime);
+      const endDt = formatDt(run.endDatetime);
+      const trainers = run.courseRunTrainers
+        .map(t => t.trainer?.name ?? '')
+        .filter(Boolean)
+        .join(', ');
+      const runType = COURSE_RUN_TYPE_LABELS[run.courseRunType ?? ''] ?? (run.courseRunType ?? '');
+      const billingMonth = run.courseRunBilling?.billingReport?.billingMonth ?? '';
+
+      // Learner-centric: skip course runs with no enrolled learners
+      if (run.courseRunLearners.length === 0) continue;
+
+      for (const crl of run.courseRunLearners) {
+        rows.push({
+          courseTitle,
+          startDate: startDt,
+          endDate: endDt,
+          trainers,
+          learnerName: crl.learner?.fullname ?? '',
+          organisation: crl.clientOrganization?.name ?? '',
+          buNumber: crl.buNumber ?? '',
+          designation: crl.learner?.designation ?? '',
+          paymentMethod: PAYMENT_MODE_LABELS[crl.paymentMode ?? ''] ?? (crl.paymentMode ?? ''),
+          runType,
+          billingMonth,
+        });
+      }
+    }
+
+    // Build Excel workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'POLWEL Training Management System';
+    workbook.created = new Date();
+
+    const ws = workbook.addWorksheet('Learner Report', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+      views: [{ state: 'frozen', ySplit: 1 }], // freeze header row
+    });
+
+    // Define columns with headers
+    ws.columns = [
+      { header: 'Course Run Title',       key: 'courseTitle',    },
+      { header: 'Start Date',             key: 'startDate',      },
+      { header: 'End Date',               key: 'endDate',        },
+      { header: 'Trainer(s)',             key: 'trainers',        },
+      { header: 'Learner Name',           key: 'learnerName',    },
+      { header: 'Organisation',           key: 'organisation',   },
+      { header: 'BU Number',              key: 'buNumber',       },
+      { header: 'Designation',            key: 'designation',    },
+      { header: 'Payment Method',         key: 'paymentMethod',  },
+      { header: 'Run Type',               key: 'runType',        },
+      { header: 'Billing Month',          key: 'billingMonth',   },
+    ];
+
+    // Style the header row
+    const headerRow = ws.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1E3A5F' }, // dark navy blue
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    headerRow.height = 28;
+
+    // Add data rows with alternating bands
+    rows.forEach((row, idx) => {
+      const dataRow = ws.addRow([
+        row.courseTitle,
+        row.startDate,
+        row.endDate,
+        row.trainers,
+        row.learnerName,
+        row.organisation,
+        row.buNumber,
+        row.designation,
+        row.paymentMethod,
+        row.runType,
+        row.billingMonth,
+      ]);
+
+      dataRow.alignment = { vertical: 'middle', wrapText: false };
+
+      // Light alternating row background
+      if (idx % 2 === 1) {
+        dataRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF0F4F8' },
+        };
+      }
+    });
+
+    // Auto-fit column widths based on content
+    const colKeys = ['courseTitle','startDate','endDate','trainers','learnerName','organisation','buNumber','designation','paymentMethod','runType','billingMonth'] as const;
+    const MIN_COL_WIDTH = 12;
+    const MAX_COL_WIDTH = 55;
+
+    colKeys.forEach((key, i) => {
+      const col = ws.getColumn(i + 1);
+      const headerLen = (col.header as string).length;
+      let maxLen = headerLen;
+
+      rows.forEach(r => {
+        const val = r[key] ?? '';
+        if (val.length > maxLen) maxLen = val.length;
+      });
+
+      col.width = Math.min(Math.max(maxLen + 2, MIN_COL_WIDTH), MAX_COL_WIDTH);
+    });
+
+    // Add thin borders to all cells
+    const totalRows = rows.length + 1; // +1 for header
+    for (let r = 1; r <= totalRows; r++) {
+      for (let c = 1; c <= 11; c++) {
+        const cell = ws.getCell(r, c);
+        cell.border = {
+          top:    { style: 'thin', color: { argb: 'FFD0D9E4' } },
+          left:   { style: 'thin', color: { argb: 'FFD0D9E4' } },
+          bottom: { style: 'thin', color: { argb: 'FFD0D9E4' } },
+          right:  { style: 'thin', color: { argb: 'FFD0D9E4' } },
+        };
+      }
+    }
+
+    // Build filename with timestamp
+    const now = new Date();
+    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const filename = `Learner_Report_${stamp}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.error('[downloadLearnerReport]', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate learner report',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
