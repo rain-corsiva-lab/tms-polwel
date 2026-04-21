@@ -6293,11 +6293,11 @@ export const courseRunController = {
       
       console.log('[PostCourseRuns] Where clause:', JSON.stringify(where, null, 2));
       
-      // Use statusUpdatedAt for completed/cancelled/incompleted runs; endDatetime for pending
+      // Sort by startDatetime desc (newest course run date first) for both buckets
       const completedStatuses = ['COMPLETED', 'CANCELLED', 'INCOMPLETED'];
       const isCompletedBucket = statusArray.length > 0 && statusArray.every(s => completedStatuses.includes(s));
       const orderBy = isCompletedBucket
-        ? { statusUpdatedAt: 'desc' as const }
+        ? { startDatetime: 'desc' as const }
         : { endDatetime: 'desc' as const };
 
       // Get course runs with all necessary relations
