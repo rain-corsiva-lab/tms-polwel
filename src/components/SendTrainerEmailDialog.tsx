@@ -42,14 +42,7 @@ interface SendTrainerEmailDialogProps {
   onSuccess: () => void;
 }
 
-export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
-  open,
-  onOpenChange,
-  courseRunId,
-  trainers,
-  partners,
-  onSuccess,
-}) => {
+export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({ open, onOpenChange, courseRunId, trainers, partners, onSuccess }) => {
   const [ccEmails, setCcEmails] = useState("");
   const [additionalBody, setAdditionalBody] = useState("");
   const [debouncedAdditionalBody, setDebouncedAdditionalBody] = useState("");
@@ -93,9 +86,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
     if (!open) return;
     if (trainers.length > 0) {
       setPreviewRecipientType("trainer");
-      setPreviewTrainerId((prev) =>
-        prev && trainers.some((t) => t.id === prev) ? prev : (trainers[0]?.id ?? null),
-      );
+      setPreviewTrainerId((prev) => (prev && trainers.some((t) => t.id === prev) ? prev : (trainers[0]?.id ?? null)));
     } else if (hasPartners) {
       setPreviewRecipientType("partner");
       setPreviewTrainerId(null);
@@ -448,9 +439,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
 
             <div className="relative bg-[#0f172a] min-h-[320px] max-h-[55vh] overflow-auto">
               {previewLoading && !previewHtml && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">
-                  Loading preview…
-                </div>
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">Loading preview…</div>
               )}
               {previewHtml && (
                 <iframe
@@ -465,9 +454,7 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
 
             <div className="p-3 bg-gray-50 border-t space-y-3">
               <div>
-                <div className="font-semibold text-sm mb-2">
-                  {hasPartners ? "Assigned trainers (for reference)" : `Trainers (${trainers.length})`}
-                </div>
+                <div className="font-semibold text-sm mb-2">{hasPartners ? "Assigned trainers (for reference)" : `Trainers (${trainers.length})`}</div>
                 <div className="space-y-1">
                   {trainers.map((t) => (
                     <div key={t.id} className="flex justify-between items-center text-xs">
@@ -515,11 +502,13 @@ export const SendTrainerEmailDialog: React.FC<SendTrainerEmailDialogProps> = ({
                   toolbar: [
                     [{ header: [1, 2, 3, false] }],
                     ["bold", "italic", "underline", "strike"],
+                    [{ color: [] }, { background: [] }],
                     [{ list: "ordered" }, { list: "bullet" }],
                     ["link", "image"],
                     ["clean"],
                   ],
                 }}
+                formats={["header", "bold", "italic", "underline", "strike", "color", "background", "list", "bullet", "link", "image"]}
                 style={{ height: "150px" }}
               />
             </div>
