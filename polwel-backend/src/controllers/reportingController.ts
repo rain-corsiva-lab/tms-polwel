@@ -339,6 +339,7 @@ export const getQuarterDetails = async (req: AuthenticatedRequest, res: Response
         organization: run.clientOrganization?.name || 'N/A',
         learners: run.courseRunLearners?.length || 0,
         revenue,
+        courseRunType: run.courseRunType || null,
       };
     });
 

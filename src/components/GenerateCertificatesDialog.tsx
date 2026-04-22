@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { courseRunsApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errorHandler";
 import { Award, Download, FileArchive, Loader2, X, FileText, Mail } from "lucide-react";
+import ExcelJS from "exceljs";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
 
@@ -63,6 +64,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
   const [loading, setLoading] = useState(false);
   const [submittingWaiver, setSubmittingWaiver] = useState(false);
   const [sendingCertificates, setSendingCertificates] = useState(false);
+  const [exportingParticipants, setExportingParticipants] = useState(false);
   const [courseRun, setCourseRun] = useState<CourseRunInfo | null>(null);
   const [learners, setLearners] = useState<LearnerWithAttendance[]>([]);
   const [selectedLearners, setSelectedLearners] = useState<string[]>([]);
@@ -415,6 +417,174 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
     }
   };
 
+  const handleExportParticipantList = async () => {
+    setExportingParticipants(true);
+    try {
+      const response = await courseRunsApi.getById(courseRunId);
+      if (!response.success) throw new Error("Failed to fetch course run data");
+      const fullRun = response.courseRun;
+
+      const getPaymentModeLabel = (mode: string | null | undefined) => {
+        const map: Record<string, string> = {
+          SELF_SPONSORED: "Self-Payment",
+          TRANSITION_DOLLARS: "Transition Dollar (TS)",
+          ULTF: "Unit Local Training Fund (ULTF)",
+          COMPANY_BILLING: "Company-Sponsored (Non-Home Team)",
+          GOVERNMENT_FUNDING: "Polwel Training Subsidy",
+          CREDIT_CARD: "Credit Card",
+          BANK_TRANSFER: "Bank Transfer",
+          NOT_APPLICABLE: "Not Applicable",
+        };
+        return map[mode as string] || mode || "-";
+      };
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Participants");
+      const headers = [
+        "No",
+        "Name",
+        "Department",
+        "Designation",
+        "SPF Email Address",
+        "Contact Number",
+        "Retiring Officer?",
+        "Payment Mode",
+        "Fees before GST",
+        "Fees Remarks",
+        "PO No. / Payment Advice",
+        "Invoice No.",
+        "Receipt No.",
+        "Business Unit Number",
+        "Training Officer's Name",
+        "Training Officer's Email",
+        "Training Officer's Phone Number",
+        "Remarks",
+      ];
+
+      const enrolled = (fullRun.courseRunLearners || []).filter((r: any) => r.enrollmentStatus === "ENROLLED");
+      const withdrawn = (fullRun.courseRunLearners || []).filter((r: any) => r.enrollmentStatus === "WITHDRAWN");
+
+      const meta = [
+        fullRun.course?.title || "Course",
+        `Course Code: ${fullRun.course?.courseCode || "N/A"}`,
+        `Duration: ${fullRun.startDatetime ? new Date(fullRun.startDatetime).toLocaleDateString("en-SG") : "N/A"} - ${fullRun.endDatetime ? new Date(fullRun.endDatetime).toLocaleDateString("en-SG") : "N/A"}`,
+        `Venue: ${fullRun.venue?.name || fullRun.specifiedLocation || "TBD"}`,
+      ];
+
+      let row = 1;
+      const colors = ["FF1F4E78", "FF2F5496", "FF3D6EB3", "FF4472C4"];
+      meta.forEach((text) => {
+        const r = worksheet.getRow(row);
+        r.getCell(1).value = text;
+        worksheet.mergeCells(row, 1, row, Math.ceil(headers.length / 2));
+        r.height = 22;
+        for (let c = 1; c <= headers.length; c++) {
+          const cell = r.getCell(c);
+          cell.font = { bold: true, size: 12, color: { argb: "FFFFFFFF" } };
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: colors[row - 1] } };
+          cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+        }
+        row++;
+      });
+      row++;
+
+      headers.forEach((h, i) => {
+        worksheet.getCell(row, i + 1).value = h;
+      });
+      const hRow = worksheet.getRow(row);
+      hRow.height = 22;
+      for (let c = 1; c <= headers.length; c++) {
+        const cell = worksheet.getCell(row, c);
+        cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+        cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
+        cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+      }
+      row++;
+
+      enrolled.forEach((lr: any, idx: number) => {
+        const l = lr.learner;
+        const bg = idx % 2 === 0 ? "FFE7EFF7" : "FFFFFFFF";
+        const r = worksheet.getRow(row);
+        r.getCell(1).value = idx + 1;
+        r.getCell(2).value = l.fullname || "";
+        r.getCell(3).value = "";
+        r.getCell(4).value = l.designation || "";
+        r.getCell(5).value = l.email || "";
+        r.getCell(6).value = l.contactNumber || "";
+        r.getCell(7).value = "";
+        r.getCell(8).value = getPaymentModeLabel(lr.paymentMode);
+        r.getCell(9).value = "";
+        r.getCell(10).value = "";
+        r.getCell(11).value = "";
+        r.getCell(12).value = "";
+        r.getCell(13).value = "";
+        r.getCell(14).value = fullRun.clientOrganization?.buNumber || "";
+        r.getCell(15).value = lr.trainingCoordinator?.name || "";
+        r.getCell(16).value = lr.trainingCoordinator?.email || "";
+        r.getCell(17).value = lr.trainingCoordinator?.contactNumber || "";
+        r.getCell(18).value = "";
+        r.height = 18;
+        for (let c = 1; c <= headers.length; c++) {
+          worksheet.getCell(row, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+          worksheet.getCell(row, c).border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+        }
+        row++;
+      });
+
+      if (withdrawn.length > 0) {
+        row += 2;
+        const wTitle = worksheet.getRow(row);
+        wTitle.getCell(1).value = "WITHDRAWN";
+        worksheet.mergeCells(row, 1, row, headers.length);
+        wTitle.getCell(1).font = { bold: true, size: 13 };
+        wTitle.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFC000" } };
+        wTitle.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
+        row += 2;
+        headers.forEach((h, i) => {
+          worksheet.getCell(row, i + 1).value = h;
+        });
+        for (let c = 1; c <= headers.length; c++) {
+          const cell = worksheet.getCell(row, c);
+          cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
+        }
+        row++;
+        withdrawn.forEach((lr: any, idx: number) => {
+          const l = lr.learner;
+          const bg = idx % 2 === 0 ? "FFFEF5E7" : "FFFFFFFF";
+          const r = worksheet.getRow(row);
+          r.getCell(1).value = idx + 1;
+          r.getCell(2).value = l.fullname || "";
+          r.getCell(4).value = l.designation || "";
+          r.getCell(5).value = l.email || "";
+          r.getCell(6).value = l.contactNumber || "";
+          r.getCell(8).value = getPaymentModeLabel(lr.paymentMode);
+          for (let c = 1; c <= headers.length; c++) {
+            worksheet.getCell(row, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+          }
+          row++;
+        });
+      }
+
+      worksheet.columns = [6, 25, 20, 22, 32, 18, 16, 20, 18, 18, 26, 18, 18, 22, 24, 32, 36, 28].map((w) => ({ width: w }));
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `participant-list-${fullRun.serialNumber || fullRun.id}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Exported", description: `${enrolled.length} participant${enrolled.length !== 1 ? "s" : ""} exported.` });
+    } catch (err: any) {
+      toast({ title: "Export failed", description: err?.message || "Failed to export participant list", variant: "destructive" });
+    } finally {
+      setExportingParticipants(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -623,6 +793,10 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Close
+              </Button>
+              <Button variant="outline" onClick={handleExportParticipantList} disabled={exportingParticipants}>
+                {exportingParticipants ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                {exportingParticipants ? "Exporting..." : "Export participant list"}
               </Button>
               <Button onClick={handleExportZip} disabled={selectedLearners.length === 0}>
                 <FileArchive className="h-4 w-4 mr-2" />

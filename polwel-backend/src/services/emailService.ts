@@ -1891,7 +1891,7 @@ class EmailService {
       }
     };
 
-    const subjectSuffix = courseDuration ? courseDuration : formatDateForSubject(startDate);
+    const subjectSuffix = formatDateForSubject(startDate);
     const subject = `Course Confirmation: ${courseTitle}${subjectSuffix ? ` (${subjectSuffix})` : ''}`;
 
     const html = `
