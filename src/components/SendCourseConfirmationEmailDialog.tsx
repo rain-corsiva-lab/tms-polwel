@@ -40,17 +40,14 @@ const RecipientsGrouped: React.FC<{
   learners: SendCourseConfirmationEmailDialogProps["learners"];
 }> = ({ learners }) => {
   const groups = useMemo(() => {
-    const map = new Map<
-      string,
-      { tcName: string | null; tcEmail: string | null; learners: typeof learners }
-    >();
+    const map = new Map<string, { tcName: string | null; tcEmail: string | null; learners: typeof learners }>();
     for (const l of learners) {
       const isSelfPay = l.paymentMode === "SELF_SPONSORED";
       const key = !isSelfPay && l.trainingCoordinatorId ? l.trainingCoordinatorId : "NO_TC";
       if (!map.has(key)) {
         map.set(key, {
-          tcName: key !== "NO_TC" ? l.trainingCoordinatorName ?? null : null,
-          tcEmail: key !== "NO_TC" ? l.trainingCoordinatorEmail ?? null : null,
+          tcName: key !== "NO_TC" ? (l.trainingCoordinatorName ?? null) : null,
+          tcEmail: key !== "NO_TC" ? (l.trainingCoordinatorEmail ?? null) : null,
           learners: [],
         });
       }
@@ -67,15 +64,14 @@ const RecipientsGrouped: React.FC<{
         Recipients ({learners.length} learner{learners.length !== 1 ? "s" : ""} ·{" "}
         <span className="text-blue-600">
           {emailCount} email{emailCount !== 1 ? "s" : ""} to be sent
-        </span>)
+        </span>
+        )
       </div>
       <div className="space-y-2 max-h-44 overflow-y-auto text-xs">
         {Array.from(groups.entries()).map(([key, group]) => (
           <div key={key} className="border rounded p-2 bg-white">
             <div className="font-semibold text-gray-700 mb-1">
-              {key !== "NO_TC"
-                ? `TC: ${group.tcName || "Unknown TC"}${group.tcEmail ? ` (${group.tcEmail})` : ""}`
-                : "No Training Coordinator"}
+              {key !== "NO_TC" ? `TC: ${group.tcName || "Unknown TC"}${group.tcEmail ? ` (${group.tcEmail})` : ""}` : "No Training Coordinator"}
             </div>
             <div className="text-gray-600 break-all">
               <span className="font-medium">To: </span>
@@ -330,14 +326,10 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
                 <span className="font-medium text-foreground break-all">{previewSubject}</span>
               </div>
             )}
-            {previewError && (
-              <div className="p-3 text-sm text-destructive bg-white">{previewError}</div>
-            )}
+            {previewError && <div className="p-3 text-sm text-destructive bg-white">{previewError}</div>}
             <div className="relative bg-[#0f172a] min-h-[320px] max-h-[55vh] overflow-auto">
               {previewLoading && !previewHtml && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">
-                  Loading preview…
-                </div>
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400 z-10 bg-[#0f172a]/80">Loading preview…</div>
               )}
               {previewHtml && (
                 <iframe
@@ -351,9 +343,7 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
             </div>
             <div className="p-3 bg-gray-50 border-t">
               <RecipientsGrouped learners={learners} />
-              <p className="text-xs text-muted-foreground mt-2">
-                Attachments are not shown in this preview; they will be included when you send.
-              </p>
+              <p className="text-xs text-muted-foreground mt-2">Attachments are not shown in this preview; they will be included when you send.</p>
             </div>
           </div>
 
@@ -383,11 +373,13 @@ export const SendCourseConfirmationEmailDialog: React.FC<SendCourseConfirmationE
                   toolbar: [
                     [{ header: [1, 2, 3, false] }],
                     ["bold", "italic", "underline", "strike"],
+                    [{ color: [] }, { background: [] }],
                     [{ list: "ordered" }, { list: "bullet" }],
                     ["link", "image"],
                     ["clean"],
                   ],
                 }}
+                formats={["header", "bold", "italic", "underline", "strike", "color", "background", "list", "bullet", "link", "image"]}
                 style={{ height: "150px" }}
               />
             </div>
