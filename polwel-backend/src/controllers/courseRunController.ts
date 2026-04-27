@@ -3670,15 +3670,11 @@ export const courseRunController = {
 
       await Promise.all(partnerEmailTasks);
 
-      // Check if confirmation emails have already been sent
-      // If yes and we just sent trainer emails, update status to CONFIRMED
-      const confirmationEmailsSent = await prisma.confirmationEmailHistory.count({
-        where: {
-          courseRunId: id,
-          deletedAt: null,
-        },
-      });
-
+      // Check if ALL enrolled learners have confirmation email status SENT.
+      // Using the confirmationEmailStatus field directly — set by both individual resends
+      // (from CourseRunDetail) and bulk sends (from the confirmation email dialog).
+      // This correctly handles the case where clients manually sent confirmation emails
+      // before the course run reached CONFIRMED_PENDING_CONFIRMATION_EMAILS status.
       const hasLearners = await prisma.courseRunLearner.count({
         where: {
           courseRunId: id,
@@ -3687,12 +3683,23 @@ export const courseRunController = {
         },
       });
 
-      // If we have learners and confirmation emails have been sent
-      // AND trainer emails have been sent (we just sent them)
-      // Then update status to CONFIRMED.
+      const learnersWithoutConfirmationEmail = hasLearners > 0
+        ? await prisma.courseRunLearner.count({
+            where: {
+              courseRunId: id,
+              deletedAt: null,
+              enrollmentStatus: 'ENROLLED',
+              confirmationEmailStatus: { not: 'SENT' },
+            },
+          })
+        : 0;
+
+      const allConfirmationEmailsSent = hasLearners > 0 && learnersWithoutConfirmationEmail === 0;
+
       // For TALKS (no learners), transition to CONFIRMED immediately after trainer email is sent.
+      // For other types, transition only if ALL enrolled learners have confirmation emails sent.
       const isTalks = courseRun.courseRunType === 'TALKS';
-      if (isTalks || (hasLearners > 0 && confirmationEmailsSent >= hasLearners)) {
+      if (isTalks || allConfirmationEmailsSent) {
         await prisma.courseRun.update({
           where: { id },
           data: {
@@ -3702,11 +3709,11 @@ export const courseRunController = {
         });
         console.log(
           `Course run ${id} status updated to CONFIRMED${
-            isTalks ? ' (TALKS — no learners required)' : ' after both trainer and confirmation emails sent'
+            isTalks ? ' (TALKS — no learners required)' : ` after trainer email sent — all ${hasLearners} enrolled learner(s) already have confirmation emails sent`
           }.`,
         );
       } else {
-        console.log(`Trainer assignment emails sent for course run ${id}. Waiting for confirmation emails before moving to CONFIRMED status.`);
+        console.log(`Trainer assignment emails sent for course run ${id}. ${hasLearners - learnersWithoutConfirmationEmail}/${hasLearners} learner confirmation email(s) sent. Waiting for remaining ${learnersWithoutConfirmationEmail} before moving to CONFIRMED status.`);
       }
 
       const totalTrainers = (courseRun.courseRunTrainers || []).length;
@@ -4266,18 +4273,35 @@ export const courseRunController = {
       }
 
       // ── Auto-transition to CONFIRMED when both trainer and confirmation emails are sent ──
+      // Check if ALL enrolled learners now have confirmationEmailStatus = 'SENT'
+      // (covers both learners just sent to now and those already sent to previously)
+      const totalEnrolled = await prisma.courseRunLearner.count({
+        where: { courseRunId: id, deletedAt: null, enrollmentStatus: 'ENROLLED' },
+      });
+      const enrolledWithoutConfirmation = totalEnrolled > 0
+        ? await prisma.courseRunLearner.count({
+            where: {
+              courseRunId: id,
+              deletedAt: null,
+              enrollmentStatus: 'ENROLLED',
+              confirmationEmailStatus: { not: 'SENT' },
+            },
+          })
+        : 0;
+      const allLearnerEmailsSent = totalEnrolled > 0 && enrolledWithoutConfirmation === 0;
+
       const trainerEmailsSent = await prisma.trainerAssignmentEmailHistory.count({
         where: { courseRunId: id, deletedAt: null },
       });
       const hasTrainers = await prisma.courseRunTrainer.count({
         where: { courseRunId: id, deletedAt: null },
       });
-      if (hasTrainers > 0 && trainerEmailsSent >= hasTrainers) {
+      if (allLearnerEmailsSent && hasTrainers > 0 && trainerEmailsSent >= hasTrainers) {
         await prisma.courseRun.update({
           where: { id },
           data: { status: 'CONFIRMED', statusLastEvaluatedAt: new Date() },
         });
-        console.log(`Course run ${id} status updated to CONFIRMED after both trainer and confirmation emails sent.`);
+        console.log(`Course run ${id} status updated to CONFIRMED — all ${totalEnrolled} learner(s) and trainer(s) have been emailed.`);
       }
 
       // Check if response already sent (e.g., by timeout middleware)
