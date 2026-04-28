@@ -18,6 +18,7 @@ import {
   PanelLeftOpen,
   Library,
   BarChart3,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -394,6 +395,11 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
               <NavItem to="/reporting" icon={BarChart3} label="Reporting" />
             </Can>
           )}
+
+          {/* Email Logs - POLWEL only */}
+          {/* 
+          {isPolwelUser && <NavItem to="/email-logs" icon={Mail} label="Email Logs" />}
+          */}
         </TooltipProvider>
       </nav>
 

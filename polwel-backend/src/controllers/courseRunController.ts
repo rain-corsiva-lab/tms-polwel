@@ -3814,21 +3814,25 @@ export const courseRunController = {
           const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/$/, '');
           const reviewUrl = `${frontendUrl}/course-runs?status=CONFIRMED_PENDING_TA_APPROVAL`;
 
-          console.log(`(markAsConfirmed) Sending TA approval notice to ${approvers.length} user(s)…`);
+          console.log(`(markAsConfirmed) Sending TA approval notice to ${approvers.length} user(s) sequentially…`);
           for (const ap of approvers) {
             if (!ap.user.email) continue;
-            EmailService.sendCourseRunTAApprovalEmail({
-              adminEmail: ap.user.email,
-              adminName: ap.user.name,
-              courseTitle: courseRun.course?.title || 'POLWEL Course',
-              courseCode: courseRun.course?.courseCode || null,
-              serialNumber: courseRun.serialNumber || null,
-              startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime) : null,
-              endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : null,
-              reviewUrl,
-            }).catch((err: any) => {
+            try {
+              await EmailService.sendCourseRunTAApprovalEmail({
+                adminEmail: ap.user.email,
+                adminName: ap.user.name,
+                courseTitle: courseRun.course?.title || 'POLWEL Course',
+                courseCode: courseRun.course?.courseCode || null,
+                serialNumber: courseRun.serialNumber || null,
+                startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime) : null,
+                endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : null,
+                reviewUrl,
+              });
+            } catch (err: any) {
               console.error(`(markAsConfirmed) Failed to notify ${ap.user.email}:`, err?.message);
-            });
+            }
+            // Small delay between sends to avoid rate limiting on Graph API
+            await new Promise(r => setTimeout(r, 300));
           }
         } catch (notifyErr) {
           console.error('(markAsConfirmed) Notification error:', notifyErr);

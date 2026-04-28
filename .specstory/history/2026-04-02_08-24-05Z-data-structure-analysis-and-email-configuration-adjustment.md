@@ -587,3 +587,8 @@ please develop all of these front end , backend , database with best practice, e
 _**User (2026-04-22 08:57:36Z)**_
 
 @agent Try Again
+
+_**User (2026-04-27 13:10:18Z)**_
+
+see pasted image 1 , in #file:CourseRuns.tsx #file:CourseRunDetail.tsx so when a course run reach confirmed pending confirmation emails status , we will need to run send confirmation emails and send trainer emails first currently right. 
+but when a course run is not on the 'Confirmed pending confirmation emails' status yet , sometimes client send email confirmation to all learners manually in the #file:CourseRunDetail.tsx page on the participant tab since we have that feature too. and when the status is become confirmed pending confirmatin email , since client already send all learner email before , they only need to send trainer email , but since we dont trigerr run send confirmation email , the status is not automatically changed to 'confirmed' , so we want to add new condition when all participant that enrolled in this course run , have all email confirmation status is sent , then we dont need to run the send email confirmation in #file:CourseRuns.tsx , just send trainer email will automatically goes to confirmed status, but if atleast 1 participant who the email confirmation status is not sent , then we will not auto change it into the confirmed yet, we need to send those who hasnt sent yet. so everytime we trigger send in #file:SendCourseConfirmationEmailDialog.tsx we will check the status conditions of this course run , please carefully develop this

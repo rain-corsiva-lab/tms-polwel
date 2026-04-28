@@ -43,6 +43,7 @@ import RunsByTrainer from "./pages/reporting/RunsByTrainer";
 import RunsByStatus from "./pages/reporting/RunsByStatus";
 import RunsByPeriod from "./pages/reporting/RunsByPeriod";
 import RunsByVenue from "./pages/reporting/RunsByVenue";
+import EmailLogs from "./pages/EmailLogs";
 
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
@@ -336,6 +337,16 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredPermissions={["reporting.view"]}>
                     <RunsByVenue />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Email Logs */}
+              <Route
+                path="email-logs"
+                element={
+                  <ProtectedRoute requiredRoles={["POLWEL"]}>
+                    <EmailLogs />
                   </ProtectedRoute>
                 }
               />
