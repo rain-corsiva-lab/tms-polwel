@@ -256,6 +256,7 @@ model CourseRun {
   clientOrganizationId           String?
   clientOrganization             Organization?                    @relation(fields: [clientOrganizationId], references: [id])
   cancellationAttachments        CourseRunCancellationAttachment[]
+  emailLogs                      EmailLog[]
 
   @@index([courseId], map: "course_runs_courseId_fkey")
   @@index([venueId], map: "course_runs_venueId_fkey")
@@ -894,4 +895,38 @@ model PartnerTrainer {
 
   @@map("partner_trainers")
   @@index([partnerId])
+}
+
+// ─── Email Logging ────────────────────────────────────────────────────────────
+
+model EmailLog {
+  id            String         @id @default(cuid())
+  emailType     String         @db.VarChar(100)
+  recipient     String         @db.VarChar(2000)
+  cc            String?        @db.VarChar(2000)
+  subject       String?        @db.VarChar(500)
+  status        EmailLogStatus @default(PENDING)
+  attempts      Int            @default(0)
+  lastAttemptAt DateTime?
+  messageId     String?        @db.VarChar(255)
+  errorMessage  String?        @db.Text
+  errorCode     String?        @db.VarChar(100)
+  courseRunId   String?
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  courseRun     CourseRun?     @relation(fields: [courseRunId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([emailType])
+  @@index([courseRunId])
+  @@index([createdAt])
+  @@map("email_logs")
+}
+
+enum EmailLogStatus {
+  PENDING
+  SENT
+  FAILED
+  RETRYING
 }

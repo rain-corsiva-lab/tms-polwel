@@ -5,6 +5,13 @@ import fs from 'fs';
 import type { SentMessageInfo, Transport, TransportOptions } from 'nodemailer';
 import type MailMessage from 'nodemailer/lib/mailer/mail-message';
 import { POLWEL_LOGO_BASE64_DATA_URI } from '../assets/logoBase64';
+import {
+  createEmailLog,
+  markEmailSent,
+  markEmailFailed,
+  markEmailRetrying,
+  EMAIL_TYPES,
+} from './emailLogService';
 
 interface EmailConfig {
   host: string;
@@ -958,11 +965,13 @@ class EmailService {
     
     try {
       if (transporter) {
+        const _logId = await createEmailLog({ emailType: EMAIL_TYPES.TRAINER_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
         console.log('📨 Attempting to send trainer setup email via transporter');
         const info = await transporter.sendMail(mailOptions);
         console.log(`✅ Trainer setup email sent to ${email}`);
         console.log(`   Message ID: ${info.messageId}`);
         console.log(`   Response: ${info.response}`);
+        await markEmailSent(_logId, info.messageId, 1).catch(() => {});
         return true;
       } else {
         console.log('=== TRAINER SETUP EMAIL (Development Mode) ===');
@@ -973,6 +982,9 @@ class EmailService {
         return true;
       }
     } catch (error) {
+      const _errMsg = error instanceof Error ? error.message : String(error);
+      const _logId2 = await createEmailLog({ emailType: EMAIL_TYPES.TRAINER_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
+      await markEmailFailed(_logId2, _errMsg, (error as any)?.code, 1).catch(() => {});
       console.error('❌ CRITICAL: Failed to send trainer setup email');
       console.error('   Recipient:', email);
       console.error('   Error Type:', error?.constructor?.name);
@@ -1098,10 +1110,12 @@ class EmailService {
       `,
       attachments: this.getEmailMediaAttachments(),
     };
+    const _coordLogId = await createEmailLog({ emailType: EMAIL_TYPES.COORDINATOR_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
     try {
       if (transporter) {
-        await transporter.sendMail(mailOptions);
+        const _cInfo = await transporter.sendMail(mailOptions);
         console.log(`Coordinator setup email sent to ${email}`);
+        await markEmailSent(_coordLogId, _cInfo?.messageId, 1).catch(() => {});
         return true;
       } else {
         console.log('=== COORDINATOR SETUP EMAIL (Development Mode) ===');
@@ -1110,9 +1124,12 @@ class EmailService {
         console.log(`Organization: ${organizationName}`);
         console.log(`Setup URL: ${setupUrl}`);
         console.log('=============================================');
+        await markEmailSent(_coordLogId, undefined, 1).catch(() => {});
         return true;
       }
     } catch (error) {
+      const _cErr = error instanceof Error ? error.message : String(error);
+      await markEmailFailed(_coordLogId, _cErr, (error as any)?.code, 1).catch(() => {});
       console.error('Error sending coordinator setup email:', error);
       return false;
     }
@@ -1221,10 +1238,12 @@ class EmailService {
       `,
       attachments: this.getEmailMediaAttachments(),
     };
+    const _pwLogId = await createEmailLog({ emailType: EMAIL_TYPES.PASSWORD_RESET, recipient: email, subject: mailOptions.subject }).catch(() => null);
     try {
       if (transporter) {
         const result = await transporter.sendMail(mailOptions);
         console.log(`✅ Password reset email sent to ${email}. Message ID: ${result.messageId}`);
+        await markEmailSent(_pwLogId, result.messageId, 1).catch(() => {});
         return true;
       } else {
         console.log('=== PASSWORD RESET EMAIL (Development Mode) ===');
@@ -1232,10 +1251,12 @@ class EmailService {
         console.log(`Name: ${name}`);
         console.log(`Reset URL: ${resetUrl}`);
         console.log('=============================================');
+        await markEmailSent(_pwLogId, undefined, 1).catch(() => {});
         return true;
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      await markEmailFailed(_pwLogId, errorMessage, (error as any)?.code, 1).catch(() => {});
       console.error('❌ Error sending password reset email to', email);
       console.error('Error details:', errorMessage);
       console.error('Full error:', error);
@@ -1371,10 +1392,13 @@ class EmailService {
       attachments: this.getEmailMediaAttachments(),
     };
 
+    const _mfaLogId = await createEmailLog({ emailType: EMAIL_TYPES.MFA_CODE, recipient: email, subject: mailOptions.subject }).catch(() => null);
+
     try {
       if (transporter) {
-        await transporter.sendMail(mailOptions);
+        const _mInfo = await transporter.sendMail(mailOptions);
         console.log(`MFA code email sent to ${email}`);
+        await markEmailSent(_mfaLogId, _mInfo?.messageId, 1).catch(() => {});
         return true;
       } else {
         console.log('=== MFA CODE EMAIL (Development Mode) ===');
@@ -1383,9 +1407,12 @@ class EmailService {
         console.log(`Code: ${code}`);
         console.log(`Expires At: ${formattedExpiry}`);
         console.log('========================================');
+        await markEmailSent(_mfaLogId, undefined, 1).catch(() => {});
         return true;
       }
     } catch (error) {
+      const _mfaErr = error instanceof Error ? error.message : String(error);
+      await markEmailFailed(_mfaLogId, _mfaErr, (error as any)?.code, 1).catch(() => {});
       console.error('Error sending MFA code email:', error);
       return false;
     }
@@ -1498,10 +1525,12 @@ class EmailService {
       `,
       attachments: this.getEmailMediaAttachments(),
     };
+    const _polwelLogId = await createEmailLog({ emailType: EMAIL_TYPES.POLWEL_USER_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
     try {
       if (transporter) {
-        await transporter.sendMail(mailOptions);
+        const _pInfo = await transporter.sendMail(mailOptions);
         console.log(`POLWEL user setup email sent to ${email}`);
+        await markEmailSent(_polwelLogId, _pInfo?.messageId, 1).catch(() => {});
         return true;
       } else {
         console.log('=== POLWEL USER SETUP EMAIL (Development Mode) ===');
@@ -1509,9 +1538,12 @@ class EmailService {
         console.log(`Name: ${name}`);
         console.log(`Setup URL: ${setupUrl}`);
         console.log('=============================================');
+        await markEmailSent(_polwelLogId, undefined, 1).catch(() => {});
         return true;
       }
     } catch (error) {
+      const _pErr = error instanceof Error ? error.message : String(error);
+      await markEmailFailed(_polwelLogId, _pErr, (error as any)?.code, 1).catch(() => {});
       console.error('Error sending POLWEL user setup email:', error);
       return false;
     }
@@ -1767,10 +1799,18 @@ class EmailService {
       }
     }
 
+    const _taLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.TRAINER_ASSIGNMENT,
+      recipient: email,
+      ...(ccEmails && ccEmails.length > 0 ? { cc: ccEmails.join(', ') } : {}),
+      subject: mailOptions.subject,
+    }).catch(() => null);
+
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — trainer assignment email would be:');
         console.log('To:', email, '| Subject:', mailOptions.subject);
+        await markEmailFailed(_taLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1).catch(() => {});
         return { success: false, error: 'SMTP not configured' };
       }
 
@@ -1795,16 +1835,22 @@ class EmailService {
         });
         if (!result.success) {
           console.error('❌ Mailjet REST API failed for trainer email:', result.error);
+          await markEmailFailed(_taLogId, result.error, undefined, 1).catch(() => {});
+        } else {
+          await markEmailSent(_taLogId, undefined, 1).catch(() => {});
         }
         return result;
       }
 
       const info = await transporter.sendMail(mailOptions);
       console.log(`(EmailService) Trainer assignment email sent to ${email}:`, info?.messageId || info);
+      await markEmailSent(_taLogId, info?.messageId, 1).catch(() => {});
       return { success: true, info };
     } catch (err) {
-      console.error('(EmailService) Failed to send trainer assignment email:', (err as any)?.message || err);
-      return { success: false, error: (err as any)?.message || String(err) };
+      const _taErr = (err as any)?.message || String(err);
+      await markEmailFailed(_taLogId, _taErr, (err as any)?.code, 1).catch(() => {});
+      console.error('(EmailService) Failed to send trainer assignment email:', _taErr || err);
+      return { success: false, error: _taErr };
     }
   }
 
@@ -2053,6 +2099,8 @@ class EmailService {
     courseDuration?: string | null;
     /** Course run remarks to display in the Note field */
     remarks?: string | null;
+    /** Optional: log which course run this email belongs to */
+    courseRunId?: string;
   }): Promise<boolean> {
     const {
       email,
@@ -2145,6 +2193,14 @@ class EmailService {
       console.log(`📎 Total attachment size: ${(totalAttachmentBytes / 1024 / 1024).toFixed(2)} MB`);
     }
 
+    const _confLogId = await createEmailLog({
+      emailType:   EMAIL_TYPES.COURSE_CONFIRMATION,
+      recipient:   Array.isArray(email) ? email.join(', ') : email,
+      ...(ccRecipients ? { cc: ccRecipients.join(', ') } : {}),
+      subject:     mailOptions.subject,
+      ...(params.courseRunId ? { courseRunId: params.courseRunId } : {}),
+    }).catch(() => null);
+
     try {
       if (!transporter) {
         console.error('╔════════════════════════════════════════════════════════════════╗');
@@ -2155,6 +2211,7 @@ class EmailService {
         console.error('Configure SMTP in .env file with:');
         console.error('  - MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD');
         console.error('════════════════════════════════════════════════════════════════');
+        await markEmailFailed(_confLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1).catch(() => {});
         return false;
       }
 
@@ -2195,9 +2252,11 @@ class EmailService {
 
         if (!result.success) {
           console.error('❌ Mailjet REST API failed:', result.error);
+          await markEmailFailed(_confLogId, result.error, undefined, 1).catch(() => {});
           return false;
         }
         console.log('✅ Mailjet REST API success. MessageID:', result.messageId);
+        await markEmailSent(_confLogId, result.messageId, 1).catch(() => {});
         return true;
       }
 
@@ -2216,10 +2275,14 @@ class EmailService {
       
       if (info.rejected && info.rejected.length > 0) {
         console.error('⚠️  Email rejected by server:', info.rejected);
+        await markEmailFailed(_confLogId, `Rejected: ${JSON.stringify(info.rejected)}`, 'SMTP_REJECTED', 1).catch(() => {});
         return false;
       }
+      await markEmailSent(_confLogId, info.messageId, 1).catch(() => {});
       return true;
     } catch (error) {
+      const _confErr = (error as any)?.message || String(error);
+      await markEmailFailed(_confLogId, _confErr, (error as any)?.code, 1).catch(() => {});
       console.error('╔════════════════════════════════════════════════════════════════╗');
       console.error('║ ❌ FAILED TO SEND EMAIL - ERROR DETAILS                       ║');
       console.error('╚════════════════════════════════════════════════════════════════╝');
@@ -2486,9 +2549,12 @@ class EmailService {
       }
     }
 
+    const _cancelLogId = await createEmailLog({ emailType: EMAIL_TYPES.COURSE_CANCELLATION, recipient: email, subject }).catch(() => null);
+
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — cancellation email would be sent to:', email);
+        await markEmailSent(_cancelLogId, undefined, 1).catch(() => {});
         return true;
       }
 
@@ -2513,13 +2579,19 @@ class EmailService {
         });
         if (!result.success) {
           console.error('(EmailService) Mailjet REST failed for cancellation email:', result.error);
+          await markEmailFailed(_cancelLogId, result.error, undefined, 1).catch(() => {});
+        } else {
+          await markEmailSent(_cancelLogId, result.messageId, 1).catch(() => {});
         }
         return result.success;
       }
 
-      await transporter.sendMail(mailOptions);
+      const _cancelInfo = await transporter.sendMail(mailOptions);
+      await markEmailSent(_cancelLogId, _cancelInfo?.messageId, 1).catch(() => {});
       return true;
     } catch (error) {
+      const _cancelErr = (error as any)?.message || String(error);
+      await markEmailFailed(_cancelLogId, _cancelErr, (error as any)?.code, 1).catch(() => {});
       console.error('Failed to send course cancellation email:', error);
       return false;
     }
@@ -2740,9 +2812,12 @@ class EmailService {
       attachments: allAttachments,
     };
 
+    const _compLogId = await createEmailLog({ emailType: EMAIL_TYPES.COURSE_COMPLETION, recipient: email, subject }).catch(() => null);
+
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — completion email would be sent to:', email);
+        await markEmailSent(_compLogId, undefined, 1).catch(() => {});
         return true;
       }
 
@@ -2759,12 +2834,20 @@ class EmailService {
           inlinedAttachments: inlined,
           ...(mjAttachments ? { attachments: mjAttachments } : {}),
         });
+        if (result.success) {
+          await markEmailSent(_compLogId, result.messageId, 1).catch(() => {});
+        } else {
+          await markEmailFailed(_compLogId, result.error, undefined, 1).catch(() => {});
+        }
         return result.success;
       }
 
-      await transporter.sendMail(mailOptions);
+      const _compInfo = await transporter.sendMail(mailOptions);
+      await markEmailSent(_compLogId, _compInfo?.messageId, 1).catch(() => {});
       return true;
     } catch (error) {
+      const _compErr = (error as any)?.message || String(error);
+      await markEmailFailed(_compLogId, _compErr, (error as any)?.code, 1).catch(() => {});
       console.error('Failed to send course completion email:', error);
       return false;
     }
@@ -2858,6 +2941,8 @@ class EmailService {
       mailOptions.attachments = this.getEmailMediaAttachments();
     }
 
+    const _trainerCompLogId = await createEmailLog({ emailType: EMAIL_TYPES.TRAINER_COMPLETION, recipient: email, subject: `Course Completed: ${courseTitle}` }).catch(() => null);
+
     try {
       if (this.isMailjetSmtp()) {
         const result = await this.sendViaMailjetApi({
@@ -2868,13 +2953,21 @@ class EmailService {
           text: mailOptions.text,
           inlinedAttachments,
         });
+        if (result.success) {
+          await markEmailSent(_trainerCompLogId, result.messageId, 1).catch(() => {});
+        } else {
+          await markEmailFailed(_trainerCompLogId, result.error, undefined, 1).catch(() => {});
+        }
         return result.success;
       }
       const t = this.getTransporter();
       if (!t) throw new Error('Email transporter not available');
-      await t.sendMail(mailOptions);
+      const _tcInfo = await t.sendMail(mailOptions);
+      await markEmailSent(_trainerCompLogId, _tcInfo?.messageId, 1).catch(() => {});
       return true;
     } catch (error) {
+      const _tcErr = (error as any)?.message || String(error);
+      await markEmailFailed(_trainerCompLogId, _tcErr, (error as any)?.code, 1).catch(() => {});
       console.error('Failed to send trainer course completion email:', error);
       return false;
     }
@@ -2982,30 +3075,60 @@ class EmailService {
       attachments: this.getEmailMediaAttachments(),
     };
 
-    try {
-      if (this.isGraphApiMode()) {
-        const t2 = this.getTransporter();
-        if (!t2) { console.log(`(EmailService) Graph transport unavailable — TA approval notice to ${adminEmail} skipped`); return false; }
-        await t2.sendMail(mailOptions);
-      } else if (this.isMailjetSmtp()) {
-        const result = await this.sendViaMailjetApi({
-          to: adminEmail,
-          from: this.mailFromAddress,
-          subject: mailOptions.subject as string,
-          html,
-          inlinedAttachments: this.getEmailMediaMailjetInline(),
-        });
-        return result.success;
-      } else {
-        if (!t) { console.log(`(EmailService) SMTP not configured — TA approval notice to ${adminEmail} skipped`); return false; }
-        await t.sendMail(mailOptions);
+    const _taApprovalLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.TA_APPROVAL,
+      recipient: adminEmail,
+      subject: mailOptions.subject,
+    }).catch(() => null);
+
+    const MAX_ATTEMPTS = 3;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        if (this.isGraphApiMode()) {
+          const t2 = this.getTransporter();
+          if (!t2) {
+            console.log(`(EmailService) Graph transport unavailable — TA approval notice to ${adminEmail} skipped`);
+            await markEmailFailed(_taApprovalLogId, 'Graph transport unavailable', 'NO_TRANSPORTER', attempt).catch(() => {});
+            return false;
+          }
+          await t2.sendMail(mailOptions);
+        } else if (this.isMailjetSmtp()) {
+          const result = await this.sendViaMailjetApi({
+            to: adminEmail,
+            from: this.mailFromAddress,
+            subject: mailOptions.subject as string,
+            html,
+            inlinedAttachments: this.getEmailMediaMailjetInline(),
+          });
+          if (!result.success) throw new Error(result.error || 'Mailjet send failed');
+        } else {
+          if (!t) {
+            console.log(`(EmailService) SMTP not configured — TA approval notice to ${adminEmail} skipped`);
+            await markEmailFailed(_taApprovalLogId, 'SMTP not configured', 'NO_TRANSPORTER', attempt).catch(() => {});
+            return false;
+          }
+          await t.sendMail(mailOptions);
+        }
+        console.log(`✅ TA approval notice sent to ${adminEmail} (attempt ${attempt})`);
+        await markEmailSent(_taApprovalLogId, undefined, attempt).catch(() => {});
+        return true;
+      } catch (error) {
+        lastError = error;
+        const errMsg = (error as any)?.message || String(error);
+        console.error(`❌ Failed to send TA approval notice to ${adminEmail} (attempt ${attempt}/${MAX_ATTEMPTS}):`, errMsg);
+
+        if (attempt < MAX_ATTEMPTS) {
+          const delay = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
+          await markEmailRetrying(_taApprovalLogId, attempt, errMsg).catch(() => {});
+          await new Promise(r => setTimeout(r, delay));
+        }
       }
-      console.log(`✅ TA approval notice sent to ${adminEmail}`);
-      return true;
-    } catch (error) {
-      console.error(`❌ Failed to send TA approval notice to ${adminEmail}:`, error);
-      return false;
     }
+
+    await markEmailFailed(_taApprovalLogId, lastError?.message || String(lastError), lastError?.code, MAX_ATTEMPTS).catch(() => {});
+    return false;
   }
 
   static async sendWaiverPendingNotificationEmail(params: {
@@ -3112,15 +3235,21 @@ class EmailService {
       attachments: this.getEmailMediaAttachments(),
     };
 
+    const _waiverLogId = await createEmailLog({ emailType: EMAIL_TYPES.WAIVER_NOTIFICATION, recipient: adminEmail, subject: mailOptions.subject }).catch(() => null);
+
     try {
       if (!transporter) {
         console.log(`(EmailService) SMTP not configured — waiver notification to ${adminEmail} skipped`);
+        await markEmailFailed(_waiverLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1).catch(() => {});
         return false;
       }
-      await transporter.sendMail(mailOptions);
+      const _wvInfo = await transporter.sendMail(mailOptions);
+      await markEmailSent(_waiverLogId, _wvInfo?.messageId, 1).catch(() => {});
       console.log(`✅ Waiver notification sent to ${adminEmail}`);
       return true;
     } catch (error) {
+      const _wvErr = (error as any)?.message || String(error);
+      await markEmailFailed(_waiverLogId, _wvErr, (error as any)?.code, 1).catch(() => {});
       console.error(`❌ Failed to send waiver notification to ${adminEmail}:`, error);
       return false;
     }

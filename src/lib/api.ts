@@ -2480,6 +2480,39 @@ export const importApi = {
   },
 };
 
+// Email Logs API
+export const emailLogsApi = {
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    emailType?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+    courseRunId?: string;
+  } = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, String(v));
+    });
+    const qs = query.toString();
+    return apiRequest(`/email-logs${qs ? `?${qs}` : ''}`);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest(`/email-logs/${id}`);
+  },
+
+  getStats: async (params: { startDate?: string; endDate?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+    const qs = query.toString();
+    return apiRequest(`/email-logs/stats${qs ? `?${qs}` : ''}`);
+  },
+};
+
 export {
   API_BASE_URL,
 };
@@ -2500,4 +2533,5 @@ export default {
   resourceLibraryApi,
   reportingApi,
   importApi,
+  emailLogsApi,
 };
