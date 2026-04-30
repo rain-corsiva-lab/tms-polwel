@@ -5776,6 +5776,7 @@ export const courseRunController = {
         courseName: courseInfo?.title || 'Course',
         duration: Number(courseInfo?.duration) || 0,
         durationType: courseInfo?.durationType || 'days',
+        startDate: new Date((enrollment.courseRun as any).startDatetime),
         endDate: new Date((enrollment.courseRun as any).endDatetime),
         courseCode: courseInfo?.courseCode || undefined,
       };
@@ -5852,6 +5853,7 @@ export const courseRunController = {
           courseName: courseInfo?.title || 'Course',
           duration: Number(courseInfo?.duration) || 0,
           durationType: courseInfo?.durationType || 'days',
+          startDate: new Date((enrollment.courseRun as any).startDatetime),
           endDate: new Date((enrollment.courseRun as any).endDatetime),
           courseCode: courseInfo?.courseCode || undefined,
         };
@@ -6099,6 +6101,7 @@ export const courseRunController = {
         courseName: enrollment.courseRun.course.title,
         duration: Number(enrollment.courseRun.course.duration) || 0,
         durationType: enrollment.courseRun.course.durationType || 'hours',
+        startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
         endDate: enrollment.courseRun.endDatetime ? new Date(enrollment.courseRun.endDatetime) : new Date(),
         courseCode: enrollment.courseRun.course.courseCode ?? '',
       };
@@ -6879,7 +6882,8 @@ export const courseRunController = {
         courseName: enrollment.courseRun.course.title,
         duration: enrollment.courseRun.course.duration || 0,
         durationType: enrollment.courseRun.course.durationType || 'days',
-        endDate: enrollment.courseRun.endDatetime || new Date(),
+        startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
+        endDate: new Date(enrollment.courseRun.endDatetime || new Date()),
         courseCode: enrollment.courseRun.course.courseCode || '',
       };
 
@@ -6939,7 +6943,8 @@ export const courseRunController = {
         courseName: enrollment.courseRun.course.title,
         duration: enrollment.courseRun.course.duration || 0,
         durationType: enrollment.courseRun.course.durationType || 'days',
-        endDate: enrollment.courseRun.endDatetime || new Date(),
+        startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
+        endDate: new Date(enrollment.courseRun.endDatetime || new Date()),
         courseCode: enrollment.courseRun.course.courseCode || '',
       }));
 
@@ -7005,7 +7010,8 @@ export const courseRunController = {
             courseName: enrollment.courseRun.course.title,
             duration: enrollment.courseRun.course.duration || 0,
             durationType: enrollment.courseRun.course.durationType || 'days',
-            endDate: enrollment.courseRun.endDatetime || new Date(),
+            startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
+            endDate: new Date(enrollment.courseRun.endDatetime || new Date()),
             courseCode: enrollment.courseRun.course.courseCode || '',
           };
 

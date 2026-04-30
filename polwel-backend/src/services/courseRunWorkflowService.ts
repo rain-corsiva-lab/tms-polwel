@@ -509,11 +509,13 @@ export const courseRunWorkflowService = {
           const safeCertCode = (courseRun.course?.courseCode || '').replace(/[^a-z0-9]+/gi, '_');
           const certFilename = `Certificate_${safeName}${safeCertCode ? `_${safeCertCode}` : ''}.pdf`;
           try {
+            const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime) : undefined;
             const certData = {
               learnerName: learner?.fullname || 'Learner',
               courseName: courseRun.course?.title || 'POLWEL Course',
               duration: Number(courseRun.course?.duration) || 1,
               durationType: courseRun.course?.durationType || 'days',
+              ...(startDate ? { startDate } : {}),
               endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : new Date(),
               courseCode: courseRun.course?.courseCode ?? '',
             };
