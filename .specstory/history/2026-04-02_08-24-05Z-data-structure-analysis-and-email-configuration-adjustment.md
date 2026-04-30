@@ -592,3 +592,26 @@ _**User (2026-04-27 13:10:18Z)**_
 
 see pasted image 1 , in #file:CourseRuns.tsx #file:CourseRunDetail.tsx so when a course run reach confirmed pending confirmation emails status , we will need to run send confirmation emails and send trainer emails first currently right. 
 but when a course run is not on the 'Confirmed pending confirmation emails' status yet , sometimes client send email confirmation to all learners manually in the #file:CourseRunDetail.tsx page on the participant tab since we have that feature too. and when the status is become confirmed pending confirmatin email , since client already send all learner email before , they only need to send trainer email , but since we dont trigerr run send confirmation email , the status is not automatically changed to 'confirmed' , so we want to add new condition when all participant that enrolled in this course run , have all email confirmation status is sent , then we dont need to run the send email confirmation in #file:CourseRuns.tsx , just send trainer email will automatically goes to confirmed status, but if atleast 1 participant who the email confirmation status is not sent , then we will not auto change it into the confirmed yet, we need to send those who hasnt sent yet. so everytime we trigger send in #file:SendCourseConfirmationEmailDialog.tsx we will check the status conditions of this course run , please carefully develop this
+
+_**User (2026-04-28 06:22:47Z)**_
+
+good . oh ya client say this to me  
+'can you also help me check, why the TA approval notification email dont work sometimes on zhengwei_lee@polwel.org.sg ?'
+see pasted image 1 to 3 , sometimes the email sent to lee zheng wei successfullly somettimes not , can you check probably whats the issue ? is there any limit from smtp or email provider ? or anything else? and please do some fixes or improve our email deliverablility so we can avoid something like this please ? also please help me to develop a function to log all emails sent #file:emailService.ts into database please , #file:schema.prisma , so we need to add new table 'email_log' , with some important column like status, log, error , note , etc that important and easy for us to troubleshoot if theres any error please 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+_**User (2026-04-28 06:35:36Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+_**User (2026-04-30 06:08:49Z)**_
+
+good, oh ya cleint report some issues in our app , see pasted image 1 
+
+- Courses with more than 1 day, certificates should show start and end date of course run.
+Eg. 28 April - 29 April for 2 day courses. Currently only shows the start date. its in certificate pdf template #file:CertificateGenerationDialog.tsx #file:certificateService.ts 
+
+- also on export participant list in #file:CourseRunDetail.tsx and #file:GenerateCertificatesDialog.tsx #file:certificateService.ts , Department = Division (Not filled in Excel. Please resolve it , division also means of organisation name ) so plesae fill it with organisation name . also SPF email address colunn head-> rename to Email Address
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything

@@ -9,6 +9,7 @@ interface CertificateData {
   courseName: string;
   duration: number;
   durationType: string;
+  startDate?: Date;
   endDate: Date;
   courseCode?: string;
 }
@@ -114,11 +115,15 @@ export function generateCertificateHTML(data: CertificateData): string {
 
   const durationText = `${data.duration}-${durationTypeFormatted}`.trim();
   
-  const formattedEndDate = data.endDate.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).toUpperCase();
+  // Format date — single day: "28 APRIL 2026"; multi-day: "28 APRIL - 29 APRIL 2026"
+  const startDateObj = data.startDate instanceof Date ? data.startDate : undefined;
+  const isSameDay = startDateObj &&
+    startDateObj.getDate() === data.endDate.getDate() &&
+    startDateObj.getMonth() === data.endDate.getMonth() &&
+    startDateObj.getFullYear() === data.endDate.getFullYear();
+  const formattedEndDate = (startDateObj && !isSameDay)
+    ? `${startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }).toUpperCase()} - ${data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`
+    : data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
 
   const logoPath = findImagePath('cert-logo.png');
   const signaturePath = findImagePath('polwel-signature.png');

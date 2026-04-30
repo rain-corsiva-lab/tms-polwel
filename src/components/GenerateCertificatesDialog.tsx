@@ -445,7 +445,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
         "Name",
         "Department",
         "Designation",
-        "SPF Email Address",
+        "Email Address",
         "Contact Number",
         "Retiring Officer?",
         "Payment Mode",
@@ -508,7 +508,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
         const r = worksheet.getRow(row);
         r.getCell(1).value = idx + 1;
         r.getCell(2).value = l.fullname || "";
-        r.getCell(3).value = "";
+        r.getCell(3).value = lr.clientOrganization?.name || fullRun.clientOrganization?.name || "";
         r.getCell(4).value = l.designation || "";
         r.getCell(5).value = l.email || "";
         r.getCell(6).value = l.contactNumber || "";
@@ -556,6 +556,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
           const r = worksheet.getRow(row);
           r.getCell(1).value = idx + 1;
           r.getCell(2).value = l.fullname || "";
+          r.getCell(3).value = lr.clientOrganization?.name || fullRun.clientOrganization?.name || "";
           r.getCell(4).value = l.designation || "";
           r.getCell(5).value = l.email || "";
           r.getCell(6).value = l.contactNumber || "";
