@@ -2050,7 +2050,7 @@ class EmailService {
                                   <td style="padding: 16px; background-color: #f3f4f6 !important; border-left: 4px solid #d1d5db;" bgcolor="#f3f4f6">
                                     <p style="margin: 0 0 8px 0; color: #4b5563 !important; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;">Photos & Videography</p>
                                     <div style="color: #6b7280 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org/privacy-policy" style="color: #4b5563 !important; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
+                                      Please note that photos and/or videos may be taken by POLWEL staff during the course/workshop for publicity purposes. You can find our <a href="https://polwel.org.sg/privacy-policy/" style="color: #4b5563 !important; text-decoration: none;">Privacy Policy here</a>. All images and/or videos captured will remain the property of POLWEL.
                                     </div>
                                   </td>
                                 </tr>
@@ -2311,6 +2311,8 @@ class EmailService {
       cancellationReason?: string;
       nextRunDate?: string | null;
       additionalNotes?: string | null;
+      /** When 'trainer', the apology/visit-website/contact-PDCS section is omitted. */
+      recipientType?: 'learner' | 'trainer';
     },
     options?: { logoSrc?: string },
   ): { html: string; subject: string } {
@@ -2323,8 +2325,10 @@ class EmailService {
       cancellationReason,
       nextRunDate,
       additionalNotes,
+      recipientType,
     } = params;
 
+    const isTrainer = recipientType === 'trainer';
     const logoSrc = options?.logoSrc ?? this.getLogoSrc();
 
     const formatDate = (date?: Date) => {
@@ -2362,7 +2366,12 @@ class EmailService {
 
     const formatTime = () => '0900 to 1700 hrs';
 
-    const subject = `Course Cancellation: ${courseTitle}${formatDateForSubject(startDate) ? ` (${formatDateForSubject(startDate)})` : ''}`;
+    const startDateStr = formatDateForSubject(startDate);
+    const endDateStr = formatDateForSubject(endDate);
+    const dateRange = startDateStr
+      ? (endDateStr && !isSameDay(startDate, endDate) ? `${startDateStr} - ${endDateStr}` : startDateStr)
+      : '';
+    const subject = `Course Cancellation: ${courseTitle}${dateRange ? ` (${dateRange})` : ''}`;
 
     const html = `
         <!DOCTYPE html>
@@ -2449,6 +2458,7 @@ class EmailService {
                                 </tr>
                               </table>` : ''}
 
+                              ${!isTrainer ? `
                               <p style="margin: 24px 0 8px 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 We apologize for any inconvenience caused and appreciate your understanding. We hope to see you at our upcoming programmes.
                               </p>
@@ -2457,7 +2467,7 @@ class EmailService {
                               </p>
                               <p style="margin: 8px 0 0 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 For any queries pertaining to the workshop, please contact PDCS at <a href="mailto:pdcs@polwel.org.sg" style="color: #3b82f6 !important; text-decoration: underline; font-family: Arial, sans-serif !important;">pdcs@polwel.org.sg</a> or call us at 6235 6428 (Option 4).
-                              </p>
+                              </p>` : ''}
                             </td>
                           </tr>
                         </table>
@@ -2489,6 +2499,10 @@ class EmailService {
     nextRunDate?: string | null;
     additionalNotes?: string | null;
     attachments?: Array<{ path: string; originalName?: string; filename?: string }>;
+    /** Optional CC recipients (e.g. Training Coordinators). */
+    cc?: string[];
+    /** 'trainer' removes the learner-specific apology/website/contact section. */
+    recipientType?: 'learner' | 'trainer';
   }): Promise<boolean> {
     const {
       email,
@@ -2503,6 +2517,8 @@ class EmailService {
       nextRunDate,
       additionalNotes,
       attachments,
+      cc,
+      recipientType,
     } = params;
 
     const transporter = this.getTransporter();
@@ -2519,6 +2535,7 @@ class EmailService {
         ...(cancellationReason !== undefined ? { cancellationReason } : {}),
         ...(nextRunDate !== undefined && nextRunDate !== null ? { nextRunDate } : {}),
         ...(additionalNotes !== undefined && additionalNotes !== null ? { additionalNotes } : {}),
+        ...(recipientType !== undefined ? { recipientType } : {}),
       },
       { logoSrc: this.getLogoSrc() },
     );
@@ -2529,6 +2546,7 @@ class EmailService {
       subject,
       html,
       attachments: this.getEmailMediaAttachments(),
+      ...(cc && cc.length > 0 ? { cc } : {}),
     };
 
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
@@ -2575,6 +2593,7 @@ class EmailService {
           subject: mailOptions.subject,
           html: mailOptions.html as string,
           attachments: apiAttachments,
+          ...(cc && cc.length > 0 ? { cc } : {}),
           ...(logoInline ? { inlinedAttachments: [logoInline] } : {}),
         });
         if (!result.success) {

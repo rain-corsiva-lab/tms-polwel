@@ -133,6 +133,7 @@ interface CancelDialogState {
   reason: string;
   nextRunDate: string;
   additionalNotes: string;
+  cc: string;
   submitting: boolean;
 }
 
@@ -228,6 +229,7 @@ const CourseRuns: React.FC = () => {
     reason: "",
     nextRunDate: "",
     additionalNotes: "",
+    cc: "",
     submitting: false,
   };
 
@@ -809,10 +811,15 @@ const CourseRuns: React.FC = () => {
   const submitCancel = async () => {
     if (!cancelDialog.courseRun) return;
     // Strip Quill empty-state HTML before sending
-    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[] } = {};
+    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[]; cc?: string[] } = {};
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
     if (!isQuillEmptyHtml(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
+    const ccEmails = cancelDialog.cc
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+    if (ccEmails.length > 0) payloadObj.cc = ccEmails;
 
     setCancelDialog((prev) => ({ ...prev, submitting: true }));
 
@@ -1950,6 +1957,21 @@ const CourseRuns: React.FC = () => {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Rich text supported. Will be included in the cancellation notification email sent to participants and trainers.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cancelCc">
+                  CC <span className="text-muted-foreground text-xs">(Optional)</span>
+                </Label>
+                <Input
+                  id="cancelCc"
+                  placeholder="e.g. manager@example.com, admin@example.com"
+                  value={cancelDialog.cc}
+                  onChange={(e) => setCancelDialog((prev) => ({ ...prev, cc: e.target.value }))}
+                  disabled={cancelDialog.submitting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Comma-separated email addresses. Training Coordinators linked to enrolled learners will be CC'd automatically.
                 </p>
               </div>
             </div>

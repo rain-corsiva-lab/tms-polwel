@@ -596,6 +596,8 @@ const cancelCourseRunSchema = z
       .nullable(),
     /** Media IDs from POST /api/uploads/email-attachments (optional cancellation attachments). */
     attachmentMediaIds: z.array(z.string().min(1)).max(10).optional(),
+    /** Optional additional CC email addresses (on top of auto-CC TCs). */
+    cc: z.array(z.string().email('Invalid CC email address')).max(20).optional(),
   })
   .optional();
 
@@ -1554,6 +1556,7 @@ export const courseRunController = {
       const additionalNotes = payload?.additionalNotes?.trim() || null;
       const rawAttachmentIds = payload?.attachmentMediaIds ?? [];
       const attachmentMediaIds = [...new Set(rawAttachmentIds)].filter(Boolean);
+      const manualCc: string[] = (payload?.cc ?? []).filter((e) => e && e.trim());
       const actorId = req.user?.userId ?? null;
 
       if (attachmentMediaIds.length > 0) {
@@ -1680,7 +1683,7 @@ export const courseRunController = {
                 }))
               : undefined;
 
-          // Fetch enrolled learners
+          // Fetch enrolled learners (include trainingCoordinator for auto-CC)
           const enrollments = await prisma.courseRunLearner.findMany({
             where: {
               courseRunId: id,
@@ -1691,6 +1694,13 @@ export const courseRunController = {
                 select: {
                   id: true,
                   fullname: true,
+                  email: true,
+                },
+              },
+              trainingCoordinator: {
+                select: {
+                  id: true,
+                  name: true,
                   email: true,
                 },
               },
@@ -1711,6 +1721,12 @@ export const courseRunController = {
             },
           });
 
+          // Collect unique TC emails from enrollments (auto-CC by default)
+          const tcEmailsFromEnrollments = enrollments
+            .map((e) => (e as any).trainingCoordinator?.email)
+            .filter((email): email is string => typeof email === 'string' && email.trim() !== '');
+          const allCc = [...new Set([...manualCc, ...tcEmailsFromEnrollments])];
+
           // Send emails to learners
           const learnerEmailPromises = enrollments.map((enrollment) => {
             const emailParams: any = {
@@ -1718,6 +1734,7 @@ export const courseRunController = {
               learnerName: enrollment.learner.fullname,
               courseTitle: courseRun.course?.title || 'Course',
               cancellationReason: reason || 'unforeseen circumstances',
+              recipientType: 'learner',
             };
             if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
             if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
@@ -1727,6 +1744,7 @@ export const courseRunController = {
             if (nextRunDate) emailParams.nextRunDate = nextRunDate;
             if (additionalNotes) emailParams.additionalNotes = additionalNotes;
             if (emailAttachments) emailParams.attachments = emailAttachments;
+            if (allCc.length > 0) emailParams.cc = allCc;
 
             return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
               console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -1746,6 +1764,7 @@ export const courseRunController = {
               learnerName: trainerAssignment.trainer.name ?? 'Trainer',
               courseTitle: courseRun.course?.title || 'Course',
               cancellationReason: reason || 'unforeseen circumstances',
+              recipientType: 'trainer',
             };
             if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
             if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
