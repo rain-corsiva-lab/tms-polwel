@@ -1627,7 +1627,7 @@ export const courseRunsApi = {
 
   cancel: async (
     id: string,
-    payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[] }
+    payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[]; cc?: string[] }
   ) => {
     return apiRequest(`/course-runs/${id}/cancel`, {
       method: 'POST',

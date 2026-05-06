@@ -7,16 +7,34 @@
       "end_timestamp": "2026-02-08T14:22:51+07:00",
       "markdown_size_bytes": 409860,
       "provider": "copilotide",
-      "last_updated": "2026-04-30T06:12:38Z"
+      "last_updated": "2026-05-06T08:27:21Z"
+    },
+    "4a95c6ba-c315-471b-84b1-418fda19213c": {
+      "user_message_count": 1,
+      "agent_message_count": 1,
+      "start_timestamp": "2026-05-05T12:33:20+07:00",
+      "end_timestamp": "1970-01-01T07:00:00+07:00",
+      "markdown_size_bytes": 329,
+      "provider": "copilotide",
+      "last_updated": "2026-05-05T05:33:51Z"
     },
     "4ad9e894-1977-4edb-b0ae-938fd877eb7b": {
-      "user_message_count": 31,
-      "agent_message_count": 17,
+      "user_message_count": 33,
+      "agent_message_count": 728,
       "start_timestamp": "2026-04-02T15:31:23+07:00",
       "end_timestamp": "1970-01-01T07:00:00+07:00",
-      "markdown_size_bytes": 35807,
+      "markdown_size_bytes": 717662,
       "provider": "copilotide",
-      "last_updated": "2026-04-30T06:12:38Z"
+      "last_updated": "2026-05-06T08:27:21Z"
+    },
+    "83ca20d2-a885-4ee9-b8ad-38b0b28bb9c1": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "2026-05-05T17:37:27+07:00",
+      "end_timestamp": "1970-01-01T07:00:00+07:00",
+      "markdown_size_bytes": 162,
+      "provider": "copilotide",
+      "last_updated": "2026-05-05T10:38:27Z"
     },
     "8f598232-d4e9-44d3-9eb1-7fc6c09777bf": {
       "user_message_count": 57,
@@ -25,7 +43,7 @@
       "end_timestamp": "1970-01-01T07:00:00+07:00",
       "markdown_size_bytes": 607387,
       "provider": "copilotide",
-      "last_updated": "2026-04-30T06:12:38Z"
+      "last_updated": "2026-05-06T08:27:21Z"
     },
     "bd8ec3bf-d6bb-40d5-a0df-6ae2c9582fe0": {
       "user_message_count": 27,
@@ -34,7 +52,7 @@
       "end_timestamp": "2026-01-26T20:27:06+07:00",
       "markdown_size_bytes": 544792,
       "provider": "copilotide",
-      "last_updated": "2026-04-30T06:12:38Z"
+      "last_updated": "2026-05-06T08:27:21Z"
     }
   }
 }

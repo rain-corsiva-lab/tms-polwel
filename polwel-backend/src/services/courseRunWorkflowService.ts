@@ -269,6 +269,30 @@ export const courseRunWorkflowService = {
     const now = new Date();
 
     if (action === 'MARK_EMAILS_SENT') {
+      // Runs not requiring individual registration skip confirmation email sending
+      if ((courseRun as any).individualRegistrationRequired === false) {
+        await prisma.courseRun.update({
+          where: { id: courseRunId },
+          data: {
+            status: definition.to,
+            statusLastEvaluatedAt: now,
+            learnerEmailStatus: LearnerEmailStatus.NOT_REQUIRED,
+            learnerEmailStatusUpdatedAt: now,
+          },
+        });
+        return {
+          courseRun: await loadCourseRunWithRelations(prisma, courseRunId),
+          action: {
+            key: definition.key,
+            label: definition.label,
+            targetStatus: definition.to,
+            description: definition.description,
+            requiresLearnerEmails: Boolean(definition.requiresLearnerEmails),
+          },
+          emailReport: { attempted: 0, succeeded: 0, failed: [] } satisfies LearnerEmailReport,
+        };
+      }
+
       const enrolledLearners = courseRun.courseRunLearners.filter((learner) =>
         ['ENROLLED'].includes(String(learner.enrollmentStatus || 'ENROLLED'))
       );

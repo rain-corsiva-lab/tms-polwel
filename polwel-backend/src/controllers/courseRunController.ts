@@ -596,6 +596,8 @@ const cancelCourseRunSchema = z
       .nullable(),
     /** Media IDs from POST /api/uploads/email-attachments (optional cancellation attachments). */
     attachmentMediaIds: z.array(z.string().min(1)).max(10).optional(),
+    /** Optional additional CC email addresses (on top of auto-CC TCs). */
+    cc: z.array(z.string().email('Invalid CC email address')).max(20).optional(),
   })
   .optional();
 
@@ -1554,6 +1556,7 @@ export const courseRunController = {
       const additionalNotes = payload?.additionalNotes?.trim() || null;
       const rawAttachmentIds = payload?.attachmentMediaIds ?? [];
       const attachmentMediaIds = [...new Set(rawAttachmentIds)].filter(Boolean);
+      const manualCc: string[] = (payload?.cc ?? []).filter((e) => e && e.trim());
       const actorId = req.user?.userId ?? null;
 
       if (attachmentMediaIds.length > 0) {
@@ -1680,7 +1683,7 @@ export const courseRunController = {
                 }))
               : undefined;
 
-          // Fetch enrolled learners
+          // Fetch enrolled learners (include trainingCoordinator for auto-CC)
           const enrollments = await prisma.courseRunLearner.findMany({
             where: {
               courseRunId: id,
@@ -1691,6 +1694,13 @@ export const courseRunController = {
                 select: {
                   id: true,
                   fullname: true,
+                  email: true,
+                },
+              },
+              trainingCoordinator: {
+                select: {
+                  id: true,
+                  name: true,
                   email: true,
                 },
               },
@@ -1711,6 +1721,12 @@ export const courseRunController = {
             },
           });
 
+          // Collect unique TC emails from enrollments (auto-CC by default)
+          const tcEmailsFromEnrollments = enrollments
+            .map((e) => (e as any).trainingCoordinator?.email)
+            .filter((email): email is string => typeof email === 'string' && email.trim() !== '');
+          const allCc = [...new Set([...manualCc, ...tcEmailsFromEnrollments])];
+
           // Send emails to learners
           const learnerEmailPromises = enrollments.map((enrollment) => {
             const emailParams: any = {
@@ -1718,6 +1734,7 @@ export const courseRunController = {
               learnerName: enrollment.learner.fullname,
               courseTitle: courseRun.course?.title || 'Course',
               cancellationReason: reason || 'unforeseen circumstances',
+              recipientType: 'learner',
             };
             if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
             if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
@@ -1727,6 +1744,7 @@ export const courseRunController = {
             if (nextRunDate) emailParams.nextRunDate = nextRunDate;
             if (additionalNotes) emailParams.additionalNotes = additionalNotes;
             if (emailAttachments) emailParams.attachments = emailAttachments;
+            if (allCc.length > 0) emailParams.cc = allCc;
 
             return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
               console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -1746,6 +1764,7 @@ export const courseRunController = {
               learnerName: trainerAssignment.trainer.name ?? 'Trainer',
               courseTitle: courseRun.course?.title || 'Course',
               cancellationReason: reason || 'unforeseen circumstances',
+              recipientType: 'trainer',
             };
             if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
             if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
@@ -3696,10 +3715,12 @@ export const courseRunController = {
 
       const allConfirmationEmailsSent = hasLearners > 0 && learnersWithoutConfirmationEmail === 0;
 
-      // For TALKS (no learners), transition to CONFIRMED immediately after trainer email is sent.
+      // For TALKS or runs without individual registration, transition to CONFIRMED immediately
+      // after trainer email is sent — no learner confirmation emails needed.
       // For other types, transition only if ALL enrolled learners have confirmation emails sent.
       const isTalks = courseRun.courseRunType === 'TALKS';
-      if (isTalks || allConfirmationEmailsSent) {
+      const skipLearnerEmails = isTalks || (courseRun as any).individualRegistrationRequired === false;
+      if (skipLearnerEmails || allConfirmationEmailsSent) {
         await prisma.courseRun.update({
           where: { id },
           data: {
@@ -3709,7 +3730,7 @@ export const courseRunController = {
         });
         console.log(
           `Course run ${id} status updated to CONFIRMED${
-            isTalks ? ' (TALKS — no learners required)' : ` after trainer email sent — all ${hasLearners} enrolled learner(s) already have confirmation emails sent`
+            skipLearnerEmails ? ' (no individual registration required — learner emails skipped)' : ` after trainer email sent — all ${hasLearners} enrolled learner(s) already have confirmation emails sent`
           }.`,
         );
       } else {
@@ -4292,7 +4313,9 @@ export const courseRunController = {
             },
           })
         : 0;
-      const allLearnerEmailsSent = totalEnrolled > 0 && enrolledWithoutConfirmation === 0;
+      const noIndividualReg = (courseRun as any).individualRegistrationRequired === false;
+      // Treat runs without individual registration as "learner emails not required".
+      const allLearnerEmailsSent = noIndividualReg || (totalEnrolled > 0 && enrolledWithoutConfirmation === 0);
 
       const trainerEmailsSent = await prisma.trainerAssignmentEmailHistory.count({
         where: { courseRunId: id, deletedAt: null },
@@ -4300,12 +4323,16 @@ export const courseRunController = {
       const hasTrainers = await prisma.courseRunTrainer.count({
         where: { courseRunId: id, deletedAt: null },
       });
-      if (allLearnerEmailsSent && hasTrainers > 0 && trainerEmailsSent >= hasTrainers) {
+      // Advance to CONFIRMED when learner emails are satisfied and trainer emails are done.
+      // Also advance immediately for non-individual-registration runs even if no trainers are assigned.
+      if (noIndividualReg || (allLearnerEmailsSent && hasTrainers > 0 && trainerEmailsSent >= hasTrainers)) {
         await prisma.courseRun.update({
           where: { id },
           data: { status: 'CONFIRMED', statusLastEvaluatedAt: new Date() },
         });
-        console.log(`Course run ${id} status updated to CONFIRMED — all ${totalEnrolled} learner(s) and trainer(s) have been emailed.`);
+        console.log(`Course run ${id} status updated to CONFIRMED — ${
+          noIndividualReg ? 'no individual registration required' : `all ${totalEnrolled} learner(s) and trainer(s) have been emailed`
+        }.`);
       }
 
       // Check if response already sent (e.g., by timeout middleware)
