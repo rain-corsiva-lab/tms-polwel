@@ -3715,10 +3715,12 @@ export const courseRunController = {
 
       const allConfirmationEmailsSent = hasLearners > 0 && learnersWithoutConfirmationEmail === 0;
 
-      // For TALKS (no learners), transition to CONFIRMED immediately after trainer email is sent.
+      // For TALKS or runs without individual registration, transition to CONFIRMED immediately
+      // after trainer email is sent — no learner confirmation emails needed.
       // For other types, transition only if ALL enrolled learners have confirmation emails sent.
       const isTalks = courseRun.courseRunType === 'TALKS';
-      if (isTalks || allConfirmationEmailsSent) {
+      const skipLearnerEmails = isTalks || (courseRun as any).individualRegistrationRequired === false;
+      if (skipLearnerEmails || allConfirmationEmailsSent) {
         await prisma.courseRun.update({
           where: { id },
           data: {
@@ -3728,7 +3730,7 @@ export const courseRunController = {
         });
         console.log(
           `Course run ${id} status updated to CONFIRMED${
-            isTalks ? ' (TALKS — no learners required)' : ` after trainer email sent — all ${hasLearners} enrolled learner(s) already have confirmation emails sent`
+            skipLearnerEmails ? ' (no individual registration required — learner emails skipped)' : ` after trainer email sent — all ${hasLearners} enrolled learner(s) already have confirmation emails sent`
           }.`,
         );
       } else {
@@ -4311,7 +4313,9 @@ export const courseRunController = {
             },
           })
         : 0;
-      const allLearnerEmailsSent = totalEnrolled > 0 && enrolledWithoutConfirmation === 0;
+      const noIndividualReg = (courseRun as any).individualRegistrationRequired === false;
+      // Treat runs without individual registration as "learner emails not required".
+      const allLearnerEmailsSent = noIndividualReg || (totalEnrolled > 0 && enrolledWithoutConfirmation === 0);
 
       const trainerEmailsSent = await prisma.trainerAssignmentEmailHistory.count({
         where: { courseRunId: id, deletedAt: null },
@@ -4319,12 +4323,16 @@ export const courseRunController = {
       const hasTrainers = await prisma.courseRunTrainer.count({
         where: { courseRunId: id, deletedAt: null },
       });
-      if (allLearnerEmailsSent && hasTrainers > 0 && trainerEmailsSent >= hasTrainers) {
+      // Advance to CONFIRMED when learner emails are satisfied and trainer emails are done.
+      // Also advance immediately for non-individual-registration runs even if no trainers are assigned.
+      if (noIndividualReg || (allLearnerEmailsSent && hasTrainers > 0 && trainerEmailsSent >= hasTrainers)) {
         await prisma.courseRun.update({
           where: { id },
           data: { status: 'CONFIRMED', statusLastEvaluatedAt: new Date() },
         });
-        console.log(`Course run ${id} status updated to CONFIRMED — all ${totalEnrolled} learner(s) and trainer(s) have been emailed.`);
+        console.log(`Course run ${id} status updated to CONFIRMED — ${
+          noIndividualReg ? 'no individual registration required' : `all ${totalEnrolled} learner(s) and trainer(s) have been emailed`
+        }.`);
       }
 
       // Check if response already sent (e.g., by timeout middleware)
