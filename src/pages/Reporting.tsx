@@ -1,10 +1,29 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileBarChart, Building2, Users, CheckCircle, Calendar, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileBarChart, Building2, Users, CheckCircle, Calendar, MapPin, Download, Loader2 } from "lucide-react";
 import { Can } from "@/lib/casl/Can";
+import { reportingApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Reporting() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadLearnerReport = async () => {
+    setDownloading(true);
+    try {
+      await reportingApi.downloadLearnerReport();
+      toast({ title: "Download started", description: "Your Learner Report is downloading." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Download failed";
+      toast({ title: "Download failed", description: msg, variant: "destructive" });
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const reports = [
     {
@@ -85,6 +104,26 @@ export default function Reporting() {
             );
           })}
         </div>
+
+        {/* Learner Report Download */}
+        <Card className="border-2 border-dashed border-muted-foreground/20 bg-muted/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Download className="h-5 w-5 text-primary" />
+              Learner Report
+            </CardTitle>
+            <CardDescription>
+              Download a comprehensive Excel report of all learner enrollments across every course run — including course dates, trainer names, organisations,
+              BU numbers, designations, payment methods, run types and billing months.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleDownloadLearnerReport} disabled={downloading} className="gap-2">
+              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {downloading ? "Generating…" : "Download Learner Report (.xlsx)"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </Can>
   );

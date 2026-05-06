@@ -60,6 +60,18 @@
   fill: #111827 !important;
 }
 
+/* Color picker buttons (text color + background highlight) */
+.ql-toolbar.ql-snow .ql-color .ql-picker-label,
+.ql-toolbar.ql-snow .ql-background .ql-picker-label {
+  padding: 2px 4px;
+}
+
+.ql-toolbar.ql-snow .ql-color-picker .ql-picker-options,
+.ql-toolbar.ql-snow .ql-background .ql-picker-options {
+  padding: 4px;
+  width: 152px;
+}
+
 /* Dropdown styling */
 .ql-toolbar.ql-snow .ql-picker {
   color: #374151;

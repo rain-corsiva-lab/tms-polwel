@@ -269,6 +269,30 @@ export const courseRunWorkflowService = {
     const now = new Date();
 
     if (action === 'MARK_EMAILS_SENT') {
+      // Runs not requiring individual registration skip confirmation email sending
+      if ((courseRun as any).individualRegistrationRequired === false) {
+        await prisma.courseRun.update({
+          where: { id: courseRunId },
+          data: {
+            status: definition.to,
+            statusLastEvaluatedAt: now,
+            learnerEmailStatus: LearnerEmailStatus.NOT_REQUIRED,
+            learnerEmailStatusUpdatedAt: now,
+          },
+        });
+        return {
+          courseRun: await loadCourseRunWithRelations(prisma, courseRunId),
+          action: {
+            key: definition.key,
+            label: definition.label,
+            targetStatus: definition.to,
+            description: definition.description,
+            requiresLearnerEmails: Boolean(definition.requiresLearnerEmails),
+          },
+          emailReport: { attempted: 0, succeeded: 0, failed: [] } satisfies LearnerEmailReport,
+        };
+      }
+
       const enrolledLearners = courseRun.courseRunLearners.filter((learner) =>
         ['ENROLLED'].includes(String(learner.enrollmentStatus || 'ENROLLED'))
       );
@@ -509,11 +533,13 @@ export const courseRunWorkflowService = {
           const safeCertCode = (courseRun.course?.courseCode || '').replace(/[^a-z0-9]+/gi, '_');
           const certFilename = `Certificate_${safeName}${safeCertCode ? `_${safeCertCode}` : ''}.pdf`;
           try {
+            const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime) : undefined;
             const certData = {
               learnerName: learner?.fullname || 'Learner',
               courseName: courseRun.course?.title || 'POLWEL Course',
               duration: Number(courseRun.course?.duration) || 1,
               durationType: courseRun.course?.durationType || 'days',
+              ...(startDate ? { startDate } : {}),
               endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : new Date(),
               courseCode: courseRun.course?.courseCode ?? '',
             };

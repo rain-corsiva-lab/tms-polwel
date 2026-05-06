@@ -631,7 +631,7 @@ const CourseRunDetail: React.FC = () => {
         "Name",
         "Department",
         "Designation",
-        "SPF Email Address",
+        "Email Address",
         "Contact Number",
         "Retiring Officer?",
         "Payment Mode",
@@ -727,7 +727,7 @@ const CourseRunDetail: React.FC = () => {
 
         row.getCell(1).value = idx + 1;
         row.getCell(2).value = learner.fullname || "";
-        row.getCell(3).value = "";
+        row.getCell(3).value = learnerRecord.clientOrganization?.name || courseRun.clientOrganization?.name || "";
         row.getCell(4).value = learner.designation || "";
         row.getCell(5).value = learner.email || "";
         row.getCell(6).value = learner.contactNumber || "";
@@ -772,8 +772,7 @@ const CourseRunDetail: React.FC = () => {
 
       // Total "Fees before GST": PER_RUN = one flat course fee for the run; PER_HEAD = sum per participant
       const unitFeeRaw = courseRun.baseCourseFee ?? courseRun.contractFees ?? 0;
-      const unitFee =
-        typeof unitFeeRaw === "number" && Number.isFinite(unitFeeRaw) ? unitFeeRaw : Number(unitFeeRaw) || 0;
+      const unitFee = typeof unitFeeRaw === "number" && Number.isFinite(unitFeeRaw) ? unitFeeRaw : Number(unitFeeRaw) || 0;
       const isPerHead = courseRun.courseRunFeeType === "PER_HEAD";
       const totalFeesAmount = isPerHead ? unitFee * enrolledLearners.length : unitFee;
       const totalFeesFormatted = formatCurrency(totalFeesAmount);
@@ -868,7 +867,7 @@ const CourseRunDetail: React.FC = () => {
 
           row.getCell(1).value = idx + 1;
           row.getCell(2).value = learner.fullname || "";
-          row.getCell(3).value = "";
+          row.getCell(3).value = learnerRecord.clientOrganization?.name || courseRun.clientOrganization?.name || "";
           row.getCell(4).value = learner.designation || "";
           row.getCell(5).value = learner.email || "";
           row.getCell(6).value = learner.contactNumber || "";
@@ -915,7 +914,7 @@ const CourseRunDetail: React.FC = () => {
         { header: "Name", minWidth: 25 },
         { header: "Department", minWidth: 20 },
         { header: "Designation", minWidth: 22 },
-        { header: "SPF Email Address", minWidth: 32 },
+        { header: "Email Address", minWidth: 32 },
         { header: "Contact Number", minWidth: 18 },
         { header: "Retiring Officer?", minWidth: 16 },
         { header: "Payment Mode", minWidth: 20 },

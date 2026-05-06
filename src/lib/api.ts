@@ -1627,7 +1627,7 @@ export const courseRunsApi = {
 
   cancel: async (
     id: string,
-    payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[] }
+    payload?: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[]; cc?: string[] }
   ) => {
     return apiRequest(`/course-runs/${id}/cancel`, {
       method: 'POST',
@@ -2418,6 +2418,99 @@ export const reportingApi = {
   getFilterOptions: async () => {
     return apiRequest('/reporting/filter-options');
   },
+
+  downloadLearnerReport: async (params?: { startDate?: string; endDate?: string; status?: string }) => {
+    const token = getAuthToken();
+    if (!token) throw new Error('No authentication token found. Please log in again.');
+
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.status) query.append('status', params.status);
+
+    const url = `${API_BASE_URL}/reporting/learner-report${query.toString() ? `?${query}` : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Failed to download learner report' }));
+      throw new Error(err.message || 'Failed to download learner report');
+    }
+
+    // Extract filename from Content-Disposition header
+    const cd = response.headers.get('Content-Disposition') ?? '';
+    const match = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(cd);
+    const filename = match?.[1]?.replace(/['"]/g, '') ?? `Learner_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+    return { success: true, filename };
+  },
+};
+
+export const importApi = {
+  previewCourseRuns: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-runs/preview', { method: 'POST', body: formData, timeout: 60000 });
+  },
+  importCourseRuns: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-runs', { method: 'POST', body: formData, timeout: 120000 });
+  },
+  previewLearners: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/learners/preview', { method: 'POST', body: formData, timeout: 60000 });
+  },
+  importLearners: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/learners', { method: 'POST', body: formData, timeout: 120000 });
+  },
+};
+
+// Email Logs API
+export const emailLogsApi = {
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    emailType?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+    courseRunId?: string;
+  } = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, String(v));
+    });
+    const qs = query.toString();
+    return apiRequest(`/email-logs${qs ? `?${qs}` : ''}`);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest(`/email-logs/${id}`);
+  },
+
+  getStats: async (params: { startDate?: string; endDate?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+    const qs = query.toString();
+    return apiRequest(`/email-logs/stats${qs ? `?${qs}` : ''}`);
+  },
 };
 
 export {
@@ -2439,4 +2532,6 @@ export default {
   waiversApi,
   resourceLibraryApi,
   reportingApi,
+  importApi,
+  emailLogsApi,
 };
