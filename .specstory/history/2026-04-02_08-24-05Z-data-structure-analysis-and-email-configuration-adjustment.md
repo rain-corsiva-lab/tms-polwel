@@ -2,7 +2,7 @@
 
 # 2026-04-02 08:31:23Z
 
-<!-- copilotide Session 4ad9e894-1977-4edb-b0ae-938fd877eb7b (2026-04-02 08:31:23Z) -->
+<!-- VS Code Copilot IDE Session 4ad9e894-1977-4edb-b0ae-938fd877eb7b (2026-04-02 08:31:23Z) -->
 
 _**User (2026-04-02 08:31:23Z)**_
 
@@ -19894,3 +19894,37 @@ _**Agent (copilot/claude-sonnet-4.6)**_
 
 
 ```
+
+
+---
+
+_**User (2026-05-06 08:28:48Z)**_
+
+hmm i have try in course run who have individual registration required as false and status is confirmed pending conrifmation email , i test it to send trainer email only without send course confirmation email . the status is not changed to confirmed. this is incorrect. on this scenario we need to auto change status into confirmed without need to send course confirmation email because individual registration required is false. plesae fix it and ensure its working properly
+
+_**User (2026-05-06 08:37:21Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+Now I see the issue clearly! In `sendTrainerAssignmentEmail` (lines 3700-3730), the auto-transition logic is:
+
+```typescript
+const allConfirmationEmailsSent = hasLearners > 0 && learnersWithoutConfirmationEmail === 0;
+
+// For TALKS (no learners), transition to CONFIRMED immediately after trainer email is sent.
+// For other types, transition only if ALL enrolled learners have confirmation emails sent.
+const isTalks = courseRun.courseRunType === 'TALKS';
+if (isTalks || allConfirmationEmailsSent) {
+
+
+```
+
+The bug is that the code checks `courseRunType === 'TALKS'` to auto-transition, but the actual condition that matters is `individualRegistrationRequired = false`. A DEDICATED run with no individual registration required and zero enrolled learners won't transition because it fails both checks: it's not a TALKS type, and there are no learners to send confirmation emails to.
+
+The fix is to update the condition to also account for `individualRegistrationRequired === false`, so runs that don't require individual registration can transition to CONFIRMED even without learners. The same logic bug exists in the `sendCourseConfirmationEmail` function, where it checks `totalEnrolled > 0` but should also handle the case where individual registration isn't required.
+
+My approach is to add the `individualRegistrationRequired === false` check to the skip condition in `sendTrainerAssignmentEmail`, and add an early exit in `sendCourseConfirmationEmail` that transitions directly to CONFIRMED when individual registration isn't required.
