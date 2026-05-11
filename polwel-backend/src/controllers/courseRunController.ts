@@ -1721,14 +1721,23 @@ export const courseRunController = {
             },
           });
 
-          // Collect unique TC emails from enrollments (auto-CC by default)
-          const tcEmailsFromEnrollments = enrollments
-            .map((e) => (e as any).trainingCoordinator?.email)
-            .filter((email): email is string => typeof email === 'string' && email.trim() !== '');
-          const allCc = [...new Set([...manualCc, ...tcEmailsFromEnrollments])];
-
-          // Send emails to learners
+          // Send emails to learners (each learner gets CC'd only their own TC + manual cc)
           const learnerEmailPromises = enrollments.map((enrollment) => {
+            // CC: own TC (if present) + manual CC addresses
+            const learnerCc: string[] = [];
+            
+            // Add learner's own training coordinator (if present)
+            const learnerTcEmail = (enrollment as any).trainingCoordinator?.email;
+            if (learnerTcEmail && typeof learnerTcEmail === 'string' && learnerTcEmail.trim() !== '') {
+              learnerCc.push(learnerTcEmail);
+            }
+            
+            // Add manual CC addresses (if any)
+            learnerCc.push(...manualCc);
+            
+            // Remove duplicates
+            const uniqueLearnerCc = [...new Set(learnerCc)];
+
             const emailParams: any = {
               email: enrollment.learner.email ?? '',
               learnerName: enrollment.learner.fullname,
@@ -1744,7 +1753,7 @@ export const courseRunController = {
             if (nextRunDate) emailParams.nextRunDate = nextRunDate;
             if (additionalNotes) emailParams.additionalNotes = additionalNotes;
             if (emailAttachments) emailParams.attachments = emailAttachments;
-            if (allCc.length > 0) emailParams.cc = allCc;
+            if (uniqueLearnerCc.length > 0) emailParams.cc = uniqueLearnerCc;
 
             return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
               console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);

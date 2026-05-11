@@ -123,19 +123,14 @@ const buildClientActualSection = (worksheet: ExcelJS.Worksheet, startRow: number
     'PBMS Invoice Date',
     'No discounts',
     'Discount granted',
-    'Actual Amount billed before current month',
     'Actual Amount billed in current month',
-    'Actual Amount billed after current month',
     'Salary / Contract Fees',
     'PBMS Ref2 (Invoice for contract fees)',
     'PBMS Invoice creation date for contract fees',
-    'Contract Fees Payout before month',
     'Contract Fees Payout in current month',
-    'Contract Fees Payout after months',
     'PBMS Ref3 (Invoice for venue expense)',
     'PBMS Invoice creation date for venue expense',
     'Venue Expenses in current month',
-    'Venue Expenses in other months',
     'Remarks',
     'Other Remarks',
   ];
@@ -148,10 +143,10 @@ const buildClientActualSection = (worksheet: ExcelJS.Worksheet, startRow: number
 
     let fill = 'FFD9D9D9';
     if (col >= 10 && col <= 13) fill = 'FFAEC3DB';
-    if (col >= 14 && col <= 16) fill = 'FFBFD0E3';
-    if (col >= 17 && col <= 22) fill = 'FFCCC6D9';
-    if (col >= 23 && col <= 26) fill = 'FFE8D8C8';
-    if (col >= 27) fill = 'FFC4C8CF';
+    if (col >= 14 && col <= 14) fill = 'FFBFD0E3';
+    if (col >= 15 && col <= 17) fill = 'FFCCC6D9';
+    if (col >= 18 && col <= 21) fill = 'FFE8D8C8';
+    if (col >= 22) fill = 'FFC4C8CF';
 
     formatHeadingCell(cell, fill);
     cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
@@ -192,40 +187,35 @@ const buildClientActualSection = (worksheet: ExcelJS.Worksheet, startRow: number
       row.getCell(11).value = formatDate(entry?.pbmsInvoiceDate);
       row.getCell(12).value = discountMeta.noDiscount > 0 ? discountMeta.noDiscount : 0;
       row.getCell(13).value = discountMeta.discountGranted > 0 ? discountMeta.discountGranted : 0;
-      row.getCell(14).value = '';
-      setCurrency(row.getCell(15), invoiceAmount || null);
-      row.getCell(16).value = '';
-      row.getCell(17).value = 'Contract Fees';
+      setCurrency(row.getCell(14), invoiceAmount || null);
+      row.getCell(15).value = 'Contract Fees';
 
       if (idx === 0) {
-        row.getCell(18).value = billing.contractFeePBMSBENumber || '';
-        row.getCell(19).value = formatDate(billing.contractPBMSInvoiceDate);
-        row.getCell(20).value = '';
-        setCurrency(row.getCell(21), toNumber(billing.contractInvoiceAmount) || null);
-        row.getCell(22).value = '';
-        row.getCell(23).value = billing.venuePBMSBENumber || '';
-        row.getCell(24).value = formatDate(billing.venuePBMSInvoiceDate);
-        setCurrency(row.getCell(25), toNumber(billing.venueInvoiceAmount) || null);
-        row.getCell(26).value = '';
-        row.getCell(27).value = billing.finalRemarks || '';
+        row.getCell(16).value = billing.contractFeePBMSBENumber || '';
+        row.getCell(17).value = formatDate(billing.contractPBMSInvoiceDate);
+        setCurrency(row.getCell(18), toNumber(billing.contractInvoiceAmount) || null);
+        row.getCell(19).value = billing.venuePBMSBENumber || '';
+        row.getCell(20).value = formatDate(billing.venuePBMSInvoiceDate);
+        setCurrency(row.getCell(21), toNumber(billing.venueInvoiceAmount) || null);
+        row.getCell(22).value = billing.finalRemarks || '';
       }
 
-      row.getCell(28).value = entry?.remarks || '';
-      if (typeof row.getCell(28).value === 'string' && String(row.getCell(28).value).toLowerCase().includes('deduction')) {
-        row.getCell(28).font = { color: { argb: 'FFFF0000' } };
+      row.getCell(23).value = entry?.remarks || '';
+      if (typeof row.getCell(23).value === 'string' && String(row.getCell(23).value).toLowerCase().includes('deduction')) {
+        row.getCell(23).font = { color: { argb: 'FFFF0000' } };
       }
 
-      for (let col = 1; col <= 28; col += 1) {
+      for (let col = 1; col <= 23; col += 1) {
         applyBorder(row.getCell(col));
-        if (![1, 6, 27, 28].includes(col) && !row.getCell(col).alignment) {
+        if (![1, 6, 22, 23].includes(col) && !row.getCell(col).alignment) {
           row.getCell(col).alignment = { horizontal: 'center', vertical: 'middle' };
         }
       }
 
       row.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
       row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      row.getCell(27).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
-      row.getCell(28).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+      row.getCell(22).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+      row.getCell(23).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
       row.height = 24;
 
       rowNum += 1;
@@ -284,9 +274,6 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       { width: 15 }, // W: Additional Fees (NEW)
       { width: 15 }, // X: Total Fee
       { width: 30 }, // Y: Final Remarks
-      { width: 12 }, // Z: Venue Expenses in other months
-      { width: 30 }, // AA: Remarks
-      { width: 30 }, // AB: Other Remarks
     ];
 
     worksheet.views = [{ state: 'frozen', ySplit: 3 }];
