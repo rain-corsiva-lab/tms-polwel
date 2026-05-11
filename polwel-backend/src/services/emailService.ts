@@ -2439,7 +2439,7 @@ class EmailService {
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${venueName || 'TBD'}</td>
                                 </tr>
                                 ${
-                                  nextRunDate && String(nextRunDate).trim()
+                                  !isTrainer && nextRunDate && String(nextRunDate).trim()
                                     ? `<tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Next session</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${String(nextRunDate).trim()}</td>
@@ -2449,7 +2449,7 @@ class EmailService {
                                 
                               </table>
 
-                              ${additionalNotes ? `
+                              ${!isTrainer && additionalNotes ? `
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
                                   <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
