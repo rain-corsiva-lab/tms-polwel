@@ -348,7 +348,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
           ? 'FF00B050'
           : yellowColumns.includes(index)
             ? 'FFFFFF99'
-            : 'FFDCE6F1';
+            : 'FFDCE6F1'; // This is where gray colors used in client sample would fall, but since we have many columns, we'll use a light blue for better differentiation
       formatHeadingCell(cell, fillColor);
     });
     headerRow.height = 30;
