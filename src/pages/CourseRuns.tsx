@@ -726,6 +726,7 @@ const CourseRuns: React.FC = () => {
       reason: courseRun.cancelReason ?? "",
       nextRunDate: "",
       additionalNotes: "",
+      cc: "",
       submitting: false,
     });
   };
@@ -815,7 +816,9 @@ const CourseRuns: React.FC = () => {
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
     if (!isQuillEmptyHtml(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
-    const ccEmails = cancelDialog.cc
+
+    // Safely parse CC emails with null coalescing
+    const ccEmails = (cancelDialog.cc ?? "")
       .split(",")
       .map((e) => e.trim())
       .filter((e) => e.length > 0);

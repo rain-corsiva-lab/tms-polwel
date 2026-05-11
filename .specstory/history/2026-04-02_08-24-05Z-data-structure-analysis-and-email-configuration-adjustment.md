@@ -19928,3 +19928,25 @@ The bug is that the code checks `courseRunType === 'TALKS'` to auto-transition, 
 The fix is to update the condition to also account for `individualRegistrationRequired === false`, so runs that don't require individual registration can transition to CONFIRMED even without learners. The same logic bug exists in the `sendCourseConfirmationEmail` function, where it checks `totalEnrolled > 0` but should also handle the case where individual registration isn't required.
 
 My approach is to add the `individualRegistrationRequired === false` check to the skip condition in `sendTrainerAssignmentEmail`, and add an early exit in `sendCourseConfirmationEmail` that transitions directly to CONFIRMED when individual registration isn't required.
+
+---
+
+_**User (2026-05-10 15:33:11Z)**_
+
+so client have request some adjustments in here , please view and read all pasted images in here 
+
+first task is pasted images 1 to 5 . becarefull because this is complex task , its about column layouting and design and color, but also double check , sometimes client is asking for some column that the data is unavailable in our website, i need you to keep logical on the column list, and tell me if theres any column that are client in the end, so  i can explain it to client . 
+
+second task , in pasted image 6, Those in blue bracket should not be sent to trainers in the course cancellation email (only to trainers , on learners and tc no any change)
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+_**User (2026-05-10 15:34:52Z)**_
+
+@agent Try Again
+
+---
+
+_**Agent (copilot/auto)**_
+
+I reviewed your screenshots and will now locate the exact billing export generator and cancellation-email template code paths to implement both changes safely end-to-end. After I map those files, I’ll patch backend/frontend, run TypeScript checks, and report any client-requested columns that have no source data in the current system.
