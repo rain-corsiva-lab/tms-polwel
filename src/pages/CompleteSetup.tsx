@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import AuthLayout from "@/components/AuthLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, UserPlus, CheckCircle, XCircle, Loader2, FileText, Shield } from "lucide-react";
 
@@ -141,7 +142,7 @@ const CompleteSetup = () => {
   // Loading state
   if (isVerifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
             <div className="flex flex-col items-center space-y-4">
@@ -150,14 +151,14 @@ const CompleteSetup = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
   // Invalid token state
   if (!isValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
@@ -173,14 +174,14 @@ const CompleteSetup = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
   // Success state
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -198,15 +199,15 @@ const CompleteSetup = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
   // Setup form
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-lg">
+      <AuthLayout>
+        <Card className="w-full max-w-lg" style={{ maxHeight: "90vh", overflowY: "auto" }}>
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
               <UserPlus className="h-6 w-6 text-orange-600" />
@@ -362,7 +363,7 @@ const CompleteSetup = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
       {/* Terms & Conditions Dialog */}
       <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
