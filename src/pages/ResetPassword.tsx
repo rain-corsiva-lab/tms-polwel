@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Lock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import AuthLayout from "@/components/AuthLayout";
 
 interface PasswordResetResponse {
   success: boolean;
@@ -43,7 +44,7 @@ const ResetPassword = () => {
     { test: (pwd: string) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), text: "One special character" },
   ];
 
-  const isPasswordValid = passwordRequirements.every(req => req.test(password));
+  const isPasswordValid = passwordRequirements.every((req) => req.test(password));
   const doPasswordsMatch = password === confirmPassword && password.length > 0;
 
   // Verify token on component mount
@@ -57,9 +58,9 @@ const ResetPassword = () => {
 
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/password-reset/verify-token/${token}`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         });
 
@@ -72,7 +73,7 @@ const ResetPassword = () => {
           setError(data.message || "Invalid or expired reset token");
         }
       } catch (err) {
-        console.error('Token verification error:', err);
+        console.error("Token verification error:", err);
         setError("Failed to verify reset token. Please try again.");
       } finally {
         setIsVerifying(false);
@@ -84,7 +85,7 @@ const ResetPassword = () => {
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isPasswordValid) {
       setError("Password does not meet security requirements");
       return;
@@ -100,9 +101,9 @@ const ResetPassword = () => {
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/password-reset/reset-password`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           token,
@@ -118,16 +119,16 @@ const ResetPassword = () => {
           title: "Password Reset Successful",
           description: "Your password has been reset successfully. You can now login with your new password.",
         });
-        
+
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          navigate('/login');
+          navigate("/login");
         }, 3000);
       } else {
         setError(data.message || "Failed to reset password");
       }
     } catch (err) {
-      console.error('Password reset error:', err);
+      console.error("Password reset error:", err);
       setError("Failed to reset password. Please try again.");
     } finally {
       setIsResetting(false);
@@ -137,7 +138,7 @@ const ResetPassword = () => {
   // Loading state
   if (isVerifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
             <div className="flex flex-col items-center space-y-4">
@@ -146,62 +147,58 @@ const ResetPassword = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
   // Invalid token state
   if (!isValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
               <XCircle className="h-6 w-6 text-red-600" />
             </div>
             <CardTitle className="text-xl text-red-600">Invalid Reset Link</CardTitle>
-            <CardDescription>
-              {error || "This password reset link is invalid or has expired."}
-            </CardDescription>
+            <CardDescription>{error || "This password reset link is invalid or has expired."}</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={() => navigate('/login')} className="w-full">
+            <Button onClick={() => navigate("/login")} className="w-full">
               Return to Login
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
   // Success state
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
             <CardTitle className="text-xl text-green-600">Password Reset Successful</CardTitle>
-            <CardDescription>
-              Your password has been reset successfully. You will be redirected to the login page shortly.
-            </CardDescription>
+            <CardDescription>Your password has been reset successfully. You will be redirected to the login page shortly.</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={() => navigate('/login')} className="w-full">
+            <Button onClick={() => navigate("/login")} className="w-full">
               Go to Login Now
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
   // Password reset form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
+    <AuthLayout>
+      <Card className="w-full max-w-md" style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
             <Lock className="h-6 w-6 text-blue-600" />
@@ -241,11 +238,7 @@ const ResetPassword = () => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </Button>
               </div>
 
@@ -254,14 +247,8 @@ const ResetPassword = () => {
                 <div className="mt-2 space-y-1">
                   {passwordRequirements.map((req, index) => (
                     <div key={index} className="flex items-center text-xs">
-                      {req.test(password) ? (
-                        <CheckCircle className="h-3 w-3 text-green-500 mr-2" />
-                      ) : (
-                        <XCircle className="h-3 w-3 text-red-500 mr-2" />
-                      )}
-                      <span className={req.test(password) ? "text-green-600" : "text-red-600"}>
-                        {req.text}
-                      </span>
+                      {req.test(password) ? <CheckCircle className="h-3 w-3 text-green-500 mr-2" /> : <XCircle className="h-3 w-3 text-red-500 mr-2" />}
+                      <span className={req.test(password) ? "text-green-600" : "text-red-600"}>{req.text}</span>
                     </div>
                   ))}
                 </div>
@@ -288,11 +275,7 @@ const ResetPassword = () => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </Button>
               </div>
 
@@ -315,11 +298,7 @@ const ResetPassword = () => {
             </div>
 
             {/* Submit Button */}
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={!isPasswordValid || !doPasswordsMatch || isResetting}
-            >
+            <Button type="submit" className="w-full" disabled={!isPasswordValid || !doPasswordsMatch || isResetting}>
               {isResetting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -333,13 +312,13 @@ const ResetPassword = () => {
 
           {/* Back to Login Link */}
           <div className="mt-6 text-center">
-            <Button variant="ghost" onClick={() => navigate('/login')}>
+            <Button variant="ghost" onClick={() => navigate("/login")}>
               Back to Login
             </Button>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 };
 

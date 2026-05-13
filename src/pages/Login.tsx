@@ -10,6 +10,7 @@ import { UserCheck, Loader2, AlertCircle, MailCheck, Clock, RefreshCw } from "lu
 import { useAuth } from "@/hooks/useAuth";
 import type { AuthResponse } from "@/lib/auth";
 import { toast } from "sonner";
+import AuthLayout from "@/components/AuthLayout";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -382,8 +383,8 @@ const Login = () => {
                 {isCodeExpired
                   ? "Request a new login to continue"
                   : isResendDisabled
-                  ? `Resend available in ${formatCountdown(timers.resend)}`
-                  : "You can resend a new code now"}
+                    ? `Resend available in ${formatCountdown(timers.resend)}`
+                    : "You can resend a new code now"}
               </span>
             </div>
           </div>
@@ -442,18 +443,13 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
+    <AuthLayout>
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Welcome</h1>
-          <p className="text-muted-foreground">{activeChallenge ? "Enter the verification code to continue" : "Please enter your credentials to continue"}</p>
-        </div>
-
         {activeChallenge ? renderMfaCard() : renderLoginCard()}
 
         <div className="text-center text-sm text-muted-foreground">Need help? Contact your system administrator</div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

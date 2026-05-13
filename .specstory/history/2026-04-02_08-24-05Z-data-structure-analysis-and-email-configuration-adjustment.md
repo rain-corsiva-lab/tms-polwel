@@ -19950,3 +19950,96 @@ _**User (2026-05-10 15:34:52Z)**_
 _**Agent (copilot/auto)**_
 
 I reviewed your screenshots and will now locate the exact billing export generator and cancellation-email template code paths to implement both changes safely end-to-end. After I map those files, I’ll patch backend/frontend, run TypeScript checks, and report any client-requested columns that have no source data in the current system.
+
+---
+
+_**User (2026-05-11 08:49:47Z)**_
+
+i see okok these column that unavailable in DB 
+Actual Amount billed before current month
+Actual Amount billed after current month
+Contract Fees Payout before month
+Contract Fees Payout after months
+Venue Expenses in other months
+
+please just remove these column from the xlsx template export 
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+_**User (2026-05-11 10:47:47Z)**_
+
+good , also in #file:emailService.ts #file:courseRunController.ts send course cancellation , i think currently (not sure but please help me ensure) letsay :
+- learner A connect with TC A
+- llearner B connect with TC B
+
+current conditions (please review our code and ensure it) : 
+- mail 1 , send to learner A  , CC TC A and TC B
+- mail 2 , send to learner B , CC TC A and TC B
+this is incorrct, it should be like this : 
+- mail 1 , send to learner A , CC TC A
+- mail 2 , send to learner B , CC TC B
+
+please develop it like this 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+_**User (2026-05-11 10:53:12Z)**_
+
+wait i got this error when i try to cancel run in oourse run #file:CourseRuns.tsx 
+CourseRuns.tsx:819 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'split')
+    at submitCancel (CourseRuns.tsx:819:8)
+please fix it
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything
+
+---
+
+_**Agent (copilot/claude-haiku-4.5)**_
+
+The user is getting an error in CourseRuns.tsx at line 819 where they're trying to split something that is undefined. Looking at the code, I can see the `submitCancel` function. Let me find line 819:
+
+Looking at the submitCancel function:
+```typescript
+const submitCancel = async () => {
+    if (!cancelDialog.courseRun) return;
+    // Strip Quill empty-state HTML before sending
+    const payloadObj: { reason?: string; nextRunDate?: string; additionalNotes?: string; attachmentMediaIds?: string[]; cc?: string[] } = {};
+    if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
+    if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
+    if (!isQuillEmptyHtml(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
+    const ccEmails = cancelDialog.cc
+      .split(",")  // <-- LINE 819: This is where the error occurs
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+    if (ccEmails.length > 0) payloadObj.cc = ccEmails;
+```
+
+The error is that `cancelDialog.cc` is undefined. Looking at the initial state:
+
+```typescript
+const initialCancelDialogState: CancelDialogState = {
+    open: false,
+    courseRun: null,
+    reason: "",
+    nextRunDate: "",
+    additionalNotes: "",
+    cc: "",  // <-- It's initialized as empty string
+    submitting: false,
+};
+```
+
+And when the dialog is opened:
+```typescript
+const openCancelDialog = (courseRun: CourseRunUI) => {
+    setCancelAttachmentFiles([]);
+    setCancelDialog({
+      open: true,
+      courseRun,
+      reason: courseRun.cancelReason ?? "",
+      nextRunDate: "",
+      additionalNotes: "",
+      submitting: false,
+    });  // <-- Missing cc field!
+};
+```
+
+When `openCancelDialog` is called, the `cc` field isn't being set in the state update, so it becomes undefined instead of staying as an empty string. The solution is to include `cc: ""` in the `setCancelDialog` call.
