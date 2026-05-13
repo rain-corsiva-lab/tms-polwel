@@ -96,6 +96,13 @@ const ForgotPassword = () => {
             </div>
           </CardContent>
         </Card>
+
+        <div className="text-center text-sm text-muted-foreground">
+          Need help? Please contact PDCS at{" "}
+          <a href="mailto:pdcs@polwel.org.sg" className="text-primary hover:underline">
+            pdcs@polwel.org.sg
+          </a>
+        </div>
       </AuthLayout>
     );
   }

@@ -447,7 +447,12 @@ const Login = () => {
       <div className="w-full max-w-md space-y-6">
         {activeChallenge ? renderMfaCard() : renderLoginCard()}
 
-        <div className="text-center text-sm text-muted-foreground">Need help? Contact your system administrator</div>
+        <div className="text-center text-sm text-muted-foreground">
+          Need help? Please contact PDCS at{" "}
+          <a href="mailto:pdcs@polwel.org.sg" className="text-primary hover:underline">
+            pdcs@polwel.org.sg
+          </a>
+        </div>
       </div>
     </AuthLayout>
   );
