@@ -39,6 +39,7 @@ import billingReportsRoutes from './routes/billingReports';
 import waiverRoutes from './routes/waivers';
 import uploadsRoutes from './routes/uploads';
 import { startCourseRunStatusJob, evaluateCourseRunStatusesNow } from './jobs/courseRunStatusJob';
+import { startEmailRetryWorker } from './jobs/emailRetryWorker';
 import dashboardRoutes from './routes/dashboard';
 import resourceLibraryRoutes from './routes/resourceLibrary';
 import reportingRoutes from './routes/reporting';
@@ -320,6 +321,7 @@ const startServer = () => {
     });
 
     startCourseRunStatusJob();
+    startEmailRetryWorker();
   });
 
   // Configure server timeouts to prevent connection drops

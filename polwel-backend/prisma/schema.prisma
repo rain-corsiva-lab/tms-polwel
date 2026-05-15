@@ -908,20 +908,63 @@ model EmailLog {
   status        EmailLogStatus @default(PENDING)
   attempts      Int            @default(0)
   lastAttemptAt DateTime?
+  sentAt        DateTime?
   messageId     String?        @db.VarChar(255)
   errorMessage  String?        @db.Text
   errorCode     String?        @db.VarChar(100)
+  /// Transport provider: SMTP | GRAPH_API | MAILJET | NONE
+  provider      String?        @db.VarChar(50)
+  /// Classified error category for fast filtering
+  errorCategory String?        @db.VarChar(50)
+  /// Full SMTP/API response text on success or failure
+  smtpResponse  String?        @db.Text
+  /// Truncated stack trace captured on failure
+  errorStack    String?        @db.Text
+  /// Link to the retry queue job this attempt belongs to (null for first attempt)
+  retryQueueId  String?        @db.VarChar(30)
   courseRunId   String?
   metadata      Json?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   courseRun     CourseRun?     @relation(fields: [courseRunId], references: [id], onDelete: SetNull)
+  retryQueue    EmailRetryQueue? @relation(fields: [retryQueueId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([emailType])
   @@index([courseRunId])
   @@index([createdAt])
+  @@index([provider])
+  @@index([errorCategory])
+  @@index([retryQueueId])
   @@map("email_logs")
+}
+
+model EmailRetryQueue {
+  id          String           @id @default(cuid())
+  emailType   String           @db.VarChar(100)
+  recipient   String           @db.VarChar(2000)
+  subject     String?          @db.VarChar(500)
+  /// Serialized email parameters (Buffers encoded as base64, Dates as ISO strings)
+  payload     Json
+  status      EmailRetryStatus @default(PENDING)
+  /// Number of attempts already made (including the first failed attempt)
+  attempts    Int              @default(1)
+  /// Maximum attempts before abandoning (default 10, includes first attempt)
+  maxAttempts Int              @default(10)
+  /// When the next retry should run
+  nextRunAt   DateTime
+  /// Last error message from the most recent failed attempt
+  lastError   String?          @db.Text
+  errorCategory String?        @db.VarChar(50)
+  courseRunId String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  emailLogs   EmailLog[]
+
+  @@index([status, nextRunAt])
+  @@index([emailType])
+  @@index([courseRunId])
+  @@map("email_retry_queue")
 }
 
 enum EmailLogStatus {
@@ -929,4 +972,11 @@ enum EmailLogStatus {
   SENT
   FAILED
   RETRYING
+}
+
+enum EmailRetryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  ABANDONED
 }

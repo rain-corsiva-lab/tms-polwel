@@ -20611,3 +20611,60 @@ Killed
 _**User (2026-05-13 10:35:39Z)**_
 
 ohh good also on text 'Need help? Contact your system administrator' weneed to change it to 'Need help? Please contact PDCS at pdcs@polwel.org.sg' (also with mailto link' please dev it 
+
+_**User (2026-05-13 10:38:18Z)**_
+
+[Terminal 5275c268-2c26-4ac1-9efe-87dc1aea3f37 notification: terminal exited. The terminal process ended before the command could complete normally; further commands cannot be sent to this terminal ID.]
+Terminal output:
+kukuh@kukuh-linux:~/webprojects/polwel$  npm run build 2>&1 | tail -10
+computing gzip size...
+dist/index.html                     1.11 kB │ gzip:     0.46 kB
+dist/assets/index-COX0Eo9L.css    122.63 kB │ gzip:    20.18 kB
+dist/assets/index-DelOsV9l.js   3,653.15 kB │ gzip: 1,018.68 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.16s
+kukuh@kukuh-linux:~/webprojects/polwel$  npx tsc --noEmit 2>&1 && echo "✅ TypeScript: PASSED"
+✅ TypeScript: PASSED
+kukuh@kukuh-linux:~/webprojects/polwel$  curl -s http://localhost:3001/health 2>&1 | head -20
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+_**Agent (copilot/claude-haiku-4.5)**_
+
+The terminal exited before completing the health check. The build and TypeScript validation both passed successfully though. The backend health check timeout is likely because the backend isn't running - that's not a problem since the frontend changes are complete and validated.
+
+Let me verify the changes were applied correctly by reading one of the files to confirm the help text update is in place.
+
+---
+
+_**User (2026-05-15 05:49:39Z)**_
+
+i dont know why bot somettimes email failed to send and not listed an log in email logs, is it because error from the smtp it self or what ? 
+
+also can we listed all error and all possible source of error eventho its from the smtp itself plesae. probably like smtp has limit rate or else and we neeed to make it very critical thinking to store all possible error or any condition status of  all email send into our email logs plesae 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything. please develop with best optimization for smooth experience , please also give me detailed documentation about all of changes that you do (every single little detail need to write it down here) , please make detailed and comprehensive documentations in it in /documentations #file:documentations folder. so later we can review it or give it to another person or maybe another AI Agent who want to help our development. please create the md file with format name 'datetime_changes_title-changes-in-max-8-words' , example '2026_05_23_14_40_changes_fixing-some-broken-and-issues-on-transactions'
+
+
+---
+
+_**Agent (copilot/claude-sonnet-4.6)**_
+
+Let me start by exploring the codebase to understand the current email logging system, email service, and related components before making any changes.

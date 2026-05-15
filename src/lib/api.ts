@@ -2491,6 +2491,8 @@ export const emailLogsApi = {
     endDate?: string;
     search?: string;
     courseRunId?: string;
+    provider?: string;
+    errorCategory?: string;
   } = {}) => {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -2510,6 +2512,31 @@ export const emailLogsApi = {
     if (params.endDate) query.append('endDate', params.endDate);
     const qs = query.toString();
     return apiRequest(`/email-logs/stats${qs ? `?${qs}` : ''}`);
+  },
+};
+
+export const emailRetryQueueApi = {
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    emailType?: string;
+    courseRunId?: string;
+  } = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, String(v));
+    });
+    const qs = query.toString();
+    return apiRequest(`/email-logs/retry-queue${qs ? `?${qs}` : ''}`);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest(`/email-logs/retry-queue/${id}`);
+  },
+
+  cancel: async (id: string) => {
+    return apiRequest(`/email-logs/retry-queue/${id}`, { method: 'DELETE' });
   },
 };
 
@@ -2534,4 +2561,5 @@ export default {
   reportingApi,
   importApi,
   emailLogsApi,
+  emailRetryQueueApi,
 };
