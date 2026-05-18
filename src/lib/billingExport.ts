@@ -222,7 +222,7 @@ export async function generateBillingXLSX(courseRunId: string, courseRunCode: st
     const beforeGST = billingRate * participantCount;
     const valueOfWorkDone = typeof billing.valueOfWorkDone === 'number' ? billing.valueOfWorkDone : beforeGST;
     const courseDates = courseRun.startDatetime
-      ? `${new Date(courseRun.startDatetime).toLocaleDateString('en-GB')} - ${new Date(courseRun.endDatetime).toLocaleDateString('en-GB')}`
+      ? `${new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })} - ${new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })}`
       : '';
 
     const billingEntries = Array.isArray(billing.courseRunBillingEntries) ? billing.courseRunBillingEntries : [];

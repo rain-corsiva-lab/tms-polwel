@@ -106,6 +106,11 @@ const formatStatusLabel = (status: string): string => {
 
 const formatDateRange = (start: Date | null, end: Date | null): string => {
   if (!start && !end) return "—";
+
+  // All course-run datetimes are stored as wall-clock UTC; display with timeZone:'UTC'
+  // so the shown time matches the stored value regardless of browser locale.
+  const UTZ = { timeZone: "UTC" } as const;
+
   if (start && !end) {
     return start.toLocaleString(undefined, {
       year: "numeric",
@@ -113,6 +118,7 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      ...UTZ,
     });
   }
   if (!start && end) {
@@ -122,24 +128,28 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      ...UTZ,
     });
   }
 
-  const sameDay = start?.toDateString() === end?.toDateString();
+  const sameDay = start?.toLocaleDateString(undefined, { ...UTZ }) === end?.toLocaleDateString(undefined, { ...UTZ });
 
   if (sameDay) {
     const dateLabel = start!.toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
+      ...UTZ,
     });
     const startTime = start!.toLocaleTimeString(undefined, {
       hour: "2-digit",
       minute: "2-digit",
+      ...UTZ,
     });
     const endTime = end!.toLocaleTimeString(undefined, {
       hour: "2-digit",
       minute: "2-digit",
+      ...UTZ,
     });
     return `${dateLabel} • ${startTime} - ${endTime}`;
   }
@@ -150,6 +160,7 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    ...UTZ,
   });
   const endLabel = end!.toLocaleString(undefined, {
     year: "numeric",
@@ -157,6 +168,7 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    ...UTZ,
   });
   return `${startLabel} → ${endLabel}`;
 };

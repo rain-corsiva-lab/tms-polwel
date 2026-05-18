@@ -74,13 +74,17 @@ function parseExcelDate(value: unknown): Date | null {
 
 /**
  * Build a full datetime by combining a UTC-midnight date with an Excel time value.
- * The time is ALWAYS treated as Singapore Time (UTC+8) so the stored UTC value is correct
- * regardless of which timezone the server is running in.
+ *
+ * TIMEZONE STRATEGY: Wall-clock UTC
+ * Times from Excel are treated as the literal hour value in UTC.
+ * Example: "08:00" → stored as T08:00:00.000Z
+ * This ensures the same time is displayed in every timezone when the
+ * frontend reads with UTC-aware formatting (timeZone: 'UTC').
  *
  * Supports:
  *  - Excel fractional day (0.333333 = 8:00 AM)
  *  - String: "8:00", "08:00", "8:00:00", "08:00 AM", "5:00 PM"
- *  - Falls back to 00:00 SGT if unparseable
+ *  - Falls back to 00:00 UTC if unparseable
  */
 function buildDatetime(date: Date | null, timeStr: unknown): Date | null {
   if (!date) return null;
@@ -104,20 +108,20 @@ function buildDatetime(date: Date | null, timeStr: unknown): Date | null {
       if (ampm === 'PM' && hours < 12) hours += 12;
       if (ampm === 'AM' && hours === 12) hours = 0;
     }
-    // If no match, falls through with hours=0, minutes=0 (midnight SGT)
+    // If no match, falls through with hours=0, minutes=0 (midnight UTC)
   }
 
   // Clamp to valid range
   hours = Math.min(23, Math.max(0, hours));
   minutes = Math.min(59, Math.max(0, minutes));
 
-  // Build as Singapore Time (UTC+8) — JavaScript converts to UTC internally
-  // This is timezone-safe: 08:00 SGT = 00:00 UTC regardless of server locale
+  // Store as UTC wall-clock: Date.UTC() builds the exact UTC timestamp
+  // without any server or browser timezone influence.
+  // "08:00" in Excel → T08:00:00.000Z in DB → displays as "08:00" everywhere
   const y = date.getUTCFullYear();
-  const mo = date.getUTCMonth() + 1;
+  const mo = date.getUTCMonth();
   const d = date.getUTCDate();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return new Date(`${y}-${pad(mo)}-${pad(d)}T${pad(hours)}:${pad(minutes)}:00+08:00`);
+  return new Date(Date.UTC(y, mo, d, hours, minutes, 0, 0));
 }
 
 /** Normalize row keys by trimming whitespace */
@@ -466,11 +470,14 @@ export const importLearners = async (req: Request, res: Response): Promise<void>
         if (!course) {
           courseRunCache.set(cacheKey, null);
         } else {
-          // startDateRaw is UTC midnight of the SGT calendar date.
-          // A full Singapore day spans UTC: [prevDay 16:00, sameDay 15:59:59.999]
-          // (SGT midnight = UTC-8h; SGT 23:59:59 = UTC+16h-1ms)
-          const dayStart = new Date(startDateRaw.getTime() - 8 * 60 * 60 * 1000);
-          const dayEnd = new Date(startDateRaw.getTime() + 16 * 60 * 60 * 1000 - 1);
+          // startDateRaw is UTC midnight of the calendar date (from parseExcelDate).
+          // Since times are now stored as wall-clock UTC, we match the full UTC calendar day:
+          // 00:00:00.000Z to 23:59:59.999Z of that same UTC date.
+          const y = startDateRaw.getUTCFullYear();
+          const mo = startDateRaw.getUTCMonth();
+          const day = startDateRaw.getUTCDate();
+          const dayStart = new Date(Date.UTC(y, mo, day, 0, 0, 0, 0));
+          const dayEnd = new Date(Date.UTC(y, mo, day, 23, 59, 59, 999));
 
           const courseRun = await prisma.courseRun.findFirst({
             where: {
