@@ -6,46 +6,118 @@ const prisma = new PrismaClient();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Parse an Excel date serial or string into a JS Date, or null */
+/**
+ * Parse an Excel date serial or string into a JS Date representing UTC midnight of that calendar date.
+ * Using UTC midnight ensures downstream buildDatetime can safely combine with SGT time strings
+ * without any server-timezone influence.
+ */
 function parseExcelDate(value: unknown): Date | null {
   if (value == null || value === '') return null;
+
   if (typeof value === 'number') {
-    const d = (XLSX.SSF as any).parse_date_code(value) as { y: number; m: number; d: number } | null;
-    if (d) return new Date(d.y, d.m - 1, d.d);
+    // Strip any fractional time component from combined date+time Excel serials
+    const intSerial = Math.floor(value);
+    const d = (XLSX.SSF as any).parse_date_code(intSerial) as { y: number; m: number; d: number } | null;
+    if (d && d.y > 1899) return new Date(Date.UTC(d.y, d.m - 1, d.d));
     return null;
   }
+
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) return null;
+
     const monthMap: Record<string, number> = {
       jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
     };
+
     // "2-Jan-25" or "2-Jan-2025"
-    const m = trimmed.match(/^(\d{1,2})[\/\-]([A-Za-z]{3})[\/\-](\d{2,4})$/);
-    if (m && m[1] && m[2] && m[3]) {
-      const day = parseInt(m[1], 10);
-      const month = monthMap[m[2].toLowerCase()];
-      let year = parseInt(m[3], 10);
+    const m1 = trimmed.match(/^(\d{1,2})[\/\-]([A-Za-z]{3})[\/\-](\d{2,4})$/);
+    if (m1 && m1[1] && m1[2] && m1[3]) {
+      const day = parseInt(m1[1], 10);
+      const month = monthMap[m1[2].toLowerCase()];
+      let year = parseInt(m1[3], 10);
       if (year < 100) year += 2000;
-      if (month) return new Date(year, month - 1, day);
+      if (month) return new Date(Date.UTC(year, month - 1, day));
     }
-    const parsed = new Date(trimmed);
-    if (!isNaN(parsed.getTime())) return parsed;
+
+    // ISO "YYYY-MM-DD" (possibly with trailing time/timezone we ignore)
+    const isoM = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (isoM && isoM[1] && isoM[2] && isoM[3]) {
+      return new Date(Date.UTC(parseInt(isoM[1], 10), parseInt(isoM[2], 10) - 1, parseInt(isoM[3], 10)));
+    }
+
+    // "DD/MM/YYYY" or "MM/DD/YYYY" — treat first part > 12 as day (DD/MM)
+    const slashM = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (slashM && slashM[1] && slashM[2] && slashM[3]) {
+      let year = parseInt(slashM[3], 10);
+      if (year < 100) year += 2000;
+      const a = parseInt(slashM[1], 10);
+      const b = parseInt(slashM[2], 10);
+      const [day, month] = a > 12 ? [a, b] : [b, a];
+      if (month >= 1 && month <= 12) return new Date(Date.UTC(year, month - 1, day));
+    }
+
+    // "DD-MM-YYYY"
+    const dashM = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+    if (dashM && dashM[1] && dashM[2] && dashM[3]) {
+      let year = parseInt(dashM[3], 10);
+      if (year < 100) year += 2000;
+      const a = parseInt(dashM[1], 10);
+      const b = parseInt(dashM[2], 10);
+      const [day, month] = a > 12 ? [a, b] : [b, a];
+      if (month >= 1 && month <= 12) return new Date(Date.UTC(year, month - 1, day));
+    }
   }
+
   return null;
 }
 
-/** Build a full datetime from a date + time string like "9:00" */
+/**
+ * Build a full datetime by combining a UTC-midnight date with an Excel time value.
+ * The time is ALWAYS treated as Singapore Time (UTC+8) so the stored UTC value is correct
+ * regardless of which timezone the server is running in.
+ *
+ * Supports:
+ *  - Excel fractional day (0.333333 = 8:00 AM)
+ *  - String: "8:00", "08:00", "8:00:00", "08:00 AM", "5:00 PM"
+ *  - Falls back to 00:00 SGT if unparseable
+ */
 function buildDatetime(date: Date | null, timeStr: unknown): Date | null {
   if (!date) return null;
-  const time = typeof timeStr === 'string' ? timeStr.trim() : typeof timeStr === 'number' ? String(timeStr) : '';
-  const match = time.match(/^(\d{1,2}):(\d{2})$/);
-  if (match && match[1] && match[2]) {
-    const result = new Date(date);
-    result.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
-    return result;
+
+  let hours = 0;
+  let minutes = 0;
+
+  if (typeof timeStr === 'number' && timeStr >= 0 && timeStr < 1) {
+    // Excel fractional day: e.g. 0.333333... = 8:00 AM
+    const totalMinutes = Math.round(timeStr * 24 * 60);
+    hours = Math.floor(totalMinutes / 60) % 24;
+    minutes = totalMinutes % 60;
+  } else {
+    const timeRaw = typeof timeStr === 'string' ? timeStr.trim() : typeof timeStr === 'number' ? String(timeStr) : '';
+    // Matches: "8:00", "08:00", "8:00:00", "8:00 AM", "17:00 PM"
+    const match = timeRaw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?$/i);
+    if (match && match[1] && match[2]) {
+      hours = parseInt(match[1], 10);
+      minutes = parseInt(match[2], 10);
+      const ampm = (match[3] ?? '').toUpperCase();
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+    }
+    // If no match, falls through with hours=0, minutes=0 (midnight SGT)
   }
-  return new Date(date);
+
+  // Clamp to valid range
+  hours = Math.min(23, Math.max(0, hours));
+  minutes = Math.min(59, Math.max(0, minutes));
+
+  // Build as Singapore Time (UTC+8) — JavaScript converts to UTC internally
+  // This is timezone-safe: 08:00 SGT = 00:00 UTC regardless of server locale
+  const y = date.getUTCFullYear();
+  const mo = date.getUTCMonth() + 1;
+  const d = date.getUTCDate();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return new Date(`${y}-${pad(mo)}-${pad(d)}T${pad(hours)}:${pad(minutes)}:00+08:00`);
 }
 
 /** Normalize row keys by trimming whitespace */
@@ -64,6 +136,31 @@ function str(v: unknown): string {
 function strOrNull(v: unknown): string | null {
   const s = str(v);
   return s || null;
+}
+
+/** Format an Excel time value (string or fractional day) for human-readable preview display */
+function fmtTimeForPreview(value: unknown): string {
+  if (typeof value === 'number' && value >= 0 && value < 1) {
+    const totalMinutes = Math.round(value * 24 * 60);
+    const h = Math.floor(totalMinutes / 60) % 24;
+    const m = totalMinutes % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${displayH}:${String(m).padStart(2, '0')} ${ampm}`;
+  }
+  return str(value);
+}
+
+/** Format an Excel date value (serial or string) as DD/MM/YYYY for preview display */
+function fmtDateForPreview(value: unknown): string {
+  const d = parseExcelDate(value);
+  if (d) {
+    const day = d.getUTCDate();
+    const mo = d.getUTCMonth() + 1;
+    const y = d.getUTCFullYear();
+    return `${String(day).padStart(2, '0')}/${String(mo).padStart(2, '0')}/${y}`;
+  }
+  return str(value);
 }
 
 function parseCourseStatus(value: string): CourseStatus {
@@ -238,6 +335,7 @@ export const importCourseRuns = async (req: Request, res: Response): Promise<voi
           await prisma.courseRun.update({
             where: { id: existing.id },
             data: {
+              startDatetime: startDatetime,
               venueId: venueId,
               venueType: venueType ?? null,
               courseRunType: courseRunType ?? null,
@@ -368,10 +466,11 @@ export const importLearners = async (req: Request, res: Response): Promise<void>
         if (!course) {
           courseRunCache.set(cacheKey, null);
         } else {
-          const dayStart = new Date(startDateRaw);
-          dayStart.setHours(0, 0, 0, 0);
-          const dayEnd = new Date(startDateRaw);
-          dayEnd.setHours(23, 59, 59, 999);
+          // startDateRaw is UTC midnight of the SGT calendar date.
+          // A full Singapore day spans UTC: [prevDay 16:00, sameDay 15:59:59.999]
+          // (SGT midnight = UTC-8h; SGT 23:59:59 = UTC+16h-1ms)
+          const dayStart = new Date(startDateRaw.getTime() - 8 * 60 * 60 * 1000);
+          const dayEnd = new Date(startDateRaw.getTime() + 16 * 60 * 60 * 1000 - 1);
 
           const courseRun = await prisma.courseRun.findFirst({
             where: {
@@ -554,10 +653,10 @@ export const previewCourseRuns = async (req: Request, res: Response): Promise<vo
         rowNum: i + 2,
         courseTitle: str(row['Course Title']),
         courseRunType: str(row['Course Run Type']),
-        startDate: str(row['Start Date']),
-        endDate: str(row['End Date']),
-        startTime: str(row['Start Time']),
-        endTime: str(row['End Time']),
+        startDate: fmtDateForPreview(row['Start Date']),
+        endDate: fmtDateForPreview(row['End Date']),
+        startTime: fmtTimeForPreview(row['Start Time']),
+        endTime: fmtTimeForPreview(row['End Time']),
         status: str(row['Course Status']),
         venueType: str(row['Venue Type']),
         venue: str(row['Venue']),
@@ -599,8 +698,8 @@ export const previewLearners = async (req: Request, res: Response): Promise<void
       return {
         rowNum: i + 2,
         courseTitle: str(row['Course Title']),
-        startDate: str(row['Course Start Date']),
-        endDate: str(row['Course End Date']),
+        startDate: fmtDateForPreview(row['Course Start Date']),
+        endDate: fmtDateForPreview(row['Course End Date']),
         learnerName: str(row['Name']),
         orgName: str(row['Client Organisation Name']),
         division: str(row['Division']),

@@ -20,6 +20,8 @@ interface Learner {
   email: string;
   attendanceStatus: "PRESENT" | "ABSENT";
   certificateGeneratedAt?: string | null;
+  certificateEmailStatus?: "NOT_SENT" | "SENDING" | "SENT" | "FAILED" | null;
+  certificateEmailSentAt?: string | null;
 }
 
 interface CourseRunInfo {
@@ -595,6 +597,7 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
                         <TableHead>Participant Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Attendance</TableHead>
+                        <TableHead>Email Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -613,6 +616,23 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
                             <Badge variant="default" className="bg-green-600">
                               Present
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {learner.certificateEmailStatus === "SENT" ? (
+                              <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+                                Sent
+                              </Badge>
+                            ) : learner.certificateEmailStatus === "SENDING" ? (
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                                Sending…
+                              </Badge>
+                            ) : learner.certificateEmailStatus === "FAILED" ? (
+                              <Badge variant="destructive">Failed</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Not Sent
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button size="sm" variant="ghost" onClick={() => handleDownloadSingle(learner.id)} disabled={downloading === learner.id}>

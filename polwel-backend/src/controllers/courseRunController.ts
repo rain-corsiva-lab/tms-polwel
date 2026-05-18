@@ -5577,6 +5577,8 @@ export const courseRunController = {
           waiverStatus: enrollment.waiverStatus || null,
           waiverRejectReason: enrollment.waiverRejectReason || null,
           waiverReviewedAt: enrollment.waiverReviewedAt || null,
+          certificateEmailStatus: enrollment.certificateEmailStatus,
+          certificateEmailSentAt: enrollment.certificateEmailSentAt,
         };
       });
 
@@ -5985,7 +5987,13 @@ export const courseRunController = {
 
       let successCount = 0;
       let failedCount = 0;
-      const results: Array<{ learnerId: string; learnerName: string; success: boolean; error?: string }> = [];
+      const results: Array<{ learnerId: string; learnerName: string; enrollmentId: string; success: boolean; error?: string }> = [];
+
+      // Mark all selected enrollments as SENDING
+      await prisma.courseRunLearner.updateMany({
+        where: { id: { in: courseRun.courseRunLearners.map((e: any) => e.id) } },
+        data: { certificateEmailStatus: 'SENDING' },
+      });
 
       // Send certificate email to each selected learner
       for (const enrollment of courseRun.courseRunLearners) {
@@ -5994,9 +6002,14 @@ export const courseRunController = {
 
         if (!email) {
           failedCount += 1;
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: { certificateEmailStatus: 'FAILED' },
+          });
           results.push({
             learnerId: learner?.id || '',
             learnerName: learner?.fullname || 'Unknown',
+            enrollmentId: enrollment.id,
             success: false,
             error: 'No email address',
           });
@@ -6039,16 +6052,26 @@ export const courseRunController = {
 
           if (didSend) {
             successCount += 1;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'SENT', certificateEmailSentAt: new Date() },
+            });
             results.push({
               learnerId: learner?.id || '',
               learnerName: learner?.fullname || 'Unknown',
+              enrollmentId: enrollment.id,
               success: true,
             });
           } else {
             failedCount += 1;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'FAILED' },
+            });
             results.push({
               learnerId: learner?.id || '',
               learnerName: learner?.fullname || 'Unknown',
+              enrollmentId: enrollment.id,
               success: false,
               error: 'Email service failed',
             });
@@ -6056,9 +6079,14 @@ export const courseRunController = {
         } catch (error: any) {
           console.error(`Failed to send certificate email to ${email}:`, error);
           failedCount += 1;
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: { certificateEmailStatus: 'FAILED' },
+          }).catch(() => {});
           results.push({
             learnerId: learner?.id || '',
             learnerName: learner?.fullname || 'Unknown',
+            enrollmentId: enrollment.id,
             success: false,
             error: error?.message || 'Unknown error',
           });
@@ -6833,6 +6861,8 @@ export const courseRunController = {
         waiverReason: enrollment.waiverReason || null,
         waiverDocument: enrollment.waiverSupportingDocumentId || null,
         waiverSubmittedAt: enrollment.waiverSubmittedAt || null,
+        certificateEmailStatus: enrollment.certificateEmailStatus,
+        certificateEmailSentAt: enrollment.certificateEmailSentAt || null,
       }));
 
       res.json({
@@ -7037,6 +7067,12 @@ export const courseRunController = {
       let successCount = 0;
       let failCount = 0;
 
+      // Mark all selected enrollments as SENDING
+      await prisma.courseRunLearner.updateMany({
+        where: { id: { in: enrollments.map((e) => e.id) } },
+        data: { certificateEmailStatus: 'SENDING' },
+      });
+
       // Send certificate to each learner
       for (const enrollment of enrollments) {
         try {
@@ -7071,12 +7107,24 @@ export const courseRunController = {
 
           if (emailSent) {
             successCount++;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'SENT', certificateEmailSentAt: new Date() },
+            });
           } else {
             failCount++;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'FAILED' },
+            });
           }
         } catch (error) {
           console.error(`Failed to send certificate to ${enrollment.learner.fullname}:`, error);
           failCount++;
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: { certificateEmailStatus: 'FAILED' },
+          }).catch(() => {});
         }
       }
 
