@@ -20668,3 +20668,34 @@ please develop all of these front end , backend , database with best practice, e
 _**Agent (copilot/claude-sonnet-4.6)**_
 
 Let me start by exploring the codebase to understand the current email logging system, email service, and related components before making any changes.
+
+---
+
+_**User (2026-05-15 05:58:08Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+_**User (2026-05-15 06:18:26Z)**_
+
+also i want your help to develop this : 
+so every each email #file:emailService.ts need to have status in it (yeah in emai log) , so if its failed then we retry to send email in the next 3 mins , upt o 10 times , so letsay we cancel a course run at 13.00 , and its error, then we retry it on 13.03 , and if its still error then retry again 13.06 , then if its success we stop at it ,. and in this example we will log email 3 times. 
+- 12.00 error , with source of error 
+- 12.03 error , with source of error
+- 12.06 success
+
+and if its still error until 10 times retry , then we stop at it to avoid infinite run .
+
+these need to implelmemnted to all emails #file:emailService.ts without exceptions 
+
+ensure we store all send email tries into email log properly without any email send data log missing, this is crucial 
+
+please develop all of these front end , backend , database with best practice, ensure all working properly and test it to ensure it , ensure we dont broke anything. please develop with best optimization for smooth experience , please also give me detailed documentation about all of changes that you do (every single little detail need to write it down here) , please make detailed and comprehensive documentations in it in /documentations #file:documentations folder. so later we can review it or give it to another person or maybe another AI Agent who want to help our development. please create the md file with format name 'datetime_changes_title-changes-in-max-8-words' , example '2026_05_23_14_40_changes_fixing-some-broken-and-issues-on-transactions'
+
+
+_**User (2026-05-15 06:32:52Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+_**User (2026-05-15 06:43:57Z)**_
+
+@agent Continue: "Continue to iterate?"

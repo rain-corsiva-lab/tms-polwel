@@ -34,6 +34,8 @@ interface LearnerWithAttendance {
   waiverStatus?: "PENDING" | "APPROVED" | "REJECTED" | null;
   waiverRejectReason?: string | null;
   waiverReviewedAt?: Date | null;
+  certificateEmailStatus?: "NOT_SENT" | "SENDING" | "SENT" | "FAILED" | null;
+  certificateEmailSentAt?: string | Date | null;
 }
 
 interface CourseRunInfo {
@@ -308,6 +310,8 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
           title: "Certificates Sent",
           description: `Successfully sent ${success || 0} certificate(s)${failed > 0 ? `. ${failed} failed` : ""}`,
         });
+        // Refresh learner data to show updated email statuses
+        await fetchCertificateData();
       } else {
         throw new Error(response?.error || response?.message || "Failed to send certificates");
       }
@@ -665,6 +669,7 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
                         <TableHead>Participant Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Attendance</TableHead>
+                        <TableHead>Email Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -681,6 +686,23 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
                           <TableCell>{learner.learnerEmail}</TableCell>
                           <TableCell>
                             <Badge variant="default">Present</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {learner.certificateEmailStatus === "SENT" ? (
+                              <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+                                Sent
+                              </Badge>
+                            ) : learner.certificateEmailStatus === "SENDING" ? (
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                                Sending…
+                              </Badge>
+                            ) : learner.certificateEmailStatus === "FAILED" ? (
+                              <Badge variant="destructive">Failed</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Not Sent
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm" onClick={() => handleDownloadCertificate(learner)}>

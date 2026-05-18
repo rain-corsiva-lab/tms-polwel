@@ -545,6 +545,8 @@ model CourseRunLearner {
   waiverReviewedAt              DateTime?
   waiverReviewedBy              String?
   certificateGeneratedAt        DateTime?
+  certificateEmailStatus        CertificateEmailStatus     @default(NOT_SENT)
+  certificateEmailSentAt        DateTime?
   createdAt                     DateTime                   @default(now())
   updatedAt                     DateTime                   @updatedAt
   deletedAt                     DateTime?
@@ -979,4 +981,11 @@ enum EmailRetryStatus {
   PROCESSING
   SENT
   ABANDONED
+}
+
+enum CertificateEmailStatus {
+  NOT_SENT
+  SENDING
+  SENT
+  FAILED
 }
