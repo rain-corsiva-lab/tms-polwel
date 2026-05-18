@@ -5433,10 +5433,10 @@ export const courseRunController = {
       const sheet = workbook.addWorksheet('Participants');
 
       // Add course run header info
-      const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-      const endDate = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-      const startTime = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-      const endTime = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+      const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+      const endDate = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+      const startTime = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '';
+      const endTime = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '';
       const trainers = courseRun.courseRunTrainers.map((t: any) => t.trainer?.name || '').filter(Boolean).join(', ') || '-';
 
       sheet.addRow([`Course: ${courseRun.course?.title || ''}`]);
@@ -6277,11 +6277,11 @@ export const courseRunController = {
 
       const rows = courseRuns.map((run) => {
         const startDate = run.startDatetime
-          ? new Date(run.startDatetime).toLocaleDateString('en-GB')
+          ? new Date(run.startDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })
           : '';
         
         const endDate = run.endDatetime
-          ? new Date(run.endDatetime).toLocaleDateString('en-GB')
+          ? new Date(run.endDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })
           : '';
 
         // Determine fee type (Default/Standard/Premium or custom description)

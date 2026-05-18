@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { courseRunsApi, coursesApi, venuesApi, organizationsApi } from "../lib/api";
 import { toast } from "sonner";
-import { formatDate, formatDateTime } from "../lib/date";
+import { formatDate, formatDateTime, formatDateUTC, formatTimeUTC, toUTCDateInputValue, toUTCTimeInputValue, buildUTCDatetime } from "../lib/date";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { AddLearnersDialog } from "../components/AddLearnersDialog";
@@ -277,10 +277,11 @@ const CourseRunDetail: React.FC = () => {
       courseId: cr.course?.id || "",
       courseCode: cr.course?.courseCode || "",
       clientOrganizationId: (cr as any).clientOrganizationId || "",
-      startDate: start ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}` : "",
-      startTime: start ? `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}` : "",
-      endDate: end ? `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}` : "",
-      endTime: end ? `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}` : "",
+      // Use UTC methods so the edit form shows the wall-clock UTC time that was stored
+      startDate: start ? toUTCDateInputValue(start) : "",
+      startTime: start ? toUTCTimeInputValue(start) : "",
+      endDate: end ? toUTCDateInputValue(end) : "",
+      endTime: end ? toUTCTimeInputValue(end) : "",
       venueType: cr.venueType || "",
       venueId: cr.venue?.id || "",
       specifiedLocation: cr.specifiedLocation || "",
@@ -656,8 +657,8 @@ const CourseRunDetail: React.FC = () => {
       const headerMetadata = [
         courseRun.course?.title || "Course",
         `Course Code: ${courseRun.course?.courseCode || "N/A"}`,
-        `Duration: ${courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-SG") : "N/A"} - ${
-          courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-SG") : "N/A"
+        `Duration: ${courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "N/A"} - ${
+          courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "N/A"
         }`,
         `Venue: ${courseRun.venue?.name || courseRun.specifiedLocation || "TBD"}`,
       ];
@@ -1593,8 +1594,10 @@ const CourseRunDetail: React.FC = () => {
         }
       }
 
-      const startDatetime = editData.startDate && editData.startTime ? new Date(`${editData.startDate}T${editData.startTime}`).toISOString() : null;
-      const endDatetime = editData.endDate && editData.endTime ? new Date(`${editData.endDate}T${editData.endTime}`).toISOString() : null;
+      // Treat the user's date+time input as wall-clock UTC (append 'Z') so we store the
+      // literal value without any browser-timezone shift.
+      const startDatetime = buildUTCDatetime(editData.startDate, editData.startTime);
+      const endDatetime = buildUTCDatetime(editData.endDate, editData.endTime);
 
       const payload: any = {
         serialNumber: editData.serialNumber || undefined,
@@ -1855,11 +1858,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <DateInput value={editData?.startDate} onChange={(d) => handleEditField("startDate", d || "")} />
                       ) : (
-                        <Input
-                          value={courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB") : ""}
-                          disabled
-                          className="bg-gray-50"
-                        />
+                        <Input value={formatDateUTC(courseRun.startDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1867,13 +1866,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <TimeInput value={editData?.startTime} onChange={(t) => handleEditField("startTime", t || "")} />
                       ) : (
-                        <Input
-                          value={
-                            courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""
-                          }
-                          disabled
-                          className="bg-gray-50"
-                        />
+                        <Input value={formatTimeUTC(courseRun.startDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1881,11 +1874,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <DateInput value={editData?.endDate} onChange={(d) => handleEditField("endDate", d || "")} />
                       ) : (
-                        <Input
-                          value={courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB") : ""}
-                          disabled
-                          className="bg-gray-50"
-                        />
+                        <Input value={formatDateUTC(courseRun.endDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1893,13 +1882,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <TimeInput value={editData?.endTime} onChange={(t) => handleEditField("endTime", t || "")} />
                       ) : (
-                        <Input
-                          value={
-                            courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""
-                          }
-                          disabled
-                          className="bg-gray-50"
-                        />
+                        <Input value={formatTimeUTC(courseRun.endDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -3169,8 +3152,8 @@ const CourseRunDetail: React.FC = () => {
           courseRunDetails={{
             serialNumber: courseRun.serialNumber || "",
             courseName: courseRun.course?.title || "",
-            startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB") : "",
-            endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB") : "",
+            startDate: formatDateUTC(courseRun.startDatetime) === "-" ? "" : formatDateUTC(courseRun.startDatetime),
+            endDate: formatDateUTC(courseRun.endDatetime) === "-" ? "" : formatDateUTC(courseRun.endDatetime),
             venue: courseRun.venue?.name || courseRun.specifiedLocation || "TBA",
           }}
           onSuccess={() => {

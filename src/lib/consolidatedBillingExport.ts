@@ -363,7 +363,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       const valueOfWorkDone = billing.valueOfWorkDone || beforeGST;
       
       const courseDates = courseRun.startDate && courseRun.endDate
-        ? `${new Date(courseRun.startDate).toLocaleDateString('en-GB')} - ${new Date(courseRun.endDate).toLocaleDateString('en-GB')}`
+        ? `${new Date(courseRun.startDate).toLocaleDateString('en-GB', { timeZone: 'UTC' })} - ${new Date(courseRun.endDate).toLocaleDateString('en-GB', { timeZone: 'UTC' })}`
         : '';
 
       // Merge columns A-J and P-X across all billing rows if there are multiple entries
