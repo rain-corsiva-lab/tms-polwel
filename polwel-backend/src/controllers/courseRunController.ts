@@ -1721,14 +1721,23 @@ export const courseRunController = {
             },
           });
 
-          // Collect unique TC emails from enrollments (auto-CC by default)
-          const tcEmailsFromEnrollments = enrollments
-            .map((e) => (e as any).trainingCoordinator?.email)
-            .filter((email): email is string => typeof email === 'string' && email.trim() !== '');
-          const allCc = [...new Set([...manualCc, ...tcEmailsFromEnrollments])];
-
-          // Send emails to learners
+          // Send emails to learners (each learner gets CC'd only their own TC + manual cc)
           const learnerEmailPromises = enrollments.map((enrollment) => {
+            // CC: own TC (if present) + manual CC addresses
+            const learnerCc: string[] = [];
+            
+            // Add learner's own training coordinator (if present)
+            const learnerTcEmail = (enrollment as any).trainingCoordinator?.email;
+            if (learnerTcEmail && typeof learnerTcEmail === 'string' && learnerTcEmail.trim() !== '') {
+              learnerCc.push(learnerTcEmail);
+            }
+            
+            // Add manual CC addresses (if any)
+            learnerCc.push(...manualCc);
+            
+            // Remove duplicates
+            const uniqueLearnerCc = [...new Set(learnerCc)];
+
             const emailParams: any = {
               email: enrollment.learner.email ?? '',
               learnerName: enrollment.learner.fullname,
@@ -1744,7 +1753,7 @@ export const courseRunController = {
             if (nextRunDate) emailParams.nextRunDate = nextRunDate;
             if (additionalNotes) emailParams.additionalNotes = additionalNotes;
             if (emailAttachments) emailParams.attachments = emailAttachments;
-            if (allCc.length > 0) emailParams.cc = allCc;
+            if (uniqueLearnerCc.length > 0) emailParams.cc = uniqueLearnerCc;
 
             return EmailService.sendCourseCancellationEmail(emailParams).catch((err) => {
               console.error(`Failed to send cancellation email to learner ${enrollment.learner.email}:`, err);
@@ -5424,10 +5433,10 @@ export const courseRunController = {
       const sheet = workbook.addWorksheet('Participants');
 
       // Add course run header info
-      const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-      const endDate = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-      const startTime = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-      const endTime = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+      const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+      const endDate = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+      const startTime = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '';
+      const endTime = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '';
       const trainers = courseRun.courseRunTrainers.map((t: any) => t.trainer?.name || '').filter(Boolean).join(', ') || '-';
 
       sheet.addRow([`Course: ${courseRun.course?.title || ''}`]);
@@ -5568,6 +5577,8 @@ export const courseRunController = {
           waiverStatus: enrollment.waiverStatus || null,
           waiverRejectReason: enrollment.waiverRejectReason || null,
           waiverReviewedAt: enrollment.waiverReviewedAt || null,
+          certificateEmailStatus: enrollment.certificateEmailStatus,
+          certificateEmailSentAt: enrollment.certificateEmailSentAt,
         };
       });
 
@@ -5976,7 +5987,13 @@ export const courseRunController = {
 
       let successCount = 0;
       let failedCount = 0;
-      const results: Array<{ learnerId: string; learnerName: string; success: boolean; error?: string }> = [];
+      const results: Array<{ learnerId: string; learnerName: string; enrollmentId: string; success: boolean; error?: string }> = [];
+
+      // Mark all selected enrollments as SENDING
+      await prisma.courseRunLearner.updateMany({
+        where: { id: { in: courseRun.courseRunLearners.map((e: any) => e.id) } },
+        data: { certificateEmailStatus: 'SENDING' },
+      });
 
       // Send certificate email to each selected learner
       for (const enrollment of courseRun.courseRunLearners) {
@@ -5985,9 +6002,14 @@ export const courseRunController = {
 
         if (!email) {
           failedCount += 1;
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: { certificateEmailStatus: 'FAILED' },
+          });
           results.push({
             learnerId: learner?.id || '',
             learnerName: learner?.fullname || 'Unknown',
+            enrollmentId: enrollment.id,
             success: false,
             error: 'No email address',
           });
@@ -6030,16 +6052,26 @@ export const courseRunController = {
 
           if (didSend) {
             successCount += 1;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'SENT', certificateEmailSentAt: new Date() },
+            });
             results.push({
               learnerId: learner?.id || '',
               learnerName: learner?.fullname || 'Unknown',
+              enrollmentId: enrollment.id,
               success: true,
             });
           } else {
             failedCount += 1;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'FAILED' },
+            });
             results.push({
               learnerId: learner?.id || '',
               learnerName: learner?.fullname || 'Unknown',
+              enrollmentId: enrollment.id,
               success: false,
               error: 'Email service failed',
             });
@@ -6047,9 +6079,14 @@ export const courseRunController = {
         } catch (error: any) {
           console.error(`Failed to send certificate email to ${email}:`, error);
           failedCount += 1;
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: { certificateEmailStatus: 'FAILED' },
+          }).catch(() => {});
           results.push({
             learnerId: learner?.id || '',
             learnerName: learner?.fullname || 'Unknown',
+            enrollmentId: enrollment.id,
             success: false,
             error: error?.message || 'Unknown error',
           });
@@ -6240,11 +6277,11 @@ export const courseRunController = {
 
       const rows = courseRuns.map((run) => {
         const startDate = run.startDatetime
-          ? new Date(run.startDatetime).toLocaleDateString('en-GB')
+          ? new Date(run.startDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })
           : '';
         
         const endDate = run.endDatetime
-          ? new Date(run.endDatetime).toLocaleDateString('en-GB')
+          ? new Date(run.endDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })
           : '';
 
         // Determine fee type (Default/Standard/Premium or custom description)
@@ -6824,6 +6861,8 @@ export const courseRunController = {
         waiverReason: enrollment.waiverReason || null,
         waiverDocument: enrollment.waiverSupportingDocumentId || null,
         waiverSubmittedAt: enrollment.waiverSubmittedAt || null,
+        certificateEmailStatus: enrollment.certificateEmailStatus,
+        certificateEmailSentAt: enrollment.certificateEmailSentAt || null,
       }));
 
       res.json({
@@ -7028,6 +7067,12 @@ export const courseRunController = {
       let successCount = 0;
       let failCount = 0;
 
+      // Mark all selected enrollments as SENDING
+      await prisma.courseRunLearner.updateMany({
+        where: { id: { in: enrollments.map((e) => e.id) } },
+        data: { certificateEmailStatus: 'SENDING' },
+      });
+
       // Send certificate to each learner
       for (const enrollment of enrollments) {
         try {
@@ -7062,12 +7107,24 @@ export const courseRunController = {
 
           if (emailSent) {
             successCount++;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'SENT', certificateEmailSentAt: new Date() },
+            });
           } else {
             failCount++;
+            await prisma.courseRunLearner.update({
+              where: { id: enrollment.id },
+              data: { certificateEmailStatus: 'FAILED' },
+            });
           }
         } catch (error) {
           console.error(`Failed to send certificate to ${enrollment.learner.fullname}:`, error);
           failCount++;
+          await prisma.courseRunLearner.update({
+            where: { id: enrollment.id },
+            data: { certificateEmailStatus: 'FAILED' },
+          }).catch(() => {});
         }
       }
 

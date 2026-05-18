@@ -11,7 +11,16 @@ import {
   markEmailFailed,
   markEmailRetrying,
   EMAIL_TYPES,
+  EMAIL_PROVIDERS,
+  classifyError,
+  extractStack,
+  extractSmtpResponse,
 } from './emailLogService';
+import {
+  enqueueEmailRetry,
+  type RetryContext,
+  serializePayload,
+} from './emailQueueService';
 
 interface EmailConfig {
   host: string;
@@ -849,6 +858,17 @@ class EmailService {
     return this.transporter;
     }
 
+  /**
+   * Returns the EMAIL_PROVIDERS string for the currently active transport.
+   * Used to populate the `provider` column in email_logs.
+   */
+  private static getProviderName(): string {
+    if (this.isGraphApiMode()) return EMAIL_PROVIDERS.GRAPH_API;
+    if (this.isMailjetSmtp())   return EMAIL_PROVIDERS.MAILJET;
+    if (!this.transporter)      return EMAIL_PROVIDERS.NONE;
+    return EMAIL_PROVIDERS.SMTP;
+  }
+
   static generateResetToken(): string {
     return crypto.randomBytes(32).toString('hex');
   }
@@ -856,7 +876,8 @@ class EmailService {
   static async sendTrainerSetupEmail(
     email: string,
     name: string,
-    setupUrl: string
+    setupUrl: string,
+    _ctx?: RetryContext,
   ): Promise<boolean> {
   const transporter = this.getTransporter();
   const logoSrc = this.getLogoSrc();
@@ -962,16 +983,26 @@ class EmailService {
       const footerContent = mailOptions.html.substring(footerStart, Math.min(footerStart + 600, mailOptions.html.length));
       console.log('📧 Footer section (first 600 chars):\n', footerContent);
     }
-    
+
+    // Create the log ONCE before send attempt (fixes double-log bug)
+    const _trainerSetupLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.TRAINER_SETUP,
+      recipient:  email,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
+
     try {
       if (transporter) {
-        const _logId = await createEmailLog({ emailType: EMAIL_TYPES.TRAINER_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
         console.log('📨 Attempting to send trainer setup email via transporter');
         const info = await transporter.sendMail(mailOptions);
         console.log(`✅ Trainer setup email sent to ${email}`);
         console.log(`   Message ID: ${info.messageId}`);
         console.log(`   Response: ${info.response}`);
-        await markEmailSent(_logId, info.messageId, 1).catch(() => {});
+        await markEmailSent(_trainerSetupLogId, info.messageId, 1, {
+          smtpResponse: info.response,
+        }).catch(() => {});
         return true;
       } else {
         console.log('=== TRAINER SETUP EMAIL (Development Mode) ===');
@@ -979,21 +1010,30 @@ class EmailService {
         console.log(`Name: ${name}`);
         console.log(`Setup URL: ${setupUrl}`);
         console.log('=============================================');
+        await markEmailSent(_trainerSetupLogId, undefined, 1).catch(() => {});
         return true;
       }
     } catch (error) {
       const _errMsg = error instanceof Error ? error.message : String(error);
-      const _logId2 = await createEmailLog({ emailType: EMAIL_TYPES.TRAINER_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
-      await markEmailFailed(_logId2, _errMsg, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_trainerSetupLogId, _errMsg, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('❌ CRITICAL: Failed to send trainer setup email');
       console.error('   Recipient:', email);
       console.error('   Error Type:', error?.constructor?.name);
-      console.error('   Error Message:', error instanceof Error ? error.message : String(error));
-      if (error instanceof Error && (error as any).code) {
-        console.error('   Error Code:', (error as any).code);
-      }
-      if (error instanceof Error && (error as any).response) {
-        console.error('   SMTP Response:', (error as any).response);
+      console.error('   Error Message:', _errMsg);
+      if ((error as any)?.code)     console.error('   Error Code:',     (error as any).code);
+      if ((error as any)?.response) console.error('   SMTP Response:',  (error as any).response);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.TRAINER_SETUP,
+          recipient: email,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ email, name, setupUrl }),
+        }).catch(() => {});
       }
       return false;
     }
@@ -1003,7 +1043,8 @@ class EmailService {
     email: string,
     name: string,
     setupUrl: string,
-    organizationName: string
+    organizationName: string,
+    _ctx?: RetryContext,
   ): Promise<boolean> {
     // Controlled by env var ENABLE_TC_ONBOARDING_EMAIL.
     // Set to 'true' to re-enable; any other value (or absent) keeps it disabled.
@@ -1110,12 +1151,20 @@ class EmailService {
       `,
       attachments: this.getEmailMediaAttachments(),
     };
-    const _coordLogId = await createEmailLog({ emailType: EMAIL_TYPES.COORDINATOR_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
+    const _coordLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.COORDINATOR_SETUP,
+      recipient:  email,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
     try {
       if (transporter) {
         const _cInfo = await transporter.sendMail(mailOptions);
         console.log(`Coordinator setup email sent to ${email}`);
-        await markEmailSent(_coordLogId, _cInfo?.messageId, 1).catch(() => {});
+        await markEmailSent(_coordLogId, _cInfo?.messageId, 1, {
+          smtpResponse: _cInfo?.response,
+        }).catch(() => {});
         return true;
       } else {
         console.log('=== COORDINATOR SETUP EMAIL (Development Mode) ===');
@@ -1129,8 +1178,21 @@ class EmailService {
       }
     } catch (error) {
       const _cErr = error instanceof Error ? error.message : String(error);
-      await markEmailFailed(_coordLogId, _cErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_coordLogId, _cErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('Error sending coordinator setup email:', error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.COORDINATOR_SETUP,
+          recipient: email,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ email, name, setupUrl, organizationName }),
+        }).catch(() => {});
+      }
       return false;
     }
   }
@@ -1138,7 +1200,8 @@ class EmailService {
   static async sendPasswordResetEmail(
     email: string,
     name: string,
-    resetUrl: string
+    resetUrl: string,
+    _ctx?: RetryContext,
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
@@ -1238,12 +1301,18 @@ class EmailService {
       `,
       attachments: this.getEmailMediaAttachments(),
     };
-    const _pwLogId = await createEmailLog({ emailType: EMAIL_TYPES.PASSWORD_RESET, recipient: email, subject: mailOptions.subject }).catch(() => null);
+    const _pwLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.PASSWORD_RESET,
+      recipient:  email,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
     try {
       if (transporter) {
         const result = await transporter.sendMail(mailOptions);
         console.log(`✅ Password reset email sent to ${email}. Message ID: ${result.messageId}`);
-        await markEmailSent(_pwLogId, result.messageId, 1).catch(() => {});
+        await markEmailSent(_pwLogId, result.messageId, 1, { smtpResponse: result.response }).catch(() => {});
         return true;
       } else {
         console.log('=== PASSWORD RESET EMAIL (Development Mode) ===');
@@ -1256,10 +1325,23 @@ class EmailService {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      await markEmailFailed(_pwLogId, errorMessage, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_pwLogId, errorMessage, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('❌ Error sending password reset email to', email);
       console.error('Error details:', errorMessage);
       console.error('Full error:', error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.PASSWORD_RESET,
+          recipient: email,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ email, name, resetUrl }),
+        }).catch(() => {});
+      }
       return false;
     }
   }
@@ -1268,7 +1350,8 @@ class EmailService {
     email: string,
     name: string | null,
     code: string,
-    expiresAt: Date
+    expiresAt: Date,
+    _ctx?: RetryContext,
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
@@ -1392,13 +1475,19 @@ class EmailService {
       attachments: this.getEmailMediaAttachments(),
     };
 
-    const _mfaLogId = await createEmailLog({ emailType: EMAIL_TYPES.MFA_CODE, recipient: email, subject: mailOptions.subject }).catch(() => null);
+    const _mfaLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.MFA_CODE,
+      recipient:  email,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
 
     try {
       if (transporter) {
         const _mInfo = await transporter.sendMail(mailOptions);
         console.log(`MFA code email sent to ${email}`);
-        await markEmailSent(_mfaLogId, _mInfo?.messageId, 1).catch(() => {});
+        await markEmailSent(_mfaLogId, _mInfo?.messageId, 1, { smtpResponse: _mInfo?.response }).catch(() => {});
         return true;
       } else {
         console.log('=== MFA CODE EMAIL (Development Mode) ===');
@@ -1412,8 +1501,21 @@ class EmailService {
       }
     } catch (error) {
       const _mfaErr = error instanceof Error ? error.message : String(error);
-      await markEmailFailed(_mfaLogId, _mfaErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_mfaLogId, _mfaErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('Error sending MFA code email:', error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.MFA_CODE,
+          recipient: email,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ email, name, code, expiresAt }),
+        }).catch(() => {});
+      }
       return false;
     }
   }
@@ -1421,16 +1523,18 @@ class EmailService {
   static async sendUserSetupEmail(
     email: string,
     name: string,
-    setupUrl: string
+    setupUrl: string,
+    _ctx?: RetryContext,
   ): Promise<boolean> {
     // This is an alias for sendPolwelUserSetupEmail for backward compatibility
-    return this.sendPolwelUserSetupEmail(email, name, setupUrl);
+    return this.sendPolwelUserSetupEmail(email, name, setupUrl, _ctx);
   }
 
   static async sendPolwelUserSetupEmail(
     email: string,
     name: string,
-    setupUrl: string
+    setupUrl: string,
+    _ctx?: RetryContext,
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
@@ -1525,12 +1629,18 @@ class EmailService {
       `,
       attachments: this.getEmailMediaAttachments(),
     };
-    const _polwelLogId = await createEmailLog({ emailType: EMAIL_TYPES.POLWEL_USER_SETUP, recipient: email, subject: mailOptions.subject }).catch(() => null);
+    const _polwelLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.POLWEL_USER_SETUP,
+      recipient:  email,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
     try {
       if (transporter) {
         const _pInfo = await transporter.sendMail(mailOptions);
         console.log(`POLWEL user setup email sent to ${email}`);
-        await markEmailSent(_polwelLogId, _pInfo?.messageId, 1).catch(() => {});
+        await markEmailSent(_polwelLogId, _pInfo?.messageId, 1, { smtpResponse: _pInfo?.response }).catch(() => {});
         return true;
       } else {
         console.log('=== POLWEL USER SETUP EMAIL (Development Mode) ===');
@@ -1543,8 +1653,21 @@ class EmailService {
       }
     } catch (error) {
       const _pErr = error instanceof Error ? error.message : String(error);
-      await markEmailFailed(_polwelLogId, _pErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_polwelLogId, _pErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('Error sending POLWEL user setup email:', error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.POLWEL_USER_SETUP,
+          recipient: email,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ email, name, setupUrl }),
+        }).catch(() => {});
+      }
       return false;
     }
   }
@@ -1590,7 +1713,8 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
-          timeZone: 'Asia/Singapore',
+          // Course datetimes are wall-clock UTC; display literal stored value
+          timeZone: 'UTC',
         }).format(dt);
       } catch {
         return String(d);
@@ -1602,8 +1726,9 @@ class EmailService {
       try {
         const startDt = new Date(start);
         const endDt = new Date(end);
-        const startTime = startDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
-        const endTime = endDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
+        // Course datetimes are wall-clock UTC; use timeZone:'UTC' to display literal stored value
+        const startTime = startDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
+        const endTime = endDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
         return `${startTime} to ${endTime} hrs`;
       } catch {
         return '0900 to 1700 hrs';
@@ -1752,6 +1877,7 @@ class EmailService {
     additionalBody?: string | null,
     attachments?: any[] | null,
     recipientType?: 'trainer' | 'partner',
+    _ctx?: RetryContext,
   ): Promise<{ success: boolean; info?: any; error?: string }> {
     const transporter = this.getTransporter();
 
@@ -1801,16 +1927,21 @@ class EmailService {
 
     const _taLogId = await createEmailLog({
       emailType: EMAIL_TYPES.TRAINER_ASSIGNMENT,
-      recipient: email,
+      recipient:  email,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
       ...(ccEmails && ccEmails.length > 0 ? { cc: ccEmails.join(', ') } : {}),
-      subject: mailOptions.subject,
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — trainer assignment email would be:');
         console.log('To:', email, '| Subject:', mailOptions.subject);
-        await markEmailFailed(_taLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1).catch(() => {});
+        await markEmailFailed(_taLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
+          errorCategory: 'CONFIG_ERROR',
+          provider: EMAIL_PROVIDERS.NONE,
+        }).catch(() => {});
         return { success: false, error: 'SMTP not configured' };
       }
 
@@ -1818,7 +1949,6 @@ class EmailService {
       const hasCustomAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
       if (hasCustomAttachments && this.isMailjetSmtp()) {
         console.log('🚀 Using Mailjet REST API for trainer email with attachments...');
-        // Only pass file attachments (buffers) — logo is passed as InlinedAttachment separately
         const apiAttachments = (mailOptions.attachments || [])
           .filter((a: any) => Buffer.isBuffer(a.content))
           .map((a: any) => ({ filename: a.filename, content: a.content as Buffer, contentType: a.contentType || 'application/octet-stream' }));
@@ -1835,21 +1965,37 @@ class EmailService {
         });
         if (!result.success) {
           console.error('❌ Mailjet REST API failed for trainer email:', result.error);
-          await markEmailFailed(_taLogId, result.error, undefined, 1).catch(() => {});
+          await markEmailFailed(_taLogId, result.error, undefined, 1, {
+            errorCategory: 'MAILJET_ERROR',
+            provider: EMAIL_PROVIDERS.MAILJET,
+          }).catch(() => {});
         } else {
-          await markEmailSent(_taLogId, undefined, 1).catch(() => {});
+          await markEmailSent(_taLogId, result.messageId, 1).catch(() => {});
         }
         return result;
       }
 
       const info = await transporter.sendMail(mailOptions);
       console.log(`(EmailService) Trainer assignment email sent to ${email}:`, info?.messageId || info);
-      await markEmailSent(_taLogId, info?.messageId, 1).catch(() => {});
+      await markEmailSent(_taLogId, info?.messageId, 1, { smtpResponse: info?.response }).catch(() => {});
       return { success: true, info };
     } catch (err) {
       const _taErr = (err as any)?.message || String(err);
-      await markEmailFailed(_taLogId, _taErr, (err as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_taLogId, _taErr, (err as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(err),
+        errorStack:    extractStack(err),
+        errorCategory: classifyError(err),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('(EmailService) Failed to send trainer assignment email:', _taErr || err);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.TRAINER_ASSIGNMENT,
+          recipient: email,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ email, name, courseRunDetails, baseFee, ccEmails, additionalBody, attachments, recipientType }),
+        }).catch(() => {});
+      }
       return { success: false, error: _taErr };
     }
   }
@@ -1890,7 +2036,8 @@ class EmailService {
 
     const isSameDayLocal = (d1?: Date, d2?: Date): boolean => {
       if (!d1 || !d2) return false;
-      const opts = { timeZone: 'Asia/Singapore' } as const;
+      // Course datetimes are wall-clock UTC; compare UTC calendar dates
+      const opts = { timeZone: 'UTC' } as const;
       return d1.toLocaleDateString('en-CA', opts) === d2.toLocaleDateString('en-CA', opts);
     };
 
@@ -1902,7 +2049,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
-          timeZone: 'Asia/Singapore',
+          timeZone: 'UTC',
         }).format(date);
       } catch (error) {
         console.warn('Failed to format date for learner confirmation email:', error);
@@ -1917,7 +2064,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
-          timeZone: 'Asia/Singapore',
+          timeZone: 'UTC',
         }).format(date);
       } catch (error) {
         return '';
@@ -1927,10 +2074,11 @@ class EmailService {
     const formatTime = (start?: Date, end?: Date) => {
       if (!start || !end) return '0900 to 1700 hrs';
       try {
-        const startTime = start.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
-        const endTime = end.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
+        // Course datetimes are wall-clock UTC; use timeZone:'UTC' to display literal stored value
+        const startTime = start.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
+        const endTime = end.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
         const regDate = new Date(start.getTime() - 15 * 60 * 1000);
-        const regTime = regDate.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
+        const regTime = regDate.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
         return `${startTime} to ${endTime} hrs <em>(Registration starts at ${regTime})</em>`;
       } catch (error) {
         return '0900 to 1700 hrs';
@@ -2101,24 +2249,8 @@ class EmailService {
     remarks?: string | null;
     /** Optional: log which course run this email belongs to */
     courseRunId?: string;
-  }): Promise<boolean> {
-    const {
-      email,
-      learnerName,
-      courseTitle,
-      courseCode,
-      serialNumber,
-      startDate,
-      endDate,
-      venueName,
-      venueAddress,
-      specifiedLocation,
-      additionalNotes,
-      cc,
-      attachments,
-      courseDuration,
-      remarks,
-    } = params;
+  }, _ctx?: RetryContext): Promise<boolean> {
+    const { email, learnerName, courseTitle, courseCode, serialNumber, startDate, endDate, venueName, venueAddress, specifiedLocation, additionalNotes, cc, attachments, courseDuration, remarks, courseRunId } = params;
 
     const transporter = this.getTransporter();
 
@@ -2196,9 +2328,11 @@ class EmailService {
     const _confLogId = await createEmailLog({
       emailType:   EMAIL_TYPES.COURSE_CONFIRMATION,
       recipient:   Array.isArray(email) ? email.join(', ') : email,
-      ...(ccRecipients ? { cc: ccRecipients.join(', ') } : {}),
       subject:     mailOptions.subject,
+      provider:    this.getProviderName(),
+      ...(ccRecipients ? { cc: ccRecipients.join(', ') } : {}),
       ...(params.courseRunId ? { courseRunId: params.courseRunId } : {}),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
     try {
@@ -2211,7 +2345,10 @@ class EmailService {
         console.error('Configure SMTP in .env file with:');
         console.error('  - MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD');
         console.error('════════════════════════════════════════════════════════════════');
-        await markEmailFailed(_confLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1).catch(() => {});
+        await markEmailFailed(_confLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
+          errorCategory: 'CONFIG_ERROR',
+          provider: EMAIL_PROVIDERS.NONE,
+        }).catch(() => {});
         return false;
       }
 
@@ -2223,14 +2360,10 @@ class EmailService {
       if (ccRecipients) console.log('   CC:', ccRecipients.join(', '));
       console.log('   Attachments:', mailOptions.attachments?.length || 0, 'file(s)');
 
-      // ── Mailjet REST API path (used when attachments are present) ──────────
-      // REST API gives proper HTTP rejection codes; SMTP silently queues then
-      // bounces large / flagged attachments without notifying the sender.
+      // ── Mailjet REST API path ──────────────────────────────────────────────
       const hasCustomAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
       if (hasCustomAttachments && this.isMailjetSmtp()) {
         console.log('🚀 Using Mailjet REST API for email with attachments...');
-
-        // Logo uses CID (inline attachment) — pass it as InlinedAttachments to Mailjet so cid:polwellogo resolves
         const apiAttachments = (mailOptions.attachments || [])
           .filter((a: any) => Buffer.isBuffer(a.content))
           .map((a: any) => ({
@@ -2252,7 +2385,10 @@ class EmailService {
 
         if (!result.success) {
           console.error('❌ Mailjet REST API failed:', result.error);
-          await markEmailFailed(_confLogId, result.error, undefined, 1).catch(() => {});
+          await markEmailFailed(_confLogId, result.error, undefined, 1, {
+            errorCategory: 'MAILJET_ERROR',
+            provider: EMAIL_PROVIDERS.MAILJET,
+          }).catch(() => {});
           return false;
         }
         console.log('✅ Mailjet REST API success. MessageID:', result.messageId);
@@ -2260,7 +2396,7 @@ class EmailService {
         return true;
       }
 
-      // ── Standard SMTP path (no attachments, or non-Mailjet SMTP) ──────────
+      // ── Standard SMTP path ────────────────────────────────────────────────
       console.log('🔄 Sending via SMTP...');
       const info = await transporter.sendMail(mailOptions);
       
@@ -2275,14 +2411,22 @@ class EmailService {
       
       if (info.rejected && info.rejected.length > 0) {
         console.error('⚠️  Email rejected by server:', info.rejected);
-        await markEmailFailed(_confLogId, `Rejected: ${JSON.stringify(info.rejected)}`, 'SMTP_REJECTED', 1).catch(() => {});
+        await markEmailFailed(_confLogId, `Rejected: ${JSON.stringify(info.rejected)}`, 'SMTP_REJECTED', 1, {
+          smtpResponse:  info.response,
+          errorCategory: 'INVALID_RECIPIENT',
+        }).catch(() => {});
         return false;
       }
-      await markEmailSent(_confLogId, info.messageId, 1).catch(() => {});
+      await markEmailSent(_confLogId, info.messageId, 1, { smtpResponse: info.response }).catch(() => {});
       return true;
     } catch (error) {
       const _confErr = (error as any)?.message || String(error);
-      await markEmailFailed(_confLogId, _confErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_confLogId, _confErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('╔════════════════════════════════════════════════════════════════╗');
       console.error('║ ❌ FAILED TO SEND EMAIL - ERROR DETAILS                       ║');
       console.error('╚════════════════════════════════════════════════════════════════╝');
@@ -2292,13 +2436,19 @@ class EmailService {
       console.error('Error Response:', (error as any)?.response);
       console.error(JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       console.error('════════════════════════════════════════════════════════════════');
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.COURSE_CONFIRMATION,
+          recipient: Array.isArray(email) ? email.join(', ') : email,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ ...params }),
+          courseRunId: params.courseRunId,
+        }).catch(() => {});
+      }
       return false;
     }
   }
 
-  /**
-   * Same HTML + subject as the course cancellation email. Use getLogoSrcForWebPreview() in options for iframe preview.
-   */
   static buildCourseCancellationEmailHtml(
     params: {
       learnerName: string;
@@ -2439,7 +2589,7 @@ class EmailService {
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${venueName || 'TBD'}</td>
                                 </tr>
                                 ${
-                                  nextRunDate && String(nextRunDate).trim()
+                                  !isTrainer && nextRunDate && String(nextRunDate).trim()
                                     ? `<tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Next session</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${String(nextRunDate).trim()}</td>
@@ -2449,7 +2599,7 @@ class EmailService {
                                 
                               </table>
 
-                              ${additionalNotes ? `
+                              ${!isTrainer && additionalNotes ? `
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
                                   <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
@@ -2503,7 +2653,7 @@ class EmailService {
     cc?: string[];
     /** 'trainer' removes the learner-specific apology/website/contact section. */
     recipientType?: 'learner' | 'trainer';
-  }): Promise<boolean> {
+  }, _ctx?: RetryContext): Promise<boolean> {
     const {
       email,
       learnerName,
@@ -2567,13 +2717,22 @@ class EmailService {
       }
     }
 
-    const _cancelLogId = await createEmailLog({ emailType: EMAIL_TYPES.COURSE_CANCELLATION, recipient: email, subject }).catch(() => null);
+    const _cancelLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.COURSE_CANCELLATION,
+      recipient:  email,
+      subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
 
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — cancellation email would be sent to:', email);
-        await markEmailSent(_cancelLogId, undefined, 1).catch(() => {});
-        return true;
+        await markEmailFailed(_cancelLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
+          errorCategory: 'CONFIG_ERROR',
+          provider: EMAIL_PROVIDERS.NONE,
+        }).catch(() => {});
+        return false;
       }
 
       const hasCustomAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
@@ -2598,7 +2757,10 @@ class EmailService {
         });
         if (!result.success) {
           console.error('(EmailService) Mailjet REST failed for cancellation email:', result.error);
-          await markEmailFailed(_cancelLogId, result.error, undefined, 1).catch(() => {});
+          await markEmailFailed(_cancelLogId, result.error, undefined, 1, {
+            errorCategory: 'MAILJET_ERROR',
+            provider: EMAIL_PROVIDERS.MAILJET,
+          }).catch(() => {});
         } else {
           await markEmailSent(_cancelLogId, result.messageId, 1).catch(() => {});
         }
@@ -2606,18 +2768,30 @@ class EmailService {
       }
 
       const _cancelInfo = await transporter.sendMail(mailOptions);
-      await markEmailSent(_cancelLogId, _cancelInfo?.messageId, 1).catch(() => {});
+      await markEmailSent(_cancelLogId, _cancelInfo?.messageId, 1, { smtpResponse: _cancelInfo?.response }).catch(() => {});
       return true;
     } catch (error) {
       const _cancelErr = (error as any)?.message || String(error);
-      await markEmailFailed(_cancelLogId, _cancelErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_cancelLogId, _cancelErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('Failed to send course cancellation email:', error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.COURSE_CANCELLATION,
+          recipient: email,
+          subject,
+          payload:   serializePayload({ ...params }),
+        }).catch(() => {});
+      }
       return false;
     }
   }
 
   /**
-   * Build the HTML + subject for the learner course completion / certificate email.
    * Same source of truth used for both sending and browser iframe preview.
    * Pass `logoSrc` option with getLogoSrcForWebPreview() when rendering for preview.
    */
@@ -2643,19 +2817,19 @@ class EmailService {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
-          timeZone: 'Asia/Singapore',
+          // Course datetimes are wall-clock UTC; display literal stored value
+          timeZone: 'UTC',
         }).format(date);
       } catch (error) {
         return date.toISOString();
       }
     };
 
-    // Compare calendar dates (SGT) rather than exact timestamps so that a single-day
-    // course (e.g. start 09:00, end 17:00 on the same date) isn't displayed twice.
+    // Compare calendar dates in UTC since course datetimes are stored as wall-clock UTC
     const isSameCalendarDay = (a?: Date, b?: Date) => {
       if (!a || !b) return false;
-      const SGT = { timeZone: 'Asia/Singapore' };
-      return a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
+      const UTCTZ = { timeZone: 'UTC' };
+      return a.toLocaleDateString('en-CA', UTCTZ) === b.toLocaleDateString('en-CA', UTCTZ);
     };
 
     // Build date string for subject: "19 Mar 2026" or "19 Mar 2026 - 20 Mar 2026"
@@ -2803,7 +2977,7 @@ class EmailService {
     completionDate?: Date;
     certificatePdfBuffer?: Buffer;
     certificateFilename?: string;
-  }): Promise<boolean> {
+  }, _ctx?: RetryContext): Promise<boolean> {
     const { email, learnerName, certificatePdfBuffer, certificateFilename } = params;
 
     const transporter = this.getTransporter();
@@ -2831,13 +3005,22 @@ class EmailService {
       attachments: allAttachments,
     };
 
-    const _compLogId = await createEmailLog({ emailType: EMAIL_TYPES.COURSE_COMPLETION, recipient: email, subject }).catch(() => null);
+    const _compLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.COURSE_COMPLETION,
+      recipient:  email,
+      subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
 
     try {
       if (!transporter) {
         console.log('(EmailService) SMTP not configured — completion email would be sent to:', email);
-        await markEmailSent(_compLogId, undefined, 1).catch(() => {});
-        return true;
+        await markEmailFailed(_compLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
+          errorCategory: 'CONFIG_ERROR',
+          provider: EMAIL_PROVIDERS.NONE,
+        }).catch(() => {});
+        return false;
       }
 
       if (this.isMailjetSmtp()) {
@@ -2856,18 +3039,34 @@ class EmailService {
         if (result.success) {
           await markEmailSent(_compLogId, result.messageId, 1).catch(() => {});
         } else {
-          await markEmailFailed(_compLogId, result.error, undefined, 1).catch(() => {});
+          await markEmailFailed(_compLogId, result.error, undefined, 1, {
+            errorCategory: 'MAILJET_ERROR',
+            provider: EMAIL_PROVIDERS.MAILJET,
+          }).catch(() => {});
         }
         return result.success;
       }
 
       const _compInfo = await transporter.sendMail(mailOptions);
-      await markEmailSent(_compLogId, _compInfo?.messageId, 1).catch(() => {});
+      await markEmailSent(_compLogId, _compInfo?.messageId, 1, { smtpResponse: _compInfo?.response }).catch(() => {});
       return true;
     } catch (error) {
       const _compErr = (error as any)?.message || String(error);
-      await markEmailFailed(_compLogId, _compErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_compLogId, _compErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('Failed to send course completion email:', error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.COURSE_COMPLETION,
+          recipient: email,
+          subject,
+          payload:   serializePayload({ ...params }),
+        }).catch(() => {});
+      }
       return false;
     }
   }
@@ -2884,14 +3083,15 @@ class EmailService {
     serialNumber?: string;
     startDate?: Date;
     endDate?: Date;
-  }): Promise<boolean> {
+  }, _ctx?: RetryContext): Promise<boolean> {
     const { email, recipientName, courseTitle, courseCode, serialNumber, startDate, endDate } = params;
     const logoSrc = this.getLogoSrc();
 
-    const SGT = { timeZone: 'Asia/Singapore' } as const;
+    // Course datetimes are stored as wall-clock UTC; use timeZone:'UTC' so displayed values match stored values
+    const UTCTZ = { timeZone: 'UTC' } as const;
     const formatDateFull = (d: Date) =>
-      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', ...SGT });
-    const isSameDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
+      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', ...UTCTZ });
+    const isSameDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', UTCTZ) === b.toLocaleDateString('en-CA', UTCTZ);
     const dateRange = startDate
       ? (endDate && !isSameDay(startDate, endDate)
           ? `${formatDateFull(startDate)} – ${formatDateFull(endDate)}`
@@ -2960,7 +3160,13 @@ class EmailService {
       mailOptions.attachments = this.getEmailMediaAttachments();
     }
 
-    const _trainerCompLogId = await createEmailLog({ emailType: EMAIL_TYPES.TRAINER_COMPLETION, recipient: email, subject: `Course Completed: ${courseTitle}` }).catch(() => null);
+    const _trainerCompLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.TRAINER_COMPLETION,
+      recipient:  email,
+      subject:    `Course Completed: ${courseTitle}`,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
 
     try {
       if (this.isMailjetSmtp()) {
@@ -2975,19 +3181,41 @@ class EmailService {
         if (result.success) {
           await markEmailSent(_trainerCompLogId, result.messageId, 1).catch(() => {});
         } else {
-          await markEmailFailed(_trainerCompLogId, result.error, undefined, 1).catch(() => {});
+          await markEmailFailed(_trainerCompLogId, result.error, undefined, 1, {
+            errorCategory: 'MAILJET_ERROR',
+            provider: EMAIL_PROVIDERS.MAILJET,
+          }).catch(() => {});
         }
         return result.success;
       }
       const t = this.getTransporter();
-      if (!t) throw new Error('Email transporter not available');
+      if (!t) {
+        await markEmailFailed(_trainerCompLogId, 'Email transporter not available', 'NO_TRANSPORTER', 1, {
+          errorCategory: 'CONFIG_ERROR',
+          provider: EMAIL_PROVIDERS.NONE,
+        }).catch(() => {});
+        throw new Error('Email transporter not available');
+      }
       const _tcInfo = await t.sendMail(mailOptions);
-      await markEmailSent(_trainerCompLogId, _tcInfo?.messageId, 1).catch(() => {});
+      await markEmailSent(_trainerCompLogId, _tcInfo?.messageId, 1, { smtpResponse: _tcInfo?.response }).catch(() => {});
       return true;
     } catch (error) {
       const _tcErr = (error as any)?.message || String(error);
-      await markEmailFailed(_trainerCompLogId, _tcErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_trainerCompLogId, _tcErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error('Failed to send trainer course completion email:', error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.TRAINER_COMPLETION,
+          recipient: email,
+          subject:   `Course Completed: ${courseTitle}`,
+          payload:   serializePayload({ ...params }),
+        }).catch(() => {});
+      }
       return false;
     }
   }
@@ -3009,7 +3237,7 @@ class EmailService {
     startDate?: Date | null;
     endDate?: Date | null;
     reviewUrl: string;
-  }): Promise<boolean> {
+  }, _ctx?: RetryContext): Promise<boolean> {
     const { adminEmail, adminName, courseTitle, courseCode, serialNumber, startDate, endDate, reviewUrl } = params;
     const t = this.getTransporter();
     const logoSrc = this.getLogoSrc();
@@ -3096,8 +3324,10 @@ class EmailService {
 
     const _taApprovalLogId = await createEmailLog({
       emailType: EMAIL_TYPES.TA_APPROVAL,
-      recipient: adminEmail,
-      subject: mailOptions.subject,
+      recipient:  adminEmail,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
     const MAX_ATTEMPTS = 3;
@@ -3109,7 +3339,10 @@ class EmailService {
           const t2 = this.getTransporter();
           if (!t2) {
             console.log(`(EmailService) Graph transport unavailable — TA approval notice to ${adminEmail} skipped`);
-            await markEmailFailed(_taApprovalLogId, 'Graph transport unavailable', 'NO_TRANSPORTER', attempt).catch(() => {});
+            await markEmailFailed(_taApprovalLogId, 'Graph transport unavailable', 'NO_TRANSPORTER', attempt, {
+              errorCategory: 'CONFIG_ERROR',
+              provider: EMAIL_PROVIDERS.NONE,
+            }).catch(() => {});
             return false;
           }
           await t2.sendMail(mailOptions);
@@ -3125,7 +3358,10 @@ class EmailService {
         } else {
           if (!t) {
             console.log(`(EmailService) SMTP not configured — TA approval notice to ${adminEmail} skipped`);
-            await markEmailFailed(_taApprovalLogId, 'SMTP not configured', 'NO_TRANSPORTER', attempt).catch(() => {});
+            await markEmailFailed(_taApprovalLogId, 'SMTP not configured', 'NO_TRANSPORTER', attempt, {
+              errorCategory: 'CONFIG_ERROR',
+              provider: EMAIL_PROVIDERS.NONE,
+            }).catch(() => {});
             return false;
           }
           await t.sendMail(mailOptions);
@@ -3140,13 +3376,28 @@ class EmailService {
 
         if (attempt < MAX_ATTEMPTS) {
           const delay = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
-          await markEmailRetrying(_taApprovalLogId, attempt, errMsg).catch(() => {});
+          await markEmailRetrying(_taApprovalLogId, attempt, errMsg, {
+            provider: this.getProviderName(),
+          }).catch(() => {});
           await new Promise(r => setTimeout(r, delay));
         }
       }
     }
 
-    await markEmailFailed(_taApprovalLogId, lastError?.message || String(lastError), lastError?.code, MAX_ATTEMPTS).catch(() => {});
+    await markEmailFailed(_taApprovalLogId, lastError?.message || String(lastError), lastError?.code, MAX_ATTEMPTS, {
+      smtpResponse:  extractSmtpResponse(lastError),
+      errorStack:    extractStack(lastError),
+      errorCategory: classifyError(lastError),
+      provider:      this.getProviderName(),
+    }).catch(() => {});
+    if (!_ctx?.retryQueueId) {
+      enqueueEmailRetry({
+        emailType: EMAIL_TYPES.TA_APPROVAL,
+        recipient: adminEmail,
+        subject:   mailOptions.subject,
+        payload:   serializePayload({ ...params }),
+      }).catch(() => {});
+    }
     return false;
   }
 
@@ -3159,7 +3410,7 @@ class EmailService {
     submissionDate: Date;
     reason: string;
     waiverRequestUrl: string;
-  }): Promise<boolean> {
+  }, _ctx?: RetryContext): Promise<boolean> {
     const { adminEmail, adminName, learnerName, courseName, serialNumber, submissionDate, reason, waiverRequestUrl } = params;
     const transporter = this.getTransporter();
     const logoSrc = this.getLogoSrc();
@@ -3254,22 +3505,44 @@ class EmailService {
       attachments: this.getEmailMediaAttachments(),
     };
 
-    const _waiverLogId = await createEmailLog({ emailType: EMAIL_TYPES.WAIVER_NOTIFICATION, recipient: adminEmail, subject: mailOptions.subject }).catch(() => null);
+    const _waiverLogId = await createEmailLog({
+      emailType: EMAIL_TYPES.WAIVER_NOTIFICATION,
+      recipient:  adminEmail,
+      subject:    mailOptions.subject,
+      provider:   this.getProviderName(),
+      ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
+    }).catch(() => null);
 
     try {
       if (!transporter) {
         console.log(`(EmailService) SMTP not configured — waiver notification to ${adminEmail} skipped`);
-        await markEmailFailed(_waiverLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1).catch(() => {});
+        await markEmailFailed(_waiverLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
+          errorCategory: 'CONFIG_ERROR',
+          provider: EMAIL_PROVIDERS.NONE,
+        }).catch(() => {});
         return false;
       }
       const _wvInfo = await transporter.sendMail(mailOptions);
-      await markEmailSent(_waiverLogId, _wvInfo?.messageId, 1).catch(() => {});
+      await markEmailSent(_waiverLogId, _wvInfo?.messageId, 1, { smtpResponse: _wvInfo?.response }).catch(() => {});
       console.log(`✅ Waiver notification sent to ${adminEmail}`);
       return true;
     } catch (error) {
       const _wvErr = (error as any)?.message || String(error);
-      await markEmailFailed(_waiverLogId, _wvErr, (error as any)?.code, 1).catch(() => {});
+      await markEmailFailed(_waiverLogId, _wvErr, (error as any)?.code, 1, {
+        smtpResponse:  extractSmtpResponse(error),
+        errorStack:    extractStack(error),
+        errorCategory: classifyError(error),
+        provider:      this.getProviderName(),
+      }).catch(() => {});
       console.error(`❌ Failed to send waiver notification to ${adminEmail}:`, error);
+      if (!_ctx?.retryQueueId) {
+        enqueueEmailRetry({
+          emailType: EMAIL_TYPES.WAIVER_NOTIFICATION,
+          recipient: adminEmail,
+          subject:   mailOptions.subject,
+          payload:   serializePayload({ ...params }),
+        }).catch(() => {});
+      }
       return false;
     }
   }

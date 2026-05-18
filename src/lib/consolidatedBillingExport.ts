@@ -36,6 +36,195 @@ const setCurrency = (cell: ExcelJS.Cell, value?: number | null) => {
   }
 };
 
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatDate = (value?: string | Date | null, shortMonth = false): string => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: shortMonth ? 'short' : '2-digit',
+    year: 'numeric',
+  });
+};
+
+const getDiscountMeta = (entry: any, courseRun: any): { text: string; noDiscount: number; discountGranted: number } => {
+  if (!entry?.learners || !Array.isArray(entry.learners)) {
+    return { text: '', noDiscount: 0, discountGranted: 0 };
+  }
+
+  const discountLookup = new Map<string, string>();
+  if (courseRun?.courseDiscounts && Array.isArray(courseRun.courseDiscounts)) {
+    (courseRun.courseDiscounts as any[]).forEach((discount: any) => {
+      if (discount?.id) {
+        discountLookup.set(discount.id, discount.name || 'Discount');
+      }
+    });
+  }
+
+  let noDiscount = 0;
+  let discountGranted = 0;
+  const grouped = new Map<string, { percentage: number; count: number }>();
+
+  entry.learners.forEach((learner: any) => {
+    const percentage = toNumber(learner?.discountPercentage);
+    const hasDiscount = percentage > 0;
+    if (hasDiscount) {
+      discountGranted += 1;
+    } else {
+      noDiscount += 1;
+    }
+
+    const discountName = learner?.discountId && discountLookup.has(learner.discountId)
+      ? discountLookup.get(learner.discountId)!
+      : 'No Discount';
+    const key = `${discountName}_${percentage}`;
+    if (grouped.has(key)) {
+      grouped.get(key)!.count += 1;
+    } else {
+      grouped.set(key, { percentage, count: 1 });
+    }
+  });
+
+  const text = Array.from(grouped.entries())
+    .map(([key, data]) => {
+      const discountName = key.split('_')[0];
+      return `[${discountName} ${data.percentage}% = ${data.count}]`;
+    })
+    .join(', ');
+
+  return { text, noDiscount, discountGranted };
+};
+
+const buildClientActualSection = (worksheet: ExcelJS.Worksheet, startRow: number, billingMonth: string, courseRuns: any[]) => {
+  worksheet.mergeCells(startRow, 1, startRow, 28);
+  const sectionTitle = worksheet.getCell(startRow, 1);
+  sectionTitle.value = `PDCS Estimated Billing for Month of ${billingMonth} (PDCS)`;
+  sectionTitle.font = { bold: true, size: 14 };
+  sectionTitle.alignment = { horizontal: 'left', vertical: 'middle' };
+
+  const headerRowNum = startRow + 1;
+  const headers = [
+    'Project Title',
+    'Billing Rate (if applicable) PER PAX',
+    'Billing Rate (if applicable) PER RUN',
+    'Unit PAX',
+    'Unit RUN',
+    'Course/Service/Delivery Date',
+    'PM',
+    'Value of Work Done (based on actual / forecast for the month) Unit PAX',
+    'Value of Work Done (based on actual / forecast for the month) Unit RUN',
+    'PBMS Ref',
+    'PBMS Invoice Date',
+    'No discounts',
+    'Discount granted',
+    'Actual Amount billed in current month',
+    'Salary / Contract Fees',
+    'PBMS Ref2 (Invoice for contract fees)',
+    'PBMS Invoice creation date for contract fees',
+    'Contract Fees Payout in current month',
+    'PBMS Ref3 (Invoice for venue expense)',
+    'PBMS Invoice creation date for venue expense',
+    'Venue Expenses in current month',
+    'Remarks',
+    'Other Remarks',
+  ];
+
+  const sectionHeader = worksheet.getRow(headerRowNum);
+  headers.forEach((header, index) => {
+    const col = index + 1;
+    const cell = sectionHeader.getCell(col);
+    cell.value = header;
+
+    let fill = 'FFD9D9D9';
+    if (col >= 10 && col <= 13) fill = 'FFAEC3DB';
+    if (col >= 14 && col <= 14) fill = 'FFBFD0E3';
+    if (col >= 15 && col <= 17) fill = 'FFCCC6D9';
+    if (col >= 18 && col <= 21) fill = 'FFE8D8C8';
+    if (col >= 22) fill = 'FFC4C8CF';
+
+    formatHeadingCell(cell, fill);
+    cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+  });
+  sectionHeader.height = 46;
+
+  let rowNum = headerRowNum + 1;
+
+  for (const courseRun of courseRuns) {
+    const billing = courseRun.billing || {};
+    const entries = Array.isArray(billing.entries) && billing.entries.length > 0 ? billing.entries : [null];
+    const defaultCourseFee = toNumber(courseRun.defaultCourseFee);
+    const start = formatDate(courseRun.startDate, true);
+    const end = formatDate(courseRun.endDate, true);
+    const dateRange = start && end ? `${start}${start === end ? '' : ` - ${end}`}` : '';
+
+    entries.forEach((entry: any, idx: number) => {
+      const row = worksheet.getRow(rowNum);
+      const learnerCount = Array.isArray(entry?.learners) ? entry.learners.length : 0;
+      const discountMeta = getDiscountMeta(entry, courseRun);
+      const invoiceAmount = toNumber(entry?.invoiceAmount);
+
+      const billingRatePerPax = defaultCourseFee > 0 ? defaultCourseFee : null;
+      const billingRatePerRun = defaultCourseFee > 0 ? null : toNumber(billing.valueOfWorkDone);
+      const valueByPax = billingRatePerPax !== null ? invoiceAmount : null;
+      const valueByRun = billingRatePerPax === null ? (invoiceAmount || toNumber(billing.valueOfWorkDone)) : null;
+
+      row.getCell(1).value = courseRun.courseTitle || '';
+      setCurrency(row.getCell(2), billingRatePerPax);
+      setCurrency(row.getCell(3), billingRatePerRun);
+      row.getCell(4).value = learnerCount > 0 ? learnerCount : '';
+      row.getCell(5).value = 1;
+      row.getCell(6).value = dateRange;
+      row.getCell(7).value = 'N';
+      setCurrency(row.getCell(8), valueByPax);
+      setCurrency(row.getCell(9), valueByRun);
+      row.getCell(10).value = entry?.pbmsInvoiceNumber || '';
+      row.getCell(11).value = formatDate(entry?.pbmsInvoiceDate);
+      row.getCell(12).value = discountMeta.noDiscount > 0 ? discountMeta.noDiscount : 0;
+      row.getCell(13).value = discountMeta.discountGranted > 0 ? discountMeta.discountGranted : 0;
+      setCurrency(row.getCell(14), invoiceAmount || null);
+      row.getCell(15).value = 'Contract Fees';
+
+      if (idx === 0) {
+        row.getCell(16).value = billing.contractFeePBMSBENumber || '';
+        row.getCell(17).value = formatDate(billing.contractPBMSInvoiceDate);
+        setCurrency(row.getCell(18), toNumber(billing.contractInvoiceAmount) || null);
+        row.getCell(19).value = billing.venuePBMSBENumber || '';
+        row.getCell(20).value = formatDate(billing.venuePBMSInvoiceDate);
+        setCurrency(row.getCell(21), toNumber(billing.venueInvoiceAmount) || null);
+        row.getCell(22).value = billing.finalRemarks || '';
+      }
+
+      row.getCell(23).value = entry?.remarks || '';
+      if (typeof row.getCell(23).value === 'string' && String(row.getCell(23).value).toLowerCase().includes('deduction')) {
+        row.getCell(23).font = { color: { argb: 'FFFF0000' } };
+      }
+
+      for (let col = 1; col <= 23; col += 1) {
+        applyBorder(row.getCell(col));
+        if (![1, 6, 22, 23].includes(col) && !row.getCell(col).alignment) {
+          row.getCell(col).alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+      }
+
+      row.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+      row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      row.getCell(22).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+      row.getCell(23).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+      row.height = 24;
+
+      rowNum += 1;
+    });
+  }
+
+  return rowNum;
+};
+
 export async function generateConsolidatedBillingXLSX(exportData: any) {
   try {
     const workbook = new ExcelJS.Workbook();
@@ -58,7 +247,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       },
     };
 
-    // Define column widths - same as post-run format plus new columns
+    // Define column widths (A-AB). Top section uses A-Y, client comparison section uses A-AB.
     worksheet.columns = [
       { width: 30 }, // A: Title
       { width: 15 }, // B: Course Run #
@@ -136,10 +325,17 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
     headers.forEach((header, index) => {
       const cell = headerRow.getCell(index + 1);
       cell.value = header;
-      // Color coding: Red for important fields, Yellow for data fields
-      const redColumns = [0, 9, 23]; // Title, Value of Work Done, Total Fee
-      const yellowColumns = [1, 2, 3, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]; // All data columns including new fees
-      const fillColor = redColumns.includes(index) ? 'FFFF4C4C' : yellowColumns.includes(index) ? 'FFFFFF99' : 'FFE2E8F0';
+      // Header palette aligned to client sample
+      const redColumns = [0, 9]; // Title, Value of Work Done
+      const greenColumns = [2, 3, 21, 23]; // Billing Rate, Before GST, Trainer Fees, Total Fee
+      const yellowColumns = [1, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22];
+      const fillColor = redColumns.includes(index)
+        ? 'FFFF4C4C'
+        : greenColumns.includes(index)
+          ? 'FF00B050'
+          : yellowColumns.includes(index)
+            ? 'FFFFFF99'
+            : 'FFDCE6F1'; // This is where gray colors used in client sample would fall, but since we have many columns, we'll use a light blue for better differentiation
       formatHeadingCell(cell, fillColor);
     });
     headerRow.height = 30;
@@ -158,16 +354,16 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
 
       // Calculate data for this course run
       const contractFees = courseRun.contractFees || 0;
-      const venueFees = courseRun.venueFees || 0;
       const participantCount = courseRun.participants || 0;
-      
-      // Billing rate is contract fees divided by participants
-      const billingRate = participantCount > 0 ? contractFees / participantCount : 0;
+      const defaultCourseFee = toNumber(courseRun.defaultCourseFee);
+
+      // Billing rate should follow the configured default course fee when available.
+      const billingRate = defaultCourseFee > 0 ? defaultCourseFee : (participantCount > 0 ? contractFees / participantCount : 0);
       const beforeGST = contractFees; // This is the contract amount before GST
       const valueOfWorkDone = billing.valueOfWorkDone || beforeGST;
       
       const courseDates = courseRun.startDate && courseRun.endDate
-        ? `${new Date(courseRun.startDate).toLocaleDateString('en-GB')} - ${new Date(courseRun.endDate).toLocaleDateString('en-GB')}`
+        ? `${new Date(courseRun.startDate).toLocaleDateString('en-GB', { timeZone: 'UTC' })} - ${new Date(courseRun.endDate).toLocaleDateString('en-GB', { timeZone: 'UTC' })}`
         : '';
 
       // Merge columns A-J and P-X across all billing rows if there are multiple entries
@@ -312,44 +508,8 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
           row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
           applyBorder(row.getCell(12));
           
-          // M: Discount List - format: [discount_name percentage% - count]
-          let discountList = '';
-          if (entry.learners && Array.isArray(entry.learners)) {
-            // Create discount lookup from course discounts array
-            const discountLookup = new Map<string, string>();
-            if (courseRun.courseDiscounts && Array.isArray(courseRun.courseDiscounts)) {
-              (courseRun.courseDiscounts as any[]).forEach((discount: any) => {
-                if (discount.id) {
-                  discountLookup.set(discount.id, discount.name || 'Discount');
-                }
-              });
-            }
-
-            // Map learners' discount IDs to names and group by discount
-            const discountMap = new Map<string, { percentage: number; count: number }>();
-            
-            entry.learners.forEach((learner: any) => {
-              const discountName = discountLookup.has(learner.discountId)
-                ? discountLookup.get(learner.discountId)!
-                : 'No Discount';
-              const discountPercentage = Number(learner.discountPercentage) || 0;
-              const key = `${discountName}_${discountPercentage}`;
-              
-              if (discountMap.has(key)) {
-                discountMap.get(key)!.count += 1;
-              } else {
-                discountMap.set(key, { percentage: discountPercentage, count: 1 });
-              }
-            });
-            
-            const discountArray = Array.from(discountMap.entries()).map(([key, data]) => {
-              const discountName = key.split('_')[0];
-              return `[${discountName} ${data.percentage}% = ${data.count}]`;
-            });
-            
-            discountList = discountArray.join(', ');
-          }
-          row.getCell(13).value = discountList;
+          const discountMeta = getDiscountMeta(entry, courseRun);
+          row.getCell(13).value = discountMeta.text;
           row.getCell(13).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
           applyBorder(row.getCell(13));
           
@@ -483,6 +643,9 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       { min: 12, max: 18 },  // W: Additional Fees
       { min: 12, max: 18 },  // X: Total Fee
       { min: 28, max: 40 },  // Y: Final Remarks (needs wrapping)
+      { min: 12, max: 18 },  // Z
+      { min: 28, max: 40 },  // AA
+      { min: 28, max: 40 },  // AB
     ];
 
     // Auto-fit columns with content-based widths
@@ -507,10 +670,10 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber > 3) { // Skip header rows
         row.eachCell((cell) => {
-          // Column letters for wrapping (M, N, Y)
-          const wrapColumns = ['M', 'N', 'Y'];
+          // Wrap long text columns
+          const wrapColumns = [13, 14, 25, 27, 28];
           // Apply wrapping to cells that may have long content
-          if (wrapColumns.includes(String(cell.col))) {
+          if (wrapColumns.includes(cell.col)) {
             cell.alignment = { 
               wrapText: true, 
               horizontal: 'left', 
@@ -532,9 +695,9 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
         // Auto-adjust row height based on content
         let maxLines = 1;
         row.eachCell((cell) => {
-          if (cell.value && ['M', 'N', 'Y'].includes(String(cell.col))) {
+          if (cell.value && [13, 14, 25, 27, 28].includes(cell.col)) {
             const lines = String(cell.value).split('\n').length;
-            const width = worksheet.getColumn(String(cell.col)).width || 30;
+            const width = worksheet.getColumn(cell.col).width || 30;
             const estLines = Math.ceil(String(cell.value).length / (width * 1.5));
             maxLines = Math.max(maxLines, Math.max(lines, estLines));
           }
@@ -547,6 +710,10 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
 
     // Ensure header row has adequate height
     if (worksheet.getRow(3)) worksheet.getRow(3).height = 35;
+
+    // Add client-aligned comparison layout section (A-AB)
+    const secondSectionStartRow = currentRow + 4;
+    buildClientActualSection(worksheet, secondSectionStartRow, exportData.billingMonth, courseRuns);
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {

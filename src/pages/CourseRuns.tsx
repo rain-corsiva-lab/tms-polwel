@@ -613,10 +613,14 @@ const CourseRuns: React.FC = () => {
   const formatRange = (start: Date | null, end: Date | null, courseType?: string) => {
     if (!start) return "—";
 
+    // All datetimes are stored as wall-clock UTC; use timeZone:'UTC' so
+    // the display matches the stored value regardless of browser locale.
+    const UTZ = { timeZone: "UTC" } as const;
+
     // For TALKS, show date with time
     if (courseType === "TALKS") {
-      const dateOpts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
-      const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true };
+      const dateOpts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", ...UTZ };
+      const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true, ...UTZ };
 
       const dateStr = start.toLocaleDateString(undefined, dateOpts);
       const startTime = start.toLocaleTimeString(undefined, timeOpts);
@@ -624,7 +628,7 @@ const CourseRuns: React.FC = () => {
       if (!end) return `${dateStr}, ${startTime}`;
 
       const endTime = end.toLocaleTimeString(undefined, timeOpts);
-      const sameDay = start.toDateString() === end.toDateString();
+      const sameDay = start.toLocaleDateString(undefined, { ...UTZ }) === end.toLocaleDateString(undefined, { ...UTZ });
 
       if (sameDay) {
         return `${dateStr}, ${startTime} to ${endTime}`;
@@ -634,8 +638,8 @@ const CourseRuns: React.FC = () => {
       return `${dateStr}, ${startTime} → ${endDateStr}, ${endTime}`;
     }
 
-    // For other types, show date only (existing logic)
-    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+    // For other types, show date only
+    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", ...UTZ };
     const startStr = start.toLocaleDateString(undefined, opts);
     if (!end) return startStr;
     const endStr = end.toLocaleDateString(undefined, opts);
@@ -726,6 +730,7 @@ const CourseRuns: React.FC = () => {
       reason: courseRun.cancelReason ?? "",
       nextRunDate: "",
       additionalNotes: "",
+      cc: "",
       submitting: false,
     });
   };
@@ -815,7 +820,9 @@ const CourseRuns: React.FC = () => {
     if (cancelDialog.reason.trim()) payloadObj.reason = cancelDialog.reason.trim();
     if (cancelDialog.nextRunDate.trim()) payloadObj.nextRunDate = cancelDialog.nextRunDate.trim();
     if (!isQuillEmptyHtml(cancelDialog.additionalNotes)) payloadObj.additionalNotes = cancelDialog.additionalNotes;
-    const ccEmails = cancelDialog.cc
+
+    // Safely parse CC emails with null coalescing
+    const ccEmails = (cancelDialog.cc ?? "")
       .split(",")
       .map((e) => e.trim())
       .filter((e) => e.length > 0);
@@ -2157,11 +2164,11 @@ const CourseRuns: React.FC = () => {
                     <Calendar className="h-4 w-4" />
                     <span>
                       {trainerApprovalDialog.courseRunDetails.startDatetime
-                        ? new Date(trainerApprovalDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB")
+                        ? new Date(trainerApprovalDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
                         : "TBD"}
                       {" - "}
                       {trainerApprovalDialog.courseRunDetails.endDatetime
-                        ? new Date(trainerApprovalDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB")
+                        ? new Date(trainerApprovalDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
                         : "TBD"}
                     </span>
                   </div>
@@ -2228,10 +2235,10 @@ const CourseRuns: React.FC = () => {
             serialNumber: confirmationEmailDialog.courseRunDetails.serialNumber || "",
             courseName: confirmationEmailDialog.courseRunDetails.course?.title || "",
             startDate: confirmationEmailDialog.courseRunDetails.startDatetime
-              ? new Date(confirmationEmailDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB")
+              ? new Date(confirmationEmailDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
               : "",
             endDate: confirmationEmailDialog.courseRunDetails.endDatetime
-              ? new Date(confirmationEmailDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB")
+              ? new Date(confirmationEmailDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
               : "",
             venue: confirmationEmailDialog.courseRunDetails.venue?.name || confirmationEmailDialog.courseRunDetails.specifiedLocation || "TBA",
           }}
@@ -2323,9 +2330,11 @@ const CourseRuns: React.FC = () => {
             serialNumber: trainerEmailDialog.courseRunDetails?.serialNumber || "",
             courseName: trainerEmailDialog.courseRunDetails?.course?.title || "",
             startDate: trainerEmailDialog.courseRunDetails?.startDatetime
-              ? new Date(trainerEmailDialog.courseRunDetails.startDatetime).toLocaleDateString()
+              ? new Date(trainerEmailDialog.courseRunDetails.startDatetime).toLocaleDateString(undefined, { timeZone: "UTC" })
               : "",
-            endDate: trainerEmailDialog.courseRunDetails?.endDatetime ? new Date(trainerEmailDialog.courseRunDetails.endDatetime).toLocaleDateString() : "",
+            endDate: trainerEmailDialog.courseRunDetails?.endDatetime
+              ? new Date(trainerEmailDialog.courseRunDetails.endDatetime).toLocaleDateString(undefined, { timeZone: "UTC" })
+              : "",
             venue: trainerEmailDialog.courseRunDetails?.venue?.name || trainerEmailDialog.courseRunDetails?.specifiedLocation || "TBD",
           }}
           onSuccess={() => {

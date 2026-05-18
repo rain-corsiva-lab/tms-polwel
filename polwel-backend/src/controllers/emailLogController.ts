@@ -19,6 +19,8 @@ export const emailLogController = {
         endDate,
         search,
         courseRunId,
+        provider,
+        errorCategory,
       } = req.query as Record<string, string | undefined>;
 
       const pageNum  = Math.max(1, parseInt(page ?? '1', 10));
@@ -27,9 +29,11 @@ export const emailLogController = {
 
       const where: any = {};
 
-      if (status)      where.status    = status;
-      if (emailType)   where.emailType = emailType;
-      if (courseRunId) where.courseRunId = courseRunId;
+      if (status)        where.status        = status;
+      if (emailType)     where.emailType     = emailType;
+      if (courseRunId)   where.courseRunId   = courseRunId;
+      if (provider)      where.provider      = provider;
+      if (errorCategory) where.errorCategory = errorCategory;
 
       if (startDate || endDate) {
         where.createdAt = {};
@@ -154,6 +158,88 @@ export const emailLogController = {
     } catch (error) {
       console.error('[emailLogController] getEmailLogStats error:', error);
       res.status(500).json({ success: false, error: 'Failed to retrieve email log stats' });
+    }
+  },
+
+  async getRetryQueue(req: Request, res: Response): Promise<void> {
+    try {
+      const {
+        page = '1',
+        limit = '25',
+        status,
+        emailType,
+        courseRunId,
+      } = req.query as Record<string, string | undefined>;
+
+      const pageNum  = Math.max(1, parseInt(page ?? '1', 10));
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit ?? '25', 10)));
+      const skip     = (pageNum - 1) * limitNum;
+
+      const where: any = {};
+      if (status) where.status = status;
+      if (emailType) where.emailType = emailType;
+      if (courseRunId) where.courseRunId = courseRunId;
+
+      const [total, jobs] = await Promise.all([
+        prisma.emailRetryQueue.count({ where }),
+        prisma.emailRetryQueue.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limitNum,
+          include: { emailLogs: { select: { id: true, status: true, createdAt: true } } },
+        }),
+      ]);
+
+      res.json({
+        success: true,
+        data: jobs,
+        pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
+      });
+    } catch (error) {
+      console.error('Failed to retrieve retry queue:', error);
+      res.status(500).json({ success: false, error: 'Failed to retrieve retry queue' });
+    }
+  },
+
+  async getRetryQueueById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      const job = await prisma.emailRetryQueue.findUnique({
+        where: { id },
+        include: { emailLogs: { orderBy: { createdAt: 'asc' } } },
+      });
+      if (!job) {
+        res.status(404).json({ success: false, error: 'Retry queue job not found' });
+        return;
+      }
+      res.json({ success: true, data: job });
+    } catch (error) {
+      console.error('Failed to retrieve retry queue job:', error);
+      res.status(500).json({ success: false, error: 'Failed to retrieve retry queue job' });
+    }
+  },
+
+  async cancelRetryJob(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      const job = await prisma.emailRetryQueue.findUnique({ where: { id } });
+      if (!job) {
+        res.status(404).json({ success: false, error: 'Retry queue job not found' });
+        return;
+      }
+      if (job.status === 'SENT' || job.status === 'ABANDONED') {
+        res.status(400).json({ success: false, error: `Cannot cancel job with status ${job.status}` });
+        return;
+      }
+      const updated = await prisma.emailRetryQueue.update({
+        where: { id },
+        data: { status: 'ABANDONED' },
+      });
+      res.json({ success: true, data: updated });
+    } catch (error) {
+      console.error('Failed to cancel retry job:', error);
+      res.status(500).json({ success: false, error: 'Failed to cancel retry job' });
     }
   },
 };

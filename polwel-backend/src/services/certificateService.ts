@@ -117,13 +117,14 @@ export function generateCertificateHTML(data: CertificateData): string {
   
   // Format date — single day: "28 APRIL 2026"; multi-day: "28 APRIL - 29 APRIL 2026"
   const startDateObj = data.startDate instanceof Date ? data.startDate : undefined;
+  // Course datetimes are stored as wall-clock UTC; compare UTC calendar components
   const isSameDay = startDateObj &&
-    startDateObj.getDate() === data.endDate.getDate() &&
-    startDateObj.getMonth() === data.endDate.getMonth() &&
-    startDateObj.getFullYear() === data.endDate.getFullYear();
+    startDateObj.getUTCDate() === data.endDate.getUTCDate() &&
+    startDateObj.getUTCMonth() === data.endDate.getUTCMonth() &&
+    startDateObj.getUTCFullYear() === data.endDate.getUTCFullYear();
   const formattedEndDate = (startDateObj && !isSameDay)
-    ? `${startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }).toUpperCase()} - ${data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`
-    : data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    ? `${startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }).toUpperCase()} - ${data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase()}`
+    : data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
 
   const logoPath = findImagePath('cert-logo.png');
   const signaturePath = findImagePath('polwel-signature.png');
