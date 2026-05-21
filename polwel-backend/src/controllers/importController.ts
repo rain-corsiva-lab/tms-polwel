@@ -10,8 +10,8 @@ const prisma = new PrismaClient();
 
 /**
  * Parse an Excel date serial or string into a JS Date representing UTC midnight of that calendar date.
- * Using UTC midnight ensures downstream buildDatetime can safely combine with SGT time strings
- * without any server-timezone influence.
+ * The result is used as a calendar-date container only; time is added by buildDatetime()
+ * which treats times as SGT (UTC+8) and converts to UTC.
  */
 function parseExcelDate(value: unknown): Date | null {
   if (value == null || value === '') return null;
@@ -77,31 +77,30 @@ function parseExcelDate(value: unknown): Date | null {
 /**
  * Build a full datetime by combining a UTC-midnight date with an Excel time value.
  *
- * TIMEZONE STRATEGY: Wall-clock UTC
- * Times from Excel are treated as the literal hour value in UTC.
- * Example: "08:00" → stored as T08:00:00.000Z
- * This ensures the same time is displayed in every timezone when the
- * frontend reads with UTC-aware formatting (timeZone: 'UTC').
+ * TIMEZONE STRATEGY: Singapore Time (SGT, UTC+8)
+ * Times from Excel are treated as Singapore local time and converted to UTC for storage.
+ * Example: Excel "09:00" (SGT) → stored as T01:00:00.000Z (09:00 - 8h = 01:00 UTC)
+ * All display code uses timeZone: 'Asia/Singapore' so T01:00:00Z renders as "09:00 SGT".
  *
  * Supports:
- *  - Excel fractional day (0.333333 = 8:00 AM)
- *  - String: "8:00", "08:00", "8:00:00", "08:00 AM", "5:00 PM"
- *  - Falls back to 00:00 UTC if unparseable
+ *  - Excel fractional day (0.375 = 9:00 AM)
+ *  - String: "9:00", "09:00", "9:00:00", "09:00 AM", "5:00 PM"
+ *  - Falls back to 09:00 SGT (T01:00:00Z) if unparseable
  */
 function buildDatetime(date: Date | null, timeStr: unknown): Date | null {
   if (!date) return null;
 
-  let hours = 0;
+  let hours = 9;   // default 09:00 SGT
   let minutes = 0;
 
   if (typeof timeStr === 'number' && timeStr >= 0 && timeStr < 1) {
-    // Excel fractional day: e.g. 0.333333... = 8:00 AM
+    // Excel fractional day: e.g. 0.375 = 9:00 AM
     const totalMinutes = Math.round(timeStr * 24 * 60);
     hours = Math.floor(totalMinutes / 60) % 24;
     minutes = totalMinutes % 60;
   } else {
     const timeRaw = typeof timeStr === 'string' ? timeStr.trim() : typeof timeStr === 'number' ? String(timeStr) : '';
-    // Matches: "8:00", "08:00", "8:00:00", "8:00 AM", "17:00 PM"
+    // Matches: "9:00", "09:00", "9:00:00", "9:00 AM", "17:00 PM"
     const match = timeRaw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?$/i);
     if (match && match[1] && match[2]) {
       hours = parseInt(match[1], 10);
@@ -110,20 +109,21 @@ function buildDatetime(date: Date | null, timeStr: unknown): Date | null {
       if (ampm === 'PM' && hours < 12) hours += 12;
       if (ampm === 'AM' && hours === 12) hours = 0;
     }
-    // If no match, falls through with hours=0, minutes=0 (midnight UTC)
+    // If no match, falls through with hours=9, minutes=0 (09:00 SGT default)
   }
 
   // Clamp to valid range
   hours = Math.min(23, Math.max(0, hours));
   minutes = Math.min(59, Math.max(0, minutes));
 
-  // Store as UTC wall-clock: Date.UTC() builds the exact UTC timestamp
-  // without any server or browser timezone influence.
-  // "08:00" in Excel → T08:00:00.000Z in DB → displays as "08:00" everywhere
+  // Treat as Singapore Time (UTC+8) and convert to UTC for storage.
+  // E.g. "09:00 SGT" → stored as T01:00:00.000Z.
+  // Display with timeZone:'Asia/Singapore' will show "09:00" correctly.
   const y = date.getUTCFullYear();
-  const mo = date.getUTCMonth();
+  const mo = date.getUTCMonth() + 1; // 1-based for string formatting
   const d = date.getUTCDate();
-  return new Date(Date.UTC(y, mo, d, hours, minutes, 0, 0));
+  const sgtStr = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+08:00`;
+  return new Date(sgtStr);
 }
 
 /** Normalize row keys by trimming whitespace */
@@ -473,13 +473,14 @@ export const importLearners = async (req: Request, res: Response): Promise<void>
           courseRunCache.set(cacheKey, null);
         } else {
           // startDateRaw is UTC midnight of the calendar date (from parseExcelDate).
-          // Since times are now stored as wall-clock UTC, we match the full UTC calendar day:
-          // 00:00:00.000Z to 23:59:59.999Z of that same UTC date.
+          // Since times are stored as SGT (UTC+8), we search the SGT calendar day:
+          // SGT 00:00 to SGT 23:59:59 of that date, expressed in UTC.
           const y = startDateRaw.getUTCFullYear();
-          const mo = startDateRaw.getUTCMonth();
+          const mo = startDateRaw.getUTCMonth() + 1; // 1-based
           const day = startDateRaw.getUTCDate();
-          const dayStart = new Date(Date.UTC(y, mo, day, 0, 0, 0, 0));
-          const dayEnd = new Date(Date.UTC(y, mo, day, 23, 59, 59, 999));
+          const sgtDateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const dayStart = new Date(`${sgtDateStr}T00:00:00+08:00`);
+          const dayEnd   = new Date(`${sgtDateStr}T23:59:59.999+08:00`);
 
           const courseRun = await prisma.courseRun.findFirst({
             where: {
@@ -982,11 +983,14 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
         if (!course) {
           courseRunCache.set(dateCacheKey, []);
         } else {
+          // startDateObj is UTC midnight from parseExcelDate.
+          // Times are stored as SGT (UTC+8); search the full SGT calendar day.
           const y = startDateObj.getUTCFullYear();
-          const mo = startDateObj.getUTCMonth();
+          const mo = startDateObj.getUTCMonth() + 1; // 1-based
           const day = startDateObj.getUTCDate();
-          const dayStart = new Date(Date.UTC(y, mo, day, 0,  0,  0,   0));
-          const dayEnd   = new Date(Date.UTC(y, mo, day, 23, 59, 59, 999));
+          const sgtDateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const dayStart = new Date(`${sgtDateStr}T00:00:00+08:00`);
+          const dayEnd   = new Date(`${sgtDateStr}T23:59:59.999+08:00`);
           const runs = await prisma.courseRun.findMany({
             where: { courseId: course.id, startDatetime: { gte: dayStart, lte: dayEnd }, deletedAt: null },
             orderBy: { startDatetime: 'asc' },
