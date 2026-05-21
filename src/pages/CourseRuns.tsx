@@ -613,14 +613,14 @@ const CourseRuns: React.FC = () => {
   const formatRange = (start: Date | null, end: Date | null, courseType?: string) => {
     if (!start) return "—";
 
-    // All datetimes are stored as wall-clock UTC; use timeZone:'UTC' so
-    // the display matches the stored value regardless of browser locale.
-    const UTZ = { timeZone: "UTC" } as const;
+    // All datetimes are stored as proper UTC representing Singapore time.
+    // Use timeZone:'Asia/Singapore' so the display always shows SGT values.
+    const SGT = { timeZone: "Asia/Singapore" } as const;
 
     // For TALKS, show date with time
     if (courseType === "TALKS") {
-      const dateOpts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", ...UTZ };
-      const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true, ...UTZ };
+      const dateOpts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", ...SGT };
+      const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true, ...SGT };
 
       const dateStr = start.toLocaleDateString(undefined, dateOpts);
       const startTime = start.toLocaleTimeString(undefined, timeOpts);
@@ -628,7 +628,7 @@ const CourseRuns: React.FC = () => {
       if (!end) return `${dateStr}, ${startTime}`;
 
       const endTime = end.toLocaleTimeString(undefined, timeOpts);
-      const sameDay = start.toLocaleDateString(undefined, { ...UTZ }) === end.toLocaleDateString(undefined, { ...UTZ });
+      const sameDay = start.toLocaleDateString(undefined, { ...SGT }) === end.toLocaleDateString(undefined, { ...SGT });
 
       if (sameDay) {
         return `${dateStr}, ${startTime} to ${endTime}`;
@@ -639,7 +639,7 @@ const CourseRuns: React.FC = () => {
     }
 
     // For other types, show date only
-    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", ...UTZ };
+    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", ...SGT };
     const startStr = start.toLocaleDateString(undefined, opts);
     if (!end) return startStr;
     const endStr = end.toLocaleDateString(undefined, opts);
@@ -2164,11 +2164,11 @@ const CourseRuns: React.FC = () => {
                     <Calendar className="h-4 w-4" />
                     <span>
                       {trainerApprovalDialog.courseRunDetails.startDatetime
-                        ? new Date(trainerApprovalDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
+                        ? new Date(trainerApprovalDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" })
                         : "TBD"}
                       {" - "}
                       {trainerApprovalDialog.courseRunDetails.endDatetime
-                        ? new Date(trainerApprovalDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
+                        ? new Date(trainerApprovalDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" })
                         : "TBD"}
                     </span>
                   </div>
@@ -2235,10 +2235,10 @@ const CourseRuns: React.FC = () => {
             serialNumber: confirmationEmailDialog.courseRunDetails.serialNumber || "",
             courseName: confirmationEmailDialog.courseRunDetails.course?.title || "",
             startDate: confirmationEmailDialog.courseRunDetails.startDatetime
-              ? new Date(confirmationEmailDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
+              ? new Date(confirmationEmailDialog.courseRunDetails.startDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" })
               : "",
             endDate: confirmationEmailDialog.courseRunDetails.endDatetime
-              ? new Date(confirmationEmailDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" })
+              ? new Date(confirmationEmailDialog.courseRunDetails.endDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" })
               : "",
             venue: confirmationEmailDialog.courseRunDetails.venue?.name || confirmationEmailDialog.courseRunDetails.specifiedLocation || "TBA",
           }}
@@ -2330,10 +2330,10 @@ const CourseRuns: React.FC = () => {
             serialNumber: trainerEmailDialog.courseRunDetails?.serialNumber || "",
             courseName: trainerEmailDialog.courseRunDetails?.course?.title || "",
             startDate: trainerEmailDialog.courseRunDetails?.startDatetime
-              ? new Date(trainerEmailDialog.courseRunDetails.startDatetime).toLocaleDateString(undefined, { timeZone: "UTC" })
+              ? new Date(trainerEmailDialog.courseRunDetails.startDatetime).toLocaleDateString(undefined, { timeZone: "Asia/Singapore" })
               : "",
             endDate: trainerEmailDialog.courseRunDetails?.endDatetime
-              ? new Date(trainerEmailDialog.courseRunDetails.endDatetime).toLocaleDateString(undefined, { timeZone: "UTC" })
+              ? new Date(trainerEmailDialog.courseRunDetails.endDatetime).toLocaleDateString(undefined, { timeZone: "Asia/Singapore" })
               : "",
             venue: trainerEmailDialog.courseRunDetails?.venue?.name || trainerEmailDialog.courseRunDetails?.specifiedLocation || "TBD",
           }}

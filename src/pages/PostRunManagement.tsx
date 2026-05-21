@@ -107,9 +107,9 @@ const formatStatusLabel = (status: string): string => {
 const formatDateRange = (start: Date | null, end: Date | null): string => {
   if (!start && !end) return "—";
 
-  // All course-run datetimes are stored as wall-clock UTC; display with timeZone:'UTC'
-  // so the shown time matches the stored value regardless of browser locale.
-  const UTZ = { timeZone: "UTC" } as const;
+  // All course-run datetimes are stored as proper UTC representing Singapore time.
+  // Display with timeZone:'Asia/Singapore' so times always show in SGT.
+  const SGT = { timeZone: "Asia/Singapore" } as const;
 
   if (start && !end) {
     return start.toLocaleString(undefined, {
@@ -118,7 +118,7 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      ...UTZ,
+      ...SGT,
     });
   }
   if (!start && end) {
@@ -128,28 +128,28 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      ...UTZ,
+      ...SGT,
     });
   }
 
-  const sameDay = start?.toLocaleDateString(undefined, { ...UTZ }) === end?.toLocaleDateString(undefined, { ...UTZ });
+  const sameDay = start?.toLocaleDateString(undefined, { ...SGT }) === end?.toLocaleDateString(undefined, { ...SGT });
 
   if (sameDay) {
     const dateLabel = start!.toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
-      ...UTZ,
+      ...SGT,
     });
     const startTime = start!.toLocaleTimeString(undefined, {
       hour: "2-digit",
       minute: "2-digit",
-      ...UTZ,
+      ...SGT,
     });
     const endTime = end!.toLocaleTimeString(undefined, {
       hour: "2-digit",
       minute: "2-digit",
-      ...UTZ,
+      ...SGT,
     });
     return `${dateLabel} • ${startTime} - ${endTime}`;
   }
@@ -160,7 +160,7 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    ...UTZ,
+    ...SGT,
   });
   const endLabel = end!.toLocaleString(undefined, {
     year: "numeric",
@@ -168,7 +168,7 @@ const formatDateRange = (start: Date | null, end: Date | null): string => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    ...UTZ,
+    ...SGT,
   });
   return `${startLabel} → ${endLabel}`;
 };

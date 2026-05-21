@@ -1713,8 +1713,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
-          // Course datetimes are wall-clock UTC; display literal stored value
-          timeZone: 'UTC',
+          timeZone: 'Asia/Singapore',
         }).format(dt);
       } catch {
         return String(d);
@@ -1726,9 +1725,8 @@ class EmailService {
       try {
         const startDt = new Date(start);
         const endDt = new Date(end);
-        // Course datetimes are wall-clock UTC; use timeZone:'UTC' to display literal stored value
-        const startTime = startDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
-        const endTime = endDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
+        const startTime = startDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
+        const endTime = endDt.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
         return `${startTime} to ${endTime} hrs`;
       } catch {
         return '0900 to 1700 hrs';
@@ -2036,8 +2034,7 @@ class EmailService {
 
     const isSameDayLocal = (d1?: Date, d2?: Date): boolean => {
       if (!d1 || !d2) return false;
-      // Course datetimes are wall-clock UTC; compare UTC calendar dates
-      const opts = { timeZone: 'UTC' } as const;
+      const opts = { timeZone: 'Asia/Singapore' } as const;
       return d1.toLocaleDateString('en-CA', opts) === d2.toLocaleDateString('en-CA', opts);
     };
 
@@ -2049,7 +2046,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
-          timeZone: 'UTC',
+          timeZone: 'Asia/Singapore',
         }).format(date);
       } catch (error) {
         console.warn('Failed to format date for learner confirmation email:', error);
@@ -2064,7 +2061,7 @@ class EmailService {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
-          timeZone: 'UTC',
+          timeZone: 'Asia/Singapore',
         }).format(date);
       } catch (error) {
         return '';
@@ -2074,11 +2071,10 @@ class EmailService {
     const formatTime = (start?: Date, end?: Date) => {
       if (!start || !end) return '0900 to 1700 hrs';
       try {
-        // Course datetimes are wall-clock UTC; use timeZone:'UTC' to display literal stored value
-        const startTime = start.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
-        const endTime = end.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
+        const startTime = start.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
+        const endTime = end.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
         const regDate = new Date(start.getTime() - 15 * 60 * 1000);
-        const regTime = regDate.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).replace(':', '');
+        const regTime = regDate.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Singapore' }).replace(':', '');
         return `${startTime} to ${endTime} hrs <em>(Registration starts at ${regTime})</em>`;
       } catch (error) {
         return '0900 to 1700 hrs';
@@ -2817,19 +2813,17 @@ class EmailService {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
-          // Course datetimes are wall-clock UTC; display literal stored value
-          timeZone: 'UTC',
+          timeZone: 'Asia/Singapore',
         }).format(date);
       } catch (error) {
         return date.toISOString();
       }
     };
 
-    // Compare calendar dates in UTC since course datetimes are stored as wall-clock UTC
     const isSameCalendarDay = (a?: Date, b?: Date) => {
       if (!a || !b) return false;
-      const UTCTZ = { timeZone: 'UTC' };
-      return a.toLocaleDateString('en-CA', UTCTZ) === b.toLocaleDateString('en-CA', UTCTZ);
+      const SGT = { timeZone: 'Asia/Singapore' };
+      return a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
     };
 
     // Build date string for subject: "19 Mar 2026" or "19 Mar 2026 - 20 Mar 2026"
@@ -3087,11 +3081,10 @@ class EmailService {
     const { email, recipientName, courseTitle, courseCode, serialNumber, startDate, endDate } = params;
     const logoSrc = this.getLogoSrc();
 
-    // Course datetimes are stored as wall-clock UTC; use timeZone:'UTC' so displayed values match stored values
-    const UTCTZ = { timeZone: 'UTC' } as const;
+    const SGT = { timeZone: 'Asia/Singapore' } as const;
     const formatDateFull = (d: Date) =>
-      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', ...UTCTZ });
-    const isSameDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', UTCTZ) === b.toLocaleDateString('en-CA', UTCTZ);
+      d.toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', ...SGT });
+    const isSameDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
     const dateRange = startDate
       ? (endDate && !isSameDay(startDate, endDate)
           ? `${formatDateFull(startDate)} – ${formatDateFull(endDate)}`
