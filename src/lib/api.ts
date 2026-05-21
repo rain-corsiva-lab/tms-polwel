@@ -2478,6 +2478,16 @@ export const importApi = {
     formData.append('file', file);
     return apiRequest('/import/learners', { method: 'POST', body: formData, timeout: 120000 });
   },
+  previewCourseRunLearners2: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-run-learners-2/preview', { method: 'POST', body: formData, timeout: 60000 });
+  },
+  importCourseRunLearners2: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-run-learners-2', { method: 'POST', body: formData, timeout: 180000 });
+  },
 };
 
 // Email Logs API
