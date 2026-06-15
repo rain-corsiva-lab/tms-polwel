@@ -49,28 +49,16 @@ const buildErrorResponse = (method: string, userMessage: string, error: unknown)
 const getBillingMonthString = (dateInput: Date | string): string => {
   // Accept either a Date or an ISO date string
   const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
 
-  // Business rule: if the course run end date falls on or before the 7th of the month,
-  // it is considered part of the previous month's billing cycle.
-  // Example: end on 2 Nov => counts to October.
-  const day = date.getDate();
-  let year = date.getFullYear();
-  let month = date.getMonth(); // 0-based
+  // Format the date to "Month Year" (e.g. "April 2026") in Singapore timezone
+  // This is safe against server timezone differences and implements the direct month-matching rule.
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Singapore',
+    month: 'long',
+    year: 'numeric'
+  });
 
-  if (day <= 7) {
-    // move to previous month
-    month -= 1;
-    if (month < 0) {
-      month = 11;
-      year -= 1;
-    }
-  }
-
-  return `${monthNames[month]} ${year}`;
+  return formatter.format(date);
 };
 
 /**
