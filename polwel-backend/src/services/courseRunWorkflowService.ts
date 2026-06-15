@@ -395,9 +395,16 @@ export const courseRunWorkflowService = {
             emailPayload.endDate = new Date(courseRun.endDatetime);
           }
 
-          const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
+           const venueName = courseRun.venue?.name || courseRun.specifiedLocation;
           if (venueName) {
             emailPayload.venueName = venueName;
+          }
+
+          if (courseRun.course?.duration) {
+            const dur = parseFloat(String(courseRun.course.duration));
+            const durType = courseRun.course.durationType || 'days';
+            const durLabel = durType.charAt(0).toUpperCase() + durType.slice(1).toLowerCase();
+            emailPayload.courseDuration = `${isNaN(dur) ? courseRun.course.duration : dur} ${durLabel}`;
           }
 
           if (courseRun.remarks) {

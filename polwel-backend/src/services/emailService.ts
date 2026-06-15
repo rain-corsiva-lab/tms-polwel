@@ -323,7 +323,11 @@ class AzureTransport implements Transport<SentMessageInfo> {
 class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
   private static isInitialized: boolean = false;
-  private static mailFromAddress: string = process.env.NODE_ENV === "Production" ? process.env.GRAPH_MAIL_FROM_ADDRESS || 'noreply@polwel.org' : process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org';
+  private static get mailFromAddress(): string {
+    return this.isGraphApiMode()
+      ? process.env.GRAPH_MAIL_FROM_ADDRESS || 'noreply@polwel.org'
+      : process.env.MAIL_FROM_ADDRESS || 'noreply@polwel.org';
+  }
   private static logoPath: string = '';
   private static logoUrl: string = '';
 
@@ -378,11 +382,22 @@ class EmailService {
     return host.includes('office365.com') || host.includes('outlook.com') || host.includes('hotmail.com');
   }
 
-  // Detect if the service is running in Graph API (production) mode
+  // Detect if the service is running in Graph API (production or explicit dev) mode
   private static isGraphApiMode(): boolean {
-    return process.env.NODE_ENV === 'Production' &&
-      !!(process.env.GRAPH_CLIENT_ID && process.env.GRAPH_CLIENT_SECRET &&
-         process.env.GRAPH_TENANT_ID && process.env.GRAPH_MAIL_FROM_ADDRESS);
+    const hasGraphCreds = !!(
+      process.env.GRAPH_CLIENT_ID &&
+      process.env.GRAPH_CLIENT_SECRET &&
+      process.env.GRAPH_TENANT_ID &&
+      process.env.GRAPH_MAIL_FROM_ADDRESS
+    );
+    if (!hasGraphCreds) return false;
+
+    return (
+      process.env.NODE_ENV === 'Production' ||
+      process.env.MAIL_MAILER === 'outlook' ||
+      process.env.MAIL_MAILER === 'graph' ||
+      process.env.MAIL_MAILER === 'microsoft'
+    );
   }
 
   // Return logo as base64 data URI.
@@ -739,7 +754,7 @@ class EmailService {
   private static getTransporter() {
     if (!this.isInitialized) {
       // Check if Microsoft Graph API is configured      
-      if (process.env.NODE_ENV === "Production") {
+      if (this.isGraphApiMode()) {
         const graphClientId = process.env.GRAPH_CLIENT_ID;
         const graphClientSecret = process.env.GRAPH_CLIENT_SECRET;
         const graphTenantId = process.env.GRAPH_TENANT_ID;
@@ -2068,6 +2083,16 @@ class EmailService {
       }
     };
 
+    const formatDateRangeForSubject = (start?: Date, end?: Date) => {
+      if (!start) return '';
+      const startStr = formatDateForSubject(start);
+      if (!end || isSameDayLocal(start, end)) {
+        return startStr;
+      }
+      const endStr = formatDateForSubject(end);
+      return `${startStr} - ${endStr}`;
+    };
+
     const formatTime = (start?: Date, end?: Date) => {
       if (!start || !end) return '0900 to 1700 hrs';
       try {
@@ -2081,7 +2106,7 @@ class EmailService {
       }
     };
 
-    const subjectSuffix = formatDateForSubject(startDate);
+    const subjectSuffix = formatDateRangeForSubject(startDate, endDate);
     const subject = `Course Confirmation: ${courseTitle}${subjectSuffix ? ` (${subjectSuffix})` : ''}`;
 
     const html = `
