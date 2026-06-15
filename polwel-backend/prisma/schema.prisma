@@ -544,6 +544,8 @@ model CourseRunLearner {
   waiverRejectReason            String?                    @db.Text
   waiverReviewedAt              DateTime?
   waiverReviewedBy              String?
+  poNumber                      String?                    @db.VarChar(255)
+  receiptNumber                 String?                    @db.VarChar(255)
   certificateGeneratedAt        DateTime?
   certificateEmailStatus        CertificateEmailStatus     @default(NOT_SENT)
   certificateEmailSentAt        DateTime?

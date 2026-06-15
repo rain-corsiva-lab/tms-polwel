@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as XLSX from 'xlsx';
-import { PrismaClient, CourseStatus, CourseRunType, VenueType, FeeType, PaymentMode, EnrollmentStatus, UserRole } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import { PrismaClient, CourseStatus, CourseRunType, VenueType, FeeType, PaymentMode, EnrollmentStatus, AttendanceStatus, OrganizationType, UserRole, UserStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -8,8 +10,8 @@ const prisma = new PrismaClient();
 
 /**
  * Parse an Excel date serial or string into a JS Date representing UTC midnight of that calendar date.
- * Using UTC midnight ensures downstream buildDatetime can safely combine with SGT time strings
- * without any server-timezone influence.
+ * The result is used as a calendar-date container only; time is added by buildDatetime()
+ * which treats times as SGT (UTC+8) and converts to UTC.
  */
 function parseExcelDate(value: unknown): Date | null {
   if (value == null || value === '') return null;
@@ -75,31 +77,30 @@ function parseExcelDate(value: unknown): Date | null {
 /**
  * Build a full datetime by combining a UTC-midnight date with an Excel time value.
  *
- * TIMEZONE STRATEGY: Wall-clock UTC
- * Times from Excel are treated as the literal hour value in UTC.
- * Example: "08:00" → stored as T08:00:00.000Z
- * This ensures the same time is displayed in every timezone when the
- * frontend reads with UTC-aware formatting (timeZone: 'UTC').
+ * TIMEZONE STRATEGY: Singapore Time (SGT, UTC+8)
+ * Times from Excel are treated as Singapore local time and converted to UTC for storage.
+ * Example: Excel "09:00" (SGT) → stored as T01:00:00.000Z (09:00 - 8h = 01:00 UTC)
+ * All display code uses timeZone: 'Asia/Singapore' so T01:00:00Z renders as "09:00 SGT".
  *
  * Supports:
- *  - Excel fractional day (0.333333 = 8:00 AM)
- *  - String: "8:00", "08:00", "8:00:00", "08:00 AM", "5:00 PM"
- *  - Falls back to 00:00 UTC if unparseable
+ *  - Excel fractional day (0.375 = 9:00 AM)
+ *  - String: "9:00", "09:00", "9:00:00", "09:00 AM", "5:00 PM"
+ *  - Falls back to 09:00 SGT (T01:00:00Z) if unparseable
  */
 function buildDatetime(date: Date | null, timeStr: unknown): Date | null {
   if (!date) return null;
 
-  let hours = 0;
+  let hours = 9;   // default 09:00 SGT
   let minutes = 0;
 
   if (typeof timeStr === 'number' && timeStr >= 0 && timeStr < 1) {
-    // Excel fractional day: e.g. 0.333333... = 8:00 AM
+    // Excel fractional day: e.g. 0.375 = 9:00 AM
     const totalMinutes = Math.round(timeStr * 24 * 60);
     hours = Math.floor(totalMinutes / 60) % 24;
     minutes = totalMinutes % 60;
   } else {
     const timeRaw = typeof timeStr === 'string' ? timeStr.trim() : typeof timeStr === 'number' ? String(timeStr) : '';
-    // Matches: "8:00", "08:00", "8:00:00", "8:00 AM", "17:00 PM"
+    // Matches: "9:00", "09:00", "9:00:00", "9:00 AM", "17:00 PM"
     const match = timeRaw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?$/i);
     if (match && match[1] && match[2]) {
       hours = parseInt(match[1], 10);
@@ -108,20 +109,21 @@ function buildDatetime(date: Date | null, timeStr: unknown): Date | null {
       if (ampm === 'PM' && hours < 12) hours += 12;
       if (ampm === 'AM' && hours === 12) hours = 0;
     }
-    // If no match, falls through with hours=0, minutes=0 (midnight UTC)
+    // If no match, falls through with hours=9, minutes=0 (09:00 SGT default)
   }
 
   // Clamp to valid range
   hours = Math.min(23, Math.max(0, hours));
   minutes = Math.min(59, Math.max(0, minutes));
 
-  // Store as UTC wall-clock: Date.UTC() builds the exact UTC timestamp
-  // without any server or browser timezone influence.
-  // "08:00" in Excel → T08:00:00.000Z in DB → displays as "08:00" everywhere
+  // Treat as Singapore Time (UTC+8) and convert to UTC for storage.
+  // E.g. "09:00 SGT" → stored as T01:00:00.000Z.
+  // Display with timeZone:'Asia/Singapore' will show "09:00" correctly.
   const y = date.getUTCFullYear();
-  const mo = date.getUTCMonth();
+  const mo = date.getUTCMonth() + 1; // 1-based for string formatting
   const d = date.getUTCDate();
-  return new Date(Date.UTC(y, mo, d, hours, minutes, 0, 0));
+  const sgtStr = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+08:00`;
+  return new Date(sgtStr);
 }
 
 /** Normalize row keys by trimming whitespace */
@@ -471,13 +473,14 @@ export const importLearners = async (req: Request, res: Response): Promise<void>
           courseRunCache.set(cacheKey, null);
         } else {
           // startDateRaw is UTC midnight of the calendar date (from parseExcelDate).
-          // Since times are now stored as wall-clock UTC, we match the full UTC calendar day:
-          // 00:00:00.000Z to 23:59:59.999Z of that same UTC date.
+          // Since times are stored as SGT (UTC+8), we search the SGT calendar day:
+          // SGT 00:00 to SGT 23:59:59 of that date, expressed in UTC.
           const y = startDateRaw.getUTCFullYear();
-          const mo = startDateRaw.getUTCMonth();
+          const mo = startDateRaw.getUTCMonth() + 1; // 1-based
           const day = startDateRaw.getUTCDate();
-          const dayStart = new Date(Date.UTC(y, mo, day, 0, 0, 0, 0));
-          const dayEnd = new Date(Date.UTC(y, mo, day, 23, 59, 59, 999));
+          const sgtDateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const dayStart = new Date(`${sgtDateStr}T00:00:00+08:00`);
+          const dayEnd   = new Date(`${sgtDateStr}T23:59:59.999+08:00`);
 
           const courseRun = await prisma.courseRun.findFirst({
             where: {
@@ -730,6 +733,412 @@ export const previewLearners = async (req: Request, res: Response): Promise<void
     res.json({ success: true, totalRows: rawRows.length, rows });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Preview failed';
+    res.status(500).json({ success: false, error: msg });
+  }
+};
+
+// ─── Course Run Learners 2 Import ─────────────────────────────────────────────
+//
+// Designed for SPF-format Excel exports with columns:
+//   Name, Department, Designation, SPF Email Address, Contact Number,
+//   Retiring Officer? (IGNORED), Payment Mode, Fees before GST,
+//   Fees Remarks, PO No./ Payment Advice, Invoice No., Receipt No.,
+//   Business Unit Number, Training Officer's Name, Training Officer's Email,
+//   Training Officer's Phone Number, Enrollment Status, Attendance Status,
+//   Course Run Title, Course Run Start Date (DD-MM-YYYY)
+//
+// Logic:
+//   1. Upsert Learner via SPF Email Address
+//   2. Upsert Organization (Department) with type SPF, creating if needed
+//   3. Upsert Training Coordinator User via Training Officer's Email, creating if needed
+//   4. Find ALL CourseRuns matching (Course Run Title, Start Date) — may be multiple
+//   5. For each matched CourseRun:
+//      a. Upsert CourseRunBilling
+//      b. Per unique Invoice No. per billing: upsert CourseRunBillingEntry
+//      c. Upsert CourseRunLearner, linking to the billing entry
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const previewCourseRunLearners2 = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      res.status(400).json({ success: false, error: 'Empty workbook' });
+      return;
+    }
+    const sheet = workbook.Sheets[sheetName]!;
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+
+    const rows = rawRows.slice(0, 100).map((rawRow, i) => {
+      const row = normalizeRow(rawRow);
+      return {
+        rowNum: i + 2,
+        name: str(row['Name']),
+        department: str(row['Department']),
+        designation: str(row['Designation']),
+        email: str(row['SPF Email Address']),
+        contactNumber: str(row['Contact Number']),
+        paymentMode: str(row['Payment Mode']),
+        feesBeforeGST: str(row['Fees before GST']),
+        feesRemarks: str(row['Fees Remarks']),
+        poNumber: str(row['PO No./ Payment Advice']),
+        invoiceNo: str(row['Invoice No.']),
+        receiptNo: str(row['Receipt No.']),
+        buNumber: str(row['Business Unit Number']),
+        trainingOfficerName: str(row["Training Officer's Name"]),
+        trainingOfficerEmail: str(row["Training Officer's Email"]),
+        enrollmentStatus: str(row['Enrollment Status']),
+        attendanceStatus: str(row['Attendance Status']),
+        courseRunTitle: str(row['Course Run Title']),
+        courseRunStartDate: fmtDateForPreview(row['Course Run Start Date']),
+      };
+    });
+
+    res.json({ success: true, totalRows: rawRows.length, rows });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Preview failed';
+    console.error('[previewCourseRunLearners2]', error);
+    res.status(500).json({ success: false, error: msg });
+  }
+};
+
+export const importCourseRunLearners2 = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      res.status(400).json({ success: false, error: 'Empty workbook' });
+      return;
+    }
+    const sheet = workbook.Sheets[sheetName]!;
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+
+    const results = {
+      total: rawRows.length,
+      learnersCreated: 0,
+      learnersUpdated: 0,
+      organizationsCreated: 0,
+      coordinatorsCreated: 0,
+      enrollmentsCreated: 0,
+      enrollmentsUpdated: 0,
+      billingsCreated: 0,
+      billingEntriesCreated: 0,
+      skipped: 0,
+      errors: [] as Array<{ row: number; reason: string }>,
+    };
+
+    // ── In-memory caches to minimise repeated DB round-trips ──
+    // key: email or "name:<fullname>"  → learnerId
+    const learnerCache = new Map<string, string>();
+    // key: org name → orgId
+    const orgCache = new Map<string, string>();
+    // key: coordinator email → userId
+    const coordinatorCache = new Map<string, string>();
+    // key: `${courseTitle}|${YYYY-MM-DD}` → courseRunId[]
+    const courseRunCache = new Map<string, string[]>();
+    // key: courseRunId → courseRunBillingId
+    const billingCache = new Map<string, string>();
+    // key: `${billingId}|${invoiceNumber}` → billingEntryId
+    const billingEntryCache = new Map<string, string>();
+
+    for (let i = 0; i < rawRows.length; i++) {
+      const rowNum = i + 2;
+      const raw = rawRows[i];
+      if (!raw) { results.skipped++; continue; }
+      const row = normalizeRow(raw);
+
+      const learnerName = str(row['Name']);
+      const courseTitle  = str(row['Course Run Title']);
+
+      if (!learnerName || !courseTitle) {
+        results.errors.push({ row: rowNum, reason: 'Missing "Name" or "Course Run Title"' });
+        results.skipped++;
+        continue;
+      }
+
+      const startDateObj = parseExcelDate(row['Course Run Start Date']);
+      if (!startDateObj) {
+        results.errors.push({ row: rowNum, reason: `Invalid or missing "Course Run Start Date": "${str(row['Course Run Start Date'])}"` });
+        results.skipped++;
+        continue;
+      }
+
+      // ─── 1. Resolve / Upsert Learner ───────────────────────────────────────
+      const learnerEmail      = strOrNull(row['SPF Email Address']);
+      const learnerDesig      = strOrNull(row['Designation']);
+      const learnerContact    = strOrNull(row['Contact Number']);
+      const learnerCacheKey   = learnerEmail ?? `name:${learnerName}`;
+
+      let learnerId: string;
+      if (learnerCache.has(learnerCacheKey)) {
+        learnerId = learnerCache.get(learnerCacheKey)!;
+      } else {
+        const existing = learnerEmail
+          ? await prisma.learner.findFirst({ where: { email: learnerEmail, deletedAt: null } })
+          : await prisma.learner.findFirst({ where: { fullname: learnerName, deletedAt: null } });
+
+        if (existing) {
+          await prisma.learner.update({
+            where: { id: existing.id },
+            data: {
+              fullname: learnerName,
+              ...(learnerDesig   !== null ? { designation: learnerDesig } : {}),
+              ...(learnerContact !== null ? { contact: learnerContact }   : {}),
+              ...(learnerEmail   !== null ? { email: learnerEmail }       : {}),
+            },
+          });
+          learnerId = existing.id;
+          results.learnersUpdated++;
+        } else {
+          const created = await prisma.learner.create({
+            data: { fullname: learnerName, email: learnerEmail, designation: learnerDesig, contact: learnerContact },
+          });
+          learnerId = created.id;
+          results.learnersCreated++;
+        }
+        learnerCache.set(learnerCacheKey, learnerId);
+      }
+
+      // ─── 2. Resolve / Create Organization (Department = SPF unit) ──────────
+      const departmentName = str(row['Department']);
+      const buNumber       = strOrNull(row['Business Unit Number']);
+      let clientOrganizationId: string | null = null;
+
+      if (departmentName) {
+        if (orgCache.has(departmentName)) {
+          clientOrganizationId = orgCache.get(departmentName)!;
+        } else {
+          const existingOrg = await prisma.organization.findFirst({ where: { name: departmentName } });
+          if (existingOrg) {
+            clientOrganizationId = existingOrg.id;
+          } else {
+            const newOrg = await prisma.organization.create({
+              data: {
+                name: departmentName,
+                buNumber,
+                organizationType: OrganizationType.SPF,
+                status: UserStatus.ACTIVE,
+              },
+            });
+            clientOrganizationId = newOrg.id;
+            results.organizationsCreated++;
+          }
+          orgCache.set(departmentName, clientOrganizationId);
+        }
+      }
+
+      // ─── 3. Resolve / Create Training Coordinator ──────────────────────────
+      const coordName  = strOrNull(row["Training Officer's Name"]);
+      const coordEmail = strOrNull(row["Training Officer's Email"]);
+      const coordPhone = strOrNull(row["Training Officer's Phone Number"]);
+      let trainingCoordinatorId: string | null = null;
+
+      if (coordEmail) {
+        if (coordinatorCache.has(coordEmail)) {
+          trainingCoordinatorId = coordinatorCache.get(coordEmail)!;
+        } else {
+          // Look up by email regardless of role — avoids duplicates
+          const existingUser = await prisma.user.findFirst({
+            where: { email: coordEmail, deletedAt: null },
+          });
+          if (existingUser) {
+            trainingCoordinatorId = existingUser.id;
+          } else if (coordName) {
+            // Auto-create with a random unusable password; coordinator must reset via email
+            const tempPassword = crypto.randomBytes(16).toString('hex');
+            const hashedPassword = await bcrypt.hash(tempPassword, 12);
+            const newCoord = await prisma.user.create({
+              data: {
+                name: coordName,
+                email: coordEmail,
+                password: hashedPassword,
+                role: UserRole.TRAINING_COORDINATOR,
+                status: UserStatus.ACTIVE,
+                contactNumber: coordPhone,
+              },
+            });
+            trainingCoordinatorId = newCoord.id;
+            results.coordinatorsCreated++;
+          }
+          if (trainingCoordinatorId) {
+            coordinatorCache.set(coordEmail, trainingCoordinatorId);
+          }
+        }
+      }
+
+      // ─── 4. Find ALL matching CourseRuns (title + calendar date) ───────────
+      const dateCacheKey = `${courseTitle}|${startDateObj.toISOString().slice(0, 10)}`;
+      if (!courseRunCache.has(dateCacheKey)) {
+        const course = await prisma.course.findFirst({ where: { title: courseTitle } });
+        if (!course) {
+          courseRunCache.set(dateCacheKey, []);
+        } else {
+          // startDateObj is UTC midnight from parseExcelDate.
+          // Times are stored as SGT (UTC+8); search the full SGT calendar day.
+          const y = startDateObj.getUTCFullYear();
+          const mo = startDateObj.getUTCMonth() + 1; // 1-based
+          const day = startDateObj.getUTCDate();
+          const sgtDateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const dayStart = new Date(`${sgtDateStr}T00:00:00+08:00`);
+          const dayEnd   = new Date(`${sgtDateStr}T23:59:59.999+08:00`);
+          const runs = await prisma.courseRun.findMany({
+            where: { courseId: course.id, startDatetime: { gte: dayStart, lte: dayEnd }, deletedAt: null },
+            orderBy: { startDatetime: 'asc' },
+          });
+          courseRunCache.set(dateCacheKey, runs.map(r => r.id));
+        }
+      }
+
+      const courseRunIds = courseRunCache.get(dateCacheKey) ?? [];
+      if (courseRunIds.length === 0) {
+        results.errors.push({ row: rowNum, reason: `No course run found: "${courseTitle}" on ${fmtDateForPreview(row['Course Run Start Date'])}` });
+        results.skipped++;
+        continue;
+      }
+
+      // ─── 5. Enrollment + Attendance Status ─────────────────────────────────
+      const enrollRaw   = str(row['Enrollment Status']).toUpperCase();
+      const attendRaw   = str(row['Attendance Status']).toUpperCase();
+      const enrollStatus: EnrollmentStatus = enrollRaw === 'WITHDRAWN' ? EnrollmentStatus.WITHDRAWN : EnrollmentStatus.ENROLLED;
+      const attendStatus: AttendanceStatus = attendRaw === 'PRESENT' ? AttendanceStatus.PRESENT
+        : attendRaw === 'ABSENT' ? AttendanceStatus.ABSENT
+        : AttendanceStatus.PENDING;
+
+      // ─── 6. Financial fields ────────────────────────────────────────────────
+      const rawFees    = str(row['Fees before GST']).replace(/[\$,\s]/g, '');
+      const totalFees  = rawFees && !isNaN(parseFloat(rawFees)) ? parseFloat(rawFees) : null;
+      const feesRemarks  = strOrNull(row['Fees Remarks']);
+      const invoiceNumber = strOrNull(row['Invoice No.']);
+      const poNumber      = strOrNull(row['PO No./ Payment Advice']);
+      const receiptNumber = strOrNull(row['Receipt No.']);
+      const paymentMode   = parsePaymentMode(str(row['Payment Mode']));
+
+      // ─── 7. For each matched CourseRun: billing + enrollment ───────────────
+      for (const courseRunId of courseRunIds) {
+        try {
+          // 7a. Upsert CourseRunBilling (1:1 with CourseRun)
+          let billingId: string;
+          if (billingCache.has(courseRunId)) {
+            billingId = billingCache.get(courseRunId)!;
+          } else {
+            const existingBilling = await prisma.courseRunBilling.findUnique({ where: { courseRunId } });
+            if (existingBilling) {
+              billingId = existingBilling.id;
+            } else {
+              const newBilling = await prisma.courseRunBilling.create({ data: { courseRunId } });
+              billingId = newBilling.id;
+              results.billingsCreated++;
+            }
+            billingCache.set(courseRunId, billingId);
+          }
+
+          // 7b. Upsert CourseRunBillingEntry per (billingId + invoiceNumber)
+          let billingEntryId: string | null = null;
+          if (invoiceNumber) {
+            const entryCacheKey = `${billingId}|${invoiceNumber}`;
+            if (billingEntryCache.has(entryCacheKey)) {
+              billingEntryId = billingEntryCache.get(entryCacheKey)!;
+            } else {
+              const existingEntry = await prisma.courseRunBillingEntry.findFirst({
+                where: { courseRunBillingId: billingId, pbmsInvoiceNumber: invoiceNumber, deletedAt: null },
+              });
+              if (existingEntry) {
+                billingEntryId = existingEntry.id;
+              } else {
+                const newEntry = await prisma.courseRunBillingEntry.create({
+                  data: {
+                    courseRunBillingId: billingId,
+                    pbmsInvoiceNumber: invoiceNumber,
+                    remarks: feesRemarks,
+                  },
+                });
+                billingEntryId = newEntry.id;
+                results.billingEntriesCreated++;
+              }
+              billingEntryCache.set(entryCacheKey, billingEntryId);
+            }
+          }
+
+          // 7c. Upsert CourseRunLearner
+          const existingEnrollment = await prisma.courseRunLearner.findUnique({
+            where: { courseRunId_learnerId: { courseRunId, learnerId } },
+          });
+
+          if (existingEnrollment) {
+            await prisma.courseRunLearner.update({
+              where: { id: existingEnrollment.id },
+              data: {
+                clientOrganizationId,
+                trainingCoordinatorId,
+                buNumber,
+                paymentMode,
+                totalFees,
+                feesRemarks,
+                invoiceNumber,
+                poNumber,
+                receiptNumber,
+                enrollmentStatus: enrollStatus,
+                attendanceStatus: attendStatus,
+                ...(billingEntryId !== null ? { courseRunBillingEntryId: billingEntryId } : {}),
+              },
+            });
+            results.enrollmentsUpdated++;
+          } else {
+            await prisma.courseRunLearner.create({
+              data: {
+                courseRunId,
+                learnerId,
+                clientOrganizationId,
+                trainingCoordinatorId,
+                buNumber,
+                paymentMode,
+                totalFees,
+                feesRemarks,
+                invoiceNumber,
+                poNumber,
+                receiptNumber,
+                enrollmentStatus: enrollStatus,
+                attendanceStatus: attendStatus,
+                courseRunBillingEntryId: billingEntryId,
+              },
+            });
+            results.enrollmentsCreated++;
+          }
+        } catch (rowError: unknown) {
+          const msg = rowError instanceof Error ? rowError.message : 'Database error';
+          results.errors.push({ row: rowNum, reason: `CourseRun ${courseRunId}: ${msg}` });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      results,
+      message: [
+        `${results.learnersCreated} new learners`,
+        `${results.learnersUpdated} learners updated`,
+        `${results.organizationsCreated} new organisations`,
+        `${results.coordinatorsCreated} new coordinators`,
+        `${results.enrollmentsCreated} enrollments created`,
+        `${results.enrollmentsUpdated} enrollments updated`,
+        `${results.billingsCreated} billing records created`,
+        `${results.billingEntriesCreated} billing entries created`,
+        results.skipped > 0 ? `${results.skipped} rows skipped` : null,
+      ].filter(Boolean).join(', '),
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Import failed';
+    console.error('[importCourseRunLearners2]', error);
     res.status(500).json({ success: false, error: msg });
   }
 };

@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { courseRunsApi, coursesApi, venuesApi, organizationsApi } from "../lib/api";
 import { toast } from "sonner";
-import { formatDate, formatDateTime, formatDateUTC, formatTimeUTC, toUTCDateInputValue, toUTCTimeInputValue, buildUTCDatetime } from "../lib/date";
+import { formatDate, formatDateTime, formatDateSGT, formatTimeSGT, toSGTDateInputValue, toSGTTimeInputValue, buildSGTDatetime } from "../lib/date";
 import SafeDropdownMenu from "../components/ui/safe-dropdown-menu";
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { AddLearnersDialog } from "../components/AddLearnersDialog";
@@ -277,11 +277,11 @@ const CourseRunDetail: React.FC = () => {
       courseId: cr.course?.id || "",
       courseCode: cr.course?.courseCode || "",
       clientOrganizationId: (cr as any).clientOrganizationId || "",
-      // Use UTC methods so the edit form shows the wall-clock UTC time that was stored
-      startDate: start ? toUTCDateInputValue(start) : "",
-      startTime: start ? toUTCTimeInputValue(start) : "",
-      endDate: end ? toUTCDateInputValue(end) : "",
-      endTime: end ? toUTCTimeInputValue(end) : "",
+      // Use SGT helpers so the edit form shows Singapore time
+      startDate: start ? toSGTDateInputValue(start) : "",
+      startTime: start ? toSGTTimeInputValue(start) : "",
+      endDate: end ? toSGTDateInputValue(end) : "",
+      endTime: end ? toSGTTimeInputValue(end) : "",
       venueType: cr.venueType || "",
       venueId: cr.venue?.id || "",
       specifiedLocation: cr.specifiedLocation || "",
@@ -657,8 +657,8 @@ const CourseRunDetail: React.FC = () => {
       const headerMetadata = [
         courseRun.course?.title || "Course",
         `Course Code: ${courseRun.course?.courseCode || "N/A"}`,
-        `Duration: ${courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "N/A"} - ${
-          courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "N/A"
+        `Duration: ${courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" }) : "N/A"} - ${
+          courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" }) : "N/A"
         }`,
         `Venue: ${courseRun.venue?.name || courseRun.specifiedLocation || "TBD"}`,
       ];
@@ -1594,10 +1594,9 @@ const CourseRunDetail: React.FC = () => {
         }
       }
 
-      // Treat the user's date+time input as wall-clock UTC (append 'Z') so we store the
-      // literal value without any browser-timezone shift.
-      const startDatetime = buildUTCDatetime(editData.startDate, editData.startTime);
-      const endDatetime = buildUTCDatetime(editData.endDate, editData.endTime);
+      // Treat the user's date+time input as Singapore Time (UTC+8), converting to UTC for storage.
+      const startDatetime = buildSGTDatetime(editData.startDate, editData.startTime);
+      const endDatetime = buildSGTDatetime(editData.endDate, editData.endTime);
 
       const payload: any = {
         serialNumber: editData.serialNumber || undefined,
@@ -1858,7 +1857,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <DateInput value={editData?.startDate} onChange={(d) => handleEditField("startDate", d || "")} />
                       ) : (
-                        <Input value={formatDateUTC(courseRun.startDatetime)} disabled className="bg-gray-50" />
+                        <Input value={formatDateSGT(courseRun.startDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1866,7 +1865,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <TimeInput value={editData?.startTime} onChange={(t) => handleEditField("startTime", t || "")} />
                       ) : (
-                        <Input value={formatTimeUTC(courseRun.startDatetime)} disabled className="bg-gray-50" />
+                        <Input value={formatTimeSGT(courseRun.startDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1874,7 +1873,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <DateInput value={editData?.endDate} onChange={(d) => handleEditField("endDate", d || "")} />
                       ) : (
-                        <Input value={formatDateUTC(courseRun.endDatetime)} disabled className="bg-gray-50" />
+                        <Input value={formatDateSGT(courseRun.endDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1882,7 +1881,7 @@ const CourseRunDetail: React.FC = () => {
                       {isEditing ? (
                         <TimeInput value={editData?.endTime} onChange={(t) => handleEditField("endTime", t || "")} />
                       ) : (
-                        <Input value={formatTimeUTC(courseRun.endDatetime)} disabled className="bg-gray-50" />
+                        <Input value={formatTimeSGT(courseRun.endDatetime)} disabled className="bg-gray-50" />
                       )}
                     </div>
                     <div className="space-y-2">
@@ -3152,8 +3151,8 @@ const CourseRunDetail: React.FC = () => {
           courseRunDetails={{
             serialNumber: courseRun.serialNumber || "",
             courseName: courseRun.course?.title || "",
-            startDate: formatDateUTC(courseRun.startDatetime) === "-" ? "" : formatDateUTC(courseRun.startDatetime),
-            endDate: formatDateUTC(courseRun.endDatetime) === "-" ? "" : formatDateUTC(courseRun.endDatetime),
+            startDate: formatDateSGT(courseRun.startDatetime) === "-" ? "" : formatDateSGT(courseRun.startDatetime),
+            endDate: formatDateSGT(courseRun.endDatetime) === "-" ? "" : formatDateSGT(courseRun.endDatetime),
             venue: courseRun.venue?.name || courseRun.specifiedLocation || "TBA",
           }}
           onSuccess={() => {

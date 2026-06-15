@@ -49,28 +49,16 @@ const buildErrorResponse = (method: string, userMessage: string, error: unknown)
 const getBillingMonthString = (dateInput: Date | string): string => {
   // Accept either a Date or an ISO date string
   const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
 
-  // Business rule: if the course run end date falls on or before the 7th of the month,
-  // it is considered part of the previous month's billing cycle.
-  // Example: end on 2 Nov => counts to October.
-  const day = date.getDate();
-  let year = date.getFullYear();
-  let month = date.getMonth(); // 0-based
+  // Format the date to "Month Year" (e.g. "April 2026") in Singapore timezone
+  // This is safe against server timezone differences and implements the direct month-matching rule.
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Singapore',
+    month: 'long',
+    year: 'numeric'
+  });
 
-  if (day <= 7) {
-    // move to previous month
-    month -= 1;
-    if (month < 0) {
-      month = 11;
-      year -= 1;
-    }
-  }
-
-  return `${monthNames[month]} ${year}`;
+  return formatter.format(date);
 };
 
 /**
@@ -5433,10 +5421,10 @@ export const courseRunController = {
       const sheet = workbook.addWorksheet('Participants');
 
       // Add course run header info
-      const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
-      const endDate = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
-      const startTime = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '';
-      const endTime = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '';
+      const startDate = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Singapore' }) : '';
+      const endDate = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Singapore' }) : '';
+      const startTime = courseRun.startDatetime ? new Date(courseRun.startDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Singapore' }) : '';
+      const endTime = courseRun.endDatetime ? new Date(courseRun.endDatetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Singapore' }) : '';
       const trainers = courseRun.courseRunTrainers.map((t: any) => t.trainer?.name || '').filter(Boolean).join(', ') || '-';
 
       sheet.addRow([`Course: ${courseRun.course?.title || ''}`]);
@@ -6277,11 +6265,11 @@ export const courseRunController = {
 
       const rows = courseRuns.map((run) => {
         const startDate = run.startDatetime
-          ? new Date(run.startDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+          ? new Date(run.startDatetime).toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore' })
           : '';
         
         const endDate = run.endDatetime
-          ? new Date(run.endDatetime).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+          ? new Date(run.endDatetime).toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore' })
           : '';
 
         // Determine fee type (Default/Standard/Premium or custom description)

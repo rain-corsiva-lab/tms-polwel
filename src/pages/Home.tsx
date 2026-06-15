@@ -14,6 +14,7 @@ import { formatDate, formatDateTime } from "@/lib/date";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ImportCourseRunsDialog } from "@/components/ImportCourseRunsDialog";
 import { ImportLearnersDialog } from "@/components/ImportLearnersDialog";
+import { ImportCourseRunLearners2Dialog } from "@/components/ImportCourseRunLearners2Dialog";
 
 // Action Item Card Component with hover animation
 interface ActionItemCardProps {
@@ -343,8 +344,8 @@ function DashboardContent() {
           "Course Title": run.course?.title || "",
           "Course Code": run.course?.courseCode || "",
           Category: run.course?.category || "",
-          "Start Date": run.startDatetime ? new Date(run.startDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "",
-          "End Date": run.endDatetime ? new Date(run.endDatetime).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "",
+          "Start Date": run.startDatetime ? new Date(run.startDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" }) : "",
+          "End Date": run.endDatetime ? new Date(run.endDatetime).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" }) : "",
           Venue: run.venue?.name || "",
           Location: run.venue?.address || run.specifiedLocation || "",
           Status: run.status || "",
@@ -749,12 +750,13 @@ function DashboardContent() {
       <Card>
         <CardHeader>
           <CardTitle>Data Import</CardTitle>
-          <CardDescription>Import course runs or learner enrollments from an Excel file.</CardDescription>
+          <CardDescription>Import course runs, learner enrollments, or SPF-format learner data from an Excel file.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <ImportCourseRunsDialog />
             <ImportLearnersDialog />
+            <ImportCourseRunLearners2Dialog />
           </div>
         </CardContent>
       </Card>
