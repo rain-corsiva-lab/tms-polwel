@@ -796,6 +796,7 @@ export const previewCourseRunLearners2 = async (req: Request, res: Response): Pr
         attendanceStatus: str(row['Attendance Status']),
         courseRunTitle: str(row['Course Run Title']),
         courseRunStartDate: fmtDateForPreview(row['Course Run Start Date']),
+        courseRunEndDate: row['Course Run End Date'] ? fmtDateForPreview(row['Course Run End Date']) : fmtDateForPreview(row['Course Run Start Date']),
       };
     });
 
@@ -872,6 +873,9 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
         results.skipped++;
         continue;
       }
+
+      const endDateObj = parseExcelDate(row['Course Run End Date']) || startDateObj;
+      const endDatetime = buildDatetime(endDateObj, '18:00');
 
       // ─── 1. Resolve / Upsert Learner ───────────────────────────────────────
       const learnerEmail      = strOrNull(row['SPF Email Address']);
@@ -1026,6 +1030,12 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
       // ─── 7. For each matched CourseRun: billing + enrollment ───────────────
       for (const courseRunId of courseRunIds) {
         try {
+          // Update CourseRun endDatetime (SGT)
+          await prisma.courseRun.update({
+            where: { id: courseRunId },
+            data: { endDatetime },
+          });
+
           // 7a. Upsert CourseRunBilling (1:1 with CourseRun)
           let billingId: string;
           if (billingCache.has(courseRunId)) {
