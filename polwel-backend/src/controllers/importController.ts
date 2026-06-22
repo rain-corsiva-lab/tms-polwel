@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import * as XLSX from 'xlsx';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { PrismaClient, CourseStatus, CourseRunType, VenueType, FeeType, PaymentMode, EnrollmentStatus, AttendanceStatus, OrganizationType, UserRole, UserStatus } from '@prisma/client';
+import { PrismaClient, CourseStatus, CourseRunType, VenueType, FeeType, PaymentMode, EnrollmentStatus, AttendanceStatus, OrganizationType, UserRole, UserStatus, CourseRunFeeType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -541,7 +541,7 @@ export const importLearners = async (req: Request, res: Response): Promise<void>
       const orgName = str(row['Client Organisation Name']);
       if (orgName && !orgCache.has(orgName)) {
         const org = await prisma.organization.findFirst({
-          where: { name: orgName },
+          where: { name: orgName, status: { not: 'INACTIVE' } },
         });
         orgCache.set(orgName, org?.id ?? null);
       }
@@ -922,7 +922,9 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
         if (orgCache.has(departmentName)) {
           clientOrganizationId = orgCache.get(departmentName)!;
         } else {
-          const existingOrg = await prisma.organization.findFirst({ where: { name: departmentName } });
+          const existingOrg = await prisma.organization.findFirst({
+            where: { name: departmentName, status: { not: 'INACTIVE' } },
+          });
           if (existingOrg) {
             clientOrganizationId = existingOrg.id;
           } else {
@@ -1149,6 +1151,403 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Import failed';
     console.error('[importCourseRunLearners2]', error);
+    res.status(500).json({ success: false, error: msg });
+  }
+};
+
+// ─── Course Runs Import 2 (Complete) ──────────────────────────────────────────
+
+function parseCourseRunFeeType(value: string): CourseRunFeeType | null {
+  const map: Record<string, CourseRunFeeType> = {
+    'per head': CourseRunFeeType.PER_HEAD,
+    per_head: CourseRunFeeType.PER_HEAD,
+    'per run': CourseRunFeeType.PER_RUN,
+    per_run: CourseRunFeeType.PER_RUN,
+  };
+  return map[value.toLowerCase()] ?? null;
+}
+
+export const previewCourseRuns2 = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      res.status(400).json({ success: false, error: 'Empty workbook' });
+      return;
+    }
+    const sheet = workbook.Sheets[sheetName]!;
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+
+    const rows = rawRows.slice(0, 100).map((rawRow, i) => {
+      const row = normalizeRow(rawRow);
+      return {
+        rowNum: i + 2,
+        courseTitle: str(row['Course Title *'] ?? row['Course Title'] ?? ''),
+        serialNumber: str(row['Course Run Code'] ?? ''),
+        courseRunType: str(row['Course Run Type *'] ?? row['Course Run Type'] ?? ''),
+        clientOrganization: str(row['Client Organisation'] ?? ''),
+        startDate: fmtDateForPreview(row['Start Date *'] ?? row['Start Date'] ?? ''),
+        endDate: fmtDateForPreview(row['End Date'] ?? ''),
+        startTime: fmtTimeForPreview(row['Start Time'] ?? ''),
+        endTime: fmtTimeForPreview(row['End Time'] ?? ''),
+        venueType: str(row['Venue Type *'] ?? row['Venue Type'] ?? ''),
+        venueName: str(row['Venue Name'] ?? ''),
+        specifiedLocation: str(row['Specified Location'] ?? ''),
+        minClassSize: str(row['Min Class Size'] ?? ''),
+        maxClassSize: str(row['Max Class Size'] ?? ''),
+        indivReg: str(row['Individual Registration Required'] ?? ''),
+        baseCourseFee: str(row['Base Course Fee'] ?? ''),
+        courseRunFeeType: str(row['Course Run Fee Type'] ?? ''),
+        venueFinalFee: str(row['Venue Final Fee'] ?? ''),
+        venueMaxParticipants: str(row['Venue Max Participants'] ?? ''),
+        perHeadFeeIfMaxExceed: str(row['Per Head Fee if Max Exceeded'] ?? ''),
+        trainer1: str(row['Trainer 1'] ?? ''),
+        trainer2: str(row['Trainer 2'] ?? ''),
+        trainer3: str(row['Trainer 3'] ?? ''),
+        partner1: str(row['Partner 1'] ?? ''),
+        partner2: str(row['Partner 2'] ?? ''),
+        partner3: str(row['Partner 3'] ?? ''),
+        remarks: str(row['Remarks'] ?? ''),
+        status: str(row['Course Status'] ?? ''),
+      };
+    });
+
+    res.json({ success: true, totalRows: rawRows.length, rows });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Preview failed';
+    res.status(500).json({ success: false, error: msg });
+  }
+};
+
+export const importCourseRuns2 = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      res.status(400).json({ success: false, error: 'Empty workbook' });
+      return;
+    }
+    const sheet = workbook.Sheets[sheetName]!;
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+
+    const results = {
+      total: rawRows.length,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as Array<{ row: number; reason: string }>,
+    };
+
+    for (let i = 0; i < rawRows.length; i++) {
+      const rowNum = i + 2;
+      const raw = rawRows[i];
+      if (!raw) { results.skipped++; continue; }
+      const row = normalizeRow(raw);
+
+      const courseTitle = str(row['Course Title *'] ?? row['Course Title'] ?? '');
+      if (!courseTitle) {
+        results.errors.push({ row: rowNum, reason: 'Missing required field: "Course Title"' });
+        results.skipped++;
+        continue;
+      }
+
+      const courseRunTypeStr = str(row['Course Run Type *'] ?? row['Course Run Type'] ?? '');
+      const courseRunType = parseCourseRunType(courseRunTypeStr);
+      if (!courseRunType) {
+        results.errors.push({ row: rowNum, reason: `Invalid Course Run Type: "${courseRunTypeStr}"` });
+        results.skipped++;
+        continue;
+      }
+
+      const startDateRaw = parseExcelDate(row['Start Date *'] ?? row['Start Date'] ?? '');
+      if (!startDateRaw) {
+        results.errors.push({ row: rowNum, reason: 'Invalid or missing "Start Date"' });
+        results.skipped++;
+        continue;
+      }
+      const endDateRaw = parseExcelDate(row['End Date'] ?? '');
+
+      const startDatetime = buildDatetime(startDateRaw, row['Start Time'] || '09:00');
+      const endDatetime = buildDatetime(endDateRaw ?? startDateRaw, row['End Time'] || '17:00');
+
+      const venueTypeStr = str(row['Venue Type *'] ?? row['Venue Type'] ?? '');
+      const venueType = parseVenueType(venueTypeStr);
+      if (!venueType) {
+        results.errors.push({ row: rowNum, reason: `Invalid Venue Type: "${venueTypeStr}"` });
+        results.skipped++;
+        continue;
+      }
+
+      // 1. Resolve Course
+      const course = await prisma.course.findFirst({
+        where: { title: courseTitle },
+      });
+      if (!course) {
+        results.errors.push({ row: rowNum, reason: `Course not found: "${courseTitle}"` });
+        results.skipped++;
+        continue;
+      }
+
+      // 2. Resolve Serial Number
+      let serialNumber = strOrNull(row['Course Run Code'] ?? '');
+      if (!serialNumber && course.courseCode) {
+        const dayStr = String(startDateRaw.getUTCDate()).padStart(2, '0');
+        const monthStr = String(startDateRaw.getUTCMonth() + 1).padStart(2, '0');
+        const yearStr = String(startDateRaw.getUTCFullYear()).slice(-2);
+        serialNumber = `${course.courseCode}-${dayStr}${monthStr}${yearStr}`;
+      }
+
+      // 3. Resolve Organisation
+      const clientOrgName = strOrNull(row['Client Organisation'] ?? '');
+      let clientOrganizationId: string | null = null;
+      if (clientOrgName) {
+        const org = await prisma.organization.findFirst({
+          where: { name: clientOrgName, status: { not: 'INACTIVE' } },
+        });
+        if (org) {
+          clientOrganizationId = org.id;
+        } else {
+          results.errors.push({ row: rowNum, reason: `Organisation not found: "${clientOrgName}"` });
+          results.skipped++;
+          continue;
+        }
+      } else if (courseRunType !== 'OPEN') {
+        results.errors.push({ row: rowNum, reason: `Client Organisation is required for Course Run Type: "${courseRunTypeStr}"` });
+        results.skipped++;
+        continue;
+      }
+
+      // 4. Resolve Venue
+      const venueName = strOrNull(row['Venue Name'] ?? '');
+      let venueId: string | null = null;
+      if (venueName) {
+        const venue = await prisma.venue.findFirst({
+          where: { name: venueName, deletedAt: null },
+        });
+        if (venue) {
+          venueId = venue.id;
+        } else {
+          results.errors.push({ row: rowNum, reason: `Venue Name not found: "${venueName}"` });
+          results.skipped++;
+          continue;
+        }
+      }
+
+      // 5. Resolve Trainers
+      const trainerNames = [
+        strOrNull(row['Trainer 1']),
+        strOrNull(row['Trainer 2']),
+        strOrNull(row['Trainer 3']),
+      ].filter((name): name is string => name !== null);
+
+      const trainerIds: string[] = [];
+      let trainerResolutionFailed = false;
+      for (const tName of trainerNames) {
+        const trainer = await prisma.user.findFirst({
+          where: { name: tName, role: 'TRAINER', deletedAt: null },
+        });
+        if (trainer) {
+          trainerIds.push(trainer.id);
+        } else {
+          results.errors.push({ row: rowNum, reason: `Trainer not found: "${tName}"` });
+          trainerResolutionFailed = true;
+          break;
+        }
+      }
+      if (trainerResolutionFailed) {
+        results.skipped++;
+        continue;
+      }
+
+      // 5.5 Resolve Partners
+      const partnerNames = [
+        strOrNull(row['Partner 1']),
+        strOrNull(row['Partner 2']),
+        strOrNull(row['Partner 3']),
+      ].filter((name): name is string => name !== null);
+
+      const partnerIds: string[] = [];
+      let partnerResolutionFailed = false;
+      for (const pName of partnerNames) {
+        const partner = await prisma.partner.findFirst({
+          where: { name: pName, deletedAt: null },
+        });
+        if (partner) {
+          partnerIds.push(partner.id);
+        } else {
+          results.errors.push({ row: rowNum, reason: `Partner not found: "${pName}"` });
+          partnerResolutionFailed = true;
+          break;
+        }
+      }
+      if (partnerResolutionFailed) {
+        results.skipped++;
+        continue;
+      }
+
+      // 6. Parse other properties
+      const specifiedLocation = strOrNull(row['Specified Location'] ?? '');
+      const minClassSize = row['Min Class Size'] && !isNaN(parseInt(str(row['Min Class Size']))) ? parseInt(str(row['Min Class Size'])) : null;
+      const maxClassSize = row['Max Class Size'] && !isNaN(parseInt(str(row['Max Class Size']))) ? parseInt(str(row['Max Class Size'])) : null;
+      
+      const indivRegStr = str(row['Individual Registration Required'] ?? '').toLowerCase();
+      const individualRegistrationRequired = indivRegStr === 'yes' || indivRegStr === 'true' || indivRegStr === '1';
+
+      const baseCourseFee = row['Base Course Fee'] && !isNaN(parseFloat(str(row['Base Course Fee']).replace(/^\$/, ''))) 
+        ? parseFloat(str(row['Base Course Fee']).replace(/^\$/, '')) 
+        : null;
+
+      const courseRunFeeTypeStr = str(row['Course Run Fee Type'] ?? '');
+      const courseRunFeeType = parseCourseRunFeeType(courseRunFeeTypeStr);
+
+      const venueFinalFee = row['Venue Final Fee'] && !isNaN(parseFloat(str(row['Venue Final Fee']).replace(/^\$/, '')))
+        ? parseFloat(str(row['Venue Final Fee']).replace(/^\$/, ''))
+        : null;
+
+      const venueMaxParticipants = row['Venue Max Participants'] && !isNaN(parseInt(str(row['Venue Max Participants'])))
+        ? parseInt(str(row['Venue Max Participants']))
+        : null;
+
+      const perHeadFeeIfMaxExceed = row['Per Head Fee if Max Exceeded'] && !isNaN(parseFloat(str(row['Per Head Fee if Max Exceeded']).replace(/^\$/, '')))
+        ? parseFloat(str(row['Per Head Fee if Max Exceeded']).replace(/^\$/, ''))
+        : null;
+
+      const remarks = strOrNull(row['Remarks'] ?? '');
+      const statusStr = str(row['Course Status'] ?? '');
+      const status = statusStr ? parseCourseStatus(statusStr) : 'DRAFT';
+
+      // 7. Look up existing Course Run
+      let existing = null;
+      if (serialNumber) {
+        existing = await prisma.courseRun.findFirst({
+          where: { serialNumber, deletedAt: null },
+        });
+      }
+      if (!existing && startDatetime) {
+        const windowStart = new Date(startDatetime.getTime() - 60 * 60 * 1000);
+        const windowEnd = new Date(startDatetime.getTime() + 60 * 60 * 1000);
+        existing = await prisma.courseRun.findFirst({
+          where: {
+            courseId: course.id,
+            startDatetime: { gte: windowStart, lte: windowEnd },
+            deletedAt: null,
+          },
+        });
+      }
+
+      try {
+        const dataPayload = {
+          courseId: course.id,
+          serialNumber,
+          courseRunType,
+          clientOrganizationId,
+          startDatetime,
+          endDatetime,
+          venueType,
+          venueId,
+          specifiedLocation,
+          minClassSize,
+          maxClassSize,
+          individualRegistrationRequired,
+          baseCourseFee,
+          courseRunFeeType,
+          venueFinalFee,
+          venueMaxParticipant: venueMaxParticipants,
+          perHeadFeeIfMaxExceed,
+          remarks,
+          status,
+        };
+
+        let courseRunId = '';
+        if (existing) {
+          await prisma.courseRun.update({
+            where: { id: existing.id },
+            data: dataPayload,
+          });
+          courseRunId = existing.id;
+          results.updated++;
+        } else {
+          const created = await prisma.courseRun.create({
+            data: dataPayload,
+          });
+          courseRunId = created.id;
+          results.created++;
+        }
+
+        // 8. Handle Trainer Assignments and Fees
+        // Sync assignments by deleting non-included ones and upserting included ones
+        await prisma.courseRunTrainer.deleteMany({
+          where: {
+            courseRunId,
+            trainerId: { notIn: trainerIds },
+          },
+        });
+
+        for (const trainerId of trainerIds) {
+          let trainerBaseAmount = baseCourseFee;
+          if (trainerBaseAmount === null) {
+            // Find default feePerRun from CourseTrainer
+            const courseTrainer = await prisma.courseTrainer.findUnique({
+              where: { courseId_trainerId: { courseId: course.id, trainerId } },
+            });
+            trainerBaseAmount = courseTrainer ? courseTrainer.feePerRun : 0;
+          }
+
+          await prisma.courseRunTrainer.upsert({
+            where: { courseRunId_trainerId: { courseRunId, trainerId } },
+            create: {
+              courseRunId,
+              trainerId,
+              trainerBaseAmount,
+            },
+            update: {
+              trainerBaseAmount,
+            },
+          });
+        }
+
+        // 9. Handle Partner Assignments
+        await prisma.courseRunPartner.deleteMany({
+          where: {
+            courseRunId,
+            partnerId: { notIn: partnerIds },
+          },
+        });
+
+        for (const partnerId of partnerIds) {
+          await prisma.courseRunPartner.upsert({
+            where: { courseRunId_partnerId: { courseRunId, partnerId } },
+            create: { courseRunId, partnerId },
+            update: {},
+          });
+        }
+
+      } catch (rowError: unknown) {
+        const msg = rowError instanceof Error ? rowError.message : 'Database error';
+        results.errors.push({ row: rowNum, reason: msg });
+        results.skipped++;
+      }
+    }
+
+    res.json({
+      success: true,
+      results,
+      message: `Import complete: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped`,
+    });
+
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Import failed';
+    console.error('[importCourseRuns2]', error);
     res.status(500).json({ success: false, error: msg });
   }
 };

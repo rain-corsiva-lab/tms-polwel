@@ -95,6 +95,9 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
       if (['ACTIVE', 'INACTIVE', 'PENDING', 'LOCKED'].includes(rawStatus)) {
         where.status = rawStatus as UserStatus;
       }
+    } else {
+      // By default, exclude soft-deleted/inactive organizations
+      where.status = { not: 'INACTIVE' };
     }
     if (rawOrgType) {
       if (['POLWEL', 'SPF', 'PUBLIC_SECTOR', 'PRIVATE_SECTOR'].includes(rawOrgType)) {
@@ -215,7 +218,7 @@ export const getClientOrganizationById = async (req: AuthenticatedRequest, res: 
       }
     });
 
-    if (!organization) {
+    if (!organization || organization.status === 'INACTIVE') {
       return errorResponse(res, 404, 'Organization not found');
     }
 
@@ -608,17 +611,30 @@ export const deleteClientOrganization = async (req: AuthenticatedRequest, res: R
       return errorResponse(res, 404, 'Organization not found');
     }
 
-    // Soft delete by setting status to INACTIVE
-    await prisma.organization.update({
-      where: { id },
-      data: {
-        status: UserStatus.INACTIVE
-      }
-    });
+    // Soft delete organization and linked training coordinators in a transaction
+    await prisma.$transaction([
+      prisma.organization.update({
+        where: { id },
+        data: {
+          status: UserStatus.INACTIVE
+        }
+      }),
+      prisma.user.updateMany({
+        where: {
+          organizationId: id,
+          role: 'TRAINING_COORDINATOR',
+          deletedAt: null
+        },
+        data: {
+          status: UserStatus.INACTIVE,
+          deletedAt: new Date()
+        }
+      })
+    ]);
 
     return res.json({
       success: true,
-      message: 'Organization deleted successfully'
+      message: 'Organization and its coordinators deleted successfully'
     });
   } catch (error) {
     console.error('Delete client organization error:', error);
@@ -635,7 +651,9 @@ export const getOrganizationStats = async (req: AuthenticatedRequest, res: Respo
       totalUsers,
       totalBookings
     ] = await Promise.all([
-      prisma.organization.count(),
+      prisma.organization.count({
+        where: { status: { not: 'INACTIVE' } }
+      }),
       prisma.organization.count({
         where: { status: UserStatus.ACTIVE }
       }),

@@ -1007,6 +1007,7 @@ export const getFilterOptions = async (req: AuthenticatedRequest, res: Response)
   try {
     const [organizations, trainers, venues] = await Promise.all([
       prisma.organization.findMany({
+        where: { status: { not: 'INACTIVE' } },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),

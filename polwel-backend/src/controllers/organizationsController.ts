@@ -89,7 +89,7 @@ export const organizationsController = {
         }
       });
 
-      if (!organization) {
+      if (!organization || organization.status === 'INACTIVE') {
         return res.status(404).json({
           success: false,
           error: 'Organization not found'
