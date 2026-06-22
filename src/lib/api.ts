@@ -2468,6 +2468,16 @@ export const importApi = {
     formData.append('file', file);
     return apiRequest('/import/course-runs', { method: 'POST', body: formData, timeout: 120000 });
   },
+  previewCourseRuns2: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-runs-2/preview', { method: 'POST', body: formData, timeout: 60000 });
+  },
+  importCourseRuns2: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/import/course-runs-2', { method: 'POST', body: formData, timeout: 120000 });
+  },
   previewLearners: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

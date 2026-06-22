@@ -1863,13 +1863,79 @@ export const courseRunController = {
         return;
       }
 
-      // Soft delete
-      const courseRun = await prisma.courseRun.update({
-        where: { id: id },
-        data: {
-          deletedAt: new Date(),
-          updatedAt: new Date(),
-        },
+      const now = new Date();
+
+      // Find the billing associated with this course run
+      const billing = await prisma.courseRunBilling.findUnique({
+        where: { courseRunId: id },
+        select: { id: true },
+      });
+
+      // Run soft deletes in a transaction
+      await prisma.$transaction(async (tx) => {
+        // 1. Soft delete the main CourseRun record
+        await tx.courseRun.update({
+          where: { id },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 2. Soft delete CourseRunLearner pivot records
+        await tx.courseRunLearner.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 3. Soft delete CourseRunTrainer pivot records
+        await tx.courseRunTrainer.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 4. Soft delete CourseRunPartner pivot records
+        await tx.courseRunPartner.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 5. Soft delete CourseRunLearnerAttendance records
+        await tx.courseRunLearnerAttendance.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 6. Soft delete billing tables if billing exists
+        if (billing) {
+          await tx.courseRunBillingEntry.updateMany({
+            where: { courseRunBillingId: billing.id, deletedAt: null },
+            data: {
+              deletedAt: now,
+              updatedAt: now,
+            },
+          });
+
+          await tx.courseRunBilling.update({
+            where: { id: billing.id },
+            data: {
+              deletedAt: now,
+              updatedAt: now,
+            },
+          });
+        }
       });
 
       res.json({
@@ -2252,6 +2318,9 @@ export const courseRunController = {
         const where: any = {
           name: {
             equals: name,
+          },
+          status: {
+            not: 'INACTIVE',
           },
         };
 
