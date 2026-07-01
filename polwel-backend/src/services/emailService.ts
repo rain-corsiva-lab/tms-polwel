@@ -2584,7 +2584,10 @@ class EmailService {
                             <td>
                               <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear ${learnerName || 'Participant'},</p>
                               <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                We regret to inform you that the following course has been cancelled due to ${cancellationReason || 'unforeseen circumstances'}.
+                                ${isTrainer
+                                  ? 'We regret to inform you that the following course has been cancelled.'
+                                  : `We regret to inform you that the following course has been cancelled due to ${cancellationReason || 'unforeseen circumstances'}.`
+                                }
                               </p>
 
                               <p style="margin: 24px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details :</p>

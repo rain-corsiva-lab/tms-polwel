@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Search, Download, Loader2, Filter } from "lucide-react";
+import { Building2, Search, Download, Loader2, Filter, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 import * as XLSX from "xlsx";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -107,6 +108,41 @@ const ClientOrganisations = () => {
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
+  };
+
+  const handleDeleteOrg = async (org: ClientOrg) => {
+    const result = await Swal.fire({
+      title: "Delete Client Organisation?",
+      text: `Are you sure you want to deactivate and delete "${org.name}"? This will mark the organisation status as INACTIVE and soft-delete all linked training coordinator users. This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const resp = await clientOrganizationsApi.delete(org.id);
+        if (resp.success) {
+          toast({
+            title: "Deleted successfully",
+            description: `Organisation "${org.name}" and its coordinators were soft-deleted.`,
+          });
+          fetchClientOrgs();
+        } else {
+          throw new Error(resp.error || "Failed to delete organisation");
+        }
+      } catch (error: any) {
+        console.error("Error deleting organisation:", error);
+        toast({
+          title: "Delete failed",
+          description: error.message || "An error occurred during deletion",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleExport = async () => {
@@ -393,12 +429,23 @@ const ClientOrganisations = () => {
                   <TableCell>
                     <Badge variant={org.status === "ACTIVE" ? "default" : "secondary"}>{org.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Link to={`/client-organisations/${org.id}`}>
-                      <Button variant="outline" size="sm">
-                        Manage
+                  <TableCell className="text-right whitespace-nowrap">
+                    <div className="inline-flex items-center gap-2">
+                      <Link to={`/client-organisations/${org.id}`}>
+                        <Button variant="outline" size="sm">
+                          Manage
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:text-red-900 hover:bg-red-50"
+                        onClick={() => handleDeleteOrg(org)}
+                        title="Delete Client Organisation"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

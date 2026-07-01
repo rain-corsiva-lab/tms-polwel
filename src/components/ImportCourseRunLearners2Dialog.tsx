@@ -28,6 +28,7 @@ interface PreviewRow {
   attendanceStatus: string;
   courseRunTitle: string;
   courseRunStartDate: string;
+  courseRunEndDate: string;
 }
 
 interface ImportResults {
@@ -233,6 +234,9 @@ export function ImportCourseRunLearners2Dialog({ onImportComplete }: { onImportC
                 <span>
                   <span className="font-medium text-foreground">Course Run Start Date</span> — DD-MM-YYYY
                 </span>
+                <span>
+                  <span className="font-medium text-foreground">Course Run End Date</span> — DD-MM-YYYY (Optional)
+                </span>
               </div>
             </div>
 
@@ -321,6 +325,7 @@ export function ImportCourseRunLearners2Dialog({ onImportComplete }: { onImportC
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Attendance</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Course Run</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Start Date</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">End Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -339,6 +344,7 @@ export function ImportCourseRunLearners2Dialog({ onImportComplete }: { onImportC
                       <td className="px-2 py-1">{getAttendanceBadge(r.attendanceStatus)}</td>
                       <td className="px-2 py-1 max-w-[160px] truncate">{r.courseRunTitle}</td>
                       <td className="px-2 py-1 whitespace-nowrap">{r.courseRunStartDate}</td>
+                      <td className="px-2 py-1 whitespace-nowrap">{r.courseRunEndDate}</td>
                     </tr>
                   ))}
                 </tbody>

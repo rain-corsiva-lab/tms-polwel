@@ -13,6 +13,7 @@ import { dashboardApi } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/date";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ImportCourseRunsDialog } from "@/components/ImportCourseRunsDialog";
+import { ImportCourseRuns2Dialog } from "@/components/ImportCourseRuns2Dialog";
 import { ImportLearnersDialog } from "@/components/ImportLearnersDialog";
 import { ImportCourseRunLearners2Dialog } from "@/components/ImportCourseRunLearners2Dialog";
 
@@ -755,6 +756,7 @@ function DashboardContent() {
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <ImportCourseRunsDialog />
+            <ImportCourseRuns2Dialog />
             <ImportLearnersDialog />
             <ImportCourseRunLearners2Dialog />
           </div>

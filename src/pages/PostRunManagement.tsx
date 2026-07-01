@@ -12,7 +12,8 @@ import { generateBillingXLSX } from "@/lib/billingExport";
 import { GenerateCertificatesDialog } from "@/components/GenerateCertificatesDialog";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/errorHandler";
-import { Loader2, MoreHorizontal, Search, FileSpreadsheet, Award, Filter } from "lucide-react";
+import { Loader2, MoreHorizontal, Search, FileSpreadsheet, Award, Filter, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -384,6 +385,45 @@ const PostRunManagement: React.FC = () => {
     [navigate, refetchCompleted, refetchPending, toast],
   );
 
+  const handleDeleteCourseRun = useCallback(
+    async (run: CourseRunRow) => {
+      const result = await Swal.fire({
+        title: "Delete Course Run?",
+        text: `Are you sure you want to delete "${run.courseTitle}" (${run.courseCode})? This will soft-delete the run and all associated pivot records (learners, trainers, partners, attendance, and billings) but will keep primary trainer and learner details. This action cannot be undone.`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#ef4444",
+        cancelButtonColor: "#6b7280",
+        confirmButtonText: "Yes, delete it!",
+        cancelButtonText: "Cancel",
+      });
+
+      if (result.isConfirmed) {
+        try {
+          const resp = await courseRunsApi.delete(run.id);
+          if (resp.success) {
+            toast({
+              title: "Deleted successfully",
+              description: `Course run "${run.courseTitle}" was soft-deleted.`,
+            });
+            refetchCompleted();
+            refetchPending();
+          } else {
+            throw new Error(resp.error || "Failed to delete course run");
+          }
+        } catch (error: any) {
+          console.error("Error deleting course run:", error);
+          toast({
+            title: "Delete failed",
+            description: getErrorMessage(error, "An error occurred during deletion"),
+            variant: "destructive",
+          });
+        }
+      }
+    },
+    [refetchCompleted, refetchPending, toast]
+  );
+
   const renderStatus = (status: string) => {
     const key = status?.toUpperCase?.() ?? "";
     const className = statusChipClassMap[key] ?? "bg-gray-100 text-gray-700";
@@ -610,38 +650,49 @@ const PostRunManagement: React.FC = () => {
                     )}
                   </TableCell>
                 )}
-                <TableCell className="text-right">
-                  <SafeDropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewDetails(run)}>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <GenerateCertificatesDialog
-                          courseRunId={run.id}
-                          courseRunCode={run.courseCode}
-                          trigger={
-                            <div className="flex items-center w-full">
-                              <Award className="h-4 w-4 mr-2" />
-                              Administrative Matters
-                            </div>
-                          }
-                        />
-                      </DropdownMenuItem>
-                      {showGenerateBilling && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleGenerateBillingReport(run)}>
-                            <FileSpreadsheet className="h-4 w-4 mr-2" />
-                            Generate Billing Report
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </SafeDropdownMenu>
+                <TableCell className="text-right whitespace-nowrap">
+                  <div className="inline-flex items-center gap-2">
+                    <SafeDropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewDetails(run)}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <GenerateCertificatesDialog
+                            courseRunId={run.id}
+                            courseRunCode={run.courseCode}
+                            trigger={
+                              <div className="flex items-center w-full">
+                                <Award className="h-4 w-4 mr-2" />
+                                Administrative Matters
+                              </div>
+                            }
+                          />
+                        </DropdownMenuItem>
+                        {showGenerateBilling && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleGenerateBillingReport(run)}>
+                              <FileSpreadsheet className="h-4 w-4 mr-2" />
+                              Generate Billing Report
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </SafeDropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-600 hover:text-red-900 hover:bg-red-50"
+                      onClick={() => handleDeleteCourseRun(run)}
+                      title="Delete Course Run"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

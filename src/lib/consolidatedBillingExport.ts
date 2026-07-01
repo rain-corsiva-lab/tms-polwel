@@ -101,130 +101,6 @@ const getDiscountMeta = (entry: any, courseRun: any): { text: string; noDiscount
   return { text, noDiscount, discountGranted };
 };
 
-const buildClientActualSection = (worksheet: ExcelJS.Worksheet, startRow: number, billingMonth: string, courseRuns: any[]) => {
-  worksheet.mergeCells(startRow, 1, startRow, 28);
-  const sectionTitle = worksheet.getCell(startRow, 1);
-  sectionTitle.value = `PDCS Estimated Billing for Month of ${billingMonth} (PDCS)`;
-  sectionTitle.font = { bold: true, size: 14 };
-  sectionTitle.alignment = { horizontal: 'left', vertical: 'middle' };
-
-  const headerRowNum = startRow + 1;
-  const headers = [
-    'Project Title',
-    'Billing Rate (if applicable) PER PAX',
-    'Billing Rate (if applicable) PER RUN',
-    'Unit PAX',
-    'Unit RUN',
-    'Course/Service/Delivery Date',
-    'PM',
-    'Value of Work Done (based on actual / forecast for the month) Unit PAX',
-    'Value of Work Done (based on actual / forecast for the month) Unit RUN',
-    'PBMS Ref',
-    'PBMS Invoice Date',
-    'No discounts',
-    'Discount granted',
-    'Actual Amount billed in current month',
-    'Salary / Contract Fees',
-    'PBMS Ref2 (Invoice for contract fees)',
-    'PBMS Invoice creation date for contract fees',
-    'Contract Fees Payout in current month',
-    'PBMS Ref3 (Invoice for venue expense)',
-    'PBMS Invoice creation date for venue expense',
-    'Venue Expenses in current month',
-    'Remarks',
-    'Other Remarks',
-  ];
-
-  const sectionHeader = worksheet.getRow(headerRowNum);
-  headers.forEach((header, index) => {
-    const col = index + 1;
-    const cell = sectionHeader.getCell(col);
-    cell.value = header;
-
-    let fill = 'FFD9D9D9';
-    if (col >= 10 && col <= 13) fill = 'FFAEC3DB';
-    if (col >= 14 && col <= 14) fill = 'FFBFD0E3';
-    if (col >= 15 && col <= 17) fill = 'FFCCC6D9';
-    if (col >= 18 && col <= 21) fill = 'FFE8D8C8';
-    if (col >= 22) fill = 'FFC4C8CF';
-
-    formatHeadingCell(cell, fill);
-    cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-  });
-  sectionHeader.height = 46;
-
-  let rowNum = headerRowNum + 1;
-
-  for (const courseRun of courseRuns) {
-    const billing = courseRun.billing || {};
-    const entries = Array.isArray(billing.entries) && billing.entries.length > 0 ? billing.entries : [null];
-    const defaultCourseFee = toNumber(courseRun.defaultCourseFee);
-    const start = formatDate(courseRun.startDate, true);
-    const end = formatDate(courseRun.endDate, true);
-    const dateRange = start && end ? `${start}${start === end ? '' : ` - ${end}`}` : '';
-
-    entries.forEach((entry: any, idx: number) => {
-      const row = worksheet.getRow(rowNum);
-      const learnerCount = Array.isArray(entry?.learners) ? entry.learners.length : 0;
-      const discountMeta = getDiscountMeta(entry, courseRun);
-      const invoiceAmount = toNumber(entry?.invoiceAmount);
-
-      const billingRatePerPax = defaultCourseFee > 0 ? defaultCourseFee : null;
-      const billingRatePerRun = defaultCourseFee > 0 ? null : toNumber(billing.valueOfWorkDone);
-      const valueByPax = billingRatePerPax !== null ? invoiceAmount : null;
-      const valueByRun = billingRatePerPax === null ? (invoiceAmount || toNumber(billing.valueOfWorkDone)) : null;
-
-      row.getCell(1).value = courseRun.courseTitle || '';
-      setCurrency(row.getCell(2), billingRatePerPax);
-      setCurrency(row.getCell(3), billingRatePerRun);
-      row.getCell(4).value = learnerCount > 0 ? learnerCount : '';
-      row.getCell(5).value = 1;
-      row.getCell(6).value = dateRange;
-      row.getCell(7).value = 'N';
-      setCurrency(row.getCell(8), valueByPax);
-      setCurrency(row.getCell(9), valueByRun);
-      row.getCell(10).value = entry?.pbmsInvoiceNumber || '';
-      row.getCell(11).value = formatDate(entry?.pbmsInvoiceDate);
-      row.getCell(12).value = discountMeta.noDiscount > 0 ? discountMeta.noDiscount : 0;
-      row.getCell(13).value = discountMeta.discountGranted > 0 ? discountMeta.discountGranted : 0;
-      setCurrency(row.getCell(14), invoiceAmount || null);
-      row.getCell(15).value = 'Contract Fees';
-
-      if (idx === 0) {
-        row.getCell(16).value = billing.contractFeePBMSBENumber || '';
-        row.getCell(17).value = formatDate(billing.contractPBMSInvoiceDate);
-        setCurrency(row.getCell(18), toNumber(billing.contractInvoiceAmount) || null);
-        row.getCell(19).value = billing.venuePBMSBENumber || '';
-        row.getCell(20).value = formatDate(billing.venuePBMSInvoiceDate);
-        setCurrency(row.getCell(21), toNumber(billing.venueInvoiceAmount) || null);
-        row.getCell(22).value = billing.finalRemarks || '';
-      }
-
-      row.getCell(23).value = entry?.remarks || '';
-      if (typeof row.getCell(23).value === 'string' && String(row.getCell(23).value).toLowerCase().includes('deduction')) {
-        row.getCell(23).font = { color: { argb: 'FFFF0000' } };
-      }
-
-      for (let col = 1; col <= 23; col += 1) {
-        applyBorder(row.getCell(col));
-        if (![1, 6, 22, 23].includes(col) && !row.getCell(col).alignment) {
-          row.getCell(col).alignment = { horizontal: 'center', vertical: 'middle' };
-        }
-      }
-
-      row.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-      row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      row.getCell(22).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
-      row.getCell(23).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
-      row.height = 24;
-
-      rowNum += 1;
-    });
-  }
-
-  return rowNum;
-};
-
 export async function generateConsolidatedBillingXLSX(exportData: any) {
   try {
     const workbook = new ExcelJS.Workbook();
@@ -247,405 +123,366 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       },
     };
 
-    // Define column widths (A-AB). Top section uses A-Y, client comparison section uses A-AB.
+    // Define column widths for A-X (the 24 columns of the bottom table)
     worksheet.columns = [
-      { width: 30 }, // A: Title
-      { width: 15 }, // B: Course Run #
-      { width: 12 }, // C: Billing Rate
-      { width: 12 }, // D: Before GST
-      { width: 8 },  // E: Qty
-      { width: 10 }, // F: Unit (HEAD)
-      { width: 12 }, // G: Number of Unit
-      { width: 20 }, // H: Course Duration
-      { width: 8 },  // I: Project
-      { width: 15 }, // J: Value of Work Done
-      { width: 15 }, // K: PBMS Ref (Invoice)
-      { width: 15 }, // L: PBMS Invoice Date
-      { width: 30 }, // M: Discount List
-      { width: 25 }, // N: Entry Remarks
-      { width: 12 }, // O: Invoice Amount
-      { width: 15 }, // P: Contract PBMS BE
-      { width: 15 }, // Q: Contract Invoice Date
-      { width: 15 }, // R: Contract Amount
-      { width: 15 }, // S: Venue PBMS BE
-      { width: 15 }, // T: Venue Invoice Date
-      { width: 15 }, // U: Venue Amount
-      { width: 15 }, // V: Trainer Fees (NEW)
-      { width: 15 }, // W: Additional Fees (NEW)
-      { width: 15 }, // X: Total Fee
-      { width: 30 }, // Y: Final Remarks
+      { width: 30 }, // A: Project Title (1)
+      { width: 15 }, // B: Billing Rate PTR PAX (2)
+      { width: 15 }, // C: Billing Rate PTR RUN (3)
+      { width: 12 }, // D: Unit PAX (4)
+      { width: 12 }, // E: Unit RUN (5)
+      { width: 15 }, // F: Course Run Code (6) (hidden by default)
+      { width: 20 }, // G: Course/Service/Delivery Date (7)
+      { width: 8 },  // H: PM (8)
+      { width: 15 }, // I: Value of Work Done Unit PAX (9)
+      { width: 15 }, // J: Value of Work Done Unit RUN (10)
+      { width: 15 }, // K: PBMS Ref (11)
+      { width: 15 }, // L: PBMS Invoice Date (12)
+      { width: 12 }, // M: No discounts (13)
+      { width: 12 }, // N: Discount granted (14)
+      { width: 15 }, // O: Actual Amount billed in current month (15)
+      { width: 15 }, // P: Salary / Contract Fees (16)
+      { width: 15 }, // Q: PBMS Ref2 (Invoice for contract fees) (17)
+      { width: 15 }, // R: PBMS Invoice creation date for contract fees (18)
+      { width: 15 }, // S: Contract Fees Payout in current month (19)
+      { width: 15 }, // T: PBMS Ref3 (Invoice for venue expense) (20)
+      { width: 15 }, // U: PBMS Invoice creation date for venue expense (21)
+      { width: 15 }, // V: Venue Expenses in current month (22)
+      { width: 30 }, // W: Remarks (23)
+      { width: 30 }, // X: Other Remarks (24)
     ];
+
+    // Hide Course Run Code column (Column F / Column 6) by default
+    worksheet.getColumn(6).hidden = true;
 
     worksheet.views = [{ state: 'frozen', ySplit: 3 }];
 
     // Title row
-    worksheet.mergeCells('A1:Y1');
+    worksheet.mergeCells('A1:X1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = `PDCS Estimated Billing for Month of ${exportData.billingMonth}`;
+    titleCell.value = `PDCS Estimated Billing for Month of ${exportData.billingMonth} (PDCS)`;
     titleCell.font = { bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     // Note row
-    worksheet.mergeCells('A2:Y2');
+    worksheet.mergeCells('A2:X2');
     const noteCell = worksheet.getCell('A2');
     noteCell.value = '(All figures to exclude GST)';
     noteCell.font = { italic: true, size: 10 };
     noteCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // Header row with all columns including new fee columns
+    // Table headers in Row 3
     const headers = [
-      'Title',
-      'Course Run #',
-      'Billing Rate',
-      'Before GST',
-      'Qty',
-      'Unit (HEAD)',
-      'Number of Unit (RUN)',
-      'Course Duration',
-      'Project',
-      'Value of Work Done',
+      'Project Title',
+      'Billing Rate (if applicable) PTR PAX',
+      'Billing Rate (if applicable) PTR RUN',
+      'Unit PAX',
+      'Unit RUN',
+      'Course Run Code',
+      'Course/Service/Delivery Date',
+      'PM',
+      'Value of Work Done (based on actual / forecast for the month) Unit PAX',
+      'Value of Work Done (based on actual / forecast for the month) Unit RUN',
       'PBMS Ref',
-      'PBMS Invoice',
-      'Discount List',
-      'Entry Remarks',
-      'Invoice Amount',
-      'Contract PBMS BE',
-      'Contract Invoice Date',
-      'Contract Amount',
-      'Venue PBMS BE',
-      'Venue Invoice Date',
-      'Venue Amount',
-      'Trainer Fees',
-      'Additional Fees',
-      'Total Fee',
-      'Final Remarks',
+      'PBMS Invoice Date',
+      'No discounts',
+      'Discount granted',
+      'Actual Amount billed in current month',
+      'Salary / Contract Fees',
+      'PBMS Ref2 (Invoice for contract fees)',
+      'PBMS Invoice creation date for contract fees',
+      'Contract Fees Payout in current month',
+      'PBMS Ref3 (Invoice for venue expense)',
+      'PBMS Invoice creation date for venue expense',
+      'Venue Expenses in current month',
+      'Remarks',
+      'Other Remarks',
     ];
 
     const headerRow = worksheet.getRow(3);
     headers.forEach((header, index) => {
-      const cell = headerRow.getCell(index + 1);
+      const col = index + 1;
+      const cell = headerRow.getCell(col);
       cell.value = header;
-      // Header palette aligned to client sample
-      const redColumns = [0, 9]; // Title, Value of Work Done
-      const greenColumns = [2, 3, 21, 23]; // Billing Rate, Before GST, Trainer Fees, Total Fee
-      const yellowColumns = [1, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22];
-      const fillColor = redColumns.includes(index)
-        ? 'FFFF4C4C'
-        : greenColumns.includes(index)
-          ? 'FF00B050'
-          : yellowColumns.includes(index)
-            ? 'FFFFFF99'
-            : 'FFDCE6F1'; // This is where gray colors used in client sample would fall, but since we have many columns, we'll use a light blue for better differentiation
-      formatHeadingCell(cell, fillColor);
-    });
-    headerRow.height = 30;
 
-    // Process each course run
+      // Color coding headers aligned to client sample (shifted after Col 5)
+      let fill = 'FFD9D9D9';
+      if (col >= 11 && col <= 14) fill = 'FFAEC3DB';
+      if (col === 15) fill = 'FFBFD0E3';
+      if (col >= 16 && col <= 18) fill = 'FFCCC6D9';
+      if (col >= 19 && col <= 22) fill = 'FFE8D8C8';
+      if (col >= 23) fill = 'FFC4C8CF';
+
+      formatHeadingCell(cell, fill);
+      cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+    });
+    headerRow.height = 46;
+
     let currentRow = 4;
-    const courseRuns = exportData.courseRuns || [];
+    // Sort course runs by Project Title to group runs of the same course
+    const courseRuns = [...(exportData.courseRuns || [])].sort((a: any, b: any) => {
+      const titleA = (a.courseTitle || '').toLowerCase();
+      const titleB = (b.courseTitle || '').toLowerCase();
+      return titleA.localeCompare(titleB);
+    });
+
+    // Totals accumulators
+    let totalUnitPax = 0;
+    let totalUnitRun = 0;
+    let totalValuePax = 0;
+    let totalValueRun = 0;
+    let totalNoDiscounts = 0;
+    let totalDiscountGranted = 0;
+    let totalActualAmountBilled = 0;
+    let totalContractFeesPayout = 0;
+    let totalVenueExpenses = 0;
+
+    // Calculate merge boundaries
+    let tempRow = 4;
+    const mergesToApply: { type: 'course' | 'run'; start: number; end: number }[] = [];
+    let currentCourseTitle = '';
+    let courseStartRow = 4;
+
+    for (let i = 0; i < courseRuns.length; i++) {
+      const courseRun = courseRuns[i];
+      const billing = courseRun.billing || {};
+      const entries = Array.isArray(billing.entries) && billing.entries.length > 0 ? billing.entries : [null];
+      const runStartRow = tempRow;
+      const runEndRow = tempRow + entries.length - 1;
+
+      mergesToApply.push({
+        type: 'run',
+        start: runStartRow,
+        end: runEndRow
+      });
+
+      const isLastRun = i === courseRuns.length - 1;
+      const nextRun = isLastRun ? null : courseRuns[i + 1];
+      const nextCourseTitle = nextRun ? (nextRun.courseTitle || '') : '';
+
+      if (i === 0) {
+        currentCourseTitle = courseRun.courseTitle || '';
+        courseStartRow = runStartRow;
+      }
+
+      if (isLastRun || (courseRun.courseTitle || '') !== nextCourseTitle) {
+        mergesToApply.push({
+          type: 'course',
+          start: courseStartRow,
+          end: runEndRow
+        });
+
+        if (!isLastRun) {
+          currentCourseTitle = nextCourseTitle;
+          courseStartRow = runEndRow + 1;
+        }
+      }
+
+      tempRow = runEndRow + 1;
+    }
 
     for (const courseRun of courseRuns) {
       const billing = courseRun.billing || {};
-      const billingEntries = billing.entries || [];
-      const numBillingRows = Math.max(billingEntries.length, 1);
-
-      const startRow = currentRow;
-      const endRow = currentRow + numBillingRows - 1;
-
-      // Calculate data for this course run
-      const contractFees = courseRun.contractFees || 0;
-      const participantCount = courseRun.participants || 0;
+      const entries = Array.isArray(billing.entries) && billing.entries.length > 0 ? billing.entries : [null];
       const defaultCourseFee = toNumber(courseRun.defaultCourseFee);
+      const start = formatDate(courseRun.startDate, true);
+      const end = formatDate(courseRun.endDate, true);
+      const dateRange = start && end ? `${start}${start === end ? '' : ` - ${end}`}` : '';
 
-      // Billing rate should follow the configured default course fee when available.
-      const billingRate = defaultCourseFee > 0 ? defaultCourseFee : (participantCount > 0 ? contractFees / participantCount : 0);
-      const beforeGST = contractFees; // This is the contract amount before GST
-      const valueOfWorkDone = billing.valueOfWorkDone || beforeGST;
-      
-      const courseDates = courseRun.startDate && courseRun.endDate
-        ? `${new Date(courseRun.startDate).toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore' })} - ${new Date(courseRun.endDate).toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore' })}`
-        : '';
+      const billingRatePerPax = defaultCourseFee > 0 ? defaultCourseFee : null;
+      const billingRatePerRun = defaultCourseFee > 0 ? null : toNumber(billing.valueOfWorkDone);
 
-      // Merge columns A-J and P-X across all billing rows if there are multiple entries
-      if (numBillingRows > 1) {
-        for (let col = 1; col <= 10; col++) {
-          worksheet.mergeCells(startRow, col, endRow, col);
+      // 1. Calculate aggregated values for the Course Run
+      let runUnitPax = 0;
+      let runUnitRun = 0;
+      let runValuePax = 0;
+      let runValueRun = 0;
+
+      entries.forEach((entry: any) => {
+        const learnerCount = Array.isArray(entry?.learners) ? entry.learners.length : 0;
+        const invoiceAmount = toNumber(entry?.invoiceAmount);
+        
+        runUnitPax += learnerCount;
+        if (billingRatePerPax === null) {
+          runUnitRun += 1;
         }
-        // Also merge contract and venue columns (P-X) including new fee columns and Total Fee
-        for (let col = 16; col <= 24; col++) {
-          worksheet.mergeCells(startRow, col, endRow, col);
+
+        const valueByPax = billingRatePerPax !== null ? invoiceAmount : null;
+        const valueByRun = billingRatePerPax === null ? (invoiceAmount || toNumber(billing.valueOfWorkDone)) : null;
+
+        if (valueByPax !== null) runValuePax += valueByPax;
+        if (valueByRun !== null) runValueRun += valueByRun;
+      });
+
+      // 2. Write rows for each billing entry
+      entries.forEach((entry: any, idx: number) => {
+        const row = worksheet.getRow(currentRow);
+        const learnerCount = Array.isArray(entry?.learners) ? entry.learners.length : 0;
+        const discountMeta = getDiscountMeta(entry, courseRun);
+        const invoiceAmount = toNumber(entry?.invoiceAmount);
+
+        const valueByPax = billingRatePerPax !== null ? invoiceAmount : null;
+        const valueByRun = billingRatePerPax === null ? (invoiceAmount || toNumber(billing.valueOfWorkDone)) : null;
+
+        // Accumulate sheet totals
+        totalUnitPax += learnerCount;
+        totalUnitRun += 1;
+        if (valueByPax !== null) totalValuePax += valueByPax;
+        if (valueByRun !== null) totalValueRun += valueByRun;
+        totalNoDiscounts += discountMeta.noDiscount;
+        totalDiscountGranted += discountMeta.discountGranted;
+        totalActualAmountBilled += invoiceAmount;
+        if (idx === 0) {
+          totalContractFeesPayout += toNumber(billing.contractInvoiceAmount);
+          totalVenueExpenses += toNumber(billing.venueInvoiceAmount);
         }
-        // Merge final remarks column (Y)
-        worksheet.mergeCells(startRow, 25, endRow, 25);
-      }
 
-      // Fill in the course data (merged cells - only set on first row)
-      const firstDataRow = worksheet.getRow(startRow);
-      
-      // A: Title
-      firstDataRow.getCell(1).value = courseRun.courseTitle || '';
-      firstDataRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-      
-      // B: Course Run #
-      firstDataRow.getCell(2).value = courseRun.courseRunCode || '';
-      firstDataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // C: Billing Rate
-      setCurrency(firstDataRow.getCell(3), billingRate);
-      
-      // D: Before GST
-      setCurrency(firstDataRow.getCell(4), beforeGST);
-      
-      // E: Qty
-      firstDataRow.getCell(5).value = participantCount || '';
-      firstDataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // F: Unit
-      firstDataRow.getCell(6).value = participantCount ? 'HEAD' : '';
-      firstDataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // G: Number of Unit
-      firstDataRow.getCell(7).value = 1;
-      firstDataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // H: Course Duration
-      firstDataRow.getCell(8).value = courseDates;
-      firstDataRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-      
-      // I: Project
-      firstDataRow.getCell(9).value = 'N';
-      firstDataRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // J: Value of Work Done
-      setCurrency(firstDataRow.getCell(10), valueOfWorkDone);
+        // Write course-level details only on the start row of this Course group
+        const isCourseStartRow = mergesToApply.some(m => m.type === 'course' && m.start === currentRow);
+        if (isCourseStartRow) {
+          row.getCell(1).value = courseRun.courseTitle || '';
+          setCurrency(row.getCell(2), billingRatePerPax);
+          setCurrency(row.getCell(3), billingRatePerRun);
+        }
 
-      // P: Contract PBMS BE
-      firstDataRow.getCell(16).value = billing.contractFeePBMSBENumber || '';
-      firstDataRow.getCell(16).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // Q: Contract Invoice Date
-      firstDataRow.getCell(17).value = billing.contractPBMSInvoiceDate
-        ? new Date(billing.contractPBMSInvoiceDate).toLocaleDateString('en-GB')
-        : '';
-      firstDataRow.getCell(17).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // R: Contract Amount
-      setCurrency(firstDataRow.getCell(18), billing.contractInvoiceAmount);
+        // Write course-run level details on the first row of this run
+        if (idx === 0) {
+          row.getCell(4).value = runUnitPax > 0 ? runUnitPax : '';
+          row.getCell(5).value = runUnitRun > 0 ? runUnitRun : '';
+          row.getCell(6).value = courseRun.courseRunCode || '';
+          row.getCell(7).value = dateRange;
+          row.getCell(8).value = 'N';
+          setCurrency(row.getCell(9), runValuePax);
+          setCurrency(row.getCell(10), runValueRun);
 
-      // S: Venue PBMS BE
-      firstDataRow.getCell(19).value = billing.venuePBMSBENumber || '';
-      firstDataRow.getCell(19).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // T: Venue Invoice Date
-      firstDataRow.getCell(20).value = billing.venuePBMSInvoiceDate
-        ? new Date(billing.venuePBMSInvoiceDate).toLocaleDateString('en-GB')
-        : '';
-      firstDataRow.getCell(20).alignment = { horizontal: 'center', vertical: 'middle' };
-      
-      // U: Venue Amount
-      setCurrency(firstDataRow.getCell(21), billing.venueInvoiceAmount);
+          row.getCell(16).value = 'Contract Fees';
+          row.getCell(17).value = billing.contractFeePBMSBENumber || '';
+          row.getCell(18).value = formatDate(billing.contractPBMSInvoiceDate);
+          setCurrency(row.getCell(19), toNumber(billing.contractInvoiceAmount) || null);
+          row.getCell(20).value = billing.venuePBMSBENumber || '';
+          row.getCell(21).value = formatDate(billing.venuePBMSInvoiceDate);
+          setCurrency(row.getCell(22), toNumber(billing.venueInvoiceAmount) || null);
+          row.getCell(23).value = billing.finalRemarks || '';
+        }
 
-      // V: Trainer Fees (NEW)
-      const trainerFees = courseRun.trainerFees || 0;
-      setCurrency(firstDataRow.getCell(22), trainerFees);
+        // Write entry-specific fields (unmerged)
+        row.getCell(11).value = entry?.pbmsInvoiceNumber || '';
+        row.getCell(12).value = formatDate(entry?.pbmsInvoiceDate);
+        row.getCell(13).value = discountMeta.noDiscount > 0 ? discountMeta.noDiscount : 0;
+        row.getCell(14).value = discountMeta.discountGranted > 0 ? discountMeta.discountGranted : 0;
+        setCurrency(row.getCell(15), invoiceAmount || null);
+        row.getCell(24).value = entry?.remarks || '';
 
-      // W: Additional Fees (NEW)
-      const additionalFees = courseRun.additionalFees || 0;
-      setCurrency(firstDataRow.getCell(23), additionalFees);
+        // Apply deduction styling on entry remarks
+        if (typeof row.getCell(24).value === 'string' && String(row.getCell(24).value).toLowerCase().includes('deduction')) {
+          row.getCell(24).font = { color: { argb: 'FFFF0000' } };
+        }
 
-      // X: Total Fee (Contract + Venue + Trainer + Additional)
-      const contractAmount = billing.contractInvoiceAmount || 0;
-      const venueAmount = billing.venueInvoiceAmount || 0;
-      const totalFee = contractAmount + venueAmount + trainerFees + additionalFees;
-      setCurrency(firstDataRow.getCell(24), totalFee);
+        // Apply borders and alignments
+        for (let col = 1; col <= 24; col += 1) {
+          applyBorder(row.getCell(col));
+          if (![1, 7, 23, 24].includes(col) && !row.getCell(col).alignment) {
+            row.getCell(col).alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+        }
 
-      // Y: Final Remarks
-      firstDataRow.getCell(25).value = billing.finalRemarks || '';
-      firstDataRow.getCell(25).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+        row.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        row.getCell(23).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+        row.getCell(24).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+        row.height = 24;
 
-      // Apply borders to all cells in first data row
-      applyRowBorders(firstDataRow, 1, 25);
-      firstDataRow.height = 24 * numBillingRows;
-
-      // Fill in billing entries (columns K-O only, not merged)
-      if (billingEntries.length === 0) {
-        const row = worksheet.getRow(startRow);
-        // K: PBMS Ref
-        row.getCell(11).value = '';
-        row.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
-        applyBorder(row.getCell(11));
-        
-        // L: PBMS Invoice Date
-        row.getCell(12).value = '';
-        row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
-        applyBorder(row.getCell(12));
-        
-        // M: Discount List
-        row.getCell(13).value = '';
-        row.getCell(13).alignment = { horizontal: 'left', vertical: 'middle' };
-        applyBorder(row.getCell(13));
-        
-        // N: Entry Remarks
-        row.getCell(14).value = '';
-        row.getCell(14).alignment = { horizontal: 'left', vertical: 'middle' };
-        applyBorder(row.getCell(14));
-        
-        // O: Invoice Amount
-        row.getCell(15).value = '';
-        row.getCell(15).alignment = { horizontal: 'right', vertical: 'middle' };
-        applyBorder(row.getCell(15));
-      } else {
-        billingEntries.forEach((entry: any, index: number) => {
-          const row = worksheet.getRow(startRow + index);
-          
-          // K: PBMS Ref (invoice number)
-          row.getCell(11).value = entry.pbmsInvoiceNumber || '';
-          row.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
-          applyBorder(row.getCell(11));
-          
-          // L: PBMS Invoice Date
-          row.getCell(12).value = entry.pbmsInvoiceDate || '';
-          row.getCell(12).alignment = { horizontal: 'center', vertical: 'middle' };
-          applyBorder(row.getCell(12));
-          
-          const discountMeta = getDiscountMeta(entry, courseRun);
-          row.getCell(13).value = discountMeta.text;
-          row.getCell(13).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-          applyBorder(row.getCell(13));
-          
-          // N: Entry Remarks
-          row.getCell(14).value = entry.remarks || '';
-          row.getCell(14).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-          applyBorder(row.getCell(14));
-          
-          // O: Invoice Amount
-          setCurrency(row.getCell(15), entry.invoiceAmount);
-          applyBorder(row.getCell(15));
-          
-          row.height = 24;
-        });
-      }
-
-      currentRow += numBillingRows;
+        currentRow += 1;
+      });
     }
+
+    // Apply all vertical merges
+    mergesToApply.forEach((merge) => {
+      if (merge.end > merge.start) {
+        if (merge.type === 'course') {
+          const colsToMerge = [1, 2, 3];
+          colsToMerge.forEach((col) => {
+            worksheet.mergeCells(merge.start, col, merge.end, col);
+          });
+        } else if (merge.type === 'run') {
+          const colsToMerge = [4, 5, 6, 7, 8, 9, 10, 16, 17, 18, 19, 20, 21, 22, 23];
+          colsToMerge.forEach((col) => {
+            worksheet.mergeCells(merge.start, col, merge.end, col);
+          });
+        }
+      }
+    });
 
     // Add summary totals row
-    const summaryRow = worksheet.getRow(currentRow + 1);
-    
-    // Calculate totals from all course runs
-    let totalCourseRuns = 0;
-    let totalParticipants = 0;
-    let totalContractFees = 0;
-    let totalVenueFees = 0;
-    let totalTrainerFees = 0;
-    let totalAdditionalFees = 0;
-    
-    for (const courseRun of courseRuns) {
-      totalCourseRuns += 1;
-      totalParticipants += courseRun.participants || 0;
-      const billing = courseRun.billing || {};
-      totalContractFees += billing.contractInvoiceAmount || 0;
-      totalVenueFees += billing.venueInvoiceAmount || 0;
-      totalTrainerFees += courseRun.trainerFees || 0;
-      totalAdditionalFees += courseRun.additionalFees || 0;
-    }
-    
-    const totalAllFees = totalContractFees + totalVenueFees + totalTrainerFees + totalAdditionalFees;
-    
-    // A: Label
+    const summaryRow = worksheet.getRow(currentRow);
     summaryRow.getCell(1).value = 'TOTAL';
     summaryRow.getCell(1).font = { bold: true };
     summaryRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
     applyBorder(summaryRow.getCell(1));
-    
-    // B-G: Empty cells with borders
-    for (let col = 2; col <= 7; col++) {
+
+    // Apply borders to all columns in totals row
+    for (let col = 2; col <= 24; col++) {
       applyBorder(summaryRow.getCell(col));
     }
-    
-    // E: Total Participants (in Qty column)
-    summaryRow.getCell(5).value = totalParticipants;
+
+    summaryRow.getCell(4).value = totalUnitPax > 0 ? totalUnitPax : '';
+    summaryRow.getCell(4).font = { bold: true };
+    summaryRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    summaryRow.getCell(5).value = totalUnitRun > 0 ? totalUnitRun : '';
     summaryRow.getCell(5).font = { bold: true };
     summaryRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
-    applyBorder(summaryRow.getCell(5));
-    
-    // H-P: Empty cells with borders
-    for (let col = 8; col <= 16; col++) {
-      applyBorder(summaryRow.getCell(col));
-    }
-    
-    // Q: Empty with border
-    applyBorder(summaryRow.getCell(17));
-    
-    // R: Total Contract Fees
-    setCurrency(summaryRow.getCell(18), totalContractFees);
-    summaryRow.getCell(18).font = { bold: true };
-    applyBorder(summaryRow.getCell(18));
-    
-    // S: Empty with border
-    applyBorder(summaryRow.getCell(19));
-    
-    // T: Empty with border
-    applyBorder(summaryRow.getCell(20));
-    
-    // U: Total Venue Fees
-    setCurrency(summaryRow.getCell(21), totalVenueFees);
-    summaryRow.getCell(21).font = { bold: true };
-    applyBorder(summaryRow.getCell(21));
-    
-    // V: Total Trainer Fees
-    setCurrency(summaryRow.getCell(22), totalTrainerFees);
+
+    setCurrency(summaryRow.getCell(9), totalValuePax > 0 ? totalValuePax : null);
+    summaryRow.getCell(9).font = { bold: true };
+
+    setCurrency(summaryRow.getCell(10), totalValueRun > 0 ? totalValueRun : null);
+    summaryRow.getCell(10).font = { bold: true };
+
+    summaryRow.getCell(13).value = totalNoDiscounts;
+    summaryRow.getCell(13).font = { bold: true };
+    summaryRow.getCell(13).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    summaryRow.getCell(14).value = totalDiscountGranted;
+    summaryRow.getCell(14).font = { bold: true };
+    summaryRow.getCell(14).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    setCurrency(summaryRow.getCell(15), totalActualAmountBilled > 0 ? totalActualAmountBilled : null);
+    summaryRow.getCell(15).font = { bold: true };
+
+    setCurrency(summaryRow.getCell(19), totalContractFeesPayout > 0 ? totalContractFeesPayout : null);
+    summaryRow.getCell(19).font = { bold: true };
+
+    setCurrency(summaryRow.getCell(22), totalVenueExpenses > 0 ? totalVenueExpenses : null);
     summaryRow.getCell(22).font = { bold: true };
-    applyBorder(summaryRow.getCell(22));
-    
-    // W: Total Additional Fees
-    setCurrency(summaryRow.getCell(23), totalAdditionalFees);
-    summaryRow.getCell(23).font = { bold: true };
-    applyBorder(summaryRow.getCell(23));
-    
-    // X: Total All Fees (moved from V to X due to new columns)
-    setCurrency(summaryRow.getCell(24), totalAllFees);
-    summaryRow.getCell(24).font = { bold: true, color: { argb: 'FFFF0000' } }; // Red font
-    applyBorder(summaryRow.getCell(24));
-    
-    // Y: Total Course Runs as text (moved from W to Y)
-    summaryRow.getCell(25).value = `Total Runs: ${totalCourseRuns}`;
-    summaryRow.getCell(25).font = { bold: true };
-    summaryRow.getCell(25).alignment = { horizontal: 'left', vertical: 'middle' };
-    applyBorder(summaryRow.getCell(25));
-    
+
     summaryRow.height = 24;
 
     // Apply auto-fit for columns based on content and wrapping
     const columnWidths = [
-      { min: 25, max: 40 },  // A: Title
-      { min: 12, max: 18 },  // B: Course Run #
-      { min: 12, max: 16 },  // C: Billing Rate
-      { min: 12, max: 16 },  // D: Before GST
-      { min: 8, max: 12 },   // E: Qty
-      { min: 10, max: 14 },  // F: Unit (HEAD)
-      { min: 12, max: 18 },  // G: Number of Unit
-      { min: 18, max: 26 },  // H: Course Duration
-      { min: 8, max: 12 },   // I: Project
-      { min: 12, max: 18 },  // J: Value of Work Done
-      { min: 12, max: 18 },  // K: PBMS Ref (Invoice)
-      { min: 12, max: 18 },  // L: PBMS Invoice Date
-      { min: 28, max: 40 },  // M: Discount List (needs wrapping)
-      { min: 25, max: 40 },  // N: Entry Remarks (needs wrapping)
-      { min: 12, max: 18 },  // O: Invoice Amount
-      { min: 12, max: 18 },  // P: Contract PBMS BE
-      { min: 12, max: 18 },  // Q: Contract Invoice Date
-      { min: 12, max: 18 },  // R: Contract Amount
-      { min: 12, max: 18 },  // S: Venue PBMS BE
-      { min: 12, max: 18 },  // T: Venue Invoice Date
-      { min: 12, max: 18 },  // U: Venue Amount
-      { min: 12, max: 18 },  // V: Trainer Fees
-      { min: 12, max: 18 },  // W: Additional Fees
-      { min: 12, max: 18 },  // X: Total Fee
-      { min: 28, max: 40 },  // Y: Final Remarks (needs wrapping)
-      { min: 12, max: 18 },  // Z
-      { min: 28, max: 40 },  // AA
-      { min: 28, max: 40 },  // AB
+      { min: 25, max: 40 },  // A: Project Title (1)
+      { min: 15, max: 20 },  // B: Billing Rate PTR PAX (2)
+      { min: 15, max: 20 },  // C: Billing Rate PTR RUN (3)
+      { min: 10, max: 14 },  // D: Unit PAX (4)
+      { min: 10, max: 14 },  // E: Unit RUN (5)
+      { min: 12, max: 18 },  // F: Course Run Code (6) (hidden)
+      { min: 18, max: 26 },  // G: Course/Service/Delivery Date (7)
+      { min: 8, max: 12 },   // H: PM (8)
+      { min: 15, max: 20 },  // I: Value PAX (9)
+      { min: 15, max: 20 },  // J: Value RUN (10)
+      { min: 12, max: 18 },  // K: PBMS Ref (11)
+      { min: 12, max: 18 },  // L: PBMS Invoice Date (12)
+      { min: 10, max: 14 },  // M: No discounts (13)
+      { min: 10, max: 14 },  // N: Discount granted (14)
+      { min: 15, max: 20 },  // O: Actual Amount billed (15)
+      { min: 15, max: 20 },  // P: Salary / Contract Fees (16)
+      { min: 12, max: 18 },  // Q: PBMS Ref2 (17)
+      { min: 12, max: 18 },  // R: PBMS Invoice Date (18)
+      { min: 15, max: 20 },  // S: Contract Payout (19)
+      { min: 12, max: 18 },  // T: PBMS Ref3 (20)
+      { min: 12, max: 18 },  // U: PBMS Invoice Date (21)
+      { min: 15, max: 20 },  // V: Venue Expenses (22)
+      { min: 28, max: 40 },  // W: Remarks (needs wrapping) (23)
+      { min: 28, max: 40 },  // X: Other Remarks (needs wrapping) (24)
     ];
 
     // Auto-fit columns with content-based widths
@@ -668,10 +505,9 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
 
     // Apply text wrapping and adjust row heights for wrapped text
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 3) { // Skip header rows
+      if (rowNumber > 3) { // Skip title and headers
         row.eachCell((cell) => {
-          // Wrap long text columns
-          const wrapColumns = [13, 14, 25, 27, 28];
+          const wrapColumns = [1, 7, 23, 24];
           // Apply wrapping to cells that may have long content
           if (wrapColumns.includes(cell.col)) {
             cell.alignment = { 
@@ -695,7 +531,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
         // Auto-adjust row height based on content
         let maxLines = 1;
         row.eachCell((cell) => {
-          if (cell.value && [13, 14, 25, 27, 28].includes(cell.col)) {
+          if (cell.value && [1, 7, 23, 24].includes(cell.col)) {
             const lines = String(cell.value).split('\n').length;
             const width = worksheet.getColumn(cell.col).width || 30;
             const estLines = Math.ceil(String(cell.value).length / (width * 1.5));
@@ -709,11 +545,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
     });
 
     // Ensure header row has adequate height
-    if (worksheet.getRow(3)) worksheet.getRow(3).height = 35;
-
-    // Add client-aligned comparison layout section (A-AB)
-    const secondSectionStartRow = currentRow + 4;
-    buildClientActualSection(worksheet, secondSectionStartRow, exportData.billingMonth, courseRuns);
+    if (worksheet.getRow(3)) worksheet.getRow(3).height = 46;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {

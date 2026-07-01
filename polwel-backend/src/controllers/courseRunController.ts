@@ -1709,9 +1709,9 @@ export const courseRunController = {
             },
           });
 
-          // Send emails to learners (each learner gets CC'd only their own TC + manual cc)
+          // Send emails to learners (each learner gets CC'd only their own TC)
           const learnerEmailPromises = enrollments.map((enrollment) => {
-            // CC: own TC (if present) + manual CC addresses
+            // CC: own TC (if present)
             const learnerCc: string[] = [];
             
             // Add learner's own training coordinator (if present)
@@ -1719,9 +1719,6 @@ export const courseRunController = {
             if (learnerTcEmail && typeof learnerTcEmail === 'string' && learnerTcEmail.trim() !== '') {
               learnerCc.push(learnerTcEmail);
             }
-            
-            // Add manual CC addresses (if any)
-            learnerCc.push(...manualCc);
             
             // Remove duplicates
             const uniqueLearnerCc = [...new Set(learnerCc)];
@@ -1783,7 +1780,40 @@ export const courseRunController = {
               });
           });
 
-          const results = await Promise.all([...learnerEmailPromises, ...trainerEmailPromises]);
+          // Send separate, private emails to manual CC addresses
+          const manualCcEmailPromises = manualCc.map((ccEmail) => {
+            const emailParams: any = {
+              email: ccEmail,
+              learnerName: 'Participant',
+              courseTitle: courseRun.course?.title || 'Course',
+              cancellationReason: reason || 'unforeseen circumstances',
+              recipientType: 'learner', // They get the full learner details
+            };
+            if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
+            if (courseRun.serialNumber) emailParams.serialNumber = courseRun.serialNumber;
+            if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
+            if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
+            if (courseRun.venue?.name) emailParams.venueName = courseRun.venue.name;
+            if (nextRunDate) emailParams.nextRunDate = nextRunDate;
+            if (additionalNotes) emailParams.additionalNotes = additionalNotes;
+            if (emailAttachments) emailParams.attachments = emailAttachments;
+
+            return EmailService.sendCourseCancellationEmail(emailParams)
+              .then(() => {
+                console.log(`✅ Private cancellation email sent to CC recipient: ${ccEmail}`);
+                return true;
+              })
+              .catch((err) => {
+                console.error(`❌ Failed to send private cancellation email to CC recipient ${ccEmail}:`, err);
+                return false;
+              });
+          });
+
+          const results = await Promise.all([
+            ...learnerEmailPromises,
+            ...trainerEmailPromises,
+            ...manualCcEmailPromises,
+          ]);
           const successCount = results.filter(Boolean).length;
           const failCount = results.length - successCount;
           console.log(`Cancellation emails: ${successCount} sent, ${failCount} failed (${enrollments.length} learners + ${trainersWithEmail.length} trainers attempted)`);
@@ -1833,13 +1863,79 @@ export const courseRunController = {
         return;
       }
 
-      // Soft delete
-      const courseRun = await prisma.courseRun.update({
-        where: { id: id },
-        data: {
-          deletedAt: new Date(),
-          updatedAt: new Date(),
-        },
+      const now = new Date();
+
+      // Find the billing associated with this course run
+      const billing = await prisma.courseRunBilling.findUnique({
+        where: { courseRunId: id },
+        select: { id: true },
+      });
+
+      // Run soft deletes in a transaction
+      await prisma.$transaction(async (tx) => {
+        // 1. Soft delete the main CourseRun record
+        await tx.courseRun.update({
+          where: { id },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 2. Soft delete CourseRunLearner pivot records
+        await tx.courseRunLearner.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 3. Soft delete CourseRunTrainer pivot records
+        await tx.courseRunTrainer.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 4. Soft delete CourseRunPartner pivot records
+        await tx.courseRunPartner.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 5. Soft delete CourseRunLearnerAttendance records
+        await tx.courseRunLearnerAttendance.updateMany({
+          where: { courseRunId: id, deletedAt: null },
+          data: {
+            deletedAt: now,
+            updatedAt: now,
+          },
+        });
+
+        // 6. Soft delete billing tables if billing exists
+        if (billing) {
+          await tx.courseRunBillingEntry.updateMany({
+            where: { courseRunBillingId: billing.id, deletedAt: null },
+            data: {
+              deletedAt: now,
+              updatedAt: now,
+            },
+          });
+
+          await tx.courseRunBilling.update({
+            where: { id: billing.id },
+            data: {
+              deletedAt: now,
+              updatedAt: now,
+            },
+          });
+        }
       });
 
       res.json({
@@ -2222,6 +2318,9 @@ export const courseRunController = {
         const where: any = {
           name: {
             equals: name,
+          },
+          status: {
+            not: 'INACTIVE',
           },
         };
 
