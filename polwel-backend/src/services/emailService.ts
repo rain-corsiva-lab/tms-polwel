@@ -390,14 +390,7 @@ class EmailService {
       process.env.GRAPH_TENANT_ID &&
       process.env.GRAPH_MAIL_FROM_ADDRESS
     );
-    if (!hasGraphCreds) return false;
-
-    return (
-      process.env.NODE_ENV === 'Production' ||
-      process.env.MAIL_MAILER === 'outlook' ||
-      process.env.MAIL_MAILER === 'graph' ||
-      process.env.MAIL_MAILER === 'microsoft'
-    );
+    return hasGraphCreds;
   }
 
   // Return logo as base64 data URI.
