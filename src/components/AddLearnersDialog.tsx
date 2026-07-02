@@ -384,26 +384,29 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
 
   const loadAllLearners = async () => {
     try {
-      const response = await clientOrganizationsApi.getAllLearners({ limit: 1000 });
+      const response = await clientOrganizationsApi.getAllLearners({ limit: 10000 });
       const learnerList = Array.isArray(response?.learners) ? response.learners : Array.isArray(response?.data?.learners) ? response.data.learners : [];
 
-      const mappedLearners: Learner[] = learnerList.map((learner: any) => ({
-        id: learner.id,
-        fullname: learner.fullname || learner.name || "",
-        designation: learner.designation || learner.departmentName || "",
-        email: learner.email || "",
-        contact: learner.contact || learner.phone || "",
-        clientOrganizationId: learner.clientOrganizationId || learner.organizationId,
-        clientOrganizationName: learner.clientOrganizationName || learner.organizationName || learner.clientOrganization?.name || "",
-        clientOrganizationBuNumber: learner.clientOrganizationBuNumber || learner.clientOrganization?.buNumber || learner.buNumber || "",
-        departmentName: learner.departmentName || "",
-        status: learner.status || (learner.deletedAt ? "INACTIVE" : "ACTIVE"),
-        trainingCoordinatorId: learner.trainingCoordinatorId || learner.trainingCoordinator?.id,
-        trainingCoordinatorName: learner.trainingCoordinatorName || learner.trainingCoordinator?.name || "",
-        trainingCoordinatorEmail: learner.trainingCoordinatorEmail || learner.trainingCoordinator?.email || "",
-        trainingCoordinatorPhone:
-          learner.trainingCoordinatorPhone || learner.trainingCoordinator?.contactNumber || learner.trainingCoordinator?.phoneNumber || "",
-      }));
+      const mappedLearners: Learner[] = learnerList.map((learner: any) => {
+        const primaryEnrollment = learner.courseRunLearners?.[0];
+        return {
+          id: learner.id,
+          fullname: learner.fullname || learner.name || "",
+          designation: learner.designation || learner.departmentName || primaryEnrollment?.departmentName || "",
+          email: learner.email || "",
+          contact: learner.contact || learner.phone || "",
+          clientOrganizationId: learner.clientOrganizationId || learner.organizationId || primaryEnrollment?.clientOrganizationId || "",
+          clientOrganizationName: learner.clientOrganizationName || learner.organizationName || learner.clientOrganization?.name || primaryEnrollment?.clientOrganization?.name || "",
+          clientOrganizationBuNumber: learner.clientOrganizationBuNumber || learner.clientOrganization?.buNumber || learner.buNumber || primaryEnrollment?.clientOrganization?.buNumber || "",
+          departmentName: learner.departmentName || primaryEnrollment?.departmentName || "",
+          status: learner.status || (learner.deletedAt ? "INACTIVE" : "ACTIVE"),
+          trainingCoordinatorId: learner.trainingCoordinatorId || learner.trainingCoordinator?.id || primaryEnrollment?.trainingCoordinatorId || "",
+          trainingCoordinatorName: learner.trainingCoordinatorName || learner.trainingCoordinator?.name || primaryEnrollment?.trainingCoordinator?.name || "",
+          trainingCoordinatorEmail: learner.trainingCoordinatorEmail || learner.trainingCoordinator?.email || primaryEnrollment?.trainingCoordinator?.email || "",
+          trainingCoordinatorPhone:
+            learner.trainingCoordinatorPhone || learner.trainingCoordinator?.contactNumber || learner.trainingCoordinator?.phoneNumber || primaryEnrollment?.trainingCoordinator?.contactNumber || "",
+        };
+      });
 
       // Remove duplicates based on learner ID
       const uniqueLearners = Array.from(new Map(mappedLearners.map((learner) => [learner.id, learner])).values());

@@ -6,6 +6,12 @@ const router = express.Router();
 // Get all organizations (with optional type filter)
 router.get('/', organizationsController.getOrganizations);
 
+// Scan and find duplicate organizations
+router.get('/duplicates', organizationsController.getDuplicates);
+
+// Merge duplicate organizations
+router.post('/merge-duplicates', organizationsController.mergeDuplicates);
+
 // Get all enrollments for an organization
 router.get('/:id/enrollments', organizationsController.getOrganizationEnrollments);
 
