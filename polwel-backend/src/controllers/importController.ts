@@ -877,6 +877,10 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
       const endDateObj = parseExcelDate(row['Course Run End Date']) || startDateObj;
       const endDatetime = buildDatetime(endDateObj, '18:00');
 
+      // Parse fees early so we can use them during default Course creation if needed
+      const rawFees    = str(row['Fees before GST']).replace(/[\$,\s]/g, '');
+      const totalFees  = rawFees && !isNaN(parseFloat(rawFees)) ? parseFloat(rawFees) : null;
+
       // ─── 1. Resolve / Upsert Learner ───────────────────────────────────────
       const learnerEmail      = strOrNull(row['SPF Email Address']);
       const learnerDesig      = strOrNull(row['Designation']);
@@ -985,24 +989,75 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
       // ─── 4. Find ALL matching CourseRuns (title + calendar date) ───────────
       const dateCacheKey = `${courseTitle}|${startDateObj.toISOString().slice(0, 10)}`;
       if (!courseRunCache.has(dateCacheKey)) {
-        const course = await prisma.course.findFirst({ where: { title: courseTitle } });
+        let course = await prisma.course.findFirst({ where: { title: courseTitle } });
         if (!course) {
-          courseRunCache.set(dateCacheKey, []);
-        } else {
-          // startDateObj is UTC midnight from parseExcelDate.
-          // Times are stored as SGT (UTC+8); search the full SGT calendar day.
-          const y = startDateObj.getUTCFullYear();
-          const mo = startDateObj.getUTCMonth() + 1; // 1-based
-          const day = startDateObj.getUTCDate();
-          const sgtDateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const dayStart = new Date(`${sgtDateStr}T00:00:00+08:00`);
-          const dayEnd   = new Date(`${sgtDateStr}T23:59:59.999+08:00`);
-          const runs = await prisma.courseRun.findMany({
-            where: { courseId: course.id, startDatetime: { gte: dayStart, lte: dayEnd }, deletedAt: null },
-            orderBy: { startDatetime: 'asc' },
+          // Auto-create missing Course
+          const codeSuffix = Math.floor(1000 + Math.random() * 9000);
+          const cleanTitle = courseTitle.replace(/[^a-zA-Z0-9]/g, '').slice(0, 15).toUpperCase();
+          const generatedCode = `AUTO-${cleanTitle}-${codeSuffix}`;
+          
+          console.log(`[importCourseRunLearners2] Auto-creating missing course: "${courseTitle}" with code "${generatedCode}"`);
+          course = await prisma.course.create({
+            data: {
+              title: courseTitle,
+              courseCode: generatedCode,
+              duration: '1',
+              durationType: 'days',
+              minParticipants: 1,
+              maxParticipants: 25,
+              remarks: 'Auto-created during learner import',
+              certificates: 'polwel',
+              defaultCourseFee: totalFees !== null ? totalFees : 0,
+              venueFee: 0.0,
+              status: 'ACTIVE',
+            }
           });
-          courseRunCache.set(dateCacheKey, runs.map(r => r.id));
         }
+
+        // startDateObj is UTC midnight from parseExcelDate.
+        // Times are stored as SGT (UTC+8); search the full SGT calendar day.
+        const y = startDateObj.getUTCFullYear();
+        const mo = startDateObj.getUTCMonth() + 1; // 1-based
+        const day = startDateObj.getUTCDate();
+        const sgtDateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayStart = new Date(`${sgtDateStr}T00:00:00+08:00`);
+        const dayEnd   = new Date(`${sgtDateStr}T23:59:59.999+08:00`);
+        
+        let runs = await prisma.courseRun.findMany({
+          where: { courseId: course.id, startDatetime: { gte: dayStart, lte: dayEnd }, deletedAt: null },
+          orderBy: { startDatetime: 'asc' },
+        });
+
+        if (runs.length === 0) {
+          // Auto-create missing CourseRun
+          const dayStr = String(day).padStart(2, '0');
+          const monthStr = String(mo).padStart(2, '0');
+          const yearStr = String(y).slice(-2);
+          const serialNumber = `${course.courseCode}-${dayStr}${monthStr}${yearStr}`;
+          
+          const runStart = new Date(`${sgtDateStr}T09:00:00+08:00`);
+          const runEnd = new Date(`${sgtDateStr}T17:00:00+08:00`);
+
+          console.log(`[importCourseRunLearners2] Auto-creating missing CourseRun: "${serialNumber}" for course: "${courseTitle}"`);
+          const createdRun = await prisma.courseRun.create({
+            data: {
+              courseId: course.id,
+              serialNumber,
+              courseRunType: CourseRunType.OPEN,
+              startDatetime: runStart,
+              endDatetime: runEnd,
+              status: CourseStatus.COMPLETED,
+              venueType: VenueType.ON_PREMISE,
+              individualRegistrationRequired: false,
+              courseRunFeeType: CourseRunFeeType.PER_HEAD,
+              minClassSize: 1,
+              maxClassSize: 25,
+            }
+          });
+          runs = [createdRun];
+        }
+
+        courseRunCache.set(dateCacheKey, runs.map(r => r.id));
       }
 
       const courseRunIds = courseRunCache.get(dateCacheKey) ?? [];
@@ -1021,8 +1076,6 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
         : AttendanceStatus.PENDING;
 
       // ─── 6. Financial fields ────────────────────────────────────────────────
-      const rawFees    = str(row['Fees before GST']).replace(/[\$,\s]/g, '');
-      const totalFees  = rawFees && !isNaN(parseFloat(rawFees)) ? parseFloat(rawFees) : null;
       const feesRemarks  = strOrNull(row['Fees Remarks']);
       const invoiceNumber = strOrNull(row['Invoice No.']);
       const poNumber      = strOrNull(row['PO No./ Payment Advice']);

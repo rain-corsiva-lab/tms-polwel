@@ -16,6 +16,7 @@ import { ImportCourseRunsDialog } from "@/components/ImportCourseRunsDialog";
 import { ImportCourseRuns2Dialog } from "@/components/ImportCourseRuns2Dialog";
 import { ImportLearnersDialog } from "@/components/ImportLearnersDialog";
 import { ImportCourseRunLearners2Dialog } from "@/components/ImportCourseRunLearners2Dialog";
+import { MergeDuplicateOrganizationsDialog } from "@/components/MergeDuplicateOrganizationsDialog";
 
 // Action Item Card Component with hover animation
 interface ActionItemCardProps {
@@ -759,6 +760,7 @@ function DashboardContent() {
             <ImportCourseRuns2Dialog />
             <ImportLearnersDialog />
             <ImportCourseRunLearners2Dialog />
+            <MergeDuplicateOrganizationsDialog />
           </div>
         </CardContent>
       </Card>

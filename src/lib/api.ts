@@ -1365,6 +1365,16 @@ export const organizationsApi = {
   getTrainingCoordinators: async (organizationId: string) => {
     return apiRequest(`/organizations/${organizationId}/training-coordinators`);
   },
+
+  // Scan for duplicate organization names
+  getDuplicates: async () => {
+    return apiRequest('/organizations/duplicates');
+  },
+
+  // Merge duplicates into primary organizations
+  mergeDuplicates: async () => {
+    return apiRequest('/organizations/merge-duplicates', { method: 'POST' });
+  },
 };
 
 // Course related types

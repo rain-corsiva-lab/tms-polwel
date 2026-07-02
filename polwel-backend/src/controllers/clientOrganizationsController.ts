@@ -1035,7 +1035,7 @@ export const getAllLearners = async (req: AuthenticatedRequest, res: Response) =
     const rawPage = Number(page);
     const rawLimit = Number(limit);
     const pageNum = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
-    const limitNum = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(1000, Math.floor(rawLimit)) : 20;
+    const limitNum = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(10000, Math.floor(rawLimit)) : 20;
     const skip = (pageNum - 1) * limitNum;
 
     const rawSearch = typeof search === "string" ? search.trim() : undefined;
