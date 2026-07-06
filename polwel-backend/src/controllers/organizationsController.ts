@@ -325,6 +325,8 @@ export const organizationsController = {
       let totalDeletedCount = 0;
       let totalMergedLearners = 0;
       let totalDeletedLearners = 0;
+      let totalMergedCoordinators = 0;
+      let totalDeletedCoordinators = 0;
       const totalUpdatedReferences = {
         courseRunLearners: 0,
         bookings: 0,
@@ -500,6 +502,80 @@ export const organizationsController = {
             totalMergedLearners++;
           }
         }
+
+        // 3. Merge Duplicate Training Coordinators (matching email)
+        const duplicateCoordinatorGroups = await tx.user.groupBy({
+          by: ['email'],
+          where: {
+            role: 'TRAINING_COORDINATOR',
+            deletedAt: null,
+            email: { not: null, notIn: [''] }
+          },
+          _count: {
+            email: true
+          },
+          having: {
+            email: {
+              _count: {
+                gt: 1
+              }
+            }
+          }
+        });
+
+        for (const coordGroup of duplicateCoordinatorGroups) {
+          if (!coordGroup.email) continue;
+
+          const activeCoordinators = await tx.user.findMany({
+            where: {
+              role: 'TRAINING_COORDINATOR',
+              email: coordGroup.email,
+              deletedAt: null
+            },
+            orderBy: {
+              createdAt: 'asc'
+            }
+          });
+
+          if (activeCoordinators.length > 1) {
+            const primaryCoordinator = activeCoordinators[0];
+            if (!primaryCoordinator) continue;
+            const secondaryCoordinators = activeCoordinators.slice(1);
+
+            for (const secondaryCoordinator of secondaryCoordinators) {
+              // Redirect trainingCoordinatorId references in CourseRunLearner
+              const enrollRes = await tx.courseRunLearner.updateMany({
+                where: { trainingCoordinatorId: secondaryCoordinator.id },
+                data: { trainingCoordinatorId: primaryCoordinator.id }
+              });
+              totalUpdatedReferences.courseRunLearners += enrollRes.count;
+
+              // Redirect createdBy bookingsCreated
+              await tx.booking.updateMany({
+                where: { createdBy: secondaryCoordinator.id },
+                data: { createdBy: primaryCoordinator.id }
+              });
+
+              // Redirect userId in bookings
+              await tx.booking.updateMany({
+                where: { userId: secondaryCoordinator.id },
+                data: { userId: primaryCoordinator.id }
+              });
+
+              // Soft-delete duplicate coordinator (setting INACTIVE, deletedAt, and renaming email to free the unique constraint)
+              await tx.user.update({
+                where: { id: secondaryCoordinator.id },
+                data: {
+                  status: 'INACTIVE',
+                  deletedAt: new Date(),
+                  email: secondaryCoordinator.email ? `${secondaryCoordinator.email}_merged_${Date.now()}` : null
+                }
+              });
+              totalDeletedCoordinators++;
+            }
+            totalMergedCoordinators++;
+          }
+        }
       }, { maxWait: 15000, timeout: 60000 });
 
       return res.json({
@@ -508,6 +584,8 @@ export const organizationsController = {
         deletedCount: totalDeletedCount,
         mergedLearners: totalMergedLearners,
         deletedLearners: totalDeletedLearners,
+        mergedCoordinators: totalMergedCoordinators,
+        deletedCoordinators: totalDeletedCoordinators,
         referencesUpdated: totalUpdatedReferences
       });
     } catch (error: any) {
