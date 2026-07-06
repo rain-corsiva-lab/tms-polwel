@@ -27,6 +27,8 @@ interface MergeResults {
   deletedCount: number;
   mergedLearners: number;
   deletedLearners: number;
+  mergedCoordinators: number;
+  deletedCoordinators: number;
   referencesUpdated: {
     courseRunLearners: number;
     bookings: number;
@@ -90,6 +92,8 @@ export function MergeDuplicateOrganizationsDialog() {
           deletedCount: response.deletedCount,
           mergedLearners: response.mergedLearners,
           deletedLearners: response.deletedLearners,
+          mergedCoordinators: response.mergedCoordinators,
+          deletedCoordinators: response.deletedCoordinators,
           referencesUpdated: response.referencesUpdated,
         });
         setStep("result");
@@ -249,6 +253,10 @@ export function MergeDuplicateOrganizationsDialog() {
                   <li className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5 font-semibold text-emerald-650 dark:text-emerald-400">
                     <span>Duplicate learners merged:</span>
                     <strong className="text-emerald-650 dark:text-emerald-400">{results.deletedLearners} participants ({results.mergedLearners} unique)</strong>
+                  </li>
+                  <li className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5 font-semibold text-emerald-650 dark:text-emerald-400">
+                    <span>Duplicate coordinators merged:</span>
+                    <strong className="text-emerald-650 dark:text-emerald-400">{results.deletedCoordinators} coordinators ({results.mergedCoordinators} unique)</strong>
                   </li>
                   <li className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5">
                     <span>Learner enrollments updated:</span>

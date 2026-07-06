@@ -325,6 +325,8 @@ export const organizationsController = {
       let totalDeletedCount = 0;
       let totalMergedLearners = 0;
       let totalDeletedLearners = 0;
+      let totalMergedCoordinators = 0;
+      let totalDeletedCoordinators = 0;
       const totalUpdatedReferences = {
         courseRunLearners: 0,
         bookings: 0,
@@ -500,6 +502,92 @@ export const organizationsController = {
             totalMergedLearners++;
           }
         }
+
+        // 3. Merge Duplicate Training Coordinators (matching email)
+        const duplicateCoordinatorGroups = await tx.user.groupBy({
+          by: ['email'],
+          where: {
+            role: 'TRAINING_COORDINATOR',
+            deletedAt: null,
+            email: { not: null, notIn: [''] }
+          },
+          _count: {
+            email: true
+          },
+          having: {
+            email: {
+              _count: {
+                gt: 1
+              }
+            }
+          }
+        });
+
+        for (const coordinatorGroup of duplicateCoordinatorGroups) {
+          if (!coordinatorGroup.email) continue;
+
+          const activeCoordinators = await tx.user.findMany({
+            where: {
+              email: coordinatorGroup.email,
+              role: 'TRAINING_COORDINATOR',
+              deletedAt: null
+            },
+            orderBy: {
+              createdAt: 'asc'
+            }
+          });
+
+          if (activeCoordinators.length > 1) {
+            const primaryCoordinator = activeCoordinators[0];
+            if (!primaryCoordinator) continue;
+            const secondaryCoordinators = activeCoordinators.slice(1);
+
+            for (const secondaryCoordinator of secondaryCoordinators) {
+              // Redirect CourseRunLearner coordinator references
+              await tx.courseRunLearner.updateMany({
+                where: { trainingCoordinatorId: secondaryCoordinator.id },
+                data: { trainingCoordinatorId: primaryCoordinator.id }
+              });
+
+              // Redirect Booking references (user / creator)
+              await tx.booking.updateMany({
+                where: { userId: secondaryCoordinator.id },
+                data: { userId: primaryCoordinator.id }
+              });
+              await tx.booking.updateMany({
+                where: { createdBy: secondaryCoordinator.id },
+                data: { createdBy: primaryCoordinator.id }
+              });
+
+              // Redirect Attendance edits
+              await tx.courseRunLearnerAttendance.updateMany({
+                where: { editedBy: secondaryCoordinator.id },
+                data: { editedBy: primaryCoordinator.id }
+              });
+
+              // If secondary has isPrimaryCoordinator = true, and primary doesn't, make primary true
+              if (secondaryCoordinator.isPrimaryCoordinator && !primaryCoordinator.isPrimaryCoordinator) {
+                await tx.user.update({
+                  where: { id: primaryCoordinator.id },
+                  data: { isPrimaryCoordinator: true }
+                });
+                primaryCoordinator.isPrimaryCoordinator = true;
+              }
+
+              // Soft delete secondary coordinator user and release email constraint
+              await tx.user.update({
+                where: { id: secondaryCoordinator.id },
+                data: {
+                  deletedAt: new Date(),
+                  status: 'INACTIVE',
+                  email: `deleted-tc-${secondaryCoordinator.id}@polwel.org.sg`
+                }
+              });
+              totalDeletedCoordinators++;
+            }
+            totalMergedCoordinators++;
+          }
+        }
       }, { maxWait: 15000, timeout: 60000 });
 
       return res.json({
@@ -508,6 +596,8 @@ export const organizationsController = {
         deletedCount: totalDeletedCount,
         mergedLearners: totalMergedLearners,
         deletedLearners: totalDeletedLearners,
+        mergedCoordinators: totalMergedCoordinators,
+        deletedCoordinators: totalDeletedCoordinators,
         referencesUpdated: totalUpdatedReferences
       });
     } catch (error: any) {
