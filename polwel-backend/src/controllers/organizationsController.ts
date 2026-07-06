@@ -523,13 +523,13 @@ export const organizationsController = {
           }
         });
 
-        for (const coordinatorGroup of duplicateCoordinatorGroups) {
-          if (!coordinatorGroup.email) continue;
+        for (const coordGroup of duplicateCoordinatorGroups) {
+          if (!coordGroup.email) continue;
 
           const activeCoordinators = await tx.user.findMany({
             where: {
-              email: coordinatorGroup.email,
               role: 'TRAINING_COORDINATOR',
+              email: coordGroup.email,
               deletedAt: null
             },
             orderBy: {
@@ -543,44 +543,32 @@ export const organizationsController = {
             const secondaryCoordinators = activeCoordinators.slice(1);
 
             for (const secondaryCoordinator of secondaryCoordinators) {
-              // Redirect CourseRunLearner coordinator references
-              await tx.courseRunLearner.updateMany({
+              // Redirect trainingCoordinatorId references in CourseRunLearner
+              const enrollRes = await tx.courseRunLearner.updateMany({
                 where: { trainingCoordinatorId: secondaryCoordinator.id },
                 data: { trainingCoordinatorId: primaryCoordinator.id }
               });
+              totalUpdatedReferences.courseRunLearners += enrollRes.count;
 
-              // Redirect Booking references (user / creator)
-              await tx.booking.updateMany({
-                where: { userId: secondaryCoordinator.id },
-                data: { userId: primaryCoordinator.id }
-              });
+              // Redirect createdBy bookingsCreated
               await tx.booking.updateMany({
                 where: { createdBy: secondaryCoordinator.id },
                 data: { createdBy: primaryCoordinator.id }
               });
 
-              // Redirect Attendance edits
-              await tx.courseRunLearnerAttendance.updateMany({
-                where: { editedBy: secondaryCoordinator.id },
-                data: { editedBy: primaryCoordinator.id }
+              // Redirect userId in bookings
+              await tx.booking.updateMany({
+                where: { userId: secondaryCoordinator.id },
+                data: { userId: primaryCoordinator.id }
               });
 
-              // If secondary has isPrimaryCoordinator = true, and primary doesn't, make primary true
-              if (secondaryCoordinator.isPrimaryCoordinator && !primaryCoordinator.isPrimaryCoordinator) {
-                await tx.user.update({
-                  where: { id: primaryCoordinator.id },
-                  data: { isPrimaryCoordinator: true }
-                });
-                primaryCoordinator.isPrimaryCoordinator = true;
-              }
-
-              // Soft delete secondary coordinator user and release email constraint
+              // Soft-delete duplicate coordinator (setting INACTIVE, deletedAt, and renaming email to free the unique constraint)
               await tx.user.update({
                 where: { id: secondaryCoordinator.id },
                 data: {
-                  deletedAt: new Date(),
                   status: 'INACTIVE',
-                  email: `deleted-tc-${secondaryCoordinator.id}@polwel.org.sg`
+                  deletedAt: new Date(),
+                  email: secondaryCoordinator.email ? `${secondaryCoordinator.email}_merged_${Date.now()}` : null
                 }
               });
               totalDeletedCoordinators++;

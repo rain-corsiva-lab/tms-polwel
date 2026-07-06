@@ -256,7 +256,7 @@ export function MergeDuplicateOrganizationsDialog() {
                   </li>
                   <li className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5 font-semibold text-emerald-650 dark:text-emerald-400">
                     <span>Duplicate coordinators merged:</span>
-                    <strong className="text-emerald-650 dark:text-emerald-400">{results.deletedCoordinators} coordinators ({results.mergedCoordinators} unique)</strong>
+                    <strong className="text-emerald-650 dark:text-emerald-400">{results.deletedCoordinators} users ({results.mergedCoordinators} unique)</strong>
                   </li>
                   <li className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5">
                     <span>Learner enrollments updated:</span>
