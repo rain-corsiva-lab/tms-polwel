@@ -225,6 +225,58 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
       return titleA.localeCompare(titleB);
     });
 
+    // Group courseRuns by courseTitle and propagate billing fields
+    const courseGroups: { courseTitle: string; runs: any[] }[] = [];
+    let currentGroup: { courseTitle: string; runs: any[] } | null = null;
+    for (const courseRun of courseRuns) {
+      const title = courseRun.courseTitle || '';
+      if (!currentGroup || currentGroup.courseTitle !== title) {
+        currentGroup = { courseTitle: title, runs: [] };
+        courseGroups.push(currentGroup);
+      }
+      currentGroup.runs.push(courseRun);
+    }
+
+    for (const group of courseGroups) {
+      // Find first non-empty contract fee details
+      const firstWithContract = group.runs.find(r => 
+        r.billing?.contractFeePBMSBENumber || 
+        r.billing?.contractPBMSInvoiceDate || 
+        toNumber(r.billing?.contractInvoiceAmount) > 0
+      );
+      
+      // Find first non-empty venue fee details
+      const firstWithVenue = group.runs.find(r => 
+        r.billing?.venuePBMSBENumber || 
+        r.billing?.venuePBMSInvoiceDate || 
+        toNumber(r.billing?.venueInvoiceAmount) > 0
+      );
+
+      // Find first non-empty remarks
+      const firstWithRemarks = group.runs.find(r => r.billing?.finalRemarks);
+
+      // Propagate
+      group.runs.forEach(run => {
+        if (!run.billing) run.billing = {};
+        
+        if (firstWithContract && !run.billing.contractFeePBMSBENumber && !run.billing.contractPBMSInvoiceDate && toNumber(run.billing.contractInvoiceAmount) === 0) {
+          run.billing.contractFeePBMSBENumber = firstWithContract.billing.contractFeePBMSBENumber;
+          run.billing.contractPBMSInvoiceDate = firstWithContract.billing.contractPBMSInvoiceDate;
+          run.billing.contractInvoiceAmount = firstWithContract.billing.contractInvoiceAmount;
+        }
+
+        if (firstWithVenue && !run.billing.venuePBMSBENumber && !run.billing.venuePBMSInvoiceDate && toNumber(run.billing.venueInvoiceAmount) === 0) {
+          run.billing.venuePBMSBENumber = firstWithVenue.billing.venuePBMSBENumber;
+          run.billing.venuePBMSInvoiceDate = firstWithVenue.billing.venuePBMSInvoiceDate;
+          run.billing.venueInvoiceAmount = firstWithVenue.billing.venueInvoiceAmount;
+        }
+
+        if (firstWithRemarks && !run.billing.finalRemarks) {
+          run.billing.finalRemarks = firstWithRemarks.billing.finalRemarks;
+        }
+      });
+    }
+
     // Totals accumulators
     let totalUnitPax = 0;
     let totalUnitRun = 0;
@@ -238,46 +290,118 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
 
     // Calculate merge boundaries
     let tempRow = 4;
-    const mergesToApply: { type: 'course' | 'run'; start: number; end: number }[] = [];
-    let currentCourseTitle = '';
-    let courseStartRow = 4;
+    const mergesToApply: { start: number; end: number; cols: number[] }[] = [];
+    const courseStartRows = new Set<number>();
 
-    for (let i = 0; i < courseRuns.length; i++) {
-      const courseRun = courseRuns[i];
-      const billing = courseRun.billing || {};
-      const entries = Array.isArray(billing.entries) && billing.entries.length > 0 ? billing.entries : [null];
-      const runStartRow = tempRow;
-      const runEndRow = tempRow + entries.length - 1;
+    for (const group of courseGroups) {
+      const courseStartRow = tempRow;
+      courseStartRows.add(courseStartRow);
+      
+      // Calculate run-level row ranges first
+      const runRanges: { start: number; end: number; run: any }[] = [];
+      let currentRunRow = tempRow;
+      
+      for (const run of group.runs) {
+        const billing = run.billing || {};
+        const entries = Array.isArray(billing.entries) && billing.entries.length > 0 ? billing.entries : [null];
+        const runStartRow = currentRunRow;
+        const runEndRow = currentRunRow + entries.length - 1;
+        
+        runRanges.push({
+          start: runStartRow,
+          end: runEndRow,
+          run
+        });
+        
+        currentRunRow = runEndRow + 1;
+      }
+      
+      const courseEndRow = currentRunRow - 1;
+      tempRow = currentRunRow;
 
+      // 1. Course-level fields (Col 1, 2, 3) always merge at course level
       mergesToApply.push({
-        type: 'run',
-        start: runStartRow,
-        end: runEndRow
+        start: courseStartRow,
+        end: courseEndRow,
+        cols: [1, 2, 3]
       });
 
-      const isLastRun = i === courseRuns.length - 1;
-      const nextRun = isLastRun ? null : courseRuns[i + 1];
-      const nextCourseTitle = nextRun ? (nextRun.courseTitle || '') : '';
-
-      if (i === 0) {
-        currentCourseTitle = courseRun.courseTitle || '';
-        courseStartRow = runStartRow;
-      }
-
-      if (isLastRun || (courseRun.courseTitle || '') !== nextCourseTitle) {
+      // 2. Run-level unit fields (Col 4, 5, 6, 7, 8, 9, 10) always merge at run level
+      runRanges.forEach(range => {
         mergesToApply.push({
-          type: 'course',
-          start: courseStartRow,
-          end: runEndRow
+          start: range.start,
+          end: range.end,
+          cols: [4, 5, 6, 7, 8, 9, 10]
         });
+      });
 
-        if (!isLastRun) {
-          currentCourseTitle = nextCourseTitle;
-          courseStartRow = runEndRow + 1;
-        }
+      // 3. Contract Fees fields (Col 16, 17, 18, 19):
+      const firstRun = group.runs[0];
+      const allContractFeesSame = group.runs.every(r => 
+        (r.billing?.contractFeePBMSBENumber || '') === (firstRun.billing?.contractFeePBMSBENumber || '') &&
+        (r.billing?.contractPBMSInvoiceDate || '') === (firstRun.billing?.contractPBMSInvoiceDate || '') &&
+        toNumber(r.billing?.contractInvoiceAmount) === toNumber(firstRun.billing?.contractInvoiceAmount)
+      );
+
+      if (allContractFeesSame) {
+        mergesToApply.push({
+          start: courseStartRow,
+          end: courseEndRow,
+          cols: [16, 17, 18, 19]
+        });
+      } else {
+        runRanges.forEach(range => {
+          mergesToApply.push({
+            start: range.start,
+            end: range.end,
+            cols: [16, 17, 18, 19]
+          });
+        });
       }
 
-      tempRow = runEndRow + 1;
+      // 4. Venue Fees fields (Col 20, 21, 22):
+      const allVenueFeesSame = group.runs.every(r => 
+        (r.billing?.venuePBMSBENumber || '') === (firstRun.billing?.venuePBMSBENumber || '') &&
+        (r.billing?.venuePBMSInvoiceDate || '') === (firstRun.billing?.venuePBMSInvoiceDate || '') &&
+        toNumber(r.billing?.venueInvoiceAmount) === toNumber(firstRun.billing?.venueInvoiceAmount)
+      );
+
+      if (allVenueFeesSame) {
+        mergesToApply.push({
+          start: courseStartRow,
+          end: courseEndRow,
+          cols: [20, 21, 22]
+        });
+      } else {
+        runRanges.forEach(range => {
+          mergesToApply.push({
+            start: range.start,
+            end: range.end,
+            cols: [20, 21, 22]
+          });
+        });
+      }
+
+      // 5. Final Remarks (Col 23):
+      const allRemarksSame = group.runs.every(r => 
+        (r.billing?.finalRemarks || '') === (firstRun.billing?.finalRemarks || '')
+      );
+
+      if (allRemarksSame) {
+        mergesToApply.push({
+          start: courseStartRow,
+          end: courseEndRow,
+          cols: [23]
+        });
+      } else {
+        runRanges.forEach(range => {
+          mergesToApply.push({
+            start: range.start,
+            end: range.end,
+            cols: [23]
+          });
+        });
+      }
     }
 
     for (const courseRun of courseRuns) {
@@ -337,7 +461,7 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
         }
 
         // Write course-level details only on the start row of this Course group
-        const isCourseStartRow = mergesToApply.some(m => m.type === 'course' && m.start === currentRow);
+        const isCourseStartRow = courseStartRows.has(currentRow);
         if (isCourseStartRow) {
           row.getCell(1).value = courseRun.courseTitle || '';
           setCurrency(row.getCell(2), billingRatePerPax);
@@ -398,17 +522,9 @@ export async function generateConsolidatedBillingXLSX(exportData: any) {
     // Apply all vertical merges
     mergesToApply.forEach((merge) => {
       if (merge.end > merge.start) {
-        if (merge.type === 'course') {
-          const colsToMerge = [1, 2, 3];
-          colsToMerge.forEach((col) => {
-            worksheet.mergeCells(merge.start, col, merge.end, col);
-          });
-        } else if (merge.type === 'run') {
-          const colsToMerge = [4, 5, 6, 7, 8, 9, 10, 16, 17, 18, 19, 20, 21, 22, 23];
-          colsToMerge.forEach((col) => {
-            worksheet.mergeCells(merge.start, col, merge.end, col);
-          });
-        }
+        merge.cols.forEach((col) => {
+          worksheet.mergeCells(merge.start, col, merge.end, col);
+        });
       }
     });
 
