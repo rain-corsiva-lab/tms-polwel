@@ -1055,9 +1055,9 @@ class EmailService {
     _ctx?: RetryContext,
   ): Promise<boolean> {
     // Controlled by env var ENABLE_TC_ONBOARDING_EMAIL.
-    // Set to 'true' to re-enable; any other value (or absent) keeps it disabled.
-    if (process.env.ENABLE_TC_ONBOARDING_EMAIL !== 'true') {
-      console.log(`[EmailService] TC onboarding email skipped (ENABLE_TC_ONBOARDING_EMAIL != true) for: ${email}`);
+    // Set to 'false' to explicitly disable; defaults to enabled if not set or set to 'true'.
+    if (process.env.ENABLE_TC_ONBOARDING_EMAIL === 'false') {
+      console.log(`[EmailService] TC onboarding email skipped (ENABLE_TC_ONBOARDING_EMAIL == false) for: ${email}`);
       return true;
     }
 
