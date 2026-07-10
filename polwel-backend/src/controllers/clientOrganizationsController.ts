@@ -1548,8 +1548,8 @@ export const resendCoordinatorSetup = async (req: AuthenticatedRequest, res: Res
 
     // Send setup email
     try {
-      if (process.env.ENABLE_TC_ONBOARDING_EMAIL !== 'true') {
-        console.log(`[resendCoordinatorSetup] TC onboarding email is disabled (ENABLE_TC_ONBOARDING_EMAIL != true) — skipping for: ${coordinator.email}`);
+      if (process.env.ENABLE_TC_ONBOARDING_EMAIL === 'false') {
+        console.log(`[resendCoordinatorSetup] TC onboarding email is disabled (ENABLE_TC_ONBOARDING_EMAIL == false) — skipping for: ${coordinator.email}`);
         return res.json({
           success: false,
           message: 'TC onboarding emails are currently disabled. No email was sent.',
