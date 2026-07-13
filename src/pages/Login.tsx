@@ -12,6 +12,11 @@ import type { AuthResponse } from "@/lib/auth";
 import { toast } from "sonner";
 import AuthLayout from "@/components/AuthLayout";
 
+const enableInputOnFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+  const input = event.currentTarget;
+  setTimeout(() => input.removeAttribute("readonly"), 100);
+};
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -263,30 +268,42 @@ const Login = () => {
           </Alert>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form method="post" autoComplete="off" onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="login-email">Email</Label>
             <Input
-              id="email"
-              type="email"
+              id="login-email"
+              name="polwel-login-email"
+              type="text"
+              inputMode="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               required
+              autoComplete="off"
+              readOnly
+              onFocus={enableInputOnFocus}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="login-password">Password</Label>
             <Input
-              id="password"
-              type="password"
+              id="login-password"
+              name="polwel-login-password"
+              type="text"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
               required
+              autoComplete="off"
+              readOnly
+              onFocus={enableInputOnFocus}
+              className="[-webkit-text-security:disc]"
+              data-lpignore="true"
+              data-1p-ignore
             />
           </div>
 

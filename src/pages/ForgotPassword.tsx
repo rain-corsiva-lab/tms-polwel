@@ -125,7 +125,7 @@ const ForgotPassword = () => {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form method="post" autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -137,6 +137,7 @@ const ForgotPassword = () => {
                 disabled={isSubmitting}
                 required
                 autoFocus
+                autoComplete="off"
               />
             </div>
 

@@ -221,7 +221,7 @@ const CompleteSetup = () => {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={handleSetupComplete} className="space-y-6">
+            <form method="post" autoComplete="off" onSubmit={handleSetupComplete} className="space-y-6">
               {error && (
                 <Alert variant="destructive">
                   <XCircle className="h-4 w-4" />
@@ -241,6 +241,7 @@ const CompleteSetup = () => {
                     placeholder="Create a strong password"
                     className="pr-10"
                     required
+                    autoComplete="off"
                   />
                   <Button
                     type="button"
@@ -278,6 +279,7 @@ const CompleteSetup = () => {
                     placeholder="Confirm your password"
                     className="pr-10"
                     required
+                    autoComplete="off"
                   />
                   <Button
                     type="button"
