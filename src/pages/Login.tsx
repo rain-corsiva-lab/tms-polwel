@@ -263,7 +263,7 @@ const Login = () => {
           </Alert>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form method="post" autoComplete="off" onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -274,6 +274,7 @@ const Login = () => {
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               required
+              autoComplete="off"
             />
           </div>
 
@@ -287,6 +288,7 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
               required
+              autoComplete="off"
             />
           </div>
 
@@ -389,7 +391,7 @@ const Login = () => {
             </div>
           </div>
 
-          <form onSubmit={handleVerifyMfa} className="space-y-4">
+          <form method="post" autoComplete="off" onSubmit={handleVerifyMfa} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="mfaCode">Verification code</Label>
               <Input

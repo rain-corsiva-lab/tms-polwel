@@ -210,7 +210,7 @@ const ResetPassword = () => {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handlePasswordReset} className="space-y-6">
+          <form method="post" autoComplete="off" onSubmit={handlePasswordReset} className="space-y-6">
             {error && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
@@ -230,6 +230,7 @@ const ResetPassword = () => {
                   placeholder="Enter your new password"
                   className="pr-10"
                   required
+                  autoComplete="off"
                 />
                 <Button
                   type="button"
@@ -267,6 +268,7 @@ const ResetPassword = () => {
                   placeholder="Confirm your new password"
                   className="pr-10"
                   required
+                  autoComplete="off"
                 />
                 <Button
                   type="button"
