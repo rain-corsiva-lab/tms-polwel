@@ -13,6 +13,7 @@ declare global {
         email: string;
         role: string;
         organizationId?: string;
+        organizationIds?: string[];
         permissions?: Set<string> | any[];
       };
     }
@@ -25,6 +26,7 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     organizationId?: string;
+    organizationIds?: string[];
     permissions?: Set<string> | any[];
   };
 }
@@ -87,7 +89,12 @@ export const authenticateToken = async (
             email: true,
             role: true,
             status: true,
-            organizationId: true
+            organizationId: true,
+            organizations: {
+              select: {
+                organizationId: true
+              }
+            }
           }
         });
 
@@ -116,7 +123,8 @@ export const authenticateToken = async (
           userId: user.id,
           email: user.email || '', // Provide empty string if email is null
           role: user.role,
-          ...(user.organizationId && { organizationId: user.organizationId })
+          ...(user.organizationId && { organizationId: user.organizationId }),
+          organizationIds: user.organizations ? user.organizations.map(o => o.organizationId) : []
         };
 
         next();
@@ -317,8 +325,9 @@ export const authorizeOrganization = (req: Request, res: Response, next: NextFun
     return;
   }
 
-  // Other users can only access their own organization
-  if (req.user.organizationId !== requestedOrgId) {
+  // Other users can only access their own organization(s)
+  const allowedOrgIds = req.user.organizationIds || [];
+  if (req.user.organizationId !== requestedOrgId && !allowedOrgIds.includes(requestedOrgId)) {
     res.status(403).json({ 
       error: 'Access denied to this organization',
       code: 'ORG_ACCESS_DENIED'

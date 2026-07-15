@@ -25,13 +25,23 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
         organizationId: true,
         profileImage: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        organizations: {
+          select: {
+            organizationId: true
+          }
+        }
       }
     });
 
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    return res.json({ success: true, data: user });
+    const userData = {
+      ...user,
+      organizationIds: user.organizations ? user.organizations.map((o: any) => o.organizationId) : []
+    };
+
+    return res.json({ success: true, data: userData });
   } catch (error) {
     console.error('Get profile error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

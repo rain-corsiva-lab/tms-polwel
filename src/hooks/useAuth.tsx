@@ -45,6 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       setPendingMfaState(pendingChallenge);
       setLoading(false);
+
+      if (authenticated && userData) {
+        // Fetch fresh profile details silently to update stale cache (e.g. linked org IDs)
+        authService.refreshUser()
+          .then((freshUser) => {
+            setUser(freshUser);
+          })
+          .catch((err) => {
+            console.warn("Failed silent user refresh:", err);
+          });
+      }
     };
 
     checkAuth();

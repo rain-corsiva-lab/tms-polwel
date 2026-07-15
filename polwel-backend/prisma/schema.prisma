@@ -64,6 +64,7 @@ model User {
   createdByUser                   User?                           @relation("UserCreatedBy", fields: [createdBy], references: [id])
   usersCreated                    User[]                          @relation("UserCreatedBy")
   organization                    Organization?                   @relation(fields: [organizationId], references: [id])
+  organizations                   UserOrganization[]
   venuesCreated                   Venue[]
   courseRunsCancelled             CourseRun[]                     @relation("CourseRunCancelledBy")
   waiverReviews                   CourseRunLearner[]              @relation("WaiverReviewedBy")
@@ -115,8 +116,20 @@ model Organization {
   courseRunLearners CourseRunLearner[]
   users            User[]
   courseRuns       CourseRun[]
+  coordinators     UserOrganization[]
 
   @@map("organizations")
+}
+
+model UserOrganization {
+  userId         String
+  organizationId String
+  createdAt      DateTime @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+  @@map("user_organizations")
 }
 
 model BuNumberOption {
@@ -944,7 +957,7 @@ model EmailLog {
 }
 
 model EmailRetryQueue {
-  id          String           @id @default(cuid())
+  id          String           @id @default(cuid()) @db.VarChar(30)
   emailType   String           @db.VarChar(100)
   recipient   String           @db.VarChar(2000)
   subject     String?          @db.VarChar(500)
