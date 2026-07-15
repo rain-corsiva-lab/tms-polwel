@@ -136,7 +136,7 @@ const OrganizationDashboard = () => {
       }
     };
     fetchOrgs();
-  }, [orgIds]);
+  }, [orgIds.join(",")]);
 
   useEffect(() => {
     if (!hasRole("TRAINING_COORDINATOR") || (!selectedOrgId && orgIds.length === 0)) {
