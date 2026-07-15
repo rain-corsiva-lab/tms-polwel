@@ -45,20 +45,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       setPendingMfaState(pendingChallenge);
       setLoading(false);
-
-      if (authenticated && userData) {
-        // Fetch fresh profile details silently to update stale cache (e.g. linked org IDs)
-        authService.refreshUser()
-          .then((freshUser) => {
-            setUser(freshUser);
-          })
-          .catch((err) => {
-            console.warn("Failed silent user refresh:", err);
-          });
-      }
     };
 
     checkAuth();
+
+    // Fetch fresh profile details silently once on mount to update stale cache (e.g. linked org IDs)
+    if (authService.isAuthenticated()) {
+      authService.refreshUser()
+        .then((freshUser) => {
+          setUser(freshUser);
+        })
+        .catch((err) => {
+          console.warn("Failed silent user refresh:", err);
+        });
+    }
 
     // Set up less frequent auth checks (every 2 minutes instead of 30 seconds)
     const authCheckInterval = setInterval(checkAuth, 2 * 60 * 1000);
