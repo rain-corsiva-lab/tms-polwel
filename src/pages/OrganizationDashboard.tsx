@@ -174,10 +174,10 @@ const OrganizationDashboard = () => {
         return statusLower === "completed" || statusLower === "pending_billing";
       });
 
-      // Everything else goes to in-progress table
+      // Everything else (except completed, pending_billing, and cancelled) goes to in-progress table
       const inProgress = allRuns.filter((run) => {
         const statusLower = run.status.toLowerCase();
-        return statusLower !== "completed" && statusLower !== "pending_billing";
+        return statusLower !== "completed" && statusLower !== "pending_billing" && statusLower !== "cancelled";
       });
 
       setAllCourseRuns(allRuns);
