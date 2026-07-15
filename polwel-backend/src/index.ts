@@ -60,22 +60,19 @@ const PORT = process.env.PORT || 3001;
 // Rate limiting - disabled for localhost/development, enabled for production
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || (NODE_ENV === 'development' ? '10000' : '10000')), // Very high limit in dev
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '15000'), // Very high default limit
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting for health checks and localhost in development
+    // Skip rate limiting for health checks
     if (req.path === '/health') return true;
     
-    // Skip rate limiting for localhost requests in development
-    if (NODE_ENV === 'development') {
-      const ip = req.ip || req.socket.remoteAddress || '';
-      if (ip.includes('127.0.0.1') || ip.includes('::1') || ip.includes('localhost')) {
-        return true;
-      }
+    // Skip rate limiting completely if disabled in env or if in development mode
+    if (process.env.DISABLE_RATE_LIMIT === 'true' || NODE_ENV === 'development' || !NODE_ENV) {
+      return true;
     }
     
     return false;
