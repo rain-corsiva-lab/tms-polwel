@@ -2671,9 +2671,19 @@ export const courseRunController = {
         deletedAt: null,
       };
 
-      // If coordinatorId is provided, filter learners by that training coordinator
-      // Only show enrollments assigned to this specific coordinator
-      if (coordinatorId) {
+      // If the requester is a training coordinator, they see all learners in the course run
+      // who belong to any of their linked client organizations.
+      if (req.user && req.user.role === 'TRAINING_COORDINATOR') {
+        const orgIds = [...(req.user.organizationIds || [])];
+        if (req.user.organizationId) {
+          orgIds.push(req.user.organizationId);
+        }
+        const uniqueOrgIds = Array.from(new Set(orgIds.filter(Boolean)));
+        where.clientOrganizationId = {
+          in: uniqueOrgIds
+        };
+      } else if (coordinatorId) {
+        // Otherwise, if coordinatorId is explicitly provided, filter by that coordinator
         where.trainingCoordinatorId = coordinatorId;
       }
 

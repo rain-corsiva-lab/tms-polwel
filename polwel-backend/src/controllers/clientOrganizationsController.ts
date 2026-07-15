@@ -979,12 +979,16 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
       return errorResponse(res, 400, 'Organization ID and Coordinator ID are required');
     }
 
-    // Check if coordinator exists and belongs to organization
+    // Check if coordinator exists and belongs to organization via the junction table
     const existingCoordinator = await prisma.user.findFirst({
       where: {
         id: coordinatorId,
-        organizationId,
-        role: 'TRAINING_COORDINATOR'
+        role: 'TRAINING_COORDINATOR',
+        organizations: {
+          some: {
+            organizationId
+          }
+        }
       }
     });
 
@@ -1016,8 +1020,13 @@ export const updateOrganizationCoordinator = async (req: AuthenticatedRequest, r
 
     const updatedCoordinator = await prisma.$transaction(async (tx) => {
       if (isPrimary === true) {
+        const otherCoordinators = await tx.userOrganization.findMany({
+          where: { organizationId, NOT: { userId: coordinatorId } },
+          select: { userId: true }
+        });
+        const otherUserIds = otherCoordinators.map(o => o.userId);
         await tx.user.updateMany({
-          where: { organizationId, role: 'TRAINING_COORDINATOR', NOT: { id: coordinatorId } },
+          where: { id: { in: otherUserIds }, role: 'TRAINING_COORDINATOR' },
           data: { isPrimaryCoordinator: false }
         });
       }
