@@ -173,7 +173,9 @@ app.use((req, res, next) => {
   );
   next();
 });
-app.use(limiter);
+if (process.env.ENABLE_RATE_LIMIT === 'true') {
+  app.use(limiter);
+}
 
 // CORS middleware - validation is done inside corsOptions
 app.use(cors(corsOptions));
