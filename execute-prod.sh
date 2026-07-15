@@ -24,6 +24,11 @@ cd $PROJECT_DIR
 git config --global --add safe.directory $PROJECT_DIR
 git pull origin main -X theirs
 
+# Install Puppeteer system dependencies
+echo "🔧 Installing Puppeteer system libraries..."
+chmod +x ./install-puppeteer-deps.sh
+./install-puppeteer-deps.sh
+
 # Frontend build
 echo "📦 Installing frontend dependencies..."
 npm install
