@@ -152,8 +152,7 @@ export const getCoursesByLearnersRanking = async (
       .map((item, index) => ({
         rank: index + 1,
         courseName: item.courseName,
-        numberOfLearners: item.learnerCount,
-        runType: item.runType === 'DEDICATED_RUN' ? 'Dedicated Run' : 'Open Run'
+        numberOfLearners: item.learnerCount
       }));
 
     res.json({
@@ -213,7 +212,11 @@ export const getDivisionsByLearnersRanking = async (
     const departmentMap = new Map<string, { totalLearners: Set<string>; completedCourses: number; totalEnrollments: number }>();
 
     enrollments.forEach(enrollment => {
-      const dept = enrollment.departmentName || 'Unassigned';
+      const rawDept = enrollment.departmentName ? enrollment.departmentName.trim() : '';
+      if (!rawDept || rawDept.toLowerCase() === 'unassigned') {
+        return; // Skip unassigned and empty data
+      }
+      const dept = rawDept;
       const isCompleted = enrollment.attendanceStatus === 'PRESENT' ? 1 : 0;
       const isActiveLearner = !enrollment.learner?.deletedAt;
 
@@ -237,14 +240,11 @@ export const getDivisionsByLearnersRanking = async (
       }
     });
 
-    // Convert to array and calculate completion rate
+    // Convert to array and sort by learner count
     const rankings = Array.from(departmentMap.entries())
       .map(([deptName, data]) => ({
         divisionDepartment: deptName,
-        numberOfLearners: data.totalLearners.size,
-        completionRate: data.totalEnrollments > 0 
-          ? Math.round((data.completedCourses / data.totalEnrollments) * 100) 
-          : 0
+        numberOfLearners: data.totalLearners.size
       }))
       .sort((a, b) => b.numberOfLearners - a.numberOfLearners)
       .slice(0, 10) // Top 10

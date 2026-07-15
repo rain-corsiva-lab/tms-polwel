@@ -12,6 +12,8 @@ import {
   createOrganizationCoordinator,
   updateOrganizationCoordinator,
   deleteOrganizationCoordinator,
+  getAvailableCoordinators,
+  linkExistingCoordinator,
   getAllLearners,
   getOrganizationLearners,
   resendCoordinatorSetup,
@@ -53,7 +55,9 @@ router.delete('/:id', authorizeRoles('POLWEL'), requirePermissions('clients.dele
 
 // Training Coordinators routes
 router.get('/:organizationId/coordinators', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), authorizeOrganization, requirePermissions('clients.view'), getOrganizationCoordinators);
+router.get('/:organizationId/available-coordinators', authorizeRoles('POLWEL'), requirePermissions('clients.view'), getAvailableCoordinators);
 router.post('/:organizationId/coordinators', authorizeRoles('POLWEL'), requirePermissions('clients.create'), createOrganizationCoordinator);
+router.post('/:organizationId/coordinators/:coordinatorId/link', authorizeRoles('POLWEL'), requirePermissions('clients.create'), linkExistingCoordinator);
 router.put('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), requirePermissions('clients.edit'), updateOrganizationCoordinator);
 router.delete('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), requirePermissions('clients.delete'), deleteOrganizationCoordinator);
 router.post('/:organizationId/coordinators/:coordinatorId/resend-setup', authorizeRoles('POLWEL'), resendCoordinatorSetup);

@@ -1181,6 +1181,23 @@ export const clientOrganizationsApi = {
     return apiRequest(`/client-organizations/${organizationId}/coordinators?${queryParams}`);
   },
 
+  // Get available coordinators NOT connected to the organization
+  getAvailableCoordinators: async (organizationId: string) => {
+    return apiRequest(`/client-organizations/${organizationId}/available-coordinators`);
+  },
+
+  // Link an existing coordinator to the organization
+  linkCoordinator: async (
+    organizationId: string,
+    coordinatorId: string,
+    payload: { isPrimary?: boolean }
+  ) => {
+    return apiRequest(`/client-organizations/${organizationId}/coordinators/${coordinatorId}/link`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Create coordinator for an organization
   createCoordinator: async (
     organizationId: string,
@@ -1374,6 +1391,16 @@ export const organizationsApi = {
   // Merge duplicates into primary organizations
   mergeDuplicates: async () => {
     return apiRequest('/organizations/merge-duplicates', { method: 'POST' });
+  },
+};
+
+// Course Runs Merger API
+export const courseRunsMergerApi = {
+  getDuplicates: async () => {
+    return apiRequest('/course-runs-merger/duplicates');
+  },
+  mergeDuplicates: async () => {
+    return apiRequest('/course-runs-merger/merge', { method: 'POST' });
   },
 };
 

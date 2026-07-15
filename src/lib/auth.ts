@@ -8,6 +8,7 @@ export interface User {
   role: 'POLWEL' | 'TRAINING_COORDINATOR' | 'TRAINER' | 'LEARNER';
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'LOCKED';
   organizationId?: string;
+  organizationIds?: string[];
   department?: string;
   division?: string;
   lastLogin?: string;

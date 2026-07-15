@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import { AddCoordinatorDialog } from "@/components/AddCoordinatorDialog";
+import { LinkExistingCoordinatorDialog } from "@/components/LinkExistingCoordinatorDialog";
 import { EditCoordinatorDialog } from "@/components/EditCoordinatorDialog";
 import { LearnerDetailsDialog } from "@/components/LearnerDetailsDialog";
 import { BuNumberSelect } from "@/components/BuNumberSelect";
@@ -702,7 +703,10 @@ const ClientOrganisationDetail = () => {
               <h2 className="text-2xl font-bold">Training Coordinators</h2>
               <p className="text-muted-foreground">Manage training coordinators for this organization</p>
             </div>
-            <AddCoordinatorDialog onCoordinatorAdd={handleCoordinatorAdd} />
+            <div className="flex gap-2">
+              <LinkExistingCoordinatorDialog organizationId={id!} onCoordinatorLinked={fetchCoordinators} />
+              <AddCoordinatorDialog onCoordinatorAdd={handleCoordinatorAdd} />
+            </div>
           </div>
 
           <Card>
@@ -823,6 +827,14 @@ const ClientOrganisationDetail = () => {
                                 }}
                               >
                                 {coordinator.status === "ACTIVE" ? "Mark Inactive" : "Mark Active"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-950/20"
+                                onClick={() => handleCoordinatorDelete(coordinator.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Coordinator
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

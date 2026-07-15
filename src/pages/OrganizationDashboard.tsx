@@ -98,31 +98,70 @@ const OrganizationDashboard = () => {
   const [viewLearnersOpen, setViewLearnersOpen] = useState(false);
   const [selectedCourseRun, setSelectedCourseRun] = useState<any>(null);
 
-  const organizationId = user?.organizationId;
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [userOrgs, setUserOrgs] = useState<any[]>([]);
+  const [orgsLoading, setOrgsLoading] = useState(false);
+
+  const orgIds = useMemo(() => {
+    if (user?.organizationIds && user.organizationIds.length > 0) {
+      return user.organizationIds;
+    }
+    return user?.organizationId ? [user.organizationId] : [];
+  }, [user]);
 
   useEffect(() => {
-    if (!hasRole("TRAINING_COORDINATOR") || !organizationId) {
+    const fetchOrgs = async () => {
+      if (orgIds.length === 0) return;
+      try {
+        setOrgsLoading(true);
+        const details = await Promise.all(
+          orgIds.map(async (id) => {
+            try {
+              return await clientOrganizationsApi.getById(id);
+            } catch (err) {
+              console.error(`Failed to fetch org details for ${id}`, err);
+              return null;
+            }
+          })
+        );
+        const validOrgs = details.filter(Boolean);
+        setUserOrgs(validOrgs);
+        if (validOrgs.length > 0 && !selectedOrgId) {
+          setSelectedOrgId(validOrgs[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to load organizations details", err);
+      } finally {
+        setOrgsLoading(false);
+      }
+    };
+    fetchOrgs();
+  }, [orgIds]);
+
+  useEffect(() => {
+    if (!hasRole("TRAINING_COORDINATOR") || (!selectedOrgId && orgIds.length === 0)) {
       navigate("/", { replace: true });
       return;
     }
-    fetchOrganizationData();
-    fetchResources();
-    fetchRankings();
-  }, [organizationId]);
+    if (selectedOrgId) {
+      fetchOrganizationData(selectedOrgId);
+      fetchResources(selectedOrgId);
+      fetchRankings(selectedOrgId);
+    }
+  }, [selectedOrgId]);
 
   useEffect(() => {
-    if (activeTab === "learners" && organizationId) {
-      fetchLearners();
+    if (activeTab === "learners" && selectedOrgId) {
+      fetchLearners(selectedOrgId);
     }
-  }, [activeTab, organizationId, learnersPagination.page, learnersPerPage]);
+  }, [activeTab, selectedOrgId, learnersPagination.page, learnersPerPage]);
 
-  const fetchOrganizationData = async () => {
-    if (!organizationId) return;
+  const fetchOrganizationData = async (orgId: string) => {
     try {
       setLoading(true);
       const [orgData, courseRunsData] = await Promise.all([
-        clientOrganizationsApi.getById(organizationId),
-        clientOrganizationsApi.getCoordinatorCourseRuns(organizationId),
+        clientOrganizationsApi.getById(orgId),
+        clientOrganizationsApi.getCoordinatorCourseRuns(orgId),
       ]);
       setOrganization(orgData);
 
@@ -155,10 +194,9 @@ const OrganizationDashboard = () => {
     }
   };
 
-  const fetchLearners = async () => {
-    if (!organizationId) return;
+  const fetchLearners = async (orgId: string) => {
     try {
-      const response = await clientOrganizationsApi.getCoordinatorLearners(organizationId, {
+      const response = await clientOrganizationsApi.getCoordinatorLearners(orgId, {
         page: learnersPagination.page,
         limit: learnersPerPage,
       });
@@ -173,11 +211,10 @@ const OrganizationDashboard = () => {
     }
   };
 
-  const fetchResources = async () => {
-    if (!organizationId) return;
+  const fetchResources = async (orgId: string) => {
     try {
       setResourcesLoading(true);
-      const response = await clientOrganizationsApi.getResources(organizationId);
+      const response = await clientOrganizationsApi.getResources(orgId);
       setResources(response.resources || []);
     } catch (error: any) {
       console.error("Error fetching resources:", error);
@@ -191,13 +228,12 @@ const OrganizationDashboard = () => {
     }
   };
 
-  const fetchRankings = async () => {
-    if (!organizationId) return;
+  const fetchRankings = async (orgId: string) => {
     try {
       setRankingsLoading(true);
       const [coursesResponse, divisionsResponse] = await Promise.all([
-        clientOrganizationsApi.getCoursesByLearnersRanking(organizationId),
-        clientOrganizationsApi.getDivisionsByLearnersRanking(organizationId),
+        clientOrganizationsApi.getCoursesByLearnersRanking(orgId),
+        clientOrganizationsApi.getDivisionsByLearnersRanking(orgId),
       ]);
       setCourseRankings(coursesResponse.rankings || []);
       setDivisionRankings(divisionsResponse.rankings || []);
@@ -382,8 +418,8 @@ const OrganizationDashboard = () => {
     );
   }
 
-  const totalLearners = learnersPagination.total || learners.length;
-  const activeLearners = learners.filter((l) => l.status === "ACTIVE").length;
+  const totalLearners = (organization as any).stats?.totalLearners ?? 0;
+  const activeLearners = (organization as any).stats?.activeLearners ?? 0;
   const completedCourses = completedRuns.length;
   const ongoingCourses = inProgressRuns.length;
 
@@ -394,10 +430,29 @@ const OrganizationDashboard = () => {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">{organization.name}</h1>
-          {/* <p className="text-muted-foreground">Organisation Details and Training Information</p> */}
         </div>
         {getStatusBadge(organization.status)}
       </div>
+
+      {/* Organisation Tabs Selector */}
+      {userOrgs.length > 1 && (
+        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto pb-1">
+          {userOrgs.map((org) => (
+            <button
+              key={org.id}
+              onClick={() => setSelectedOrgId(org.id)}
+              className={cn(
+                "py-2.5 px-4 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap",
+                selectedOrgId === org.id
+                  ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-slate-200"
+              )}
+            >
+              {org.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Organisation information */}
       {/* <Card className="bg-white shadow-sm">
@@ -487,10 +542,10 @@ const OrganizationDashboard = () => {
                     const coverSrc = getResourceCoverUrl(resource.imageUrl);
                     const postedLabel = resource.publishedAt
                       ? `Posted ${new Date(resource.publishedAt).toLocaleDateString("en-SG", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}`
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}`
                       : "Posted —";
                     const descPlain = resource.description ? stripHtmlTags(resource.description) : "";
 
@@ -655,7 +710,6 @@ const OrganizationDashboard = () => {
                         <TableHead className="w-16 text-center">Rank</TableHead>
                         <TableHead>Course Name</TableHead>
                         <TableHead className="w-32 text-center">Number of Learners</TableHead>
-                        <TableHead className="w-32">Run Type</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -667,9 +721,6 @@ const OrganizationDashboard = () => {
                             <Badge variant="secondary" className="bg-orange-100 text-orange-900">
                               {item.numberOfLearners}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.runType === "Dedicated Run" ? "default" : "outline"}>{item.runType}</Badge>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -684,7 +735,7 @@ const OrganizationDashboard = () => {
               <CardHeader className="bg-green-50 border-b border-green-200">
                 <CardTitle className="text-green-900 flex items-center space-x-2">
                   <span>🏢</span>
-                  <span>Attending Divisions Ranked by Number of Learners</span>
+                  <span>Divisions Ranked by Number of Learners</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -703,7 +754,6 @@ const OrganizationDashboard = () => {
                         <TableHead className="w-16 text-center">Rank</TableHead>
                         <TableHead>Division / Department</TableHead>
                         <TableHead className="w-32 text-center">Number of Learners</TableHead>
-                        <TableHead className="w-32 text-center">Completion Rate</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -714,20 +764,6 @@ const OrganizationDashboard = () => {
                           <TableCell className="text-center">
                             <Badge variant="secondary" className="bg-green-100 text-green-900">
                               {item.numberOfLearners}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="secondary"
-                              className={
-                                item.completionRate >= 80
-                                  ? "bg-green-600 text-white"
-                                  : item.completionRate >= 50
-                                    ? "bg-yellow-100 text-yellow-900"
-                                    : "bg-red-100 text-red-900"
-                              }
-                            >
-                              {item.completionRate}%
                             </Badge>
                           </TableCell>
                         </TableRow>
