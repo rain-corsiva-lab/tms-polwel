@@ -204,8 +204,8 @@ const OrganizationDashboard = () => {
       setLearnersPagination(response.pagination || learnersPagination);
     } catch (error: any) {
       toast({
-        title: "Error loading participants",
-        description: getErrorMessage(error, "Failed to load participants"),
+        title: "Error loading learners",
+        description: getErrorMessage(error, "Failed to load learners"),
         variant: "destructive",
       });
     }
@@ -795,7 +795,7 @@ const OrganizationDashboard = () => {
                         <TableHead>Course Name</TableHead>
                         <TableHead>Start Date</TableHead>
                         <TableHead>End Date</TableHead>
-                        <TableHead>Participants</TableHead>
+                        <TableHead>Learners</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -819,7 +819,7 @@ const OrganizationDashboard = () => {
                               }}
                             >
                               <Eye className="h-4 w-4" />
-                              View Participants
+                              View Learners
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -849,7 +849,7 @@ const OrganizationDashboard = () => {
                     <BookOpen className="h-5 w-5" />
                     <CardTitle>Completed Course Runs ({filteredCompletedRuns.length})</CardTitle>
                   </div>
-                  <CardDescription>Finished training programs with participant details</CardDescription>
+                  <CardDescription>Finished training programs with learner details</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Popover>
@@ -904,7 +904,7 @@ const OrganizationDashboard = () => {
                         <TableHead>Course Name</TableHead>
                         <TableHead>Start Date</TableHead>
                         <TableHead>End Date</TableHead>
-                        <TableHead>Participants</TableHead>
+                        <TableHead>Learners</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -928,7 +928,7 @@ const OrganizationDashboard = () => {
                               }}
                             >
                               <Eye className="h-4 w-4" />
-                              View Participants
+                              View Learners
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1000,7 +1000,7 @@ const OrganizationDashboard = () => {
         </TabsContent>
       </Tabs>
 
-      {/* View Participants Dialog */}
+      {/* View Learners Dialog */}
       <ViewLearnersDialog
         open={viewLearnersOpen}
         onOpenChange={setViewLearnersOpen}

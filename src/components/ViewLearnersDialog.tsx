@@ -336,15 +336,15 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Course Run Participants</DialogTitle>
-            <DialogDescription>Overview and participant list for this course run</DialogDescription>
+            <DialogTitle className="text-2xl">Course Run Learners</DialogTitle>
+            <DialogDescription>Overview and learner list for this course run</DialogDescription>
           </DialogHeader>
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-6 w-6 animate-spin" />
-                <span>Loading participants...</span>
+                <span>Loading learners...</span>
               </div>
             </div>
           ) : (
@@ -422,13 +422,13 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Enrolled Participants ({enrolledLearners.length})</h3>
+                  <h3 className="text-lg font-semibold">Enrolled Learners ({enrolledLearners.length})</h3>
                   <Badge className="bg-green-100 text-green-800">{enrolledLearners.length}</Badge>
                 </div>
 
                 {enrolledLearners.length === 0 ? (
                   <Card>
-                    <CardContent className="p-8 text-center text-muted-foreground">No enrolled participants</CardContent>
+                    <CardContent className="p-8 text-center text-muted-foreground">No enrolled learners</CardContent>
                   </Card>
                 ) : (
                   <Card>
@@ -456,7 +456,9 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                                   <TableCell className="text-sm">{record.learner.contactNumber || "—"}</TableCell>
                                   <TableCell>{attendanceBadge(certRow, record)}</TableCell>
                                   <TableCell className="text-right">
-                                    {certRow.isPresent ? (
+                                    {certRow.waiverStatus === "APPROVED" ? (
+                                      "—"
+                                    ) : certRow.isPresent ? (
                                       <Button variant="ghost" size="sm" onClick={() => handleDownloadCertificate(certRow)}>
                                         <Download className="h-4 w-4 mr-1" />
                                         PDF
@@ -482,7 +484,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
               {withdrawnLearners.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Withdrawn Participants ({withdrawnLearners.length})</h3>
+                    <h3 className="text-lg font-semibold">Withdrawn Learners ({withdrawnLearners.length})</h3>
                     <Badge className="bg-red-100 text-red-800">{withdrawnLearners.length}</Badge>
                   </div>
 
