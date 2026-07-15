@@ -480,7 +480,7 @@ export const waiverController = {
         return;
       }
 
-      // Update waiver status to approved and set attendance to PRESENT
+      // Update waiver status to approved and keep attendance as ABSENT
       const updatedWaiver = await prisma.courseRunLearner.update({
         where: { id },
         data: {
@@ -488,7 +488,7 @@ export const waiverController = {
           waiverRejectReason: reason || null, // Optional approval note
           waiverReviewedAt: new Date(),
           waiverReviewedBy: userId,
-          attendanceStatus: 'PRESENT', // Set to PRESENT when waiver is approved
+          attendanceStatus: 'ABSENT', // Keep as ABSENT when waiver is approved
         },
         include: {
           learner: {
