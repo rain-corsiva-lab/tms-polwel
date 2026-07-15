@@ -26,7 +26,8 @@ function generateAccessToken(user: any): string {
       userId: user.id, 
       email: user.email, 
       role: user.role,
-      organizationId: user.organizationId 
+      organizationId: user.organizationId,
+      organizationIds: user.organizations ? user.organizations.map((o: any) => o.organizationId) : []
     },
     JWT_SECRET,
     { expiresIn: '7d' } // Changed from 15m to 7 days for better UX
@@ -49,6 +50,11 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
     where: { id: userId },
     include: {
       organization: true,
+      organizations: {
+        select: {
+          organizationId: true
+        }
+      },
       permissions: {
         select: { permissionName: true, granted: true },
       },
@@ -87,6 +93,7 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
     role: user.role,
     status: user.status,
     organizationId: user.organizationId,
+    organizationIds: user.organizations ? user.organizations.map((o: any) => o.organizationId) : [],
     designation: user.designation,
     division: user.division,
     lastLogin: new Date(),

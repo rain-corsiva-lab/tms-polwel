@@ -136,7 +136,7 @@ class AzureTransport implements Transport<SentMessageInfo> {
   ): Promise<void> {
     try {
       const mailData = mail.data || {};
-      const { subject, from, to, text, html, cc, bcc, attachments = [] } = mailData;      
+      const { subject, from, to, text, html, cc, bcc, attachments = [] } = mailData;
 
       if (!from || !to) {
         throw new Error("Missing 'from' or 'to' email address.");
@@ -334,7 +334,7 @@ class EmailService {
   // Get logo path for CID attachment (for SMTP)
   private static getLogoPath(): string | null {
     if (this.logoPath) return this.logoPath;
-    
+
     try {
       const possiblePaths = [
         '/home/kukuh/webprojects/polwel/public/images/POLWEL Logo_Horizontal.png',
@@ -343,11 +343,11 @@ class EmailService {
         path.join(process.cwd(), '../public/images/POLWEL Logo_Horizontal.png'),
         path.join(process.cwd(), 'public/images/POLWEL Logo_Horizontal.png'),
       ];
-      
+
       console.log('🔍 Searching for POLWEL logo file:');
       console.log('   Current directory:', process.cwd());
       console.log('   __dirname:', __dirname);
-      
+
       for (const p of possiblePaths) {
         const exists = fs.existsSync(p);
         console.log(`   ${exists ? '✅' : '❌'} ${p}`);
@@ -357,7 +357,7 @@ class EmailService {
           return this.logoPath;
         }
       }
-      
+
       console.error('❌ POLWEL logo file not found in any location');
       return null;
     } catch (error) {
@@ -429,7 +429,7 @@ class EmailService {
       console.warn('⚠️  Logo file not found, will use URL fallback in email');
       return null;
     }
-    
+
     return {
       filename: 'polwel-logo.png',
       path: logoPath,
@@ -479,18 +479,18 @@ class EmailService {
    */
   private static getEmailMediaAttachments(): any[] {
     const attachments: any[] = [];
-    
+
     // Always try to provide logo attachment (returns null in Graph API mode where base64 is used)
     const logoAttachment = this.getLogoAttachment();
     if (logoAttachment) {
       attachments.push(logoAttachment);
       console.log('📎 Logo attachment added');
     }
-    
+
     // Social icons are now embedded as base64 data URIs in the HTML, no attachments needed
     console.log('📎 Social icons: Embedded as data URIs (no attachments)');
     console.log('📎 Total attachments for email:', attachments.length);
-    
+
     return attachments;
   }
 
@@ -498,28 +498,28 @@ class EmailService {
   private static getSocialIconAttachments(): Array<{ filename: string; path: string; cid: string }> {
     const attachments: Array<{ filename: string; path: string; cid: string }> = [];
     const imagesDir = path.join(__dirname, '../../public/images');
-    
+
     console.log('🔍 Looking for social icon SVGs in:', imagesDir);
-    
+
     const linkedinPath = path.join(imagesDir, 'icons8-linkedin.svg');
     const youtubePath = path.join(imagesDir, 'icons8-youtube.svg');
-    
+
     if (fs.existsSync(linkedinPath)) {
       console.log('✅ LinkedIn SVG found:', linkedinPath);
       attachments.push({ filename: 'icons8-linkedin.svg', path: linkedinPath, cid: 'linkedin-icon' });
     } else {
       console.log('❌ LinkedIn SVG NOT found:', linkedinPath);
     }
-    
+
     if (fs.existsSync(youtubePath)) {
       console.log('✅ YouTube SVG found:', youtubePath);
       attachments.push({ filename: 'icons8-youtube.svg', path: youtubePath, cid: 'youtube-icon' });
     } else {
       console.log('❌ YouTube SVG NOT found:', youtubePath);
     }
-    
+
     console.log('📎 Total social icon attachments:', attachments.length);
-    
+
     return attachments;
   }
 
@@ -530,16 +530,16 @@ class EmailService {
    */
   private static getEmailMediaMailjetInline(): Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> {
     const inlined: Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> = [];
-    
+
     const logoInline = this.getLogoMailjetInline();
     if (logoInline) {
       inlined.push(logoInline);
       console.log('🖼️  Mailjet: Logo inline attachment added');
     }
-    
+
     // Social icons are now embedded as data URIs - no attachments needed
     console.log('🖼️  Mailjet: Social icons embedded as data URIs');
-    
+
     return inlined;
   }
 
@@ -547,10 +547,10 @@ class EmailService {
   private static getSocialIconsMailjetInline(): Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> {
     const inlined: Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }> = [];
     const imagesDir = path.join(__dirname, '../../public/images');
-    
+
     const linkedinPath = path.join(imagesDir, 'icons8-linkedin.svg');
     const youtubePath = path.join(imagesDir, 'icons8-youtube.svg');
-    
+
     try {
       if (fs.existsSync(linkedinPath)) {
         const b64 = fs.readFileSync(linkedinPath).toString('base64');
@@ -573,7 +573,7 @@ class EmailService {
     } catch (error) {
       console.warn('⚠️  Could not load social icons as inline attachments:', error);
     }
-    
+
     return inlined;
   }
 
@@ -612,26 +612,26 @@ class EmailService {
     // Use HTTPS URLs for social icons - works reliably with Mailjet SMTP and all email clients
     const linkedinIconSrc = this.getLinkedInIconUrl();
     const youtubeIconSrc = this.getYouTubeIconUrl();
-    
+
     console.log('📧 FOOTER GENERATION START');
     console.log('   LinkedIn URL:', linkedinIconSrc);
     console.log('   YouTube URL:', youtubeIconSrc);
-    
+
     // Build footer with direct string concatenation to avoid template issues
     let footer = '<tr><td style="padding: 32px 28px; background-color: #ffffff; border-top: 2px solid #e5e7eb;" bgcolor="#ffffff">';
     footer += '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">';
-    
+
     // Regards
     footer += '<tr><td style="padding-bottom: 8px;"><p style="margin: 0; font-size: 14px; color: #1f2937 !important; font-family: Arial, sans-serif;">Regards,</p></td></tr>';
-    
+
     // Organization Name
     footer += '<tr><td style="padding-bottom: 2px;"><p style="margin: 0; font-size: 13px; font-weight: 600; color: #1f2937 !important; font-family: Arial, sans-serif;">Professional Development &amp; Career Services Division</p></td></tr>';
-    
+
     footer += '<tr><td style="padding-bottom: 12px;"><p style="margin: 0; font-size: 13px; color: #1f2937 !important; font-family: Arial, sans-serif;">POLWEL Co-operative Society Limited</p></td></tr>';
-    
+
     // Contact Info
     footer += '<tr><td style="padding-bottom: 12px;"><p style="margin: 0; font-size: 12px; color: #374151 !important; line-height: 1.6; font-family: Arial, sans-serif;">Main: (65) 6235 6428 (Option 4) |&#160;<a href="https://www.polwel.org.sg" style="color: #374151 !important; text-decoration: underline;">www.polwel.org.sg</a>&#160;|&#160;<span style="color: #374151 !important; font-weight: 600;">#POLWEL</span><span style="color: #2bc425 !important; font-weight: 600;">Cares</span></p></td></tr>';
-    
+
     // Social Media & HRPI with icon images
     footer += '<tr><td style="padding-bottom: 16px;"><p style="margin: 0; font-size: 12px; color: #f97316 !important; font-family: Arial, sans-serif; font-style: italic; line-height: 2;">';
     footer += 'Stay connected with POLWEL on&#160;';
@@ -642,20 +642,20 @@ class EmailService {
     footer += '<img src="' + youtubeIconSrc + '" alt="YouTube" width="20" height="20" style="display: inline-block; vertical-align: middle; border: 0; margin-bottom : 6px;" />';
     footer += '</a>&#160;and view our professional development courses on HRPI';
     footer += '</p></td></tr>';
-    
+
     // Warning
     footer += '<tr><td style="padding: 16px 0 0 0; border-top: 1px solid #e5e7eb;">';
     footer += '<p style="margin: 0; font-size: 10px; color: #1f2937 !important; font-family: Arial, sans-serif; line-height: 1.5;">';
     footer += '<strong style="font-weight: 700;">WARNING:</strong> Privileged and/or confidential information may be contained in this email. If you are not the intended addressee, you are hereby notified that you have received this transmittal in error and you must not review, copy, distribute or take any action in reliance on the information contained herein. Please notify the sender immediately if you receive this in error and immediately delete this message and all its attachments.';
     footer += '</p></td></tr>';
-    
+
     footer += '</table></td></tr>';
-    
+
     console.log('📧 FOOTER GENERATION END');
     console.log('   Footer HTML length:', footer.length);
     console.log('   Contains LinkedIn URL:', footer.includes(linkedinIconSrc) ? '✅' : '❌');
     console.log('   Contains YouTube URL:', footer.includes(youtubeIconSrc) ? '✅' : '❌');
-    
+
     return footer;
   }
 
@@ -673,17 +673,17 @@ class EmailService {
     attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
     inlinedAttachments?: Array<{ ContentType: string; Filename: string; Base64Content: string; ContentID: string }>;
   }): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const apiKey    = process.env.MAIL_USERNAME || '';
+    const apiKey = process.env.MAIL_USERNAME || '';
     const apiSecret = process.env.MAIL_PASSWORD || '';
     const fromEmail = process.env.MAIL_FROM_ADDRESS || opts.from;
-    const fromName  = process.env.MAIL_FROM_NAME   || 'POLWEL Training System';
+    const fromName = process.env.MAIL_FROM_NAME || 'POLWEL Training System';
 
     const toList = (Array.isArray(opts.to) ? opts.to : [opts.to]).map(e => ({ Email: e }));
     const ccList = (opts.cc || []).map(e => ({ Email: e }));
 
     const message: any = {
-      From:    { Email: fromEmail, Name: fromName },
-      To:      toList,
+      From: { Email: fromEmail, Name: fromName },
+      To: toList,
       Subject: opts.subject,
       HTMLPart: opts.html,
       ...(opts.text ? { TextPart: opts.text } : {}),
@@ -698,7 +698,7 @@ class EmailService {
     if (opts.attachments && opts.attachments.length > 0) {
       message.Attachments = opts.attachments.map(att => ({
         ContentType: att.contentType || 'application/octet-stream',
-        Filename:    att.filename,
+        Filename: att.filename,
         Base64Content: att.content.toString('base64'),
       }));
       const totalMB = opts.attachments.reduce((s, a) => s + a.content.length, 0) / 1024 / 1024;
@@ -709,7 +709,7 @@ class EmailService {
       const res = await fetch('https://api.mailjet.com/v3.1/send', {
         method: 'POST',
         headers: {
-          'Content-Type':  'application/json',
+          'Content-Type': 'application/json',
           'Authorization': 'Basic ' + Buffer.from(`${apiKey}:${apiSecret}`).toString('base64'),
         },
         body: JSON.stringify({ Messages: [message] }),
@@ -752,14 +752,14 @@ class EmailService {
         const graphClientSecret = process.env.GRAPH_CLIENT_SECRET;
         const graphTenantId = process.env.GRAPH_TENANT_ID;
         const graphFromEmail = process.env.GRAPH_MAIL_FROM_ADDRESS;
-  
+
         if (graphClientId && graphClientSecret && graphTenantId && graphFromEmail) {
           // Use Microsoft Graph API
           console.log('📧 Initializing email service with Microsoft Graph API');
           console.log('   Tenant ID:', graphTenantId.substring(0, 8) + '***');
           console.log('   Client ID:', graphClientId.substring(0, 8) + '***');
           console.log('   From Email:', graphFromEmail);
-  
+
           const azureTransport = new AzureTransport({
             clientId: graphClientId,
             clientSecret: graphClientSecret,
@@ -767,10 +767,10 @@ class EmailService {
             fromEmail: graphFromEmail,
             saveToSentItems: true,
           });
-  
+
           this.transporter = nodemailer.createTransport(azureTransport);
           this.isInitialized = true;
-  
+
           // Verify connection
           this.transporter.verify((error, success) => {
             if (error) {
@@ -779,7 +779,7 @@ class EmailService {
               console.log('✅ Graph API connection verified successfully');
             }
           });
-  
+
           return this.transporter;
         }
       }
@@ -840,10 +840,10 @@ class EmailService {
 
       this.transporter = nodemailer.createTransport(config as any);
       this.isInitialized = true;
-      
+
       console.log('✅ Transporter created successfully');
       console.log('🔄 Verifying SMTP connection...');
-      
+
       // Verify connection
       this.transporter.verify((error, success) => {
         if (error) {
@@ -864,7 +864,7 @@ class EmailService {
       });
     }
     return this.transporter;
-    }
+  }
 
   /**
    * Returns the EMAIL_PROVIDERS string for the currently active transport.
@@ -872,8 +872,8 @@ class EmailService {
    */
   private static getProviderName(): string {
     if (this.isGraphApiMode()) return EMAIL_PROVIDERS.GRAPH_API;
-    if (this.isMailjetSmtp())   return EMAIL_PROVIDERS.MAILJET;
-    if (!this.transporter)      return EMAIL_PROVIDERS.NONE;
+    if (this.isMailjetSmtp()) return EMAIL_PROVIDERS.MAILJET;
+    if (!this.transporter) return EMAIL_PROVIDERS.NONE;
     return EMAIL_PROVIDERS.SMTP;
   }
 
@@ -887,10 +887,10 @@ class EmailService {
     setupUrl: string,
     _ctx?: RetryContext,
   ): Promise<boolean> {
-  const transporter = this.getTransporter();
-  const logoSrc = this.getLogoSrc();
+    const transporter = this.getTransporter();
+    const logoSrc = this.getLogoSrc();
 
-  const mailOptions: any = {
+    const mailOptions: any = {
       from: this.mailFromAddress,
       to: email,
       subject: 'Welcome to POLWEL - Complete Your Trainer Account Setup',
@@ -978,13 +978,13 @@ class EmailService {
       `,
       attachments: this.getEmailMediaAttachments(),
     };
-    
+
     // Log the content to verify footer is in final HTML
     console.log('📧 FINAL EMAIL HTML CHECK:');
     console.log('   Contains footer comment:', mailOptions.html.includes('<!-- Footer -->'));
     console.log('   Contains LinkedIn img:', mailOptions.html.includes('linkedin'));
     console.log('   Contains YouTube img:', mailOptions.html.includes('youtube'));
-    
+
     // Check footer section in final HTML
     const footerStart = mailOptions.html.indexOf('<!-- Footer -->');
     if (footerStart > 0) {
@@ -995,9 +995,9 @@ class EmailService {
     // Create the log ONCE before send attempt (fixes double-log bug)
     const _trainerSetupLogId = await createEmailLog({
       emailType: EMAIL_TYPES.TRAINER_SETUP,
-      recipient:  email,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: email,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
@@ -1010,7 +1010,7 @@ class EmailService {
         console.log(`   Response: ${info.response}`);
         await markEmailSent(_trainerSetupLogId, info.messageId, 1, {
           smtpResponse: info.response,
-        }).catch(() => {});
+        }).catch(() => { });
         return true;
       } else {
         console.log('=== TRAINER SETUP EMAIL (Development Mode) ===');
@@ -1018,30 +1018,30 @@ class EmailService {
         console.log(`Name: ${name}`);
         console.log(`Setup URL: ${setupUrl}`);
         console.log('=============================================');
-        await markEmailSent(_trainerSetupLogId, undefined, 1).catch(() => {});
+        await markEmailSent(_trainerSetupLogId, undefined, 1).catch(() => { });
         return true;
       }
     } catch (error) {
       const _errMsg = error instanceof Error ? error.message : String(error);
       await markEmailFailed(_trainerSetupLogId, _errMsg, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('❌ CRITICAL: Failed to send trainer setup email');
       console.error('   Recipient:', email);
       console.error('   Error Type:', error?.constructor?.name);
       console.error('   Error Message:', _errMsg);
-      if ((error as any)?.code)     console.error('   Error Code:',     (error as any).code);
-      if ((error as any)?.response) console.error('   SMTP Response:',  (error as any).response);
+      if ((error as any)?.code) console.error('   Error Code:', (error as any).code);
+      if ((error as any)?.response) console.error('   SMTP Response:', (error as any).response);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.TRAINER_SETUP,
           recipient: email,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ email, name, setupUrl }),
-        }).catch(() => {});
+          subject: mailOptions.subject,
+          payload: serializePayload({ email, name, setupUrl }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -1161,9 +1161,9 @@ class EmailService {
     };
     const _coordLogId = await createEmailLog({
       emailType: EMAIL_TYPES.COORDINATOR_SETUP,
-      recipient:  email,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: email,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
     try {
@@ -1172,7 +1172,7 @@ class EmailService {
         console.log(`Coordinator setup email sent to ${email}`);
         await markEmailSent(_coordLogId, _cInfo?.messageId, 1, {
           smtpResponse: _cInfo?.response,
-        }).catch(() => {});
+        }).catch(() => { });
         return true;
       } else {
         console.log('=== COORDINATOR SETUP EMAIL (Development Mode) ===');
@@ -1181,25 +1181,25 @@ class EmailService {
         console.log(`Organization: ${organizationName}`);
         console.log(`Setup URL: ${setupUrl}`);
         console.log('=============================================');
-        await markEmailSent(_coordLogId, undefined, 1).catch(() => {});
+        await markEmailSent(_coordLogId, undefined, 1).catch(() => { });
         return true;
       }
     } catch (error) {
       const _cErr = error instanceof Error ? error.message : String(error);
       await markEmailFailed(_coordLogId, _cErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('Error sending coordinator setup email:', error);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.COORDINATOR_SETUP,
           recipient: email,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ email, name, setupUrl, organizationName }),
-        }).catch(() => {});
+          subject: mailOptions.subject,
+          payload: serializePayload({ email, name, setupUrl, organizationName }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -1311,16 +1311,16 @@ class EmailService {
     };
     const _pwLogId = await createEmailLog({
       emailType: EMAIL_TYPES.PASSWORD_RESET,
-      recipient:  email,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: email,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
     try {
       if (transporter) {
         const result = await transporter.sendMail(mailOptions);
         console.log(`✅ Password reset email sent to ${email}. Message ID: ${result.messageId}`);
-        await markEmailSent(_pwLogId, result.messageId, 1, { smtpResponse: result.response }).catch(() => {});
+        await markEmailSent(_pwLogId, result.messageId, 1, { smtpResponse: result.response }).catch(() => { });
         return true;
       } else {
         console.log('=== PASSWORD RESET EMAIL (Development Mode) ===');
@@ -1328,17 +1328,17 @@ class EmailService {
         console.log(`Name: ${name}`);
         console.log(`Reset URL: ${resetUrl}`);
         console.log('=============================================');
-        await markEmailSent(_pwLogId, undefined, 1).catch(() => {});
+        await markEmailSent(_pwLogId, undefined, 1).catch(() => { });
         return true;
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       await markEmailFailed(_pwLogId, errorMessage, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('❌ Error sending password reset email to', email);
       console.error('Error details:', errorMessage);
       console.error('Full error:', error);
@@ -1346,9 +1346,9 @@ class EmailService {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.PASSWORD_RESET,
           recipient: email,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ email, name, resetUrl }),
-        }).catch(() => {});
+          subject: mailOptions.subject,
+          payload: serializePayload({ email, name, resetUrl }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -1485,9 +1485,9 @@ class EmailService {
 
     const _mfaLogId = await createEmailLog({
       emailType: EMAIL_TYPES.MFA_CODE,
-      recipient:  email,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: email,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
@@ -1495,7 +1495,7 @@ class EmailService {
       if (transporter) {
         const _mInfo = await transporter.sendMail(mailOptions);
         console.log(`MFA code email sent to ${email}`);
-        await markEmailSent(_mfaLogId, _mInfo?.messageId, 1, { smtpResponse: _mInfo?.response }).catch(() => {});
+        await markEmailSent(_mfaLogId, _mInfo?.messageId, 1, { smtpResponse: _mInfo?.response }).catch(() => { });
         return true;
       } else {
         console.log('=== MFA CODE EMAIL (Development Mode) ===');
@@ -1504,25 +1504,25 @@ class EmailService {
         console.log(`Code: ${code}`);
         console.log(`Expires At: ${formattedExpiry}`);
         console.log('========================================');
-        await markEmailSent(_mfaLogId, undefined, 1).catch(() => {});
+        await markEmailSent(_mfaLogId, undefined, 1).catch(() => { });
         return true;
       }
     } catch (error) {
       const _mfaErr = error instanceof Error ? error.message : String(error);
       await markEmailFailed(_mfaLogId, _mfaErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('Error sending MFA code email:', error);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.MFA_CODE,
           recipient: email,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ email, name, code, expiresAt }),
-        }).catch(() => {});
+          subject: mailOptions.subject,
+          payload: serializePayload({ email, name, code, expiresAt }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -1639,16 +1639,16 @@ class EmailService {
     };
     const _polwelLogId = await createEmailLog({
       emailType: EMAIL_TYPES.POLWEL_USER_SETUP,
-      recipient:  email,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: email,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
     try {
       if (transporter) {
         const _pInfo = await transporter.sendMail(mailOptions);
         console.log(`POLWEL user setup email sent to ${email}`);
-        await markEmailSent(_polwelLogId, _pInfo?.messageId, 1, { smtpResponse: _pInfo?.response }).catch(() => {});
+        await markEmailSent(_polwelLogId, _pInfo?.messageId, 1, { smtpResponse: _pInfo?.response }).catch(() => { });
         return true;
       } else {
         console.log('=== POLWEL USER SETUP EMAIL (Development Mode) ===');
@@ -1656,25 +1656,25 @@ class EmailService {
         console.log(`Name: ${name}`);
         console.log(`Setup URL: ${setupUrl}`);
         console.log('=============================================');
-        await markEmailSent(_polwelLogId, undefined, 1).catch(() => {});
+        await markEmailSent(_polwelLogId, undefined, 1).catch(() => { });
         return true;
       }
     } catch (error) {
       const _pErr = error instanceof Error ? error.message : String(error);
       await markEmailFailed(_polwelLogId, _pErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('Error sending POLWEL user setup email:', error);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.POLWEL_USER_SETUP,
           recipient: email,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ email, name, setupUrl }),
-        }).catch(() => {});
+          subject: mailOptions.subject,
+          payload: serializePayload({ email, name, setupUrl }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -1786,8 +1786,8 @@ class EmailService {
                           <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear ${name},</p>
                           <p style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                             ${isPartner
-                              ? `Please refer to the attached documents and the details below regarding the upcoming course for your reference.`
-                              : `Please refer to the attached documents and details for the upcoming course.`}
+        ? `Please refer to the attached documents and the details below regarding the upcoming course for your reference.`
+        : `Please refer to the attached documents and details for the upcoming course.`}
                           </p>
                          
 
@@ -1933,9 +1933,9 @@ class EmailService {
 
     const _taLogId = await createEmailLog({
       emailType: EMAIL_TYPES.TRAINER_ASSIGNMENT,
-      recipient:  email,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: email,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(ccEmails && ccEmails.length > 0 ? { cc: ccEmails.join(', ') } : {}),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
@@ -1947,7 +1947,7 @@ class EmailService {
         await markEmailFailed(_taLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
           errorCategory: 'CONFIG_ERROR',
           provider: EMAIL_PROVIDERS.NONE,
-        }).catch(() => {});
+        }).catch(() => { });
         return { success: false, error: 'SMTP not configured' };
       }
 
@@ -1974,33 +1974,33 @@ class EmailService {
           await markEmailFailed(_taLogId, result.error, undefined, 1, {
             errorCategory: 'MAILJET_ERROR',
             provider: EMAIL_PROVIDERS.MAILJET,
-          }).catch(() => {});
+          }).catch(() => { });
         } else {
-          await markEmailSent(_taLogId, result.messageId, 1).catch(() => {});
+          await markEmailSent(_taLogId, result.messageId, 1).catch(() => { });
         }
         return result;
       }
 
       const info = await transporter.sendMail(mailOptions);
       console.log(`(EmailService) Trainer assignment email sent to ${email}:`, info?.messageId || info);
-      await markEmailSent(_taLogId, info?.messageId, 1, { smtpResponse: info?.response }).catch(() => {});
+      await markEmailSent(_taLogId, info?.messageId, 1, { smtpResponse: info?.response }).catch(() => { });
       return { success: true, info };
     } catch (err) {
       const _taErr = (err as any)?.message || String(err);
       await markEmailFailed(_taLogId, _taErr, (err as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(err),
-        errorStack:    extractStack(err),
+        smtpResponse: extractSmtpResponse(err),
+        errorStack: extractStack(err),
         errorCategory: classifyError(err),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('(EmailService) Failed to send trainer assignment email:', _taErr || err);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.TRAINER_ASSIGNMENT,
           recipient: email,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ email, name, courseRunDetails, baseFee, ccEmails, additionalBody, attachments, recipientType }),
-        }).catch(() => {});
+          subject: mailOptions.subject,
+          payload: serializePayload({ email, name, courseRunDetails, baseFee, ccEmails, additionalBody, attachments, recipientType }),
+        }).catch(() => { });
       }
       return { success: false, error: _taErr };
     }
@@ -2305,7 +2305,7 @@ class EmailService {
 
     const mailOptions: any = {
       from: this.mailFromAddress,
-      to:  email,
+      to: email,
       // to: Array.isArray(email) ? email.join(', ') : email,
       subject,
       ...(ccRecipients ? { cc: ccRecipients } : {}),
@@ -2340,10 +2340,10 @@ class EmailService {
     }
 
     const _confLogId = await createEmailLog({
-      emailType:   EMAIL_TYPES.COURSE_CONFIRMATION,
-      recipient:   Array.isArray(email) ? email.join(', ') : email,
-      subject:     mailOptions.subject,
-      provider:    this.getProviderName(),
+      emailType: EMAIL_TYPES.COURSE_CONFIRMATION,
+      recipient: Array.isArray(email) ? email.join(', ') : email,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(ccRecipients ? { cc: ccRecipients.join(', ') } : {}),
       ...(params.courseRunId ? { courseRunId: params.courseRunId } : {}),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
@@ -2362,7 +2362,7 @@ class EmailService {
         await markEmailFailed(_confLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
           errorCategory: 'CONFIG_ERROR',
           provider: EMAIL_PROVIDERS.NONE,
-        }).catch(() => {});
+        }).catch(() => { });
         return false;
       }
 
@@ -2381,17 +2381,17 @@ class EmailService {
         const apiAttachments = (mailOptions.attachments || [])
           .filter((a: any) => Buffer.isBuffer(a.content))
           .map((a: any) => ({
-            filename:    a.filename,
-            content:     a.content as Buffer,
+            filename: a.filename,
+            content: a.content as Buffer,
             contentType: a.contentType || 'application/octet-stream',
           }));
         const logoInline = this.getLogoMailjetInline();
 
         const result = await this.sendViaMailjetApi({
-          to:          email,
-          from:        this.mailFromAddress,
-          subject:     mailOptions.subject,
-          html:        mailOptions.html as string,
+          to: email,
+          from: this.mailFromAddress,
+          subject: mailOptions.subject,
+          html: mailOptions.html as string,
           attachments: apiAttachments,
           ...(logoInline ? { inlinedAttachments: [logoInline] } : {}),
           ...(ccRecipients ? { cc: ccRecipients } : {}),
@@ -2402,18 +2402,18 @@ class EmailService {
           await markEmailFailed(_confLogId, result.error, undefined, 1, {
             errorCategory: 'MAILJET_ERROR',
             provider: EMAIL_PROVIDERS.MAILJET,
-          }).catch(() => {});
+          }).catch(() => { });
           return false;
         }
         console.log('✅ Mailjet REST API success. MessageID:', result.messageId);
-        await markEmailSent(_confLogId, result.messageId, 1).catch(() => {});
+        await markEmailSent(_confLogId, result.messageId, 1).catch(() => { });
         return true;
       }
 
       // ── Standard SMTP path ────────────────────────────────────────────────
       console.log('🔄 Sending via SMTP...');
       const info = await transporter.sendMail(mailOptions);
-      
+
       console.log('╔════════════════════════════════════════════════════════════════╗');
       console.log('║ ✅ EMAIL SENT SUCCESSFULLY - SMTP RESPONSE                    ║');
       console.log('╚════════════════════════════════════════════════════════════════╝');
@@ -2422,25 +2422,25 @@ class EmailService {
       console.log('   ├─ Response:', info.response);
       console.log('   ├─ Accepted:', JSON.stringify(info.accepted));
       console.log('   └─ Rejected:', JSON.stringify(info.rejected));
-      
+
       if (info.rejected && info.rejected.length > 0) {
         console.error('⚠️  Email rejected by server:', info.rejected);
         await markEmailFailed(_confLogId, `Rejected: ${JSON.stringify(info.rejected)}`, 'SMTP_REJECTED', 1, {
-          smtpResponse:  info.response,
+          smtpResponse: info.response,
           errorCategory: 'INVALID_RECIPIENT',
-        }).catch(() => {});
+        }).catch(() => { });
         return false;
       }
-      await markEmailSent(_confLogId, info.messageId, 1, { smtpResponse: info.response }).catch(() => {});
+      await markEmailSent(_confLogId, info.messageId, 1, { smtpResponse: info.response }).catch(() => { });
       return true;
     } catch (error) {
       const _confErr = (error as any)?.message || String(error);
       await markEmailFailed(_confLogId, _confErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('╔════════════════════════════════════════════════════════════════╗');
       console.error('║ ❌ FAILED TO SEND EMAIL - ERROR DETAILS                       ║');
       console.error('╚════════════════════════════════════════════════════════════════╝');
@@ -2454,10 +2454,10 @@ class EmailService {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.COURSE_CONFIRMATION,
           recipient: Array.isArray(email) ? email.join(', ') : email,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ ...params }),
+          subject: mailOptions.subject,
+          payload: serializePayload({ ...params }),
           courseRunId: params.courseRunId,
-        }).catch(() => {});
+        }).catch(() => { });
       }
       return false;
     }
@@ -2578,9 +2578,9 @@ class EmailService {
                               <p style="margin: 0 0 16px 0; color: #4b5563 !important; font-size: 14px; font-family: Arial, sans-serif !important;">Dear ${learnerName || 'Participant'},</p>
                               <p style="margin: 0 0 24px 0; color: #1f2937 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 ${isTrainer
-                                  ? 'We regret to inform you that the following course has been cancelled.'
-                                  : `We regret to inform you that the following course has been cancelled due to ${cancellationReason || 'unforeseen circumstances'}.`
-                                }
+        ? 'We regret to inform you that the following course has been cancelled.'
+        : `We regret to inform you that the following course has been cancelled due to ${cancellationReason || 'unforeseen circumstances'}.`
+      }
                               </p>
 
                               <p style="margin: 24px 0 12px 0; color: #1f2937 !important; font-size: 15px; font-weight: 600; font-family: Arial, sans-serif !important;">Course details :</p>
@@ -2605,14 +2605,13 @@ class EmailService {
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Venue</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${venueName || 'TBD'}</td>
                                 </tr>
-                                ${
-                                  !isTrainer && nextRunDate && String(nextRunDate).trim()
-                                    ? `<tr>
+                                ${!isTrainer && nextRunDate && String(nextRunDate).trim()
+        ? `<tr>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; background-color: #f9fafb !important; color: #374151 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Next session</td>
                                   <td style="padding: 12px 16px; border: 1px solid #d1d5db; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;">${String(nextRunDate).trim()}</td>
                                 </tr>`
-                                    : ''
-                                }
+        : ''
+      }
                                 
                               </table>
 
@@ -2627,7 +2626,7 @@ class EmailService {
 
                               ${!isTrainer ? `
                               <p style="margin: 24px 0 8px 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
-                                We apologize for any inconvenience caused and appreciate your understanding. We hope to see you at our upcoming programmes.
+                                We apologise for any inconvenience caused and appreciate your understanding. We hope to see you at our upcoming programmes.
                               </p>
                               <p style="margin: 8px 0; color: #4b5563 !important; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif !important;">
                                 Do visit our website to view our courses - <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; text-decoration: underline; font-family: Arial, sans-serif !important;">Courses | POLWEL Co-operative Society Limited</a>
@@ -2736,9 +2735,9 @@ class EmailService {
 
     const _cancelLogId = await createEmailLog({
       emailType: EMAIL_TYPES.COURSE_CANCELLATION,
-      recipient:  email,
+      recipient: email,
       subject,
-      provider:   this.getProviderName(),
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
@@ -2748,7 +2747,7 @@ class EmailService {
         await markEmailFailed(_cancelLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
           errorCategory: 'CONFIG_ERROR',
           provider: EMAIL_PROVIDERS.NONE,
-        }).catch(() => {});
+        }).catch(() => { });
         return false;
       }
 
@@ -2777,32 +2776,32 @@ class EmailService {
           await markEmailFailed(_cancelLogId, result.error, undefined, 1, {
             errorCategory: 'MAILJET_ERROR',
             provider: EMAIL_PROVIDERS.MAILJET,
-          }).catch(() => {});
+          }).catch(() => { });
         } else {
-          await markEmailSent(_cancelLogId, result.messageId, 1).catch(() => {});
+          await markEmailSent(_cancelLogId, result.messageId, 1).catch(() => { });
         }
         return result.success;
       }
 
       const _cancelInfo = await transporter.sendMail(mailOptions);
-      await markEmailSent(_cancelLogId, _cancelInfo?.messageId, 1, { smtpResponse: _cancelInfo?.response }).catch(() => {});
+      await markEmailSent(_cancelLogId, _cancelInfo?.messageId, 1, { smtpResponse: _cancelInfo?.response }).catch(() => { });
       return true;
     } catch (error) {
       const _cancelErr = (error as any)?.message || String(error);
       await markEmailFailed(_cancelLogId, _cancelErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('Failed to send course cancellation email:', error);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.COURSE_CANCELLATION,
           recipient: email,
           subject,
-          payload:   serializePayload({ ...params }),
-        }).catch(() => {});
+          payload: serializePayload({ ...params }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -2850,8 +2849,8 @@ class EmailService {
     // Build date string for subject: "19 Mar 2026" or "19 Mar 2026 - 20 Mar 2026"
     const dateStr = startDate
       ? (endDate && !isSameCalendarDay(startDate, endDate)
-          ? `${formatDate(startDate)} - ${formatDate(endDate)}`
-          : formatDate(startDate))
+        ? `${formatDate(startDate)} - ${formatDate(endDate)}`
+        : formatDate(startDate))
       : '';
 
     const subject = dateStr
@@ -3022,9 +3021,9 @@ class EmailService {
 
     const _compLogId = await createEmailLog({
       emailType: EMAIL_TYPES.COURSE_COMPLETION,
-      recipient:  email,
+      recipient: email,
       subject,
-      provider:   this.getProviderName(),
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
@@ -3034,7 +3033,7 @@ class EmailService {
         await markEmailFailed(_compLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
           errorCategory: 'CONFIG_ERROR',
           provider: EMAIL_PROVIDERS.NONE,
-        }).catch(() => {});
+        }).catch(() => { });
         return false;
       }
 
@@ -3052,35 +3051,35 @@ class EmailService {
           ...(mjAttachments ? { attachments: mjAttachments } : {}),
         });
         if (result.success) {
-          await markEmailSent(_compLogId, result.messageId, 1).catch(() => {});
+          await markEmailSent(_compLogId, result.messageId, 1).catch(() => { });
         } else {
           await markEmailFailed(_compLogId, result.error, undefined, 1, {
             errorCategory: 'MAILJET_ERROR',
             provider: EMAIL_PROVIDERS.MAILJET,
-          }).catch(() => {});
+          }).catch(() => { });
         }
         return result.success;
       }
 
       const _compInfo = await transporter.sendMail(mailOptions);
-      await markEmailSent(_compLogId, _compInfo?.messageId, 1, { smtpResponse: _compInfo?.response }).catch(() => {});
+      await markEmailSent(_compLogId, _compInfo?.messageId, 1, { smtpResponse: _compInfo?.response }).catch(() => { });
       return true;
     } catch (error) {
       const _compErr = (error as any)?.message || String(error);
       await markEmailFailed(_compLogId, _compErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('Failed to send course completion email:', error);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.COURSE_COMPLETION,
           recipient: email,
           subject,
-          payload:   serializePayload({ ...params }),
-        }).catch(() => {});
+          payload: serializePayload({ ...params }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -3108,8 +3107,8 @@ class EmailService {
     const isSameDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
     const dateRange = startDate
       ? (endDate && !isSameDay(startDate, endDate)
-          ? `${formatDateFull(startDate)} – ${formatDateFull(endDate)}`
-          : formatDateFull(startDate))
+        ? `${formatDateFull(startDate)} – ${formatDateFull(endDate)}`
+        : formatDateFull(startDate))
       : null;
 
     const footerHtml = this.getEmailFooter();
@@ -3176,9 +3175,9 @@ class EmailService {
 
     const _trainerCompLogId = await createEmailLog({
       emailType: EMAIL_TYPES.TRAINER_COMPLETION,
-      recipient:  email,
-      subject:    `Course Completed: ${courseTitle}`,
-      provider:   this.getProviderName(),
+      recipient: email,
+      subject: `Course Completed: ${courseTitle}`,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
@@ -3193,12 +3192,12 @@ class EmailService {
           inlinedAttachments,
         });
         if (result.success) {
-          await markEmailSent(_trainerCompLogId, result.messageId, 1).catch(() => {});
+          await markEmailSent(_trainerCompLogId, result.messageId, 1).catch(() => { });
         } else {
           await markEmailFailed(_trainerCompLogId, result.error, undefined, 1, {
             errorCategory: 'MAILJET_ERROR',
             provider: EMAIL_PROVIDERS.MAILJET,
-          }).catch(() => {});
+          }).catch(() => { });
         }
         return result.success;
       }
@@ -3207,28 +3206,28 @@ class EmailService {
         await markEmailFailed(_trainerCompLogId, 'Email transporter not available', 'NO_TRANSPORTER', 1, {
           errorCategory: 'CONFIG_ERROR',
           provider: EMAIL_PROVIDERS.NONE,
-        }).catch(() => {});
+        }).catch(() => { });
         throw new Error('Email transporter not available');
       }
       const _tcInfo = await t.sendMail(mailOptions);
-      await markEmailSent(_trainerCompLogId, _tcInfo?.messageId, 1, { smtpResponse: _tcInfo?.response }).catch(() => {});
+      await markEmailSent(_trainerCompLogId, _tcInfo?.messageId, 1, { smtpResponse: _tcInfo?.response }).catch(() => { });
       return true;
     } catch (error) {
       const _tcErr = (error as any)?.message || String(error);
       await markEmailFailed(_trainerCompLogId, _tcErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error('Failed to send trainer course completion email:', error);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.TRAINER_COMPLETION,
           recipient: email,
-          subject:   `Course Completed: ${courseTitle}`,
-          payload:   serializePayload({ ...params }),
-        }).catch(() => {});
+          subject: `Course Completed: ${courseTitle}`,
+          payload: serializePayload({ ...params }),
+        }).catch(() => { });
       }
       return false;
     }
@@ -3338,9 +3337,9 @@ class EmailService {
 
     const _taApprovalLogId = await createEmailLog({
       emailType: EMAIL_TYPES.TA_APPROVAL,
-      recipient:  adminEmail,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: adminEmail,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
@@ -3356,7 +3355,7 @@ class EmailService {
             await markEmailFailed(_taApprovalLogId, 'Graph transport unavailable', 'NO_TRANSPORTER', attempt, {
               errorCategory: 'CONFIG_ERROR',
               provider: EMAIL_PROVIDERS.NONE,
-            }).catch(() => {});
+            }).catch(() => { });
             return false;
           }
           await t2.sendMail(mailOptions);
@@ -3375,13 +3374,13 @@ class EmailService {
             await markEmailFailed(_taApprovalLogId, 'SMTP not configured', 'NO_TRANSPORTER', attempt, {
               errorCategory: 'CONFIG_ERROR',
               provider: EMAIL_PROVIDERS.NONE,
-            }).catch(() => {});
+            }).catch(() => { });
             return false;
           }
           await t.sendMail(mailOptions);
         }
         console.log(`✅ TA approval notice sent to ${adminEmail} (attempt ${attempt})`);
-        await markEmailSent(_taApprovalLogId, undefined, attempt).catch(() => {});
+        await markEmailSent(_taApprovalLogId, undefined, attempt).catch(() => { });
         return true;
       } catch (error) {
         lastError = error;
@@ -3392,25 +3391,25 @@ class EmailService {
           const delay = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
           await markEmailRetrying(_taApprovalLogId, attempt, errMsg, {
             provider: this.getProviderName(),
-          }).catch(() => {});
+          }).catch(() => { });
           await new Promise(r => setTimeout(r, delay));
         }
       }
     }
 
     await markEmailFailed(_taApprovalLogId, lastError?.message || String(lastError), lastError?.code, MAX_ATTEMPTS, {
-      smtpResponse:  extractSmtpResponse(lastError),
-      errorStack:    extractStack(lastError),
+      smtpResponse: extractSmtpResponse(lastError),
+      errorStack: extractStack(lastError),
       errorCategory: classifyError(lastError),
-      provider:      this.getProviderName(),
-    }).catch(() => {});
+      provider: this.getProviderName(),
+    }).catch(() => { });
     if (!_ctx?.retryQueueId) {
       enqueueEmailRetry({
         emailType: EMAIL_TYPES.TA_APPROVAL,
         recipient: adminEmail,
-        subject:   mailOptions.subject,
-        payload:   serializePayload({ ...params }),
-      }).catch(() => {});
+        subject: mailOptions.subject,
+        payload: serializePayload({ ...params }),
+      }).catch(() => { });
     }
     return false;
   }
@@ -3521,9 +3520,9 @@ class EmailService {
 
     const _waiverLogId = await createEmailLog({
       emailType: EMAIL_TYPES.WAIVER_NOTIFICATION,
-      recipient:  adminEmail,
-      subject:    mailOptions.subject,
-      provider:   this.getProviderName(),
+      recipient: adminEmail,
+      subject: mailOptions.subject,
+      provider: this.getProviderName(),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
 
@@ -3533,29 +3532,29 @@ class EmailService {
         await markEmailFailed(_waiverLogId, 'SMTP not configured', 'NO_TRANSPORTER', 1, {
           errorCategory: 'CONFIG_ERROR',
           provider: EMAIL_PROVIDERS.NONE,
-        }).catch(() => {});
+        }).catch(() => { });
         return false;
       }
       const _wvInfo = await transporter.sendMail(mailOptions);
-      await markEmailSent(_waiverLogId, _wvInfo?.messageId, 1, { smtpResponse: _wvInfo?.response }).catch(() => {});
+      await markEmailSent(_waiverLogId, _wvInfo?.messageId, 1, { smtpResponse: _wvInfo?.response }).catch(() => { });
       console.log(`✅ Waiver notification sent to ${adminEmail}`);
       return true;
     } catch (error) {
       const _wvErr = (error as any)?.message || String(error);
       await markEmailFailed(_waiverLogId, _wvErr, (error as any)?.code, 1, {
-        smtpResponse:  extractSmtpResponse(error),
-        errorStack:    extractStack(error),
+        smtpResponse: extractSmtpResponse(error),
+        errorStack: extractStack(error),
         errorCategory: classifyError(error),
-        provider:      this.getProviderName(),
-      }).catch(() => {});
+        provider: this.getProviderName(),
+      }).catch(() => { });
       console.error(`❌ Failed to send waiver notification to ${adminEmail}:`, error);
       if (!_ctx?.retryQueueId) {
         enqueueEmailRetry({
           emailType: EMAIL_TYPES.WAIVER_NOTIFICATION,
           recipient: adminEmail,
-          subject:   mailOptions.subject,
-          payload:   serializePayload({ ...params }),
-        }).catch(() => {});
+          subject: mailOptions.subject,
+          payload: serializePayload({ ...params }),
+        }).catch(() => { });
       }
       return false;
     }

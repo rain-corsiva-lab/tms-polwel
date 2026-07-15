@@ -708,8 +708,12 @@ export const getOrganizationCoordinators = async (req: AuthenticatedRequest, res
 
     // Build where clause
     const where: any = {
-      organizationId,
       role: 'TRAINING_COORDINATOR',
+      organizations: {
+        some: {
+          organizationId
+        }
+      }
     };
 
     // If caller provided a specific status (and didn't ask for ALL), filter by it.
@@ -817,11 +821,73 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
     });
 
     if (existingUser) {
-      return errorResponse(
-        res,
-        409,
-        `Email ${email} is already registered as an active POLWEL User/trainer/training coordinator`
-      );
+      if (existingUser.role !== 'TRAINING_COORDINATOR') {
+        return errorResponse(
+          res,
+          409,
+          `Email ${email} is already registered as an active POLWEL User/trainer`
+        );
+      }
+
+      // Check if already linked
+      const alreadyLinked = await prisma.userOrganization.findUnique({
+        where: {
+          userId_organizationId: {
+            userId: existingUser.id,
+            organizationId
+          }
+        }
+      });
+
+      if (alreadyLinked) {
+        return errorResponse(
+          res,
+          400,
+          `Training coordinator is already associated with this organization`
+        );
+      }
+
+      // Link existing coordinator to this organization
+      await prisma.$transaction(async (tx) => {
+        if (isPrimary === true) {
+          const otherCoordinators = await tx.userOrganization.findMany({
+            where: { organizationId },
+            select: { userId: true }
+          });
+          const otherUserIds = otherCoordinators.map(o => o.userId);
+          await tx.user.updateMany({
+            where: { id: { in: otherUserIds }, role: 'TRAINING_COORDINATOR' },
+            data: { isPrimaryCoordinator: false }
+          });
+        }
+
+        await tx.userOrganization.create({
+          data: {
+            userId: existingUser.id,
+            organizationId
+          }
+        });
+
+        await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            ...(!existingUser.organizationId && { organizationId }),
+            ...(isPrimary === true && { isPrimaryCoordinator: true })
+          }
+        });
+      });
+
+      return res.status(200).json({
+        id: existingUser.id,
+        name: existingUser.name,
+        email: existingUser.email,
+        designation: existingUser.designation,
+        status: existingUser.status,
+        isPrimaryCoordinator: isPrimary === true,
+        contactNumber: existingUser.contactNumber,
+        createdAt: existingUser.createdAt,
+        updatedAt: new Date()
+      });
     }
 
     // Generate temporary password and setup token
@@ -832,8 +898,13 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
     // Create coordinator, optionally setting as primary and clearing existing primary in a transaction
     const coordinator = await prisma.$transaction(async (tx) => {
       if (isPrimary === true) {
+        const otherCoordinators = await tx.userOrganization.findMany({
+          where: { organizationId },
+          select: { userId: true }
+        });
+        const otherUserIds = otherCoordinators.map(o => o.userId);
         await tx.user.updateMany({
-          where: { organizationId, role: 'TRAINING_COORDINATOR', isPrimaryCoordinator: true },
+          where: { id: { in: otherUserIds }, role: 'TRAINING_COORDINATOR', isPrimaryCoordinator: true },
           data: { isPrimaryCoordinator: false }
         });
       }
@@ -853,6 +924,11 @@ export const createOrganizationCoordinator = async (req: AuthenticatedRequest, r
           createdBy: req.user?.userId || null,
           isPrimaryCoordinator: isPrimary === true,
           contactNumber: normalizedContactNumber,
+          organizations: {
+            create: {
+              organizationId
+            }
+          }
         },
         select: {
           id: true,
@@ -998,8 +1074,12 @@ export const deleteOrganizationCoordinator = async (req: AuthenticatedRequest, r
     const existingCoordinator = await prisma.user.findFirst({
       where: {
         id: coordinatorId,
-        organizationId,
-        role: 'TRAINING_COORDINATOR'
+        role: 'TRAINING_COORDINATOR',
+        organizations: {
+          some: {
+            organizationId
+          }
+        }
       }
     });
 
@@ -1007,11 +1087,39 @@ export const deleteOrganizationCoordinator = async (req: AuthenticatedRequest, r
       return errorResponse(res, 404, 'Coordinator not found or does not belong to this organization');
     }
 
-    // Soft delete by setting status to INACTIVE
-    await prisma.user.update({
-      where: { id: coordinatorId },
-      data: {
-        status: 'INACTIVE'
+    // Run delete within transaction
+    await prisma.$transaction(async (tx) => {
+      // Delete the junction record
+      await tx.userOrganization.delete({
+        where: {
+          userId_organizationId: {
+            userId: coordinatorId,
+            organizationId
+          }
+        }
+      });
+
+      // Find other linked organizations
+      const otherOrgs = await tx.userOrganization.findMany({
+        where: { userId: coordinatorId }
+      });
+
+      if (otherOrgs.length > 0 && otherOrgs[0]) {
+        // Shift primary organizationId to another active one
+        await tx.user.update({
+          where: { id: coordinatorId },
+          data: {
+            organizationId: otherOrgs[0].organizationId
+          }
+        });
+      } else {
+        // No remaining organizations: just unlink by setting organizationId to null (account remains active in database)
+        await tx.user.update({
+          where: { id: coordinatorId },
+          data: {
+            organizationId: null
+          }
+        });
       }
     });
 
@@ -1301,11 +1409,13 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
         deletedAt: null,
         OR: [
           {
+            clientOrganizationId: organizationId
+          },
+          {
             courseRunLearners: {
               some: {
                 deletedAt: null,
                 clientOrganizationId: organizationId,
-                trainingCoordinatorId: coordinatorId,
               },
             },
           },
@@ -1322,7 +1432,6 @@ export const getCoordinatorCourseRunsSelf = async (req: AuthenticatedRequest, re
           where: {
             deletedAt: null,
             clientOrganizationId: organizationId,
-            trainingCoordinatorId: coordinatorId,
           },
           select: { id: true },
         },
@@ -1401,7 +1510,6 @@ export const getOrganizationLearnersSelf = async (req: AuthenticatedRequest, res
     // Query CourseRunLearner instead of Learner for organization-specific enrollments
     const enrollmentWhere: any = {
       clientOrganizationId: organizationId,
-      trainingCoordinatorId: coordinatorId,
       deletedAt: null,
     };
 
@@ -1677,5 +1785,119 @@ export const deleteBuNumber = async (req: AuthenticatedRequest, res: Response) =
   } catch (error) {
     console.error('Delete BU number error:', error);
     return errorResponse(res, 500, 'Internal server error');
+  }
+};
+
+// Fetch available coordinators NOT connected to the organization
+export const getAvailableCoordinators = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { organizationId } = req.params;
+    if (!organizationId) {
+      return errorResponse(res, 400, 'Organization ID is required');
+    }
+
+    // Get IDs of coordinators already associated with this organization
+    const associated = await prisma.userOrganization.findMany({
+      where: { organizationId },
+      select: { userId: true }
+    });
+    const associatedUserIds = associated.map(a => a.userId);
+
+    // Get all coordinators NOT in the associated list
+    const available = await prisma.user.findMany({
+      where: {
+        role: 'TRAINING_COORDINATOR',
+        id: { notIn: associatedUserIds },
+        status: 'ACTIVE',
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        designation: true,
+        contactNumber: true
+      }
+    });
+
+    return res.status(200).json({ success: true, coordinators: available });
+  } catch (error: any) {
+    console.error('Get available coordinators error:', error);
+    return errorResponse(res, 500, error.message || 'Failed to fetch available coordinators');
+  }
+};
+
+// Link an existing coordinator to the organization
+export const linkExistingCoordinator = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { organizationId, coordinatorId } = req.params;
+    const { isPrimary } = req.body;
+
+    if (!organizationId || !coordinatorId) {
+      return errorResponse(res, 400, 'Organization ID and Coordinator ID are required');
+    }
+
+    // Verify organization exists
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId }
+    });
+    if (!organization) {
+      return errorResponse(res, 404, 'Organization not found');
+    }
+
+    // Verify coordinator exists
+    const user = await prisma.user.findUnique({
+      where: { id: coordinatorId, role: 'TRAINING_COORDINATOR', deletedAt: null }
+    });
+    if (!user) {
+      return errorResponse(res, 404, 'Training coordinator not found');
+    }
+
+    // Check if already linked
+    const alreadyLinked = await prisma.userOrganization.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: coordinatorId,
+          organizationId
+        }
+      }
+    });
+    if (alreadyLinked) {
+      return errorResponse(res, 400, 'Training coordinator is already associated with this organization');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (isPrimary === true) {
+        const otherCoordinators = await tx.userOrganization.findMany({
+          where: { organizationId },
+          select: { userId: true }
+        });
+        const otherUserIds = otherCoordinators.map(o => o.userId);
+        await tx.user.updateMany({
+          where: { id: { in: otherUserIds }, role: 'TRAINING_COORDINATOR' },
+          data: { isPrimaryCoordinator: false }
+        });
+      }
+
+      await tx.userOrganization.create({
+        data: {
+          userId: coordinatorId,
+          organizationId
+        }
+      });
+
+      await tx.user.update({
+        where: { id: coordinatorId },
+        data: {
+          ...(!user.organizationId && { organizationId }),
+          ...(isPrimary === true && { isPrimaryCoordinator: true })
+        }
+      });
+    });
+
+    return res.status(200).json({ success: true, message: 'Coordinator linked successfully' });
+  } catch (error: any) {
+    console.error('Link coordinator error:', error);
+    return errorResponse(res, 500, error.message || 'Failed to link coordinator');
   }
 };

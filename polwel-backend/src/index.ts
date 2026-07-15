@@ -46,6 +46,7 @@ import reportingRoutes from './routes/reporting';
 import testEmailRoutes from './routes/testEmail';
 import importRoutes from './routes/import';
 import emailLogsRoutes from './routes/emailLogs';
+import courseRunMergerRoutes from './routes/courseRunMerger';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -288,6 +289,7 @@ app.use('/api/polwel-users', polwelUsersRoutes);
 app.use('/api/trainers', trainersRoutes);
 app.use('/api/partners', partnersRoutes);
 app.use('/api/client-organizations', clientOrganizationsRoutes);
+app.use('/api/course-runs-merger', courseRunMergerRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/user-setup', userSetupRoutes);
 app.use('/api/references', authenticate, referencesRoutes);

@@ -19,6 +19,7 @@ declare global {
         email: string;
         role: string;
         organizationId?: string;
+        organizationIds?: string[];
         permissions?: any[] | Set<string>;
       };
     }

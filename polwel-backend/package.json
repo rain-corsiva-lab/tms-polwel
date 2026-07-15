@@ -9,6 +9,7 @@
     "start:production": "NODE_ENV=production node dist/index.js",
     "dev": "nodemon src/index.ts",
     "dev:safe": "bash -c 'kill -9 $(lsof -ti :3001) 2>/dev/null || true' && nodemon src/index.ts",
+    "dev:safe-w": "powershell -Command \"Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }\" && nodemon src/index.ts",
     "dev:local": "NODE_ENV=local nodemon src/index.ts",
     "dev:staging": "NODE_ENV=staging nodemon src/index.ts",
     "build": "tsc",
