@@ -29,52 +29,71 @@ export const waiverController = {
       const limitNum = Math.max(1, Math.min(100, parseInt(limit as string, 10) || 10));
       const skip = (pageNum - 1) * limitNum;
 
-      // Build where clause - only get records that have a waiver submitted
-      const whereClause: any = {
-        waiverSubmittedAt: { not: null },
-        waiverReason: { not: null },
-        deletedAt: null,
-      };
+      // Build where clause using AND conditions to avoid overwriting OR fields
+      const andConditions: any[] = [
+        { waiverSubmittedAt: { not: null } },
+        { waiverReason: { not: null } },
+        { deletedAt: null },
+      ];
+
+      // If training coordinator, restrict to their organizations
+      if (req.user && req.user.role === 'TRAINING_COORDINATOR') {
+        const orgIds = [...(req.user.organizationIds || [])];
+        if (req.user.organizationId) {
+          orgIds.push(req.user.organizationId);
+        }
+        const uniqueOrgIds = Array.from(new Set(orgIds.filter(Boolean)));
+        andConditions.push({
+          clientOrganizationId: { in: uniqueOrgIds },
+        });
+      }
 
       // Filter by waiver status
       if (status && status !== 'ALL') {
-        // Handle PENDING status - includes both null and 'PENDING' values
         if (status === 'PENDING') {
-          whereClause.OR = [
-            { waiverStatus: null },
-            { waiverStatus: 'PENDING' },
-          ];
+          andConditions.push({
+            OR: [
+              { waiverStatus: null },
+              { waiverStatus: 'PENDING' },
+            ],
+          });
         } else {
-          whereClause.waiverStatus = status as WaiverStatus;
+          andConditions.push({ waiverStatus: status as WaiverStatus });
         }
       }
 
-      // Filter by organization (from course run learner enrollment)
+      // Filter by organization
       if (organizationId) {
-        whereClause.courseRunLearner = {
+        andConditions.push({
           clientOrganizationId: organizationId as string,
-        };
+        });
       }
 
       // Filter by course
       if (courseId) {
-        whereClause.courseRun = {
-          courseId: courseId as string,
-        };
+        andConditions.push({
+          courseRun: {
+            courseId: courseId as string,
+          },
+        });
       }
 
-      // Search filter - search by learner name, email, course title, organization name
+      // Search filter
       if (search) {
         const searchTerm = (search as string).trim();
         if (searchTerm) {
-          whereClause.OR = [
-            { learner: { fullname: { contains: searchTerm } } },
-            { learner: { email: { contains: searchTerm } } },
-            { courseRun: { course: { title: { contains: searchTerm } } } },
-            { clientOrganization: { name: { contains: searchTerm } } },
-          ];
+          andConditions.push({
+            OR: [
+              { learner: { fullname: { contains: searchTerm } } },
+              { learner: { email: { contains: searchTerm } } },
+              { courseRun: { course: { title: { contains: searchTerm } } } },
+              { clientOrganization: { name: { contains: searchTerm } } },
+            ],
+          });
         }
       }
+
+      const whereClause = { AND: andConditions };
 
       // Fetch waiver requests with related data
       const [waiverRequests, total] = await Promise.all([
@@ -143,11 +162,20 @@ export const waiverController = {
       ]);
 
       // Get counts for each status
-      const baseWhere = {
+      const baseWhere: any = {
         waiverSubmittedAt: { not: null },
         waiverReason: { not: null },
         deletedAt: null,
       };
+
+      if (req.user && req.user.role === 'TRAINING_COORDINATOR') {
+        const orgIds = [...(req.user.organizationIds || [])];
+        if (req.user.organizationId) {
+          orgIds.push(req.user.organizationId);
+        }
+        const uniqueOrgIds = Array.from(new Set(orgIds.filter(Boolean)));
+        baseWhere.clientOrganizationId = { in: uniqueOrgIds };
+      }
 
       const [pendingCount, approvedCount, rejectedCount] = await Promise.all([
         prisma.courseRunLearner.count({
