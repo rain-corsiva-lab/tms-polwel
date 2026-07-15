@@ -288,7 +288,8 @@ router.post('/mfa/verify', async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     console.error('❌ [AUTH] MFA verification error', error);
-    res.status(500).json({ error: 'Failed to verify MFA code' });
+    const msg = error instanceof Error ? error.message : 'Failed to verify MFA code';
+    res.status(500).json({ error: msg });
   }
 });
 
@@ -357,7 +358,8 @@ router.post('/mfa/resend', async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     console.error('❌ [AUTH] MFA resend error', error);
-    res.status(500).json({ error: 'Failed to resend MFA code' });
+    const msg = error instanceof Error ? error.message : 'Failed to resend MFA code';
+    res.status(500).json({ error: msg });
   }
 });
 
