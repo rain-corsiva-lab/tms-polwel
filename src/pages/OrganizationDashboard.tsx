@@ -477,9 +477,8 @@ const OrganizationDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Participants</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Learners</p>
                 <p className="text-3xl font-bold">{totalLearners}</p>
-                <p className="text-xs text-muted-foreground mt-1">{activeLearners} currently active</p>
               </div>
               <div className="p-3 bg-accent rounded-lg">
                 <Users className="h-6 w-6 text-accent-foreground" />
@@ -629,7 +628,7 @@ const OrganizationDashboard = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="details">Organisation Analytics</TabsTrigger>
           <TabsTrigger value="courses">List of Course Runs</TabsTrigger>
-          <TabsTrigger value="learners">Participants</TabsTrigger>
+          <TabsTrigger value="learners">All Learners</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
@@ -957,13 +956,13 @@ const OrganizationDashboard = () => {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                <CardTitle>Participants ({totalLearners})</CardTitle>
+                <CardTitle>All Learners ({totalLearners})</CardTitle>
               </div>
               <CardDescription>Employees enrolled in training programs</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {learners.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No participants found</div>
+                <div className="text-center py-8 text-muted-foreground">No learners found</div>
               ) : (
                 <>
                   <Table>

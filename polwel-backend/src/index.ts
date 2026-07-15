@@ -310,12 +310,69 @@ app.use(errorLogger); // Add error logging before error handlers
 app.use(notFound);
 app.use(errorHandler);
 
+import { PrismaClient } from '@prisma/client';
+
+async function selfHealUserOrganizations() {
+  try {
+    const prismaClient = new PrismaClient();
+    console.log('[Self-Heal] Scanning for Training Coordinators missing junction records...');
+    
+    const coordinators = await prismaClient.user.findMany({
+      where: {
+        role: 'TRAINING_COORDINATOR',
+        organizationId: { not: null },
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        organizationId: true
+      }
+    });
+
+    let migratedCount = 0;
+    for (const tc of coordinators) {
+      if (!tc.organizationId) continue;
+      
+      const exists = await prismaClient.userOrganization.findUnique({
+        where: {
+          userId_organizationId: {
+            userId: tc.id,
+            organizationId: tc.organizationId
+          }
+        }
+      });
+
+      if (!exists) {
+        await prismaClient.userOrganization.create({
+          data: {
+            userId: tc.id,
+            organizationId: tc.organizationId
+          }
+        });
+        migratedCount++;
+      }
+    }
+
+    if (migratedCount > 0) {
+      console.log(`[Self-Heal] Successfully restored/migrated ${migratedCount} Training Coordinator junction record(s) to user_organizations!`);
+    } else {
+      console.log('[Self-Heal] All Training Coordinator junction records are already healthy.');
+    }
+  } catch (error) {
+    console.error('[Self-Heal] Failed to self-heal training coordinator junction records:', error);
+  }
+}
+
 // Start server
 const startServer = () => {
   const server = app.listen(PORT, () => {
     console.log(`🚀 POLWEL API Server running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`⚠️  Database connection will be established after Prisma setup`);
+
+    selfHealUserOrganizations().catch((error) => {
+      console.error('[Self-Heal] Startup error during user organizations migration:', error);
+    });
 
     evaluateCourseRunStatusesNow().catch((error) => {
       console.error('Immediate course run status evaluation failed on startup:', error);
