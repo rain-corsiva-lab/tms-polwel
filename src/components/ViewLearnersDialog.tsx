@@ -300,6 +300,9 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
   const withdrawnLearners = learners.filter((l) => l.enrollmentStatus === "WITHDRAWN");
 
   const courseRunStatusForDisplay = displayStatusOverride ?? courseRun?.status;
+  const isCompletedRun =
+    courseRunStatusForDisplay?.toLowerCase() === "completed" ||
+    courseRunStatusForDisplay?.toLowerCase() === "pending_billing";
 
   const attendanceBadge = (row: CertificateRow, record: LearnerRecord) => {
     if (row.isPresent) {
@@ -441,7 +444,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                               <TableHead className="font-semibold">Email</TableHead>
                               <TableHead className="font-semibold">Designation</TableHead>
                               <TableHead className="font-semibold">Contact</TableHead>
-                              <TableHead className="font-semibold">Status</TableHead>
+                              <TableHead className="font-semibold">{isCompletedRun ? "Attendance" : "Status"}</TableHead>
                               <TableHead className="font-semibold text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -455,10 +458,16 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                                   <TableCell className="text-sm">{record.learner.designation || "—"}</TableCell>
                                   <TableCell className="text-sm">{record.learner.contactNumber || "—"}</TableCell>
                                   <TableCell>
-                                    <Badge className="bg-green-100 text-green-800 border-green-200">Enrolled</Badge>
+                                    {isCompletedRun ? (
+                                      attendanceBadge(certRow, record)
+                                    ) : (
+                                      <Badge className="bg-green-100 text-green-800 border-green-200">Enrolled</Badge>
+                                    )}
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    {certRow.waiverStatus === "APPROVED" ? (
+                                    {!isCompletedRun ? (
+                                      "—"
+                                    ) : certRow.waiverStatus === "APPROVED" ? (
                                       "—"
                                     ) : certRow.isPresent ? (
                                       <Button variant="ghost" size="sm" onClick={() => handleDownloadCertificate(certRow)}>
