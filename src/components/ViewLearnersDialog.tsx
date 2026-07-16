@@ -441,7 +441,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                               <TableHead className="font-semibold">Email</TableHead>
                               <TableHead className="font-semibold">Designation</TableHead>
                               <TableHead className="font-semibold">Contact</TableHead>
-                              <TableHead className="font-semibold">Attendance</TableHead>
+                              <TableHead className="font-semibold">Status</TableHead>
                               <TableHead className="font-semibold text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -454,7 +454,9 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                                   <TableCell className="text-sm">{record.learner.email}</TableCell>
                                   <TableCell className="text-sm">{record.learner.designation || "—"}</TableCell>
                                   <TableCell className="text-sm">{record.learner.contactNumber || "—"}</TableCell>
-                                  <TableCell>{attendanceBadge(certRow, record)}</TableCell>
+                                  <TableCell>
+                                    <Badge className="bg-green-100 text-green-800 border-green-200">Enrolled</Badge>
+                                  </TableCell>
                                   <TableCell className="text-right">
                                     {certRow.waiverStatus === "APPROVED" ? (
                                       "—"
@@ -481,13 +483,17 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                 )}
               </div>
 
-              {withdrawnLearners.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Withdrawn Learners ({withdrawnLearners.length})</h3>
-                    <Badge className="bg-red-100 text-red-800">{withdrawnLearners.length}</Badge>
-                  </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Withdrawn Learners ({withdrawnLearners.length})</h3>
+                  <Badge className="bg-red-100 text-red-800">{withdrawnLearners.length}</Badge>
+                </div>
 
+                {withdrawnLearners.length === 0 ? (
+                  <Card className="border-l-4 border-l-red-400">
+                    <CardContent className="p-8 text-center text-muted-foreground">No withdrawn learners</CardContent>
+                  </Card>
+                ) : (
                   <Card className="border-l-4 border-l-red-400">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
@@ -498,6 +504,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                               <TableHead className="font-semibold">Email</TableHead>
                               <TableHead className="font-semibold">Designation</TableHead>
                               <TableHead className="font-semibold">Contact</TableHead>
+                              <TableHead className="font-semibold">Enrollment Status</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -507,6 +514,9 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                                 <TableCell className="text-sm">{record.learner.email}</TableCell>
                                 <TableCell className="text-sm">{record.learner.designation || "—"}</TableCell>
                                 <TableCell className="text-sm">{record.learner.contactNumber || "—"}</TableCell>
+                                <TableCell>
+                                  <Badge className="bg-red-100 text-red-800 border-red-200">Withdrawn</Badge>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -514,8 +524,8 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
@@ -607,19 +617,19 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
             </Button>
             {(selectedCertRow?.waiverStatus === "REJECTED" ||
               (!selectedCertRow?.waiverStatus && !selectedCertRow?.waiverReason)) && (
-              <Button onClick={handleSubmitWaiver} disabled={submittingWaiver}>
-                {submittingWaiver ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : selectedCertRow?.waiverStatus === "REJECTED" ? (
-                  "Resubmit Waiver"
-                ) : (
-                  "Submit Waiver"
-                )}
-              </Button>
-            )}
+                <Button onClick={handleSubmitWaiver} disabled={submittingWaiver}>
+                  {submittingWaiver ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : selectedCertRow?.waiverStatus === "REJECTED" ? (
+                    "Resubmit Waiver"
+                  ) : (
+                    "Submit Waiver"
+                  )}
+                </Button>
+              )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
