@@ -4793,6 +4793,103 @@ export const courseRunController = {
     }
   },
 
+  // Re-enroll a withdrawn learner
+  async reenrollLearner(req: Request, res: Response): Promise<void> {
+    try {
+      const { courseRunId, learnerId } = req.params;
+      const actorId = (req as any).user?.id;
+
+      if (!courseRunId || !learnerId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID and learner ID are required',
+        });
+        return;
+      }
+
+      const enrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          courseRunId,
+          deletedAt: null,
+          OR: [
+            { id: learnerId },
+            { learnerId },
+          ],
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
+      });
+
+      if (!enrollment) {
+        res.status(404).json({
+          success: false,
+          error: 'Learner enrollment not found',
+        });
+        return;
+      }
+
+      if (enrollment.enrollmentStatus !== 'WITHDRAWN') {
+        res.status(400).json({
+          success: false,
+          error: 'Learner is not withdrawn',
+        });
+        return;
+      }
+
+      const updatedEnrollment = await prisma.courseRunLearner.update({
+        where: {
+          id: enrollment.id,
+        },
+        data: {
+          enrollmentStatus: 'ENROLLED',
+          withdrawnReason: null,
+          withdrawnAt: null,
+          withdrawnBy: null,
+          supportingDocumentWithdrawnId: null,
+        },
+        include: {
+          learner: true,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          ...(actorId && { userId: actorId }),
+          action: 'Learner Re-enrolled',
+          actionType: 'UPDATE',
+          ...(enrollment.id && { tableName: 'course_run_learners', recordId: enrollment.id }),
+          ...(enrollment.learner?.fullname && enrollment.courseRun?.course?.title && {
+            details: `Learner ${enrollment.learner.fullname} re-enrolled into ${enrollment.courseRun.course.title}`
+          }),
+          ...((req as any).user?.email && { performedBy: (req as any).user.email }),
+          ...(req.ip && { ipAddress: req.ip }),
+        },
+      });
+
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRunId);
+        await prisma.courseRun.update({ where: { id: courseRunId }, data: { venueFinalFee: venueFinal } });
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after reenrollLearner:', err);
+      }
+
+      res.json({
+        success: true,
+        message: 'Learner re-enrolled successfully',
+        enrollment: updatedEnrollment,
+      });
+    } catch (error) {
+      console.error('Error re-enrolling learner:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.reenrollLearner', 'Failed to re-enroll learner', error));
+    }
+  },
+
   // Resend confirmation email to a learner
   async resendConfirmationEmail(req: Request, res: Response): Promise<void> {
     try {
