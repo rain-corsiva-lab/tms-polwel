@@ -1703,6 +1703,9 @@ const CourseRunDetail: React.FC = () => {
     }
   };
 
+  const enrolledParticipantsCount =
+    courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus !== "WITHDRAWN").length || 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1753,7 +1756,7 @@ const CourseRunDetail: React.FC = () => {
                 disabled={!courseRun.individualRegistrationRequired || courseRun.status === "DRAFT"}
                 className={!courseRun.individualRegistrationRequired || courseRun.status === "DRAFT" ? "opacity-50 cursor-not-allowed" : ""}
               >
-                Participants ({courseRun.courseRunLearners?.length || 0})
+                Participants ({enrolledParticipantsCount})
               </TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
               <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
@@ -2027,24 +2030,24 @@ const CourseRunDetail: React.FC = () => {
                       <div className="p-3 border rounded-md bg-gray-50">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">
-                            {courseRun.courseRunLearners?.length || 0} / {courseRun.minClassSize ?? 0}
+                            {enrolledParticipantsCount} / {courseRun.minClassSize ?? 0}
                           </span>
                           <span className="text-sm text-gray-500">
-                            {(courseRun.courseRunLearners?.length || 0) >= (courseRun.minClassSize ?? Infinity)
+                            {enrolledParticipantsCount >= (courseRun.minClassSize ?? Infinity)
                               ? "Minimum requirement met"
-                              : `${(courseRun.minClassSize ?? 0) - (courseRun.courseRunLearners?.length || 0)} more needed for minimum`}
+                              : `${(courseRun.minClassSize ?? 0) - enrolledParticipantsCount} more needed for minimum`}
                           </span>
                         </div>
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
-                              (courseRun.courseRunLearners?.length || 0) >= (courseRun.minClassSize ?? Number.MAX_SAFE_INTEGER)
+                              enrolledParticipantsCount >= (courseRun.minClassSize ?? Number.MAX_SAFE_INTEGER)
                                 ? "bg-green-500"
                                 : "bg-yellow-400"
                             }`}
                             style={{
                               width: `${
-                                courseRun.minClassSize ? Math.min(100, ((courseRun.courseRunLearners?.length || 0) / courseRun.minClassSize) * 100) : 0
+                                courseRun.minClassSize ? Math.min(100, (enrolledParticipantsCount / courseRun.minClassSize) * 100) : 0
                               }%`,
                             }}
                           ></div>
@@ -2112,7 +2115,7 @@ const CourseRunDetail: React.FC = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Enrolled Participants ({courseRun.courseRunLearners?.length || 0})</CardTitle>
+                  <CardTitle>Enrolled Participants ({enrolledParticipantsCount})</CardTitle>
                   {/* <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Learners
