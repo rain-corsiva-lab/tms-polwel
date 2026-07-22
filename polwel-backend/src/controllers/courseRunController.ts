@@ -4793,6 +4793,103 @@ export const courseRunController = {
     }
   },
 
+  // Re-enroll a withdrawn learner
+  async reenrollLearner(req: Request, res: Response): Promise<void> {
+    try {
+      const { courseRunId, learnerId } = req.params;
+      const actorId = (req as any).user?.id;
+
+      if (!courseRunId || !learnerId) {
+        res.status(400).json({
+          success: false,
+          error: 'Course run ID and learner ID are required',
+        });
+        return;
+      }
+
+      const enrollment = await prisma.courseRunLearner.findFirst({
+        where: {
+          courseRunId,
+          deletedAt: null,
+          OR: [
+            { id: learnerId },
+            { learnerId },
+          ],
+        },
+        include: {
+          learner: true,
+          courseRun: {
+            include: {
+              course: true,
+            },
+          },
+        },
+      });
+
+      if (!enrollment) {
+        res.status(404).json({
+          success: false,
+          error: 'Learner enrollment not found',
+        });
+        return;
+      }
+
+      if (enrollment.enrollmentStatus !== 'WITHDRAWN') {
+        res.status(400).json({
+          success: false,
+          error: 'Learner is not withdrawn',
+        });
+        return;
+      }
+
+      const updatedEnrollment = await prisma.courseRunLearner.update({
+        where: {
+          id: enrollment.id,
+        },
+        data: {
+          enrollmentStatus: 'ENROLLED',
+          withdrawnReason: null,
+          withdrawnAt: null,
+          withdrawnBy: null,
+          supportingDocumentWithdrawnId: null,
+        },
+        include: {
+          learner: true,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          ...(actorId && { userId: actorId }),
+          action: 'Learner Re-enrolled',
+          actionType: 'UPDATE',
+          ...(enrollment.id && { tableName: 'course_run_learners', recordId: enrollment.id }),
+          ...(enrollment.learner?.fullname && enrollment.courseRun?.course?.title && {
+            details: `Learner ${enrollment.learner.fullname} re-enrolled into ${enrollment.courseRun.course.title}`
+          }),
+          ...((req as any).user?.email && { performedBy: (req as any).user.email }),
+          ...(req.ip && { ipAddress: req.ip }),
+        },
+      });
+
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRunId);
+        await prisma.courseRun.update({ where: { id: courseRunId }, data: { venueFinalFee: venueFinal } });
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after reenrollLearner:', err);
+      }
+
+      res.json({
+        success: true,
+        message: 'Learner re-enrolled successfully',
+        enrollment: updatedEnrollment,
+      });
+    } catch (error) {
+      console.error('Error re-enrolling learner:', error);
+      res.status(500).json(buildErrorResponse('courseRunController.reenrollLearner', 'Failed to re-enroll learner', error));
+    }
+  },
+
   // Resend confirmation email to a learner
   async resendConfirmationEmail(req: Request, res: Response): Promise<void> {
     try {
@@ -5182,8 +5279,6 @@ export const courseRunController = {
           startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime) : undefined,
           endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : undefined,
           trainerName: trainerNames || undefined,
-          completionDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : undefined,
-          certificateDownloadUrl: '#',
         },
         { logoSrc: EmailService.getLogoSrcForWebPreview() },
       );
@@ -5908,9 +6003,6 @@ export const courseRunController = {
         return;
       }
 
-      // Use frontend URL for certificate download links so Apache proxy routes them correctly (/api/cert/ → backend)
-      const frontendUrl = (process.env.FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
-      
       const trainerNames = courseRun.courseRunTrainers
         .map((ct: any) => ct.trainer?.name)
         .filter(Boolean)
@@ -5937,20 +6029,36 @@ export const courseRunController = {
         }
 
         try {
-          const certificateDownloadUrl = `${frontendUrl}/api/cert/${learner?.id}/${id}`;
+          // Generate certificate PDF for attachment
+          let certPdfBuffer: Buffer | undefined;
+          const safeLearnerName = (learner?.fullname || 'Learner').replace(/[^a-z0-9]+/gi, '_');
+          const safeCourseCode = courseRun.course?.courseCode?.replace(/[^a-z0-9]+/gi, '_') || '';
+          const certFilename = `Certificate_${safeLearnerName}${safeCourseCode ? `_${safeCourseCode}` : ''}.pdf`;
+          try {
+            const certData = {
+              learnerName: learner?.fullname || 'Learner',
+              courseName: courseRun.course?.title || 'POLWEL Course',
+              duration: Number(courseRun.course?.duration) || 1,
+              durationType: courseRun.course?.durationType || 'days',
+              endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : new Date(),
+              courseCode: courseRun.course?.courseCode ?? '',
+            };
+            certPdfBuffer = await buildCertificatePDFBuffer(certData);
+          } catch (pdfErr: any) {
+            console.error(`Failed to generate certificate PDF for ${learner?.fullname}:`, pdfErr);
+          }
 
           const emailParams: any = {
             email,
             learnerName: learner?.fullname || 'Learner',
             courseTitle: courseRun.course?.title || 'POLWEL Course',
-            certificateDownloadUrl,
+            ...(certPdfBuffer ? { certificatePdfBuffer: certPdfBuffer, certificateFilename: certFilename } : {}),
           };
 
           if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
           if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (trainerNames) emailParams.trainerName = trainerNames;
-          if (courseRun.endDatetime) emailParams.completionDate = new Date(courseRun.endDatetime);
 
           const didSend = await EmailService.sendCourseCompletionEmail(emailParams);
 
@@ -6938,17 +7046,11 @@ export const courseRunController = {
 
           const pdfBuffer = await buildCertificatePDFBuffer(certificateData);
 
-          // Create attachment
-          const attachment = {
-            filename: `Certificate_${enrollment.learner.fullname.replace(/\s+/g, '_')}.pdf`,
-            content: pdfBuffer,
-            contentType: 'application/pdf',
-          };
+          const safeName = enrollment.learner.fullname.replace(/[^a-z0-9]+/gi, '_');
+          const safeCert = (enrollment.courseRun.course.courseCode || '').replace(/[^a-z0-9]+/gi, '_');
+          const pdfFilename = `Certificate_${safeName}${safeCert ? `_${safeCert}` : ''}.pdf`;
 
-          // Generate public download URL — routed via Apache to the backend API
-          const downloadUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/api/course-runs/certificates/download/${enrollment.learner.id}/${enrollment.courseRun.id}`;
-
-          // Send email with certificate
+          // Send email with certificate attached as PDF
           const emailSent = await EmailService.sendCourseCompletionEmail({
             email: enrollment.learner.email || '',
             learnerName: enrollment.learner.fullname,
@@ -6956,8 +7058,8 @@ export const courseRunController = {
             courseCode: enrollment.courseRun.course.courseCode || '',
             startDate: enrollment.courseRun.startDatetime || undefined,
             endDate: enrollment.courseRun.endDatetime || undefined,
-            completionDate: enrollment.courseRun.endDatetime || undefined,
-            certificateDownloadUrl: downloadUrl,
+            certificatePdfBuffer: pdfBuffer,
+            certificateFilename: pdfFilename,
           });
 
           if (emailSent) {

@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma, CourseStatus, CourseRunType, LearnerEmailStatus, ConfirmationEmailStatus } from '@prisma/client';
 import EmailService from './emailService';
+import { buildCertificatePDFBuffer } from './certificateService';
 
 // Helper function to format status labels for user-friendly display
 function formatStatusLabel(status: string): string {
@@ -140,7 +141,7 @@ const loadCourseRunWithRelations = async (
   courseRunId: string
 ): Promise<Prisma.CourseRunGetPayload<{
   include: {
-    course: { select: { id: true; title: true; courseCode: true } };
+    course: { select: { id: true; title: true; courseCode: true; duration: true; durationType: true } };
     venue: { select: { id: true; name: true; address: true } };
     courseRunLearners: {
       where: { deletedAt: null };
@@ -172,7 +173,7 @@ const loadCourseRunWithRelations = async (
   const courseRun = await prisma.courseRun.findFirst({
     where: { id: courseRunId, deletedAt: null },
     include: {
-      course: { select: { id: true, title: true, courseCode: true } },
+      course: { select: { id: true, title: true, courseCode: true, duration: true, durationType: true } },
       venue: { select: { id: true, name: true, address: true } },
       courseRunLearners: {
         where: { deletedAt: null },
@@ -490,12 +491,6 @@ export const courseRunWorkflowService = {
         ['ENROLLED'].includes(String(learner.enrollmentStatus || 'ENROLLED'))
       );
 
-      // Use backend URL for certificate downloads - use localhost for development
-      const backendUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || process.env.API_URL || 'https://api.polwel.org')
-        : 'http://localhost:3001';
-      const baseUrl = backendUrl.replace(/\/api$/, ''); // Remove /api suffix if present
-
       for (const enrollment of enrolledLearners) {
         const learner = enrollment.learner;
         const email = learner?.email?.trim();
@@ -508,20 +503,36 @@ export const courseRunWorkflowService = {
             .filter(Boolean)
             .join(', ');
 
-          const certificateDownloadUrl = `${baseUrl}/cert/${learner?.id}/${courseRunId}`;
+          // Generate certificate PDF for attachment
+          let certPdfBuffer: Buffer | undefined;
+          const safeName = (learner?.fullname || 'Learner').replace(/[^a-z0-9]+/gi, '_');
+          const safeCertCode = (courseRun.course?.courseCode || '').replace(/[^a-z0-9]+/gi, '_');
+          const certFilename = `Certificate_${safeName}${safeCertCode ? `_${safeCertCode}` : ''}.pdf`;
+          try {
+            const certData = {
+              learnerName: learner?.fullname || 'Learner',
+              courseName: courseRun.course?.title || 'POLWEL Course',
+              duration: Number(courseRun.course?.duration) || 1,
+              durationType: courseRun.course?.durationType || 'days',
+              endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : new Date(),
+              courseCode: courseRun.course?.courseCode ?? '',
+            };
+            certPdfBuffer = await buildCertificatePDFBuffer(certData);
+          } catch (pdfErr) {
+            console.error(`[WorkflowService] Failed to generate certificate PDF for ${learner?.fullname}:`, pdfErr);
+          }
 
           const emailParams: any = {
             email,
             learnerName: learner?.fullname || 'Learner',
             courseTitle: courseRun.course?.title || 'POLWEL Course',
-            certificateDownloadUrl,
+            ...(certPdfBuffer ? { certificatePdfBuffer: certPdfBuffer, certificateFilename: certFilename } : {}),
           };
 
           if (courseRun.course?.courseCode) emailParams.courseCode = courseRun.course.courseCode;
           if (courseRun.startDatetime) emailParams.startDate = new Date(courseRun.startDatetime);
           if (courseRun.endDatetime) emailParams.endDate = new Date(courseRun.endDatetime);
           if (trainerNames) emailParams.trainerName = trainerNames;
-          if (courseRun.endDatetime) emailParams.completionDate = new Date(courseRun.endDatetime);
 
           await EmailService.sendCourseCompletionEmail(emailParams);
 

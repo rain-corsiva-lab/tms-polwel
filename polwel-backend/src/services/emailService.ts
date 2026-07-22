@@ -554,20 +554,45 @@ class EmailService {
   }
 
   // Get standardized email footer HTML
-  // Get LinkedIn icon as HTTPS URL (Mailjet works better with standard URLs)
+  // Get LinkedIn icon as HTTPS URL — PNG format for broadest email client support
+  // SVG is NOT supported in Outlook Classic (desktop) on Mac/Windows, causing broken icon display.
   // CRITICAL: For emails, ALWAYS use the public domain, never localhost
   private static getLinkedInIconUrl(): string {
     // Use EMAIL_FRONTEND_URL for emails (always public domain), never FRONTEND_URL (local dev)
     const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
-    return emailFrontendUrl + '/images/icons8-linkedin.svg';
+    return emailFrontendUrl + '/images/icons8-linkedin-50.png';
   }
 
-  // Get YouTube icon as HTTPS URL (Mailjet works better with standard URLs)
+  // Get YouTube icon as HTTPS URL — PNG format for broadest email client support
+  // SVG is NOT supported in Outlook Classic (desktop) on Mac/Windows, causing broken icon display.
   // CRITICAL: For emails, ALWAYS use the public domain, never localhost
   private static getYouTubeIconUrl(): string {
     // Use EMAIL_FRONTEND_URL for emails (always public domain), never FRONTEND_URL (local dev)
     const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
-    return emailFrontendUrl + '/images/icons8-youtube.svg';
+    return emailFrontendUrl + '/images/icons8-youtube-50.png';
+  }
+
+  // Get QR code as a base64 data URI.
+  // Reads qr-polwel-go-course.jpg from the public/images directory at call time so it
+  // works in both web preview (file on disk) and production email sends.
+  // Falls back to the HTTPS URL if the file cannot be read.
+  private static getQrCodeSrc(): string {
+    const possiblePaths = [
+      path.join(__dirname, '../../public/images/qr-polwel-go-course.jpg'),
+      path.join(process.cwd(), 'public/images/qr-polwel-go-course.jpg'),
+      path.join(process.cwd(), '../public/images/qr-polwel-go-course.jpg'),
+    ];
+    for (const p of possiblePaths) {
+      try {
+        if (fs.existsSync(p)) {
+          const b64 = fs.readFileSync(p).toString('base64');
+          return `data:image/jpeg;base64,${b64}`;
+        }
+      } catch { /* ignore */ }
+    }
+    // Fallback to HTTPS URL when file is not on disk (e.g. Graph API cloud runner)
+    const emailFrontendUrl = (process.env.EMAIL_FRONTEND_URL || 'https://tms.polwel.org.sg').replace(/\/$/, '');
+    return emailFrontendUrl + '/images/qr-polwel-go-course.jpg';
   }
 
   private static getEmailFooter(): string {
@@ -2525,11 +2550,10 @@ class EmailService {
       endDate?: Date;
       trainerName?: string;
       completionDate?: Date;
-      certificateDownloadUrl: string;
     },
     options?: { logoSrc?: string },
   ): { html: string; subject: string } {
-    const { learnerName, courseTitle, courseCode, startDate, endDate, trainerName, completionDate, certificateDownloadUrl } = params;
+    const { learnerName, courseTitle, courseCode, startDate, endDate, trainerName } = params;
     const logoSrc = options?.logoSrc ?? this.getLogoSrc();
 
     const formatDate = (date?: Date) => {
@@ -2546,7 +2570,24 @@ class EmailService {
       }
     };
 
-    const subject = `Congratulations! Certificate of Completion - ${courseTitle}`;
+    // Compare calendar dates (SGT) rather than exact timestamps so that a single-day
+    // course (e.g. start 09:00, end 17:00 on the same date) isn't displayed twice.
+    const isSameCalendarDay = (a?: Date, b?: Date) => {
+      if (!a || !b) return false;
+      const SGT = { timeZone: 'Asia/Singapore' };
+      return a.toLocaleDateString('en-CA', SGT) === b.toLocaleDateString('en-CA', SGT);
+    };
+
+    // Build date string for subject: "19 Mar 2026" or "19 Mar 2026 - 20 Mar 2026"
+    const dateStr = startDate
+      ? (endDate && !isSameCalendarDay(startDate, endDate)
+          ? `${formatDate(startDate)} - ${formatDate(endDate)}`
+          : formatDate(startDate))
+      : '';
+
+    const subject = dateStr
+      ? `Congratulations! Certificate of Completion - ${courseTitle} | ${dateStr}`
+      : `Congratulations! Certificate of Completion - ${courseTitle}`;
 
     const html = `
         <!DOCTYPE html>
@@ -2600,17 +2641,13 @@ class EmailService {
                                   <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${courseTitle}</td>
                                 </tr>
                                 <tr>
-                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Date:</td>
-                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(startDate)}${endDate && startDate?.getTime() !== endDate?.getTime() ? ' - ' + formatDate(endDate) : ''}</td>
+                                  <td style="padding: 12px 16px; ${trainerName ? 'border-bottom: 1px solid #e5e7eb; ' : ''}color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Date:</td>
+                                  <td style="padding: 12px 16px; ${trainerName ? 'border-bottom: 1px solid #e5e7eb; ' : ''}color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(startDate)}${endDate && !isSameCalendarDay(startDate, endDate) ? ' - ' + formatDate(endDate) : ''}</td>
                                 </tr>
                                 ${trainerName ? `<tr>
-                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Trainer:</td>
-                                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${trainerName}</td>
+                                  <td style="padding: 12px 16px; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Trainer:</td>
+                                  <td style="padding: 12px 16px; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${trainerName}</td>
                                 </tr>` : ''}
-                                <tr>
-                                  <td style="padding: 12px 16px; color: #6b7280 !important; font-weight: 500; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">Completion Date:</td>
-                                  <td style="padding: 12px 16px; color: #1f2937 !important; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#f9fafb">${formatDate(completionDate || endDate)}</td>
-                                </tr>
                               </table>
 
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
@@ -2618,8 +2655,8 @@ class EmailService {
                                   <td style="padding: 24px; background-color: #f3f4f6 !important; border: 2px solid #6b7280; text-align: center;" bgcolor="#f3f4f6" align="center">
                                     <div style="font-size: 40px; margin-bottom: 16px;">🏆</div>
                                     <p style="margin: 0 0 8px 0; color: #1f2937 !important; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif !important;">Certificate of Completion</p>
-                                    <p style="margin: 0 0 16px 0; color: #525252 !important; font-size: 13px; font-family: Arial, sans-serif !important;">Awarded to: ${learnerName}</p>
-                                    <a href="${certificateDownloadUrl}" style="display: inline-block; background-color: #6b7280 !important; color: #ffffff !important; padding: 12px 32px; text-decoration: none; font-weight: 600; font-size: 14px; font-family: Arial, sans-serif !important;" bgcolor="#6b7280">⬇ Download Certificate</a>
+                                    <p style="margin: 0 0 12px 0; color: #525252 !important; font-size: 13px; font-family: Arial, sans-serif !important;">Awarded to: ${learnerName}</p>
+                                    <p style="margin: 0; color: #374151 !important; font-size: 13px; font-family: Arial, sans-serif !important; font-style: italic;">Your Certificate is attached to this email as a PDF.</p>
                                   </td>
                                 </tr>
                               </table>
@@ -2630,15 +2667,15 @@ class EmailService {
                               
                               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
                                 <tr>
-                                  <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280;" bgcolor="#f8fafc">
-                                    <p style="margin: 0 0 12px 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                  <td style="padding: 16px; background-color: #f8fafc !important; border-left: 4px solid #6b7280; text-align: center;" bgcolor="#f8fafc" align="center">
+                                    <p style="margin: 0 0 12px 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important; text-align: center;">
                                       If you are interested to know or register for our other course offerings, please refer to the link &amp; QR code below:
                                     </p>
                                     <div style="text-align: center; margin: 16px 0;">
                                       <a href="https://polwel.org.sg/courses/" style="color: #3b82f6 !important; font-size: 14px; text-decoration: underline; font-family: Arial, sans-serif !important; display: block; margin-bottom: 12px;">https://polwel.org.sg/courses/</a>
-                                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://polwel.org.sg/courses/" alt="QR Code for Course Offerings" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
+                                      <img src="${this.getQrCodeSrc()}" alt="POLWEL Courses QR Code" style="width: 150px; height: 150px; display: block; margin: 0 auto;" />
                                     </div>
-                                    <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important;">
+                                    <p style="margin: 12px 0 0 0; color: #4b5563 !important; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif !important; text-align: center;">
                                       Once again, thank you for your support and hope to see you soon in our next workshop!
                                     </p>
                                   </td>
@@ -2675,13 +2712,23 @@ class EmailService {
     endDate?: Date;
     trainerName?: string;
     completionDate?: Date;
-    certificateDownloadUrl: string;
+    certificatePdfBuffer?: Buffer;
+    certificateFilename?: string;
   }): Promise<boolean> {
-    const { email } = params;
+    const { email, learnerName, certificatePdfBuffer, certificateFilename } = params;
 
     const transporter = this.getTransporter();
 
     const { html, subject } = this.buildCourseCompletionEmailHtml(params);
+
+    // Build attachments: SMTP logo media + optional certificate PDF
+    const mediaAttachments = this.isGraphApiMode() ? [] : this.getEmailMediaAttachments();
+    const allAttachments: any[] = [...mediaAttachments];
+    if (certificatePdfBuffer) {
+      const safeName = (params.learnerName || 'Learner').replace(/[^a-z0-9]+/gi, '_');
+      const pdfFilename = certificateFilename || `Certificate_${safeName}.pdf`;
+      allAttachments.push({ filename: pdfFilename, content: certificatePdfBuffer, contentType: 'application/pdf' });
+    }
 
     const mailOptions: any = {
       from: this.mailFromAddress,
@@ -2692,7 +2739,7 @@ class EmailService {
         'X-Mailjet-TrackOpen': '0',
       },
       html,
-      attachments: this.getEmailMediaAttachments(),
+      attachments: allAttachments,
     };
 
     try {
@@ -2703,12 +2750,16 @@ class EmailService {
 
       if (this.isMailjetSmtp()) {
         const inlined = this.isGraphApiMode() ? [] : (this.getLogoMailjetInline() ? [this.getLogoMailjetInline()!] : []);
+        const mjAttachments = certificatePdfBuffer
+          ? [{ filename: certificateFilename || `Certificate_${(learnerName || 'Learner').replace(/[^a-z0-9]+/gi, '_')}.pdf`, content: certificatePdfBuffer, contentType: 'application/pdf' as const }]
+          : undefined;
         const result = await this.sendViaMailjetApi({
           to: email,
           from: this.mailFromAddress,
           subject,
           html,
           inlinedAttachments: inlined,
+          ...(mjAttachments ? { attachments: mjAttachments } : {}),
         });
         return result.success;
       }

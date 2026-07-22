@@ -462,6 +462,29 @@ const CourseRunDetail: React.FC = () => {
     }
   };
 
+  const handleReenrollLearner = async (learnerRecord: any) => {
+    if (!courseRun || !id) return;
+
+    const learnerName = learnerRecord?.learner?.fullname || "this participant";
+    const confirmed = window.confirm(`Mark ${learnerName} as enrolled again?`);
+    if (!confirmed) return;
+
+    const learnerIdentifier = learnerRecord?.learner?.id || learnerRecord?.learnerId || learnerRecord?.id;
+    if (!learnerIdentifier) {
+      toast.error("Unable to determine learner identifier for re-enrollment");
+      return;
+    }
+
+    try {
+      const response = await courseRunsApi.reenrollLearner(id, learnerIdentifier);
+      toast.success(response?.message || "Participant marked as enrolled successfully");
+      loadCourseRunDetail();
+    } catch (error: any) {
+      console.error("Error re-enrolling learner:", error);
+      toast.error(error?.message || "Failed to re-enroll learner");
+    }
+  };
+
   // Handle participant selection (checkbox toggle)
   const handleParticipantToggle = (participantId: string) => {
     setSelectedParticipants((prev) => {
@@ -2285,6 +2308,7 @@ const CourseRunDetail: React.FC = () => {
                             <TableHead>Status</TableHead>
                             <TableHead>Withdrawn Date</TableHead>
                             <TableHead>Reason</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -2301,6 +2325,20 @@ const CourseRunDetail: React.FC = () => {
                                 </TableCell>
                                 <TableCell>{learnerRecord.withdrawnAt ? new Date(learnerRecord.withdrawnAt).toLocaleDateString("en-SG") : "—"}</TableCell>
                                 <TableCell>{learnerRecord.withdrawnReason || "—"}</TableCell>
+                                <TableCell className="text-right">
+                                  <SafeDropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleReenrollLearner(learnerRecord)}>
+                                        Mark as Enrolled
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </SafeDropdownMenu>
+                                </TableCell>
                               </TableRow>
                             ))}
                         </TableBody>
