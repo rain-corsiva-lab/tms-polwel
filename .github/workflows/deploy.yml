@@ -28,7 +28,8 @@ jobs:
 
           chmod 600 ~/.ssh/key.pem
 
-      - name: Deploy
+
+      - name: Deploy server
         run: |
           if [ "${GITHUB_REF_NAME}" = "staging" ]; then
             ssh -i ~/.ssh/key.pem ${{ vars.SSH_NAME }}@${{ vars.STAG_IP }} 'bash -s' < execute-stag.sh
