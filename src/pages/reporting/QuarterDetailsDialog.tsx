@@ -5,6 +5,7 @@ import { Loader2, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { reportingApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/date";
 
 interface QuarterDetailsDialogProps {
   quarter: string;
@@ -74,8 +75,8 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
           "Run Code": run.courseRunCode || "",
           "Course Name": run.courseName || "",
           "Organization": run.organization || "N/A",
-          "Start Date": run.startDate ? new Date(run.startDate).toLocaleDateString("en-GB") : "",
-          "End Date": run.endDate ? new Date(run.endDate).toLocaleDateString("en-GB") : "",
+          "Start Date": formatDate(run.startDate),
+          "End Date": formatDate(run.endDate),
           "Status": run.status ? run.status.replace(/_/g, " ") : "N/A",
           "Participants": run.learners || 0,
           "Revenue": `$${(run.revenue || 0).toFixed(2)}`,
@@ -193,8 +194,8 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
                     <TableCell className="font-medium">{run.courseRunCode}</TableCell>
                     <TableCell>{run.courseName}</TableCell>
                     <TableCell>{run.organization || "N/A"}</TableCell>
-                    <TableCell>{new Date(run.startDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(run.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatDate(run.startDate)}</TableCell>
+                    <TableCell>{formatDate(run.endDate)}</TableCell>
                     <TableCell>
                       <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">{run.status ? run.status.replace("_", " ") : "N/A"}</span>
                     </TableCell>

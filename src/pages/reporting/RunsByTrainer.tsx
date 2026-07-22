@@ -10,6 +10,7 @@ import api, { reportingApi } from "@/lib/api";
 import { ArrowLeft, Download, Loader2, Eye, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { RunDetailsDialog } from "./RunDetailsDialog";
+import { formatDate } from "@/lib/date";
 import * as XLSX from "xlsx";
 
 interface CourseRun {
@@ -151,8 +152,8 @@ export default function RunsByTrainer() {
         "Run Code": run.courseRunCode,
         "Course Name": run.course.name,
         Trainers: run.trainers.map((t) => t.name).join(", "),
-        "Start Date": new Date(run.startDate).toLocaleDateString(),
-        "End Date": new Date(run.endDate).toLocaleDateString(),
+        "Start Date": formatDate(run.startDate),
+        "End Date": formatDate(run.endDate),
         Status: run.status,
       }));
 
@@ -285,8 +286,8 @@ export default function RunsByTrainer() {
                           <TableCell className="font-medium">{run.courseRunCode}</TableCell>
                           <TableCell>{run.course.name}</TableCell>
                           <TableCell>{trainerNames}</TableCell>
-                          <TableCell>{new Date(run.startDate).toLocaleDateString()}</TableCell>
-                          <TableCell>{new Date(run.endDate).toLocaleDateString()}</TableCell>
+                          <TableCell>{formatDate(run.startDate)}</TableCell>
+                          <TableCell>{formatDate(run.endDate)}</TableCell>
                           <TableCell className="text-center">
                             <span className={getStatusChipClass(run.status || "")}>{run.status ? run.status.replace(/_/g, " ") : "N/A"}</span>
                           </TableCell>
