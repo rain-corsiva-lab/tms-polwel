@@ -397,9 +397,7 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
           )}
 
           {/* Email Logs - POLWEL only */}
-          {/* 
           {isPolwelUser && <NavItem to="/email-logs" icon={Mail} label="Email Logs" />}
-          */}
         </TooltipProvider>
       </nav>
 
