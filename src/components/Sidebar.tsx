@@ -125,21 +125,21 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
               style={
                 isCollapsed
                   ? {
-                      width: "28px",
-                      height: "28px",
-                      padding: "0",
-                      margin: "12px auto",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: isActive ? "#001A45" : isHovered ? "rgba(0, 26, 69, 0.1)" : "transparent",
-                      color: isActive ? "#fff" : "#001A4566",
-                      border: "none",
-                      borderRadius: "8px",
-                      transition: "all 0.2s ease",
-                      transform: isHovered ? "scale(1.05)" : "scale(1)",
-                      boxShadow: isActive ? "0 2px 8px rgba(0, 26, 69, 0.3)" : isHovered ? "0 2px 4px rgba(0, 26, 69, 0.15)" : "none",
-                    }
+                    width: "28px",
+                    height: "28px",
+                    padding: "0",
+                    margin: "12px auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: isActive ? "#001A45" : isHovered ? "rgba(0, 26, 69, 0.1)" : "transparent",
+                    color: isActive ? "#fff" : "#001A4566",
+                    border: "none",
+                    borderRadius: "8px",
+                    transition: "all 0.2s ease",
+                    transform: isHovered ? "scale(1.05)" : "scale(1)",
+                    boxShadow: isActive ? "0 2px 8px rgba(0, 26, 69, 0.3)" : isHovered ? "0 2px 4px rgba(0, 26, 69, 0.15)" : "none",
+                  }
                   : undefined
               }
               onMouseEnter={() => isCollapsed && setIsHovered(true)}
@@ -395,9 +395,6 @@ const Sidebar = ({ className, isCollapsed = false, onToggle }: SidebarProps) => 
               <NavItem to="/reporting" icon={BarChart3} label="Reporting" />
             </Can>
           )}
-
-          {/* Email Logs - POLWEL only */}
-          {isPolwelUser && <NavItem to="/email-logs" icon={Mail} label="Email Logs" />}
         </TooltipProvider>
       </nav>
 
