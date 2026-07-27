@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/errorHandler";
 import * as XLSX from "xlsx";
 import PaginationControls from "@/components/ui/pagination";
+import { formatDate } from "@/lib/date";
 
 interface Course {
   id: string;
@@ -301,7 +302,7 @@ const CourseArchive = () => {
               .trim()
           : "",
         Status: course.status || "ACTIVE",
-        CreatedDate: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "N/A",
+        CreatedDate: course.createdAt ? formatDate(course.createdAt) : "N/A",
       }));
 
       if (dataToExport.length === 0) {

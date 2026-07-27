@@ -56,7 +56,10 @@ export function formatDate(d?: Date | string | number | null) {
   if (!d) return '-';
   const date = typeof d === 'string' || typeof d === 'number' ? new Date(d) : d;
   if (isNaN(date.getTime())) return '-';
-  return formatFn(date);
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 export function formatDateTime(d?: Date | string | number | null) {
@@ -72,18 +75,30 @@ export function formatDateTime(d?: Date | string | number | null) {
 // values always reflect Singapore time, regardless of the browser's locale.
 
 /**
- * Format a datetime as a date string in Singapore Time.
+ * Format a datetime as a date string in Singapore Time (dd/mm/yyyy).
  * Returns `"-"` for null/undefined/invalid input.
  * @param options  Intl.DateTimeFormatOptions — defaults to DD/MM/YYYY
  */
 export function formatDateSGT(
   d?: Date | string | number | null,
-  options: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' },
+  options?: Intl.DateTimeFormatOptions,
 ): string {
   if (!d) return '-';
   const date = typeof d === 'string' || typeof d === 'number' ? new Date(d) : d;
   if (isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore', ...options });
+  if (options && Object.keys(options).length > 0) {
+    return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore', ...options });
+  }
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Singapore',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).formatToParts(date);
+  const day = parts.find((p) => p.type === 'day')?.value || '01';
+  const month = parts.find((p) => p.type === 'month')?.value || '01';
+  const year = parts.find((p) => p.type === 'year')?.value || '1970';
+  return `${day}/${month}/${year}`;
 }
 
 /**

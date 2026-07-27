@@ -11,6 +11,7 @@ import { errorHandlers, getErrorMessage } from "@/lib/errorHandler";
 import { Input } from "@/components/ui/input";
 import PaginationControls from "@/components/ui/pagination";
 import * as XLSX from "xlsx";
+import { formatDate } from "@/lib/date";
 
 const VenueArchive = () => {
   const navigate = useNavigate();
@@ -104,7 +105,7 @@ const VenueArchive = () => {
         Capacity: venue.capacity || "N/A",
         Fee: venue.fee || "N/A",
         Status: venue.status || "ACTIVE",
-        CreatedDate: venue.createdAt ? new Date(venue.createdAt).toLocaleDateString() : "N/A",
+        CreatedDate: venue.createdAt ? formatDate(venue.createdAt) : "N/A",
       }));
 
       if (dataToExport.length === 0) {

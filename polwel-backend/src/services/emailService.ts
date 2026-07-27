@@ -2003,9 +2003,36 @@ class EmailService {
       }
     };
 
-    const textBody = `Dear ${name},\n\nPlease refer to the attached documents and the details below regarding the upcoming course, ${courseRunDetails.course || 'N/A'}, for your organisation's reference.\n\nCourse Run Details:\n- Course: ${courseRunDetails.course || 'N/A'}\n- Day & Date: ${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}\n- Time: ${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}${courseRunDetails.venueAddress ? '\n  ' + courseRunDetails.venueAddress : ''}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Thank you.\n\nRegards,\n\nProfessional Development & Career Services Division\nPOLWEL Co-operative Society Limited\nMain: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares\nStay connected with POLWEL on and view our professional development courses on HRP!`;
+    const formatDateShort = (d?: string | null) => {
+      if (!d) return '';
+      try {
+        const dt = new Date(d);
+        if (isNaN(dt.getTime())) return '';
+        return new Intl.DateTimeFormat('en-SG', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          timeZone: 'Asia/Singapore',
+        }).format(dt);
+      } catch {
+        return '';
+      }
+    };
 
-    const subject = `Training Assignment & Course Confirmation: ${courseRunDetails.serialNumber || courseRunDetails.course || 'POLWEL'}`;
+    const startShort = formatDateShort(courseRunDetails.startDate);
+    const endShort = formatDateShort(courseRunDetails.endDate);
+    const isSameDayRange = courseRunDetails.startDate && courseRunDetails.endDate && courseRunDetails.startDate.substring(0, 10) === courseRunDetails.endDate.substring(0, 10);
+    let dateRangeStr = '';
+    if (startShort && endShort && !isSameDayRange) {
+      dateRangeStr = `${startShort} - ${endShort}`;
+    } else if (startShort) {
+      dateRangeStr = startShort;
+    }
+
+    const courseTitle = courseRunDetails.course || 'POLWEL Course';
+    const textBody = `Dear ${name},\n\nPlease refer to the attached documents and the details below regarding the upcoming course, ${courseTitle}, for your organisation's reference.\n\nCourse Run Details:\n- Course: ${courseTitle}\n- Day & Date: ${formatDate(courseRunDetails.startDate)}${courseRunDetails.endDate && courseRunDetails.startDate !== courseRunDetails.endDate ? ' to ' + formatDate(courseRunDetails.endDate) : ''}\n- Time: ${formatTime(courseRunDetails.startDate, courseRunDetails.endDate)}\n- Venue: ${courseRunDetails.venue || 'TBD'}${courseRunDetails.venueAddress ? '\n  ' + courseRunDetails.venueAddress : ''}\n\n${additionalBody ? additionalBody + '\n\n' : ''}Thank you.\n\nRegards,\n\nProfessional Development & Career Services Division\nPOLWEL Co-operative Society Limited\nMain: (65) 6235 6428 (Option 4) | www.polwel.org.sg | #POLWELCares\nStay connected with POLWEL on and view our professional development courses on HRP!`;
+
+    const subject = `Training Assignment & Course Confirmation: ${courseTitle}${dateRangeStr ? ` (${dateRangeStr})` : ''}`;
 
     const html = `<!DOCTYPE html>
     <html lang="en">

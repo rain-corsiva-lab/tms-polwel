@@ -244,8 +244,8 @@ const CourseRunDetail: React.FC = () => {
     if (isNaN(date.getTime())) return "";
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${courseCode}${day}${month}${year}`;
+    const year = date.getFullYear().toString().slice(-2);
+    return `${courseCode}-${day}${month}${year}`;
   };
 
   // Check if course has started (on or after start date)
@@ -2307,7 +2307,7 @@ const CourseRunDetail: React.FC = () => {
                                 <TableCell>
                                   <Badge variant="destructive">WITHDRAWN</Badge>
                                 </TableCell>
-                                <TableCell>{learnerRecord.withdrawnAt ? new Date(learnerRecord.withdrawnAt).toLocaleDateString("en-SG") : "—"}</TableCell>
+                                <TableCell>{formatDate(learnerRecord.withdrawnAt)}</TableCell>
                                 <TableCell>{learnerRecord.withdrawnReason || "—"}</TableCell>
                                 <TableCell className="text-right">
                                   <SafeDropdownMenu>

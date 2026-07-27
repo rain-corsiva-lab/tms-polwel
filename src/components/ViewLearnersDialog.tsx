@@ -565,7 +565,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                 <div className="text-sm font-semibold text-green-800">✓ Waiver Approved</div>
                 <div className="text-xs text-green-700 mt-1">
                   Approved on{" "}
-                  {selectedCertRow.waiverReviewedAt ? new Date(selectedCertRow.waiverReviewedAt).toLocaleDateString() : "N/A"}.
+                  {formatDate(selectedCertRow.waiverReviewedAt)}.
                 </div>
               </div>
             )}
@@ -575,7 +575,7 @@ const ViewLearnersDialog = ({ open, onOpenChange, courseRunId, courseRunData, di
                 <div className="text-sm font-semibold text-yellow-800">⏳ Awaiting Review</div>
                 <div className="text-xs text-yellow-700 mt-1">
                   Submitted on{" "}
-                  {selectedCertRow.waiverSubmittedAt ? new Date(selectedCertRow.waiverSubmittedAt).toLocaleDateString() : "N/A"}.
+                  {formatDate(selectedCertRow.waiverSubmittedAt)}.
                 </div>
               </div>
             )}
