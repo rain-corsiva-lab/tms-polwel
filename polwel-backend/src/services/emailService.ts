@@ -12,6 +12,7 @@ import {
   markEmailRetrying,
   EMAIL_TYPES,
   EMAIL_PROVIDERS,
+  EMAIL_ERROR_CATEGORIES,
   classifyError,
   extractStack,
   extractSmtpResponse,
@@ -875,6 +876,267 @@ class EmailService {
     if (this.isMailjetSmtp()) return EMAIL_PROVIDERS.MAILJET;
     if (!this.transporter) return EMAIL_PROVIDERS.NONE;
     return EMAIL_PROVIDERS.SMTP;
+  }
+
+  /**
+   * Universal, bulletproof email dispatcher with guaranteed email_logs tracking.
+   *
+   * Key guarantees:
+   *  1. Validates recipient upfront. If missing or invalid, IMMEDIATELY creates a FAILED log entry
+   *     with category INVALID_RECIPIENT so it is never lost or skipped without logging.
+   *  2. Always creates a PENDING email_log entry BEFORE any template compilation or sending.
+   *  3. Catches all errors (template errors, SMTP errors, Graph API failures, domain reputation blocks),
+   *     updates the log with full error context (smtpResponse, errorStack, classified category),
+   *     and enqueues retries for transient failures.
+   */
+  private static async executeSendEmail(params: {
+    emailType: string;
+    recipient: string | string[];
+    cc?: string | string[];
+    subject: string;
+    html: string;
+    text?: string;
+    attachments?: any[];
+    courseRunId?: string;
+    metadata?: Record<string, unknown>;
+    retryContext?: RetryContext;
+    retryPayload?: Record<string, unknown>;
+    developmentLogSummary?: string;
+  }): Promise<{ success: boolean; messageId?: string | undefined; error?: string | undefined; info?: any }> {
+    const {
+      emailType,
+      recipient,
+      cc,
+      subject,
+      html,
+      text,
+      attachments,
+      courseRunId,
+      metadata,
+      retryContext,
+      retryPayload,
+      developmentLogSummary,
+    } = params;
+
+    // 1. Normalize recipient & CC string representation
+    const recipientStr = Array.isArray(recipient)
+      ? recipient.map((r) => String(r || '').trim()).filter(Boolean).join(', ')
+      : String(recipient || '').trim();
+
+    const ccStr = Array.isArray(cc)
+      ? cc.map((c) => String(c || '').trim()).filter(Boolean).join(', ')
+      : String(cc || '').trim();
+
+    const providerName = this.getProviderName();
+
+    // 2. Validate recipient BEFORE anything else
+    if (!recipientStr || recipientStr === '' || recipientStr === 'null' || recipientStr === 'undefined') {
+      console.error(`[EmailService] ❌ Cannot send ${emailType}: Missing or invalid recipient email.`);
+      const errLogId = await createEmailLog({
+        emailType,
+        recipient: recipientStr || 'N/A (Missing Recipient)',
+        ...(ccStr ? { cc: ccStr } : {}),
+        subject,
+        provider: providerName,
+        ...(courseRunId ? { courseRunId } : {}),
+        ...(metadata ? { metadata } : {}),
+        ...(retryContext?.retryQueueId ? { retryQueueId: retryContext.retryQueueId } : {}),
+      }).catch(() => null);
+
+      await markEmailFailed(
+        errLogId,
+        'Missing or invalid recipient email address',
+        'INVALID_RECIPIENT',
+        1,
+        { errorCategory: EMAIL_ERROR_CATEGORIES.INVALID_RECIPIENT, provider: providerName }
+      ).catch(() => {});
+
+      return { success: false, error: 'Missing or invalid recipient email address' };
+    }
+
+    // 3. Create PENDING email log BEFORE send attempt
+    const logId = await createEmailLog({
+      emailType,
+      recipient: recipientStr,
+      ...(ccStr ? { cc: ccStr } : {}),
+      subject,
+      provider: providerName,
+      ...(courseRunId ? { courseRunId } : {}),
+      ...(metadata ? { metadata } : {}),
+      ...(retryContext?.retryQueueId ? { retryQueueId: retryContext.retryQueueId } : {}),
+    }).catch(() => null);
+
+    const transporter = this.getTransporter();
+
+    // 4. Handle unconfigured transporter
+    if (!transporter) {
+      if (process.env.NODE_ENV === 'production') {
+        const configErr = 'Email service not configured (neither Graph API nor SMTP credentials supplied)';
+        console.error(`[EmailService] ❌ ${configErr}`);
+        await markEmailFailed(logId, configErr, 'NO_TRANSPORTER', 1, {
+          errorCategory: EMAIL_ERROR_CATEGORIES.CONFIG_ERROR,
+          provider: EMAIL_PROVIDERS.NONE,
+        }).catch(() => {});
+
+        if (!retryContext?.retryQueueId && retryPayload) {
+          enqueueEmailRetry({
+            emailType,
+            recipient: recipientStr,
+            subject,
+            payload: serializePayload(retryPayload),
+            ...(courseRunId ? { courseRunId } : {}),
+          }).catch(() => {});
+        }
+
+        return { success: false, error: configErr };
+      } else {
+        // Development mode fallback when unconfigured
+        console.log(`=== ${emailType} (Development Mode - Unconfigured Transporter) ===`);
+        console.log(`To: ${recipientStr}`);
+        console.log(`Subject: ${subject}`);
+        if (developmentLogSummary) console.log(developmentLogSummary);
+        console.log('================================================================');
+
+        await markEmailSent(logId, `dev-${Date.now()}`, 1, {
+          smtpResponse: '200 OK (Development Mode simulated send)',
+        }).catch(() => {});
+
+        return { success: true, messageId: `dev-${Date.now()}` };
+      }
+    }
+
+    // 5. Construct mailOptions
+    const mailOptions: any = {
+      from: this.mailFromAddress,
+      to: Array.isArray(recipient) ? recipient : recipientStr,
+      subject,
+      html,
+      ...(text ? { text } : {}),
+      ...(ccStr ? { cc: Array.isArray(cc) ? cc : ccStr } : {}),
+      attachments: attachments && attachments.length > 0 ? attachments : this.getEmailMediaAttachments(),
+    };
+
+    // 6. Dispatch email via Mailjet REST API or Standard Transporter
+    try {
+      const hasCustomAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
+      if (hasCustomAttachments && this.isMailjetSmtp()) {
+        console.log(`🚀 [EmailService] Dispatching ${emailType} via Mailjet REST API...`);
+        const apiAttachments = (mailOptions.attachments || [])
+          .filter((a: any) => Buffer.isBuffer(a.content))
+          .map((a: any) => ({
+            filename: a.filename,
+            content: a.content as Buffer,
+            contentType: a.contentType || 'application/octet-stream',
+          }));
+        const logoInline = this.getLogoMailjetInline();
+
+        const result = await this.sendViaMailjetApi({
+          to: Array.isArray(recipient) ? recipient : [recipientStr],
+          from: this.mailFromAddress,
+          subject,
+          html,
+          ...(text ? { text } : {}),
+          attachments: apiAttachments,
+          ...(logoInline ? { inlinedAttachments: [logoInline] } : {}),
+          ...(ccStr ? { cc: Array.isArray(cc) ? cc : [ccStr] } : {}),
+        });
+
+        if (!result.success) {
+          const errDetail = result.error || 'Mailjet REST API send failed';
+          const cat = classifyError(errDetail);
+          console.error(`❌ [EmailService] Mailjet send failed for ${emailType}: ${errDetail}`);
+
+          await markEmailFailed(logId, errDetail, 'MAILJET_ERROR', 1, {
+            smtpResponse: errDetail,
+            errorCategory: cat,
+            provider: EMAIL_PROVIDERS.MAILJET,
+          }).catch(() => {});
+
+          if (!retryContext?.retryQueueId && retryPayload) {
+            enqueueEmailRetry({
+              emailType,
+              recipient: recipientStr,
+              subject,
+              payload: serializePayload(retryPayload),
+              ...(courseRunId ? { courseRunId } : {}),
+            }).catch(() => {});
+          }
+
+          return { success: false, error: errDetail };
+        }
+
+        console.log(`✅ [EmailService] Mailjet send successful for ${emailType} → ${recipientStr}. MessageID: ${result.messageId}`);
+        await markEmailSent(logId, result.messageId, 1, { smtpResponse: '200 OK (Mailjet API)' }).catch(() => {});
+        return { success: true, messageId: result.messageId };
+      }
+
+      // Standard SMTP / Graph API path
+      console.log(`🔄 [EmailService] Dispatching ${emailType} via ${providerName} to ${recipientStr}...`);
+      const info = await transporter.sendMail(mailOptions);
+
+      console.log(`✅ [EmailService] ${emailType} sent to ${recipientStr}. MessageID: ${info?.messageId || 'N/A'}`);
+
+      // Check if server rejected any recipients
+      if (info.rejected && Array.isArray(info.rejected) && info.rejected.length > 0) {
+        const rejectMsg = `Server rejected recipient(s): ${JSON.stringify(info.rejected)}`;
+        console.error(`⚠️ [EmailService] ${rejectMsg}`);
+
+        await markEmailFailed(logId, rejectMsg, 'SMTP_REJECTED', 1, {
+          smtpResponse: extractSmtpResponse(info, info.response),
+          errorCategory: EMAIL_ERROR_CATEGORIES.INVALID_RECIPIENT,
+          provider: providerName,
+        }).catch(() => {});
+
+        if (!retryContext?.retryQueueId && retryPayload) {
+          enqueueEmailRetry({
+            emailType,
+            recipient: recipientStr,
+            subject,
+            payload: serializePayload(retryPayload),
+            ...(courseRunId ? { courseRunId } : {}),
+          }).catch(() => {});
+        }
+
+        return { success: false, error: rejectMsg, info };
+      }
+
+      await markEmailSent(logId, info?.messageId, 1, {
+        smtpResponse: extractSmtpResponse(info, info?.response),
+      }).catch(() => {});
+
+      return { success: true, messageId: info?.messageId, info };
+    } catch (error: any) {
+      const errMsg = error?.message || String(error);
+      const errCode = error?.code || error?.statusCode || error?.status;
+      const smtpRes = extractSmtpResponse(error);
+      const stack = extractStack(error);
+      const cat = classifyError(error);
+
+      console.error(`❌ [EmailService] CRITICAL send failure for ${emailType} to ${recipientStr}:`);
+      console.error(`   Message: ${errMsg}`);
+      if (errCode) console.error(`   Code: ${errCode}`);
+      if (smtpRes) console.error(`   SMTP Response: ${smtpRes}`);
+      if (stack) console.error(`   Stack: ${stack}`);
+
+      await markEmailFailed(logId, errMsg, errCode ? String(errCode) : undefined, 1, {
+        smtpResponse: smtpRes,
+        errorStack: stack,
+        errorCategory: cat,
+        provider: providerName,
+      }).catch(() => {});
+
+      if (!retryContext?.retryQueueId && retryPayload) {
+        enqueueEmailRetry({
+          emailType,
+          recipient: recipientStr,
+          subject,
+          payload: serializePayload(retryPayload),
+          ...(courseRunId ? { courseRunId } : {}),
+        }).catch(() => {});
+      }
+
+      return { success: false, error: errMsg };
+    }
   }
 
   static generateResetToken(): string {

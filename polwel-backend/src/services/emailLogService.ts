@@ -74,6 +74,8 @@ export const EMAIL_ERROR_CATEGORIES = {
   GRAPH_API_ERROR:     'GRAPH_API_ERROR',
   /** Mailjet REST API returned non-success status. */
   MAILJET_ERROR:       'MAILJET_ERROR',
+  /** Domain reputation, SPF/DKIM/DMARC policy, or spam filter rejection. */
+  DOMAIN_REPUTATION:   'DOMAIN_REPUTATION',
   /** Upstream mail server temporarily unavailable (503 / 421). */
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
   /** Catch-all for anything that does not match a specific pattern. */
@@ -98,6 +100,8 @@ export function classifyError(error: unknown): EmailErrorCategory {
     const response = ((error as any)?.response ?? '').toString().toUpperCase();
     const combined = `${code} ${msg} ${response}`;
 
+    // Domain reputation / SPF / DKIM / Spam filter rejections / DNS / DMARC
+    if (/554\s*5\.7\.1|SPAM|REPUTATION|BLACKLIST|BLOCKED|POLICY|SPF|DKIM|DMARC|RELAY.DENIED|PTR|REJECTED.BY.HEADER|SECURITY.POLICY/i.test(combined)) return EMAIL_ERROR_CATEGORIES.DOMAIN_REPUTATION;
     // Network / connectivity
     if (/ECONNREFUSED|ENOTFOUND|ECONNRESET|ENETUNREACH|EHOSTUNREACH/.test(combined))  return EMAIL_ERROR_CATEGORIES.NETWORK_ERROR;
     // Timeout
@@ -140,12 +144,22 @@ export function extractStack(error: unknown): string | undefined {
  * or Graph / Mailjet HTTP response body string.
  */
 export function extractSmtpResponse(error: unknown, fallback?: string): string | undefined {
+  const errObj = error as any;
   const response =
-    (error as any)?.response     ||   // nodemailer SMTP response line
-    (error as any)?.responseCode ||   // some transports
-    (error as any)?.body         ||   // HTTP body
+    errObj?.response     ||   // nodemailer SMTP response line
+    errObj?.responseCode ||   // some transports
+    errObj?.body         ||   // HTTP body
+    errObj?.details      ||   // Graph API error details object
+    errObj?.message      ||   // Error message fallback
     fallback;
   if (!response) return undefined;
+  if (typeof response === 'object') {
+    try {
+      return JSON.stringify(response).substring(0, 4000);
+    } catch {
+      return String(response).substring(0, 4000);
+    }
+  }
   return String(response).substring(0, 4000);
 }
 
@@ -197,16 +211,19 @@ export interface MarkFailedExtras {
  */
 export async function createEmailLog(params: CreateEmailLogParams): Promise<string | null> {
   try {
+    const rawRecipient = params.recipient ? String(params.recipient).trim() : '';
+    const safeRecipient = rawRecipient !== '' ? rawRecipient.substring(0, 2000) : 'N/A (Missing Recipient)';
+
     const log = await prisma.emailLog.create({
       data: {
-        emailType:   params.emailType,
-        recipient:   params.recipient.substring(0, 2000),
-        ...(params.cc          ? { cc:          params.cc.substring(0, 2000) }      : {}),
-        ...(params.subject     ? { subject:     params.subject.substring(0, 500) }  : {}),
-        ...(params.courseRunId ? { courseRunId: params.courseRunId }                 : {}),
-        ...(params.metadata    ? { metadata:    params.metadata as any }             : {}),
-        ...(params.provider      ? { provider:      params.provider.substring(0, 50) }   : {}),
-        ...(params.retryQueueId  ? { retryQueueId:  params.retryQueueId }                 : {}),
+        emailType:   (params.emailType || 'UNKNOWN').toString().substring(0, 100),
+        recipient:   safeRecipient,
+        ...(params.cc          ? { cc:          String(params.cc).substring(0, 2000) }      : {}),
+        ...(params.subject     ? { subject:     String(params.subject).substring(0, 500) }  : {}),
+        ...(params.courseRunId ? { courseRunId: String(params.courseRunId) }                : {}),
+        ...(params.metadata    ? { metadata:    params.metadata as any }                    : {}),
+        ...(params.provider    ? { provider:    String(params.provider).substring(0, 50) }  : {}),
+        ...(params.retryQueueId  ? { retryQueueId:  params.retryQueueId }                   : {}),
         status:   'PENDING',
         attempts: 0,
       },
