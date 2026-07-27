@@ -113,6 +113,9 @@ router.post('/:id/send-training-assignment-email-learners', requirePermissions('
 // POST /api/course-runs/:courseRunId/learners/:learnerId/withdraw - Withdraw a learner from course run
 router.post('/:courseRunId/learners/:learnerId/withdraw', requirePermissions('course-run.edit'), courseRunController.withdrawLearner);
 
+// POST /api/course-runs/:courseRunId/learners/:learnerId/reenroll - Re-enroll a withdrawn learner
+router.post('/:courseRunId/learners/:learnerId/reenroll', requirePermissions('course-run.edit'), courseRunController.reenrollLearner);
+
 // POST /api/course-runs/:courseRunId/learners/:learnerId/resend-confirmation - Resend confirmation email to a learner
 router.post('/:courseRunId/learners/:learnerId/resend-confirmation', requirePermissions('course-run.edit'), courseRunController.resendConfirmationEmail);
 

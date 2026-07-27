@@ -463,6 +463,29 @@ const CourseRunDetail: React.FC = () => {
     }
   };
 
+  const handleReenrollLearner = async (learnerRecord: any) => {
+    if (!courseRun || !id) return;
+
+    const learnerName = learnerRecord?.learner?.fullname || "this participant";
+    const confirmed = window.confirm(`Mark ${learnerName} as enrolled again?`);
+    if (!confirmed) return;
+
+    const learnerIdentifier = learnerRecord?.learner?.id || learnerRecord?.learnerId || learnerRecord?.id;
+    if (!learnerIdentifier) {
+      toast.error("Unable to determine learner identifier for re-enrollment");
+      return;
+    }
+
+    try {
+      const response = await courseRunsApi.reenrollLearner(id, learnerIdentifier);
+      toast.success(response?.message || "Participant marked as enrolled successfully");
+      loadCourseRunDetail();
+    } catch (error: any) {
+      console.error("Error re-enrolling learner:", error);
+      toast.error(error?.message || "Failed to re-enroll learner");
+    }
+  };
+
   // Handle participant selection (checkbox toggle)
   const handleParticipantToggle = (participantId: string) => {
     setSelectedParticipants((prev) => {
@@ -1681,6 +1704,9 @@ const CourseRunDetail: React.FC = () => {
     }
   };
 
+  const enrolledParticipantsCount =
+    courseRun?.courseRunLearners?.filter((l) => l.enrollmentStatus !== "WITHDRAWN").length || 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1731,7 +1757,7 @@ const CourseRunDetail: React.FC = () => {
                 disabled={!courseRun.individualRegistrationRequired || courseRun.status === "DRAFT"}
                 className={!courseRun.individualRegistrationRequired || courseRun.status === "DRAFT" ? "opacity-50 cursor-not-allowed" : ""}
               >
-                Participants ({courseRun.courseRunLearners?.length || 0})
+                Participants ({enrolledParticipantsCount})
               </TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
               <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
@@ -1985,24 +2011,24 @@ const CourseRunDetail: React.FC = () => {
                       <div className="p-3 border rounded-md bg-gray-50">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">
-                            {courseRun.courseRunLearners?.length || 0} / {courseRun.minClassSize ?? 0}
+                            {enrolledParticipantsCount} / {courseRun.minClassSize ?? 0}
                           </span>
                           <span className="text-sm text-gray-500">
-                            {(courseRun.courseRunLearners?.length || 0) >= (courseRun.minClassSize ?? Infinity)
+                            {enrolledParticipantsCount >= (courseRun.minClassSize ?? Infinity)
                               ? "Minimum requirement met"
-                              : `${(courseRun.minClassSize ?? 0) - (courseRun.courseRunLearners?.length || 0)} more needed for minimum`}
+                              : `${(courseRun.minClassSize ?? 0) - enrolledParticipantsCount} more needed for minimum`}
                           </span>
                         </div>
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
-                              (courseRun.courseRunLearners?.length || 0) >= (courseRun.minClassSize ?? Number.MAX_SAFE_INTEGER)
+                              enrolledParticipantsCount >= (courseRun.minClassSize ?? Number.MAX_SAFE_INTEGER)
                                 ? "bg-green-500"
                                 : "bg-yellow-400"
                             }`}
                             style={{
                               width: `${
-                                courseRun.minClassSize ? Math.min(100, ((courseRun.courseRunLearners?.length || 0) / courseRun.minClassSize) * 100) : 0
+                                courseRun.minClassSize ? Math.min(100, (enrolledParticipantsCount / courseRun.minClassSize) * 100) : 0
                               }%`,
                             }}
                           ></div>
@@ -2070,7 +2096,7 @@ const CourseRunDetail: React.FC = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Enrolled Participants ({courseRun.courseRunLearners?.length || 0})</CardTitle>
+                  <CardTitle>Enrolled Participants ({enrolledParticipantsCount})</CardTitle>
                   {/* <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAddLearnersDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Learners
@@ -2266,6 +2292,7 @@ const CourseRunDetail: React.FC = () => {
                             <TableHead>Status</TableHead>
                             <TableHead>Withdrawn Date</TableHead>
                             <TableHead>Reason</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -2282,6 +2309,20 @@ const CourseRunDetail: React.FC = () => {
                                 </TableCell>
                                 <TableCell>{learnerRecord.withdrawnAt ? new Date(learnerRecord.withdrawnAt).toLocaleDateString("en-SG") : "—"}</TableCell>
                                 <TableCell>{learnerRecord.withdrawnReason || "—"}</TableCell>
+                                <TableCell className="text-right">
+                                  <SafeDropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleReenrollLearner(learnerRecord)}>
+                                        Mark as Enrolled
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </SafeDropdownMenu>
+                                </TableCell>
                               </TableRow>
                             ))}
                         </TableBody>

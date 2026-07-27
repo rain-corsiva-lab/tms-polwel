@@ -1809,6 +1809,13 @@ export const courseRunsApi = {
     });
   },
 
+  // Re-enroll a withdrawn learner
+  reenrollLearner: async (courseRunId: string, learnerId: string) => {
+    return apiRequest(`/course-runs/${courseRunId}/learners/${learnerId}/reenroll`, {
+      method: 'POST',
+    });
+  },
+
   // Update trainer assignments
   updateTrainerAssignments: async (courseRunId: string, trainers: Array<{trainerId: string; trainerBaseAmount: number}>) => {
     return apiRequest(`/course-runs/${courseRunId}/trainer-assignments`, {

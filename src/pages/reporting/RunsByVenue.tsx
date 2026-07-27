@@ -10,6 +10,7 @@ import api, { reportingApi } from "@/lib/api";
 import { ArrowLeft, Download, Loader2, Eye, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { RunDetailsDialog } from "./RunDetailsDialog";
+import { formatDate } from "@/lib/date";
 import * as XLSX from "xlsx";
 
 interface CourseRun {
@@ -165,8 +166,8 @@ export default function RunsByVenue() {
           Capacity: capacity || "N/A",
           Participants: learners,
           "Utilization %": capacity > 0 ? utilization : "N/A",
-          "Start Date": new Date(run.startDate).toLocaleDateString(),
-          "End Date": new Date(run.endDate).toLocaleDateString(),
+          "Start Date": formatDate(run.startDate),
+          "End Date": formatDate(run.endDate),
           Status: run.status,
         };
       });
@@ -332,7 +333,7 @@ export default function RunsByVenue() {
                               <span className="text-xs text-muted-foreground">N/A</span>
                             )}
                           </TableCell> */}
-                          <TableCell>{new Date(run.startDate).toLocaleDateString()}</TableCell>
+                          <TableCell>{formatDate(run.startDate)}</TableCell>
                           <TableCell className="text-center">
                             <span className={getStatusChipClass(run.status || "")}>{run.status ? run.status.replace(/_/g, " ") : "N/A"}</span>
                           </TableCell>

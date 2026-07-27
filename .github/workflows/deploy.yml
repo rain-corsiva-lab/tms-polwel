@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+
+          if [ "${GITHUB_REF_NAME}" = "staging" ]; then
+            echo "${{ secrets.STAG_PEM }}" | base64 -d > ~/.ssh/key.pem
+            ssh-keyscan -H ${{ vars.STAG_IP }} >> ~/.ssh/known_hosts
+          else
+            echo "${{ secrets.PROD_PEM }}" | base64 -d > ~/.ssh/key.pem
+            ssh-keyscan -H ${{ vars.PROD_IP }} >> ~/.ssh/known_hosts
+          fi
+
+          chmod 600 ~/.ssh/key.pem
+
+
+      - name: Deploy server
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "staging" ]; then
+            ssh -i ~/.ssh/key.pem ${{ vars.SSH_NAME }}@${{ vars.STAG_IP }} 'bash -s' < execute-stag.sh
+          else
+            ssh -i ~/.ssh/key.pem ${{ vars.SSH_NAME }}@${{ vars.PROD_IP }} 'bash -s' < execute-prod.sh
+          fi

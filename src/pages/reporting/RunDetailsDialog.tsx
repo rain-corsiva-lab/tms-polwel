@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import api, { reportingApi } from "@/lib/api";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/date";
 import { Calendar, MapPin, Users, DollarSign, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 interface RunDetails {
@@ -169,11 +169,11 @@ export function RunDetailsDialog({ runId, open, onOpenChange }: RunDetailsDialog
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p>{format(new Date(details.startDate), "dd MMM yyyy")}</p>
+                  <p>{formatDate(details.startDate)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">End Date</p>
-                  <p>{format(new Date(details.endDate), "dd MMM yyyy")}</p>
+                  <p>{formatDate(details.endDate)}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground flex items-center gap-2">

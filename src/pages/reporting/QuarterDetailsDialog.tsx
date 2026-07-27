@@ -5,6 +5,7 @@ import { Loader2, Download, ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { reportingApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/date";
 
 interface QuarterDetailsDialogProps {
   quarter: string;
@@ -180,8 +181,8 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
           "Run Code": run.courseRunCode || "",
           "Course Name": run.courseName || "",
           Organization: run.organization || "N/A",
-          "Start Date": run.startDate ? new Date(run.startDate).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" }) : "",
-          "End Date": run.endDate ? new Date(run.endDate).toLocaleDateString("en-GB", { timeZone: "Asia/Singapore" }) : "",
+          "Start Date": formatDate(run.startDate),
+          "End Date": formatDate(run.endDate),
           Status: run.status ? run.status.replace(/_/g, " ") : "N/A",
           "Run Type": getRunTypeLabel(run.courseRunType, run.organization) || run.courseRunType || "",
           Participants: run.learners || 0,
