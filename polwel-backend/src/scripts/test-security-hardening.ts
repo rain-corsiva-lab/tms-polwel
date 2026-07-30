@@ -112,10 +112,14 @@ async function runSecurityTests() {
     console.log('\n▶ Test 3: Security Headers Inspection (Helmet & CSP)...');
     const healthRes = await makeRequest('GET', '/health');
 
+    const cspHeader = Array.isArray(healthRes.headers['content-security-policy'])
+      ? healthRes.headers['content-security-policy'].join('; ')
+      : healthRes.headers['content-security-policy'] || '';
+
     console.log('  X-Content-Type-Options:', healthRes.headers['x-content-type-options']);
     console.log('  X-Frame-Options:       ', healthRes.headers['x-frame-options']);
     console.log('  X-XSS-Protection:     ', healthRes.headers['x-xss-protection']);
-    console.log('  Content-Security-Policy:', healthRes.headers['content-security-policy']?.substring(0, 80) + '...');
+    console.log('  Content-Security-Policy:', cspHeader.substring(0, 80) + '...');
 
     const passNosniff = healthRes.headers['x-content-type-options'] === 'nosniff';
     const passFrame = healthRes.headers['x-frame-options'] === 'DENY' || healthRes.headers['x-frame-options'] === 'SAMEORIGIN';
