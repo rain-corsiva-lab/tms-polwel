@@ -3,19 +3,23 @@ import bcrypt from 'bcrypt';
 import { UserStatus } from '@prisma/client';
 import prisma from '../lib/prisma';
 import AuditService from '../services/auditService';
+import { validateBody } from '../middleware/validate';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { onboardingSchema } from '../schemas/authSchemas';
 
 const router = express.Router();
 
-
 // Verify setup token
-router.get('/verify-token/:token', async (req: Request, res: Response): Promise<void> => {
-  try {
+router.get(
+  '/verify-token/:token',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { token } = req.params;
 
     if (!token) {
       res.status(400).json({
         success: false,
-        message: 'Setup token is required'
+        error: 'Setup token is required',
+        code: 'BAD_REQUEST'
       });
       return;
     }
@@ -39,7 +43,8 @@ router.get('/verify-token/:token', async (req: Request, res: Response): Promise<
     if (!user) {
       res.status(400).json({
         success: false,
-        message: 'Invalid or expired setup token'
+        error: 'Invalid or expired setup token',
+        code: 'INVALID_TOKEN'
       });
       return;
     }
@@ -52,47 +57,16 @@ router.get('/verify-token/:token', async (req: Request, res: Response): Promise<
         email: user.email
       }
     });
-  } catch (error) {
-    console.error('Token verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
+  })
+);
 
 // Complete user setup
-router.post('/onboarding/', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { token, password, termsAccepted, privacyAccepted } = req.body;
+router.post(
+  '/onboarding',
+  validateBody(onboardingSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { token, password } = req.body;
 
-    // Validation
-    if (!token || !password) {
-      res.status(400).json({
-        success: false,
-        message: 'Token and password are required'
-      });
-      return;
-    }
-
-    if (!termsAccepted || !privacyAccepted) {
-      res.status(400).json({
-        success: false,
-        message: 'You must accept the Terms & Conditions and Privacy Policy'
-      });
-      return;
-    }
-
-    // Password validation
-    if (password.length < 12) {
-      res.status(400).json({
-        success: false,
-        message: 'Password must be at least 12 characters long'
-      });
-      return;
-    }
-
-    // Find user with valid setup token
     const user = await prisma.user.findFirst({
       where: {
         resetToken: token,
@@ -106,15 +80,14 @@ router.post('/onboarding/', async (req: Request, res: Response): Promise<void> =
     if (!user) {
       res.status(400).json({
         success: false,
-        message: 'Invalid or expired setup token'
+        error: 'Invalid or expired setup token',
+        code: 'INVALID_TOKEN'
       });
       return;
     }
 
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Update user - activate account and clear setup token
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -132,7 +105,6 @@ router.post('/onboarding/', async (req: Request, res: Response): Promise<void> =
       }
     });
 
-    // Log the account activation
     await AuditService.logUserUpdate(
       updatedUser.id,
       updatedUser.id,
@@ -147,13 +119,7 @@ router.post('/onboarding/', async (req: Request, res: Response): Promise<void> =
       message: 'Account setup completed successfully',
       user: updatedUser
     });
-  } catch (error) {
-    console.error('Complete setup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
+  })
+);
 
 export default router;

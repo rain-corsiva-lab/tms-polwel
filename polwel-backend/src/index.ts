@@ -157,20 +157,21 @@ app.use(helmet({
       upgradeInsecureRequests: null, // Explicitly disable to allow HTTP in development
     },
   },
-  frameguard: { action: 'sameorigin' },
+  frameguard: { action: 'deny' }, // Set X-Frame-Options: DENY
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: { maxAge: 31536000, includeSubDomains: true },
-  noSniff: true,
-  xssFilter: true,
+  noSniff: true, // Set X-Content-Type-Options: nosniff
+  xssFilter: false, // Set X-XSS-Protection: 0 per modern CSP guidelines
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow cross-origin resource loading
 }));
 
-// Set Permissions-Policy header (not directly supported by Helmet v8)
+// Set Permissions-Policy and X-XSS-Protection headers
 app.use((req, res, next) => {
   res.setHeader(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), fullscreen=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()'
   );
+  res.setHeader('X-XSS-Protection', '0'); // Modern security practice favors CSP over legacy XSS filters
   next();
 });
 if (process.env.ENABLE_RATE_LIMIT === 'true') {
