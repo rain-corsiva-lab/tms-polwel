@@ -145,10 +145,13 @@ class AzureTransport implements Transport<SentMessageInfo> {
 
       const accessToken = await this.getAccessToken();
 
-      // Prepare recipients
-      const toRecipients = Array.isArray(to)
-        ? to.map((recipient) => ({ emailAddress: { address: recipient } }))
-        : [{ emailAddress: { address: to } }];
+      // Prepare recipients safely by normalizing any string or array input
+      const normalizedTo = EmailService.normalizeEmailAddresses(to);
+      if (normalizedTo.length === 0) {
+        throw new Error(`Missing or invalid 'to' email address: ${JSON.stringify(to)}`);
+      }
+
+      const toRecipients = normalizedTo.map((address) => ({ emailAddress: { address } }));
 
       const message: any = {
         message: {
@@ -165,19 +168,15 @@ class AzureTransport implements Transport<SentMessageInfo> {
       };
 
       // Add CC if provided
-      if (cc) {
-        const ccRecipients = Array.isArray(cc)
-          ? cc.map((recipient) => ({ emailAddress: { address: recipient } }))
-          : [{ emailAddress: { address: cc } }];
-        message.message.ccRecipients = ccRecipients;
+      const normalizedCc = EmailService.normalizeEmailAddresses(cc);
+      if (normalizedCc.length > 0) {
+        message.message.ccRecipients = normalizedCc.map((address) => ({ emailAddress: { address } }));
       }
 
       // Add BCC if provided
-      if (bcc) {
-        const bccRecipients = Array.isArray(bcc)
-          ? bcc.map((recipient) => ({ emailAddress: { address: recipient } }))
-          : [{ emailAddress: { address: bcc } }];
-        message.message.bccRecipients = bccRecipients;
+      const normalizedBcc = EmailService.normalizeEmailAddresses(bcc);
+      if (normalizedBcc.length > 0) {
+        message.message.bccRecipients = normalizedBcc.map((address) => ({ emailAddress: { address } }));
       }
 
       // Add attachments if provided
@@ -378,6 +377,58 @@ class EmailService {
   }
 
   // Detect when the SMTP host is Microsoft Office 365 / Outlook
+  /**
+   * Helper function to normalize and extract valid email addresses from any input
+   * (string, array of strings, semicolon/comma delimited strings, or address objects).
+   * Splits concatenated/multiple email strings (e.g. "email1@spf.gov.sg; email2@spf.gov.sg"),
+   * extracts clean email addresses, removes duplicates, and trims whitespace.
+   */
+  public static normalizeEmailAddresses(input: any): string[] {
+    if (!input) return [];
+
+    const rawItems: string[] = [];
+
+    if (Array.isArray(input)) {
+      for (const item of input) {
+        if (typeof item === 'string') {
+          rawItems.push(...item.split(/[;,]/));
+        } else if (item && typeof item === 'object') {
+          const addr = (item as any).address || (item as any).email || String(item);
+          if (typeof addr === 'string') {
+            rawItems.push(...addr.split(/[;,]/));
+          }
+        }
+      }
+    } else if (typeof input === 'string') {
+      rawItems.push(...input.split(/[;,]/));
+    } else if (input && typeof input === 'object') {
+      const addr = (input as any).address || (input as any).email || String(input);
+      if (typeof addr === 'string') {
+        rawItems.push(...addr.split(/[;,]/));
+      }
+    }
+
+    const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    const uniqueEmails = new Set<string>();
+
+    for (const raw of rawItems) {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+
+      const matches = trimmed.match(emailRegex);
+      if (matches) {
+        for (const m of matches) {
+          uniqueEmails.add(m.trim().toLowerCase());
+        }
+      } else if (trimmed.includes('@')) {
+        const cleaned = trimmed.replace(/^.*<|>$/g, '').trim();
+        if (cleaned) uniqueEmails.add(cleaned.toLowerCase());
+      }
+    }
+
+    return Array.from(uniqueEmails);
+  }
+
   private static isOutlookSmtp(): boolean {
     const host = (process.env.MAIL_HOST || '').toLowerCase();
     return host.includes('office365.com') || host.includes('outlook.com') || host.includes('hotmail.com');
@@ -2185,19 +2236,18 @@ class EmailService {
       { logoSrc: this.getLogoSrc() },
     );
 
+    const normalizedTo = EmailService.normalizeEmailAddresses(email);
+    const normalizedCc = EmailService.normalizeEmailAddresses(ccEmails);
+
     const mailOptions: any = {
       from: this.mailFromAddress,
-      to: email,
+      to: normalizedTo,
       subject,
       text: textBody,
       html,
       attachments: this.getEmailMediaAttachments(),
+      ...(normalizedCc.length > 0 ? { cc: normalizedCc } : {}),
     };
-
-    if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
-      // mailOptions.cc = ccEmails.join(', ');
-      mailOptions.cc = ccEmails;
-    }
 
     // Preload all file attachments as buffers for reliable sending
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
@@ -2557,23 +2607,16 @@ class EmailService {
 
     const transporter = this.getTransporter();
 
-    const normalizeCc = () => {
-      if (!cc) return undefined;
-      if (Array.isArray(cc)) {
-        const cleaned = cc.map((item) => item?.trim()).filter(Boolean);
-        return cleaned.length > 0 ? cleaned : undefined;
-      }
-      if (typeof cc === 'string') {
-        const cleaned = cc
-          .split(/[;,]/)
-          .map((item) => item.trim())
-          .filter(Boolean);
-        return cleaned.length > 0 ? cleaned : undefined;
-      }
-      return undefined;
-    };
+    const normalizedTo = EmailService.normalizeEmailAddresses(email);
+    const normalizedCc = EmailService.normalizeEmailAddresses(cc);
 
-    const ccRecipients = normalizeCc();
+    if (normalizedTo.length === 0) {
+      console.error('❌ [sendLearnerCourseConfirmationEmail] No valid recipient email addresses found in:', email);
+      return false;
+    }
+
+    const recipientLogString = normalizedTo.join(', ');
+    const ccLogString = normalizedCc.length > 0 ? normalizedCc.join(', ') : undefined;
 
     const { html, subject } = this.buildLearnerCourseConfirmationEmailHtml(
       {
@@ -2594,10 +2637,9 @@ class EmailService {
 
     const mailOptions: any = {
       from: this.mailFromAddress,
-      to: email,
-      // to: Array.isArray(email) ? email.join(', ') : email,
+      to: normalizedTo,
       subject,
-      ...(ccRecipients ? { cc: ccRecipients } : {}),
+      ...(normalizedCc.length > 0 ? { cc: normalizedCc } : {}),
       html,
       attachments: this.getEmailMediaAttachments(),
     };
@@ -2630,10 +2672,10 @@ class EmailService {
 
     const _confLogId = await createEmailLog({
       emailType: EMAIL_TYPES.COURSE_CONFIRMATION,
-      recipient: Array.isArray(email) ? email.join(', ') : email,
+      recipient: recipientLogString,
       subject: mailOptions.subject,
       provider: this.getProviderName(),
-      ...(ccRecipients ? { cc: ccRecipients.join(', ') } : {}),
+      ...(ccLogString ? { cc: ccLogString } : {}),
       ...(params.courseRunId ? { courseRunId: params.courseRunId } : {}),
       ...(_ctx?.retryQueueId ? { retryQueueId: _ctx.retryQueueId } : {}),
     }).catch(() => null);
@@ -2658,9 +2700,9 @@ class EmailService {
       console.log('╔════════════════════════════════════════════════════════════════╗');
       console.log('║ 📧 SENDING COURSE CONFIRMATION EMAIL - DETAILED LOG           ║');
       console.log('╚════════════════════════════════════════════════════════════════╝');
-      console.log('📬 To:', Array.isArray(email) ? email.join(', ') : email, '| Course:', courseTitle);
+      console.log('📬 To:', recipientLogString, '| Course:', courseTitle);
       console.log('   Subject:', mailOptions.subject);
-      if (ccRecipients) console.log('   CC:', ccRecipients.join(', '));
+      if (normalizedCc.length > 0) console.log('   CC:', normalizedCc.join(', '));
       console.log('   Attachments:', mailOptions.attachments?.length || 0, 'file(s)');
 
       // ── Mailjet REST API path ──────────────────────────────────────────────
@@ -2677,13 +2719,13 @@ class EmailService {
         const logoInline = this.getLogoMailjetInline();
 
         const result = await this.sendViaMailjetApi({
-          to: email,
+          to: normalizedTo,
           from: this.mailFromAddress,
           subject: mailOptions.subject,
           html: mailOptions.html as string,
           attachments: apiAttachments,
           ...(logoInline ? { inlinedAttachments: [logoInline] } : {}),
-          ...(ccRecipients ? { cc: ccRecipients } : {}),
+          ...(normalizedCc.length > 0 ? { cc: normalizedCc } : {}),
         });
 
         if (!result.success) {
