@@ -5713,6 +5713,7 @@ export const courseRunController = {
           courseRunLearners: {
             where: {
               deletedAt: null,
+              enrollmentStatus: { not: 'WITHDRAWN' },
             },
             include: {
               learner: {
@@ -5743,8 +5744,12 @@ export const courseRunController = {
         },
       });
 
-      // Calculate attendance status for each learner
-      const learnersWithAttendance = courseRun.courseRunLearners.map((enrollment) => {
+      // Calculate attendance status for active (non-deleted, non-withdrawn) learners
+      const activeEnrollments = (courseRun.courseRunLearners || []).filter(
+        (enrollment) => !enrollment.deletedAt && enrollment.enrollmentStatus !== 'WITHDRAWN'
+      );
+
+      const learnersWithAttendance = activeEnrollments.map((enrollment) => {
         const learnerAttendance = attendanceRecords.filter(
           (record) => record.learnerId === enrollment.learnerId
         );
@@ -5762,6 +5767,8 @@ export const courseRunController = {
           learnerId: enrollment.learnerId,
           learnerName: enrollment.learner?.fullname || '',
           learnerEmail: enrollment.learner?.email || '',
+          enrollmentStatus: enrollment.enrollmentStatus,
+          deletedAt: enrollment.deletedAt,
           isPresent,
           totalDays,
           presentDays: presentCount,
@@ -5986,6 +5993,7 @@ export const courseRunController = {
           id: enrollmentId,
           courseRunId: id,
           deletedAt: null,
+          enrollmentStatus: { not: 'WITHDRAWN' },
         },
         include: {
           learner: true,
@@ -6062,6 +6070,7 @@ export const courseRunController = {
             in: learnerIds,
           },
           deletedAt: null,
+          enrollmentStatus: { not: 'WITHDRAWN' },
         },
         include: {
           learner: true,
@@ -6095,7 +6104,7 @@ export const courseRunController = {
 
       const zipFileName = `Certificates_${new Date().toISOString().split('T')[0]}.zip`;
       res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename=${zipFileName}`);
+      res.setHeader('Content-Disposition', `attachment; filename="${zipFileName}"`);
       res.setHeader('Content-Length', zipBuffer.length.toString());
       res.status(200).send(zipBuffer);
     } catch (error) {
@@ -6985,355 +6994,6 @@ export const courseRunController = {
     } catch (error) {
       console.error('[DuplicateCourseRun] Error:', error);
       res.status(500).json(buildErrorResponse('duplicateCourseRun', 'Failed to duplicate course run', error));
-    }
-  },
-
-  // Get certificate data for learners
-  async generateCertificates(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-
-      // Fetch course run with course and learners
-      const courseRun = await prisma.courseRun.findUnique({
-        where: { id },
-        include: {
-          course: {
-            select: {
-              id: true,
-              title: true,
-              courseCode: true,
-              duration: true,
-              durationType: true,
-            },
-          },
-          courseRunLearners: {
-            include: {
-              learner: {
-                select: {
-                  id: true,
-                  fullname: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          venue: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
-
-      if (!courseRun) {
-        res.status(404).json({ success: false, error: 'Course run not found' });
-        return;
-      }
-
-      // Format course run info
-      const courseRunInfo = {
-        id: courseRun.id,
-        serialNumber: courseRun.serialNumber || '',
-        courseName: courseRun.course.title,
-        courseCode: courseRun.course.courseCode || '',
-        duration: courseRun.course.duration || 0,
-        durationType: courseRun.course.durationType || 'days',
-        startDate: courseRun.startDatetime?.toISOString() || '',
-        endDate: courseRun.endDatetime?.toISOString() || '',
-        venue: courseRun.venue?.name || courseRun.specifiedLocation || '',
-      };
-
-      // Format learners with attendance data
-      const learners = courseRun.courseRunLearners.map((enrollment) => ({
-        id: enrollment.id,
-        learnerId: enrollment.learner.id,
-        learnerName: enrollment.learner.fullname,
-        learnerEmail: enrollment.learner.email || '',
-        isPresent: enrollment.attendanceStatus === 'PRESENT',
-        totalDays: courseRun.course.duration || 0,
-        presentDays: enrollment.attendanceStatus === 'PRESENT' ? (courseRun.course.duration || 0) : 0,
-        waiverReason: enrollment.waiverReason || null,
-        waiverDocument: enrollment.waiverSupportingDocumentId || null,
-        waiverSubmittedAt: enrollment.waiverSubmittedAt || null,
-        certificateEmailStatus: enrollment.certificateEmailStatus,
-        certificateEmailSentAt: enrollment.certificateEmailSentAt || null,
-      }));
-
-      res.json({
-        success: true,
-        data: {
-          courseRun: courseRunInfo,
-          learners,
-        },
-      });
-    } catch (error) {
-      console.error('Error generating certificates:', error);
-      res.status(500).json(buildErrorResponse('generateCertificates', 'Failed to generate certificates', error));
-    }
-  },
-
-  // Submit waiver form for absent learner
-  async submitWaiverForm(req: Request, res: Response): Promise<void> {
-    try {
-      const { id, enrollmentId } = req.params;
-      const { waiverReason, waiverDocument } = req.body;
-
-      if (!waiverReason || !waiverReason.trim()) {
-        res.status(400).json({ success: false, error: 'Waiver reason is required' });
-        return;
-      }
-
-      // Update enrollment with waiver info
-      const enrollment = await prisma.courseRunLearner.update({
-        where: { id: enrollmentId },
-        data: {
-          waiverReason: waiverReason.trim(),
-          waiverSupportingDocumentId: waiverDocument || null,
-          waiverSubmittedAt: new Date(),
-        },
-      });
-
-      res.json({
-        success: true,
-        message: 'Waiver form submitted successfully',
-        data: { enrollmentId: enrollment.id },
-      });
-    } catch (error) {
-      console.error('Error submitting waiver form:', error);
-      res.status(500).json(buildErrorResponse('submitWaiverForm', 'Failed to submit waiver form', error));
-    }
-  },
-
-  // Generate individual certificate PDF
-  async generateCertificatePDF(req: Request, res: Response): Promise<void> {
-    try {
-      const { id, learnerId } = req.params;
-
-      // Fetch enrollment
-      const enrollment = await prisma.courseRunLearner.findFirst({
-        where: {
-          id: learnerId,
-          courseRunId: id,
-        },
-        include: {
-          learner: true,
-          courseRun: {
-            include: {
-              course: true,
-            },
-          },
-        },
-      });
-
-      if (!enrollment) {
-        res.status(404).json({ success: false, error: 'Enrollment not found' });
-        return;
-      }
-
-      // Check if learner was present
-      if (enrollment.attendanceStatus !== 'PRESENT') {
-        res.status(400).json({ success: false, error: 'Certificate can only be generated for participants who were present' });
-        return;
-      }
-
-      // Prepare certificate data
-      const certificateData = {
-        learnerName: enrollment.learner.fullname,
-        courseName: enrollment.courseRun.course.title,
-        duration: enrollment.courseRun.course.duration || 0,
-        durationType: enrollment.courseRun.course.durationType || 'days',
-        startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
-        endDate: new Date(enrollment.courseRun.endDatetime || new Date()),
-        courseCode: enrollment.courseRun.course.courseCode || '',
-      };
-
-      // Generate PDF
-      const pdfBuffer = await buildCertificatePDFBuffer(certificateData);
-
-      // Set response headers
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="Certificate_${enrollment.learner.fullname.replace(/\s+/g, '_')}_${enrollment.courseRun.serialNumber || 'certificate'}.pdf"`
-      );
-
-      res.send(pdfBuffer);
-    } catch (error) {
-      console.error('Error generating certificate PDF:', error);
-      res.status(500).json(buildErrorResponse('generateCertificatePDF', 'Failed to generate certificate PDF', error));
-    }
-  },
-
-  // Generate bulk certificates ZIP
-  async generateCertificatesZIP(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { learnerIds } = req.body;
-
-      if (!learnerIds || !Array.isArray(learnerIds) || learnerIds.length === 0) {
-        res.status(400).json({ success: false, error: 'Learner IDs array is required' });
-        return;
-      }
-
-      // Fetch enrollments
-      const enrollments = await prisma.courseRunLearner.findMany({
-        where: {
-          id: { in: learnerIds },
-          courseRunId: id,
-          attendanceStatus: 'PRESENT',
-        },
-        include: {
-          learner: true,
-          courseRun: {
-            include: {
-              course: true,
-            },
-          },
-        },
-      });
-
-      if (enrollments.length === 0) {
-        res.status(404).json({ success: false, error: 'No eligible enrollments found' });
-        return;
-      }
-
-      // Prepare certificate data for all learners
-      const certificatesData = enrollments.map((enrollment) => ({
-        learnerName: enrollment.learner.fullname,
-        courseName: enrollment.courseRun.course.title,
-        duration: enrollment.courseRun.course.duration || 0,
-        durationType: enrollment.courseRun.course.durationType || 'days',
-        startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
-        endDate: new Date(enrollment.courseRun.endDatetime || new Date()),
-        courseCode: enrollment.courseRun.course.courseCode || '',
-      }));
-
-      // Generate ZIP
-      const zipBuffer = await buildCertificatesZipBuffer(certificatesData);
-
-      // Set response headers
-      res.setHeader('Content-Type', 'application/zip');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="Certificates_${enrollments[0].courseRun.serialNumber || 'bulk'}_${enrollments.length}learners.zip"`
-      );
-
-      res.send(zipBuffer);
-    } catch (error) {
-      console.error('Error generating certificates ZIP:', error);
-      res.status(500).json(buildErrorResponse('generateCertificatesZIP', 'Failed to generate certificates ZIP', error));
-    }
-  },
-
-  // Send certificates via email to selected learners
-  async sendCertificatesToLearners(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { learnerIds } = req.body;
-
-      if (!learnerIds || !Array.isArray(learnerIds) || learnerIds.length === 0) {
-        res.status(400).json({ success: false, error: 'Learner IDs array is required' });
-        return;
-      }
-
-      // Fetch enrollments with course run data
-      const enrollments = await prisma.courseRunLearner.findMany({
-        where: {
-          id: { in: learnerIds },
-          courseRunId: id,
-          attendanceStatus: 'PRESENT',
-        },
-        include: {
-          learner: true,
-          courseRun: {
-            include: {
-              course: true,
-            },
-          },
-        },
-      });
-
-      if (enrollments.length === 0) {
-        res.status(404).json({ success: false, error: 'No eligible enrollments found' });
-        return;
-      }
-
-      let successCount = 0;
-      let failCount = 0;
-
-      // Mark all selected enrollments as SENDING
-      await prisma.courseRunLearner.updateMany({
-        where: { id: { in: enrollments.map((e) => e.id) } },
-        data: { certificateEmailStatus: 'SENDING' },
-      });
-
-      // Send certificate to each learner
-      for (const enrollment of enrollments) {
-        try {
-          // Generate certificate PDF
-          const certificateData = {
-            learnerName: enrollment.learner.fullname,
-            courseName: enrollment.courseRun.course.title,
-            duration: enrollment.courseRun.course.duration || 0,
-            durationType: enrollment.courseRun.course.durationType || 'days',
-            startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
-            endDate: new Date(enrollment.courseRun.endDatetime || new Date()),
-            courseCode: enrollment.courseRun.course.courseCode || '',
-          };
-
-          const pdfBuffer = await buildCertificatePDFBuffer(certificateData);
-
-          const safeName = enrollment.learner.fullname.replace(/[^a-z0-9]+/gi, '_');
-          const safeCert = (enrollment.courseRun.course.courseCode || '').replace(/[^a-z0-9]+/gi, '_');
-          const pdfFilename = `Certificate_${safeName}${safeCert ? `_${safeCert}` : ''}.pdf`;
-
-          // Send email with certificate attached as PDF
-          const emailSent = await EmailService.sendCourseCompletionEmail({
-            email: enrollment.learner.email || '',
-            learnerName: enrollment.learner.fullname,
-            courseTitle: enrollment.courseRun.course.title,
-            courseCode: enrollment.courseRun.course.courseCode || '',
-            startDate: enrollment.courseRun.startDatetime || undefined,
-            endDate: enrollment.courseRun.endDatetime || undefined,
-            certificatePdfBuffer: pdfBuffer,
-            certificateFilename: pdfFilename,
-          });
-
-          if (emailSent) {
-            successCount++;
-            await prisma.courseRunLearner.update({
-              where: { id: enrollment.id },
-              data: { certificateEmailStatus: 'SENT', certificateEmailSentAt: new Date() },
-            });
-          } else {
-            failCount++;
-            await prisma.courseRunLearner.update({
-              where: { id: enrollment.id },
-              data: { certificateEmailStatus: 'FAILED' },
-            });
-          }
-        } catch (error) {
-          console.error(`Failed to send certificate to ${enrollment.learner.fullname}:`, error);
-          failCount++;
-          await prisma.courseRunLearner.update({
-            where: { id: enrollment.id },
-            data: { certificateEmailStatus: 'FAILED' },
-          }).catch(() => {});
-        }
-      }
-
-      res.json({
-        success: true,
-        data: {
-          total: enrollments.length,
-          success: successCount,
-          failed: failCount,
-        },
-        message: `Sent ${successCount} certificate(s) successfully${failCount > 0 ? `, ${failCount} failed` : ''}`,
-      });
-    } catch (error) {
-      console.error('Error sending certificates:', error);
-      res.status(500).json(buildErrorResponse('sendCertificatesToLearners', 'Failed to send certificates', error));
     }
   },
 };
