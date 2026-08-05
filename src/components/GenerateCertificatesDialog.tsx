@@ -25,6 +25,8 @@ interface LearnerWithAttendance {
   learnerId: string;
   learnerName: string;
   learnerEmail: string;
+  enrollmentStatus?: string;
+  deletedAt?: string | null;
   isPresent: boolean;
   totalDays: number;
   presentDays: number;
@@ -84,8 +86,9 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
 
   const { toast } = useToast();
 
-  const presentLearners = learners.filter((l) => l.isPresent);
-  const absentLearners = learners.filter((l) => !l.isPresent);
+  const activeLearners = learners.filter((l: any) => l.enrollmentStatus !== "WITHDRAWN" && !l.deletedAt);
+  const presentLearners = activeLearners.filter((l) => l.isPresent);
+  const absentLearners = activeLearners.filter((l) => !l.isPresent);
 
   useEffect(() => {
     if (open) {
@@ -137,9 +140,11 @@ export function GenerateCertificatesDialog({ courseRunId, courseRunCode, trigger
 
       if (response?.success) {
         setCourseRun(response.data.courseRun);
-        setLearners(response.data.learners || []);
+        const rawLearners: any[] = response.data.learners || [];
+        const validLearners = rawLearners.filter((l) => l.enrollmentStatus !== "WITHDRAWN" && !l.deletedAt);
+        setLearners(validLearners);
         // Select all present learners by default
-        const presentIds = response.data.learners.filter((l: LearnerWithAttendance) => l.isPresent).map((l: LearnerWithAttendance) => l.id);
+        const presentIds = validLearners.filter((l: LearnerWithAttendance) => l.isPresent).map((l: LearnerWithAttendance) => l.id);
         setSelectedLearners(presentIds);
       } else {
         throw new Error(response?.message || "Failed to load certificate data");

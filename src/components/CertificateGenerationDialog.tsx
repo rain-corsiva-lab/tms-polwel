@@ -208,8 +208,9 @@ export function CertificateGenerationDialog({ open, onOpenChange, courseRun, lea
 
   const [exportingParticipants, setExportingParticipants] = useState(false);
 
-  const presentLearners = learners.filter((l) => l.attendanceStatus === "PRESENT");
-  const absentLearners = learners.filter((l) => l.attendanceStatus === "ABSENT");
+  const activeLearners = learners.filter((l: any) => l.enrollmentStatus !== "WITHDRAWN" && !l.deletedAt);
+  const presentLearners = activeLearners.filter((l) => l.attendanceStatus === "PRESENT");
+  const absentLearners = activeLearners.filter((l) => l.attendanceStatus === "ABSENT");
 
   const eligibleLearners = presentLearners;
 
