@@ -703,28 +703,30 @@ const OrganizationDashboard = () => {
                     <p>No course enrollment data available</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-orange-50/50">
-                        <TableHead className="w-16 text-center">Rank</TableHead>
-                        <TableHead>Course Name</TableHead>
-                        <TableHead className="w-32 text-center">Number of Learners</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {courseRankings.map((item) => (
-                        <TableRow key={item.rank} className="hover:bg-orange-50/30">
-                          <TableCell className="text-center font-semibold text-orange-700">{item.rank}</TableCell>
-                          <TableCell className="font-medium">{item.courseName}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="secondary" className="bg-orange-100 text-orange-900">
-                              {item.numberOfLearners}
-                            </Badge>
-                          </TableCell>
+                  <div className="max-h-[500px] overflow-y-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                        <TableRow className="bg-orange-50/50">
+                          <TableHead className="w-16 text-center">Rank</TableHead>
+                          <TableHead>Course Name</TableHead>
+                          <TableHead className="w-32 text-center">Number of Learners</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {courseRankings.map((item) => (
+                          <TableRow key={item.rank} className="hover:bg-orange-50/30">
+                            <TableCell className="text-center font-semibold text-orange-700">{item.rank}</TableCell>
+                            <TableCell className="font-medium">{item.courseName}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary" className="bg-orange-100 text-orange-900">
+                                {item.numberOfLearners}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -747,28 +749,30 @@ const OrganizationDashboard = () => {
                     <p>No division data available</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-green-50/50">
-                        <TableHead className="w-16 text-center">Rank</TableHead>
-                        <TableHead>Division / Department</TableHead>
-                        <TableHead className="w-32 text-center">Number of Learners</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {divisionRankings.map((item) => (
-                        <TableRow key={item.rank} className="hover:bg-green-50/30">
-                          <TableCell className="text-center font-semibold text-green-700">{item.rank}</TableCell>
-                          <TableCell className="font-medium">{item.divisionDepartment}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="secondary" className="bg-green-100 text-green-900">
-                              {item.numberOfLearners}
-                            </Badge>
-                          </TableCell>
+                  <div className="max-h-[500px] overflow-y-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                        <TableRow className="bg-green-50/50">
+                          <TableHead className="w-16 text-center">Rank</TableHead>
+                          <TableHead>Division / Department</TableHead>
+                          <TableHead className="w-32 text-center">Number of Learners</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {divisionRankings.map((item) => (
+                          <TableRow key={item.rank} className="hover:bg-green-50/30">
+                            <TableCell className="text-center font-semibold text-green-700">{item.rank}</TableCell>
+                            <TableCell className="font-medium">{item.divisionDepartment}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary" className="bg-green-100 text-green-900">
+                                {item.numberOfLearners}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>

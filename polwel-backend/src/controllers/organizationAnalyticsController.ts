@@ -89,14 +89,27 @@ export const getCoursesByLearnersRanking = async (
       return;
     }
 
-    // Get all course runs with learners from this organization
+    const userOrgIds: string[] = [];
+    if (organizationId) userOrgIds.push(organizationId);
+    if (req.user?.organizationId) userOrgIds.push(req.user.organizationId);
+    if (Array.isArray((req.user as any)?.organizationIds)) {
+      userOrgIds.push(...(req.user as any).organizationIds);
+    }
+    const uniqueOrgIds = Array.from(new Set(userOrgIds.filter(Boolean)));
+
+    // Get all course runs with learners from this organization / linked organizations
     const courseRunsWithLearners = await prisma.courseRun.findMany({
       where: {
         deletedAt: null,
         courseRunLearners: {
           some: {
             deletedAt: null,
-            clientOrganizationId: organizationId
+            enrollmentStatus: { not: 'WITHDRAWN' },
+            OR: [
+              { clientOrganizationId: { in: uniqueOrgIds } },
+              { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
+              ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
+            ]
           }
         }
       },
@@ -113,46 +126,55 @@ export const getCoursesByLearnersRanking = async (
         courseRunLearners: {
           where: {
             deletedAt: null,
-            clientOrganizationId: organizationId
+            enrollmentStatus: { not: 'WITHDRAWN' },
+            OR: [
+              { clientOrganizationId: { in: uniqueOrgIds } },
+              { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
+              ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
+            ]
           },
           select: {
-            id: true
+            id: true,
+            learnerId: true,
           }
         }
       }
     });
 
     // Aggregate by course
-    const courseMap = new Map<string, { courseName: string; learnerCount: number; runType: string }>();
+    const courseMap = new Map<string, { courseName: string; learnerSet: Set<string>; runType: string }>();
 
     courseRunsWithLearners.forEach(run => {
       const courseId = run.course?.id;
       if (!courseId) return;
 
       const courseName = run.course?.title || 'Untitled Course';
-      const learnerCount = run.courseRunLearners.length;
       const runType = run.courseRunType || 'OPEN_RUN';
 
       if (courseMap.has(courseId)) {
         const existing = courseMap.get(courseId)!;
-        existing.learnerCount += learnerCount;
+        run.courseRunLearners.forEach((l) => existing.learnerSet.add(l.learnerId));
       } else {
+        const learnerSet = new Set<string>();
+        run.courseRunLearners.forEach((l) => learnerSet.add(l.learnerId));
         courseMap.set(courseId, {
           courseName,
-          learnerCount,
+          learnerSet,
           runType
         });
       }
     });
 
-    // Convert to array and sort by learner count
+    // Convert to array and sort by unique learner count
     const rankings = Array.from(courseMap.values())
-      .sort((a, b) => b.learnerCount - a.learnerCount)
-      .slice(0, 10) // Top 10
+      .map((item) => ({
+        courseName: item.courseName,
+        numberOfLearners: item.learnerSet.size
+      }))
+      .sort((a, b) => b.numberOfLearners - a.numberOfLearners)
       .map((item, index) => ({
         rank: index + 1,
-        courseName: item.courseName,
-        numberOfLearners: item.learnerCount
+        ...item
       }));
 
     res.json({
@@ -188,17 +210,36 @@ export const getDivisionsByLearnersRanking = async (
       return;
     }
 
-    // Get all enrollments for this organization
+    const userOrgIds: string[] = [];
+    if (organizationId) userOrgIds.push(organizationId);
+    if (req.user?.organizationId) userOrgIds.push(req.user.organizationId);
+    if (Array.isArray((req.user as any)?.organizationIds)) {
+      userOrgIds.push(...(req.user as any).organizationIds);
+    }
+    const uniqueOrgIds = Array.from(new Set(userOrgIds.filter(Boolean)));
+
+    // Get all enrollments for this organization & linked organizations
     const enrollments = await prisma.courseRunLearner.findMany({
       where: {
-        clientOrganizationId: organizationId,
         deletedAt: null,
-        enrollmentStatus: 'ENROLLED'
+        enrollmentStatus: { not: 'WITHDRAWN' },
+        OR: [
+          { clientOrganizationId: { in: uniqueOrgIds } },
+          { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
+          ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
+        ]
       },
       select: {
         id: true,
         departmentName: true,
+        division: true,
         attendanceStatus: true,
+        clientOrganization: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         learner: {
           select: {
             id: true,
@@ -208,30 +249,36 @@ export const getDivisionsByLearnersRanking = async (
       }
     });
 
-    // Aggregate by department
+    // Aggregate by department/division
     const departmentMap = new Map<string, { totalLearners: Set<string>; completedCourses: number; totalEnrollments: number }>();
 
     enrollments.forEach(enrollment => {
-      const rawDept = enrollment.departmentName ? enrollment.departmentName.trim() : '';
-      if (!rawDept || rawDept.toLowerCase() === 'unassigned') {
+      if (enrollment.learner?.deletedAt) return; // Skip deleted learners
+
+      // Robust fallback resolution for division/department name
+      const rawDept = (
+        enrollment.departmentName?.trim() ||
+        enrollment.division?.trim() ||
+        (enrollment.clientOrganization?.name && enrollment.clientOrganization.name.toLowerCase() !== 'polwel'
+          ? enrollment.clientOrganization.name.trim()
+          : '')
+      );
+
+      if (!rawDept || rawDept.toLowerCase() === 'unassigned' || rawDept.toLowerCase() === 'n/a') {
         return; // Skip unassigned and empty data
       }
+
       const dept = rawDept;
       const isCompleted = enrollment.attendanceStatus === 'PRESENT' ? 1 : 0;
-      const isActiveLearner = !enrollment.learner?.deletedAt;
 
       if (departmentMap.has(dept)) {
         const existing = departmentMap.get(dept)!;
-        if (isActiveLearner) {
-          existing.totalLearners.add(enrollment.learner.id);
-        }
+        existing.totalLearners.add(enrollment.learner.id);
         existing.completedCourses += isCompleted;
         existing.totalEnrollments += 1;
       } else {
         const learnerSet = new Set<string>();
-        if (isActiveLearner) {
-          learnerSet.add(enrollment.learner.id);
-        }
+        learnerSet.add(enrollment.learner.id);
         departmentMap.set(dept, {
           totalLearners: learnerSet,
           completedCourses: isCompleted,
@@ -240,14 +287,13 @@ export const getDivisionsByLearnersRanking = async (
       }
     });
 
-    // Convert to array and sort by learner count
+    // Convert to array and sort by learner count (returning full ranked list)
     const rankings = Array.from(departmentMap.entries())
       .map(([deptName, data]) => ({
         divisionDepartment: deptName,
         numberOfLearners: data.totalLearners.size
       }))
       .sort((a, b) => b.numberOfLearners - a.numberOfLearners)
-      .slice(0, 10) // Top 10
       .map((item, index) => ({
         rank: index + 1,
         ...item
