@@ -17,14 +17,33 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="/images/logoPolwel.png" />
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-92PJQJ7C3E"></script>
+    <!-- Google tag (gtag.js) - Production Environment Only -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+      (function() {
+        var gtagId = "%VITE_GTAG_ID%";
+        var enableAnalytics = "%VITE_ENABLE_ANALYTICS%";
+        var mode = "%MODE%";
+        var host = window.location.hostname;
 
-      gtag('config', 'G-92PJQJ7C3E');
+        // Strict Production Guard: GTAG is strictly loaded ONLY in production builds on non-staging/non-local domains
+        var isValidGtagId = gtagId && !gtagId.startsWith("%") && gtagId.startsWith("G-");
+        var isAnalyticsEnabled = enableAnalytics === "true";
+        var isProdBuild = mode === "production";
+        var isStagingOrLocal = host.includes("staging") || host.includes("localhost") || host === "127.0.0.1";
+
+        if (isValidGtagId && isAnalyticsEnabled && isProdBuild && !isStagingOrLocal) {
+          var script = document.createElement("script");
+          script.async = true;
+          script.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(gtagId);
+          document.head.appendChild(script);
+
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          window.gtag = gtag;
+          gtag('js', new Date());
+          gtag('config', gtagId);
+        }
+      })();
     </script>
   </head>
 
