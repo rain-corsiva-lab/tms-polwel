@@ -240,6 +240,19 @@ export const getDivisionsByLearnersRanking = async (
             name: true,
           }
         },
+        trainingCoordinator: {
+          select: {
+            id: true,
+            name: true,
+            division: true,
+            organization: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          }
+        },
         learner: {
           select: {
             id: true,
@@ -255,14 +268,49 @@ export const getDivisionsByLearnersRanking = async (
     enrollments.forEach(enrollment => {
       if (enrollment.learner?.deletedAt) return; // Skip deleted learners
 
-      // Robust fallback resolution for division/department name
-      const rawDept = (
-        enrollment.departmentName?.trim() ||
-        enrollment.division?.trim() ||
-        (enrollment.clientOrganization?.name && enrollment.clientOrganization.name.toLowerCase() !== 'polwel'
-          ? enrollment.clientOrganization.name.trim()
-          : '')
-      );
+      // Robust multi-stage resolution for division/department name
+      const getDivisionName = (): string => {
+        // 1. Explicit departmentName on enrollment (if specific and non-generic)
+        const dept = enrollment.departmentName?.trim();
+        if (dept && !['unassigned', 'n/a', 'polwel', 'spf'].includes(dept.toLowerCase())) {
+          return dept;
+        }
+
+        // 2. Explicit division on enrollment
+        const div = enrollment.division?.trim();
+        if (div && !['unassigned', 'n/a', 'polwel', 'spf'].includes(div.toLowerCase())) {
+          return div;
+        }
+
+        // 3. Client Organization Name (e.g. "Singapore Police Force - Ang Mo Kio Division", "P Division")
+        const orgName = enrollment.clientOrganization?.name?.trim();
+        if (orgName && !['polwel', 'spf'].includes(orgName.toLowerCase())) {
+          return orgName;
+        }
+
+        // 4. Training Coordinator's Division
+        const tcDiv = enrollment.trainingCoordinator?.division?.trim();
+        if (tcDiv && !['unassigned', 'n/a', 'polwel', 'spf'].includes(tcDiv.toLowerCase())) {
+          return tcDiv;
+        }
+
+        // 5. Training Coordinator's Organization Name
+        const tcOrgName = enrollment.trainingCoordinator?.organization?.name?.trim();
+        if (tcOrgName && !['polwel', 'spf'].includes(tcOrgName.toLowerCase())) {
+          return tcOrgName;
+        }
+
+        // 6. Generic fallbacks if nothing more specific was found
+        if (dept && !['unassigned', 'n/a'].includes(dept.toLowerCase())) return dept;
+        if (div && !['unassigned', 'n/a'].includes(div.toLowerCase())) return div;
+        if (orgName && orgName.toLowerCase() !== 'polwel') return orgName;
+        if (tcDiv) return tcDiv;
+        if (tcOrgName) return tcOrgName;
+
+        return '';
+      };
+
+      const rawDept = getDivisionName();
 
       if (!rawDept || rawDept.toLowerCase() === 'unassigned' || rawDept.toLowerCase() === 'n/a') {
         return; // Skip unassigned and empty data
