@@ -1161,6 +1161,11 @@ export const clientOrganizationsApi = {
 
   // ============ TRAINING COORDINATORS ============
   
+  // Get all coordinators across all organizations for export (deduplicated)
+  getAllCoordinatorsExport: async () => {
+    return apiRequest('/client-organizations/coordinators/export');
+  },
+
   // Get coordinators for an organization
   getCoordinators: async (organizationId: string, params: {
     page?: number;

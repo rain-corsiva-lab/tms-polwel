@@ -95,23 +95,55 @@ export const getCoursesByLearnersRanking = async (
     if (Array.isArray((req.user as any)?.organizationIds)) {
       userOrgIds.push(...(req.user as any).organizationIds);
     }
+
+    // Always fetch fresh connected organizations directly from database for the logged-in user
+    if (req.user?.userId) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: {
+          organizationId: true,
+          organizations: {
+            select: { organizationId: true }
+          }
+        }
+      });
+      if (dbUser?.organizationId) userOrgIds.push(dbUser.organizationId);
+      if (dbUser?.organizations) {
+        dbUser.organizations.forEach(o => {
+          if (o.organizationId) userOrgIds.push(o.organizationId);
+        });
+      }
+    }
     const uniqueOrgIds = Array.from(new Set(userOrgIds.filter(Boolean)));
 
     // Get all course runs with learners from this organization / linked organizations
     const courseRunsWithLearners = await prisma.courseRun.findMany({
       where: {
         deletedAt: null,
-        courseRunLearners: {
-          some: {
-            deletedAt: null,
-            enrollmentStatus: { not: 'WITHDRAWN' },
-            OR: [
-              { clientOrganizationId: { in: uniqueOrgIds } },
-              { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
-              ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
-            ]
+        OR: [
+          {
+            courseRunLearners: {
+              some: {
+                deletedAt: null,
+                enrollmentStatus: { not: 'WITHDRAWN' },
+                OR: [
+                  { clientOrganizationId: { in: uniqueOrgIds } },
+                  { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
+                  { trainingCoordinator: { organizations: { some: { organizationId: { in: uniqueOrgIds } } } } },
+                  ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
+                ]
+              }
+            }
+          },
+          {
+            bookings: {
+              some: {
+                organizationId: { in: uniqueOrgIds },
+                status: { not: 'CANCELLED' }
+              }
+            }
           }
-        }
+        ]
       },
       select: {
         id: true,
@@ -130,6 +162,7 @@ export const getCoursesByLearnersRanking = async (
             OR: [
               { clientOrganizationId: { in: uniqueOrgIds } },
               { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
+              { trainingCoordinator: { organizations: { some: { organizationId: { in: uniqueOrgIds } } } } },
               ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
             ]
           },
@@ -141,15 +174,32 @@ export const getCoursesByLearnersRanking = async (
       }
     });
 
+    // Also get direct bookings for any of these organizations
+    const bookings = await prisma.booking.findMany({
+      where: {
+        organizationId: { in: uniqueOrgIds },
+        status: { not: 'CANCELLED' }
+      },
+      select: {
+        courseId: true,
+        participantCount: true,
+        course: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
+
     // Aggregate by course
-    const courseMap = new Map<string, { courseName: string; learnerSet: Set<string>; runType: string }>();
+    const courseMap = new Map<string, { courseName: string; learnerSet: Set<string>; bookingCount: number }>();
 
     courseRunsWithLearners.forEach(run => {
       const courseId = run.course?.id;
       if (!courseId) return;
 
       const courseName = run.course?.title || 'Untitled Course';
-      const runType = run.courseRunType || 'OPEN_RUN';
 
       if (courseMap.has(courseId)) {
         const existing = courseMap.get(courseId)!;
@@ -160,16 +210,28 @@ export const getCoursesByLearnersRanking = async (
         courseMap.set(courseId, {
           courseName,
           learnerSet,
-          runType
+          bookingCount: 0
         });
       }
     });
 
-    // Convert to array and sort by unique learner count
+    // Include courses with bookings if not already present
+    bookings.forEach(b => {
+      if (!b.courseId || !b.course) return;
+      if (!courseMap.has(b.courseId)) {
+        courseMap.set(b.courseId, {
+          courseName: b.course.title || 'Untitled Course',
+          learnerSet: new Set<string>(),
+          bookingCount: b.participantCount || 0
+        });
+      }
+    });
+
+    // Convert to array and sort by unique learner count (falling back to booking count if no individual learners)
     const rankings = Array.from(courseMap.values())
       .map((item) => ({
         courseName: item.courseName,
-        numberOfLearners: item.learnerSet.size
+        numberOfLearners: item.learnerSet.size > 0 ? item.learnerSet.size : item.bookingCount
       }))
       .sort((a, b) => b.numberOfLearners - a.numberOfLearners)
       .map((item, index) => ({
@@ -216,6 +278,25 @@ export const getDivisionsByLearnersRanking = async (
     if (Array.isArray((req.user as any)?.organizationIds)) {
       userOrgIds.push(...(req.user as any).organizationIds);
     }
+
+    // Always fetch fresh connected organizations directly from database for the logged-in user
+    if (req.user?.userId) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: {
+          organizationId: true,
+          organizations: {
+            select: { organizationId: true }
+          }
+        }
+      });
+      if (dbUser?.organizationId) userOrgIds.push(dbUser.organizationId);
+      if (dbUser?.organizations) {
+        dbUser.organizations.forEach(o => {
+          if (o.organizationId) userOrgIds.push(o.organizationId);
+        });
+      }
+    }
     const uniqueOrgIds = Array.from(new Set(userOrgIds.filter(Boolean)));
 
     // Get all enrollments for this organization & linked organizations
@@ -226,6 +307,7 @@ export const getDivisionsByLearnersRanking = async (
         OR: [
           { clientOrganizationId: { in: uniqueOrgIds } },
           { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
+          { trainingCoordinator: { organizations: { some: { organizationId: { in: uniqueOrgIds } } } } },
           ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
         ]
       },

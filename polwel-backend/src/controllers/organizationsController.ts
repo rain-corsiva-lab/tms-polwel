@@ -126,7 +126,9 @@ export const organizationsController = {
 
       // Build where clause
       const where: any = {
-        clientOrganizationId: id
+        clientOrganizationId: id,
+        deletedAt: null,
+        enrollmentStatus: { not: 'WITHDRAWN' }
       };
 
       // Filter by enrollment status if provided
@@ -138,8 +140,8 @@ export const organizationsController = {
       if (search) {
         where.learner = {
           OR: [
-            { fullname: { contains: search as string, mode: 'insensitive' } },
-            { email: { contains: search as string, mode: 'insensitive' } }
+            { fullname: { contains: search as string } },
+            { email: { contains: search as string } }
           ]
         };
       }
@@ -168,6 +170,7 @@ export const organizationsController = {
           courseRun: {
             select: {
               id: true,
+              serialNumber: true,
               startDatetime: true,
               endDatetime: true,
               venue: true,

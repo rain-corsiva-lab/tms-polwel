@@ -77,14 +77,19 @@ interface Enrollment {
   };
   courseRun: {
     id: string;
-    startDate: string;
-    endDate: string;
+    serialNumber?: string;
+    courseRunCode?: string;
+    startDatetime?: string;
+    endDatetime?: string;
+    startDate?: string;
+    endDate?: string;
     venue?: string;
-    status: string;
+    status?: string;
     course: {
       id: string;
       title: string;
-      code: string;
+      code?: string;
+      courseCode?: string;
     };
   };
   trainingCoordinator?: {
@@ -787,47 +792,30 @@ const ClientOrganisationDetail = () => {
                                   Resend Onboarding Email
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem
-                                onClick={async () => {
-                                  try {
-                                    if (!coordinator.email) throw new Error("Coordinator has no email address");
-                                    // Use polwel users API which supports sending reset links for any role
-                                    await (await import("@/lib/api")).polwelUsersApi.sendPasswordResetLink(coordinator.id);
-                                    toast({
-                                      title: "Password Reset Link Sent",
-                                      description: `Password reset link has been sent to ${coordinator.email}`,
-                                    });
-                                  } catch (error: any) {
-                                    toast({
-                                      title: "Failed to Send Reset",
-                                      description: getErrorMessage(error, "Could not send password reset link. Please try again."),
-                                      variant: "destructive",
-                                    });
-                                  }
-                                }}
-                              >
-                                <Mail className="h-4 w-4 mr-2" />
-                                Send Password Reset Link
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={async () => {
-                                  try {
-                                    const nextStatus = coordinator.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-                                    await clientOrganizationsApi.updateCoordinator(id!, coordinator.id, { status: nextStatus });
-                                    await fetchCoordinators();
-                                    toast({ title: `Coordinator ${nextStatus === "ACTIVE" ? "Activated" : "Deactivated"}` });
-                                  } catch (error: any) {
-                                    toast({
-                                      title: "Failed to update status",
-                                      description: getErrorMessage(error, "Please try again."),
-                                      variant: "destructive",
-                                    });
-                                  }
-                                }}
-                              >
-                                {coordinator.status === "ACTIVE" ? "Mark Inactive" : "Mark Active"}
-                              </DropdownMenuItem>
+                              {coordinator.status === "ACTIVE" && (
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      if (!coordinator.email) throw new Error("Coordinator has no email address");
+                                      // Use polwel users API which supports sending reset links for any role
+                                      await (await import("@/lib/api")).polwelUsersApi.sendPasswordResetLink(coordinator.id);
+                                      toast({
+                                        title: "Password Reset Link Sent",
+                                        description: `Password reset link has been sent to ${coordinator.email}`,
+                                      });
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Failed to Send Reset",
+                                        description: getErrorMessage(error, "Could not send password reset link. Please try again."),
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Send Password Reset Link
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-950/20"
@@ -876,14 +864,12 @@ const ClientOrganisationDetail = () => {
                     <TableHead>Course</TableHead>
                     <TableHead>Course Run</TableHead>
                     <TableHead>Coordinator</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {learnersLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <div className="flex items-center justify-center space-x-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Loading participants...</span>
@@ -892,45 +878,35 @@ const ClientOrganisationDetail = () => {
                     </TableRow>
                   ) : enrollments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         No participants found.
                       </TableCell>
                     </TableRow>
                   ) : (
                     enrollments.map((enrollment) => (
                       <TableRow key={enrollment.id}>
-                        <TableCell className="font-medium">{enrollment.learner.fullname}</TableCell>
-                        <TableCell>{enrollment.learner.email}</TableCell>
-                        <TableCell>{enrollment.learner.designation || "N/A"}</TableCell>
+                        <TableCell className="font-medium">{enrollment.learner?.fullname || "N/A"}</TableCell>
+                        <TableCell>{enrollment.learner?.email || "N/A"}</TableCell>
+                        <TableCell>{enrollment.learner?.designation || "N/A"}</TableCell>
                         <TableCell>
-                          <Link to={`/courses/${enrollment.courseRun.course.id}`} className="text-blue-600 hover:underline">
-                            {enrollment.courseRun.course.title}
-                          </Link>
+                          {enrollment.courseRun?.course?.id ? (
+                            <Link to={`/courses/detail/${enrollment.courseRun.course.id}`} className="text-blue-600 hover:underline">
+                              {enrollment.courseRun.course.title || "View Course"}
+                            </Link>
+                          ) : (
+                            <span>{enrollment.courseRun?.course?.title || "N/A"}</span>
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Link to={`/course-runs/${enrollment.courseRun.id}`} className="text-blue-600 hover:underline">
-                            {formatDate(enrollment.courseRun.startDate)} - {formatDate(enrollment.courseRun.endDate)}
-                          </Link>
+                          {enrollment.courseRun?.id ? (
+                            <Link to={`/course-runs/${enrollment.courseRun.id}`} className="text-blue-600 hover:underline font-medium">
+                              {enrollment.courseRun.serialNumber || enrollment.courseRun.courseRunCode || "View Run"}
+                            </Link>
+                          ) : (
+                            <span>{enrollment.courseRun?.serialNumber || enrollment.courseRun?.courseRunCode || "---"}</span>
+                          )}
                         </TableCell>
                         <TableCell>{enrollment.trainingCoordinator?.name || "N/A"}</TableCell>
-                        <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
-                        <TableCell>
-                          <DropdownMenu open={openMenuId === enrollment.id} onOpenChange={(next) => handleMenuOpenChange(next, next ? enrollment.id : null)}>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()}>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link to={`/course-runs/${enrollment.courseRun.id}`}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Course Run
-                                </Link>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}

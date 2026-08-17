@@ -181,13 +181,17 @@ export default function PolwelUsers() {
         }
       }
 
-      // Use dummy data only for non-authentication errors
-      setUsers(dummyUsers);
+      setUsers([]);
       setPagination({
         page: 1,
-        limit: 10,
-        total: dummyUsers.length,
-        totalPages: 1,
+        limit: perPage,
+        total: 0,
+        totalPages: 0,
+      });
+      toast({
+        title: "Error loading POLWEL users",
+        description: getErrorMessage(error, "Failed to load POLWEL users. Please try again."),
+        variant: "destructive",
       });
     } finally {
       setLoading(false);

@@ -130,36 +130,109 @@ export const getClientOrganizations = async (req: AuthenticatedRequest, res: Res
             }
           },
           users: {
-            select: { role: true },
+            where: {
+              role: 'TRAINING_COORDINATOR',
+              deletedAt: null,
+              email: { not: null }
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              contactNumber: true,
+              designation: true,
+              isPrimaryCoordinator: true,
+              role: true
+            },
           },
+          coordinators: {
+            where: {
+              user: {
+                deletedAt: null,
+                email: { not: null }
+              }
+            },
+            select: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  contactNumber: true,
+                  designation: true,
+                  isPrimaryCoordinator: true,
+                  role: true
+                }
+              }
+            }
+          }
         },
-  ...(skip !== undefined ? { skip } : {}),
-  ...(take !== undefined ? { take } : {}),
+        ...(skip !== undefined ? { skip } : {}),
+        ...(take !== undefined ? { take } : {}),
         orderBy: { createdAt: 'desc' }
       }),
       prisma.organization.count({ where })
     ]);
 
-  return res.json({
-      organizations: organizations.map(org => ({
-        id: org.id,
-        name: org.name,
-        status: org.status,
-        address: org.address,
-        contactEmail: org.contactEmail,
-        contactPhone: org.contactPhone,
-        buNumber: org.buNumber,
-        organizationType: org.organizationType,
-        createdAt: org.createdAt,
-        updatedAt: org.updatedAt,
-        coordinatorsCount: org.users.filter(u => u.role === 'TRAINING_COORDINATOR').length,
-        learnersCount: org._count.courseRunLearners,
-        stats: {
-          totalUsers: org._count.users,
-          totalLearners: org._count.courseRunLearners,
-          totalBookings: org._count.bookings
-        }
-      })),
+    return res.json({
+      organizations: organizations.map(org => {
+        const tcMap = new Map<string, { id: string; name: string; email: string; contactNumber: string; designation: string; isPrimary: boolean }>();
+        (org.users || []).forEach(u => {
+          if (u.id) {
+            tcMap.set(u.id, {
+              id: u.id,
+              name: u.name ? u.name.trim() : '',
+              email: u.email ? u.email.trim() : '',
+              contactNumber: u.contactNumber ? u.contactNumber.trim() : '',
+              designation: u.designation ? u.designation.trim() : '',
+              isPrimary: !!u.isPrimaryCoordinator
+            });
+          }
+        });
+        (org.coordinators || []).forEach(c => {
+          if (c.user?.id) {
+            tcMap.set(c.user.id, {
+              id: c.user.id,
+              name: c.user.name ? c.user.name.trim() : '',
+              email: c.user.email ? c.user.email.trim() : '',
+              contactNumber: c.user.contactNumber ? c.user.contactNumber.trim() : '',
+              designation: c.user.designation ? c.user.designation.trim() : '',
+              isPrimary: !!c.user.isPrimaryCoordinator
+            });
+          }
+        });
+
+        const tcList = Array.from(tcMap.values()).sort((a, b) => {
+          if (a.isPrimary && !b.isPrimary) return -1;
+          if (!a.isPrimary && b.isPrimary) return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        const tcNames = tcList.map(tc => tc.name).filter(Boolean).join(', ');
+        const coordinatorsCount = tcList.length;
+
+        return {
+          id: org.id,
+          name: org.name,
+          status: org.status,
+          address: org.address,
+          contactEmail: org.contactEmail,
+          contactPhone: org.contactPhone,
+          buNumber: org.buNumber,
+          organizationType: org.organizationType,
+          createdAt: org.createdAt,
+          updatedAt: org.updatedAt,
+          tcNames,
+          coordinatorsCount,
+          coordinators: tcList,
+          learnersCount: org._count.courseRunLearners,
+          stats: {
+            totalUsers: org._count.users,
+            totalLearners: org._count.courseRunLearners,
+            totalBookings: org._count.bookings
+          }
+        };
+      }),
       pagination: {
         page: exportAll ? 1 : pageNum,
         limit: exportAll ? total : limitNum,
@@ -1908,5 +1981,86 @@ export const linkExistingCoordinator = async (req: AuthenticatedRequest, res: Re
   } catch (error: any) {
     console.error('Link coordinator error:', error);
     return errorResponse(res, 500, error.message || 'Failed to link coordinator');
+  }
+};
+
+// Get all training coordinators for Excel export (deduplicated)
+export const getAllCoordinatorsForExport = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const coordinators = await prisma.user.findMany({
+      where: {
+        role: 'TRAINING_COORDINATOR',
+        deletedAt: null,
+        email: { not: null }
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        contactNumber: true,
+        designation: true,
+        status: true,
+        createdAt: true,
+        organization: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        organizations: {
+          select: {
+            organization: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    const seen = new Set<string>();
+    const uniqueCoordinators: Array<{
+      id: string;
+      name: string;
+      email: string;
+      contact: string;
+      designation: string;
+      status: string;
+      organizations: string;
+    }> = [];
+
+    for (const c of coordinators) {
+      const key = c.email ? c.email.toLowerCase().trim() : c.id;
+      if (!seen.has(key)) {
+        seen.add(key);
+
+        const orgNames = new Set<string>();
+        if (c.organization?.name) orgNames.add(c.organization.name.trim());
+        (c.organizations || []).forEach(o => {
+          if (o.organization?.name) orgNames.add(o.organization.name.trim());
+        });
+
+        uniqueCoordinators.push({
+          id: c.id,
+          name: c.name || '',
+          email: c.email || '',
+          contact: c.contactNumber || '',
+          designation: c.designation || '',
+          status: c.status || 'ACTIVE',
+          organizations: Array.from(orgNames).join(', ')
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      coordinators: uniqueCoordinators
+    });
+  } catch (error: any) {
+    console.error('Get all coordinators for export error:', error);
+    return errorResponse(res, 500, error.message || 'Failed to fetch coordinators for export');
   }
 };

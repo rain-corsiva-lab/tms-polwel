@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Search, Download, Loader2, Filter, Trash2 } from "lucide-react";
+import { Building2, Search, Download, Loader2, Filter, Trash2, ChevronDown, FileSpreadsheet } from "lucide-react";
 import Swal from "sweetalert2";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { AddOrganisationDialog } from "@/components/AddOrganisationDialog";
 import { clientOrganizationsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PaginationControls from "@/components/ui/pagination";
 
 interface ClientOrg {
@@ -145,7 +146,107 @@ const ClientOrganisations = () => {
     }
   };
 
-  const handleExport = async () => {
+  // Helper function to export styled Excel file
+  const exportToStyledExcel = async (
+    filename: string,
+    sheetName: string,
+    columns: Array<{ header: string; key: string }>,
+    data: Record<string, any>[]
+  ) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName, {
+      views: [{ showGridLines: true }],
+    });
+
+    // Define columns
+    worksheet.columns = columns.map((col) => ({
+      header: col.header,
+      key: col.key,
+      width: 20,
+    }));
+
+    // Add data rows
+    data.forEach((item) => {
+      worksheet.addRow(item);
+    });
+
+    // Style Header Row (Row 1)
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 26;
+    headerRow.eachCell((cell) => {
+      cell.font = {
+        name: "Calibri",
+        size: 11,
+        bold: true,
+        color: { argb: "FF000000" },
+      };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFEEEEEE" }, // #eee gray background
+      };
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "left",
+      };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFD0D0D0" } },
+        left: { style: "thin", color: { argb: "FFD0D0D0" } },
+        bottom: { style: "medium", color: { argb: "FFB0B0B0" } },
+        right: { style: "thin", color: { argb: "FFD0D0D0" } },
+      };
+    });
+
+    // Style Data Rows
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      row.height = 22;
+      row.eachCell((cell) => {
+        cell.font = {
+          name: "Calibri",
+          size: 10,
+          color: { argb: "FF222222" },
+        };
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: "left",
+        };
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFEAEAEA" } },
+          left: { style: "thin", color: { argb: "FFEAEAEA" } },
+          bottom: { style: "thin", color: { argb: "FFEAEAEA" } },
+          right: { style: "thin", color: { argb: "FFEAEAEA" } },
+        };
+      });
+    });
+
+    // Auto-fit column widths based on maximum content length
+    worksheet.columns.forEach((column) => {
+      let maxLength = 0;
+      column.eachCell?.({ includeEmpty: true }, (cell) => {
+        const cellValue = cell.value !== undefined && cell.value !== null ? String(cell.value) : "";
+        if (cellValue.length > maxLength) {
+          maxLength = cellValue.length;
+        }
+      });
+      // Safety padding + minimum column width
+      column.width = Math.max(maxLength + 4, 14);
+    });
+
+    // Write buffer and trigger browser download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportOrganizations = async () => {
     try {
       setExporting(true);
       const response = await clientOrganizationsApi.getAll({
@@ -155,28 +256,72 @@ const ClientOrganisations = () => {
         all: true,
       });
 
-      const rows = (response.organizations || []).map((org: any) => ({
-        Name: org.name ?? "",
-        OrganisationType:
-          org.organizationType === "PUBLIC_SECTOR"
-            ? "Public Sector"
-            : org.organizationType === "PRIVATE_SECTOR"
-            ? "Private Sector"
-            : org.organizationType ?? "",
-        Status: org.status ?? "",
-        Coordinators: org.coordinatorsCount ?? 0,
-        Participants: org.learnersCount ?? 0,
-        ContactEmail: org.contactEmail ?? "",
-        ContactPhone: org.contactPhone ?? "",
-        BUNumber: org.buNumber ?? "",
-        CreatedAt: org.createdAt ?? "",
-        UpdatedAt: org.updatedAt ?? "",
-      }));
+      const orgList = response.organizations || [];
 
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Client Organisations");
-      XLSX.writeFile(workbook, "client_organisations.xlsx");
+      // Calculate maximum number of TCs across all organizations (at least 1)
+      const maxTCs = Math.max(
+        ...orgList.map((org: any) => (Array.isArray(org.coordinators) ? org.coordinators.length : 0)),
+        1
+      );
+
+      // Base columns
+      const columns: Array<{ header: string; key: string }> = [
+        { header: "Name", key: "Name" },
+        { header: "OrganisationType", key: "OrganisationType" },
+        { header: "Status", key: "Status" },
+        { header: "Coordinators", key: "Coordinators" },
+        { header: "Participants", key: "Participants" },
+        { header: "ContactEmail", key: "ContactEmail" },
+        { header: "ContactPhone", key: "ContactPhone" },
+        { header: "BUNumber", key: "BUNumber" },
+        { header: "CreatedAt", key: "CreatedAt" },
+        { header: "UpdatedAt", key: "UpdatedAt" },
+      ];
+
+      // Dynamically append 4 columns per TC at the very end / right side
+      for (let i = 1; i <= maxTCs; i++) {
+        columns.push(
+          { header: `TC${i} Name`, key: `TC${i}_Name` },
+          { header: `TC${i} Contact`, key: `TC${i}_Contact` },
+          { header: `TC${i} Email`, key: `TC${i}_Email` },
+          { header: `TC${i} Designation`, key: `TC${i}_Designation` }
+        );
+      }
+
+      // Map rows with dynamic TC columns
+      const rows = orgList.map((org: any) => {
+        const rowData: Record<string, any> = {
+          Name: org.name ?? "",
+          OrganisationType:
+            org.organizationType === "PUBLIC_SECTOR"
+              ? "Public Sector"
+              : org.organizationType === "PRIVATE_SECTOR"
+              ? "Private Sector"
+              : org.organizationType ?? "",
+          Status: org.status ?? "",
+          Coordinators: org.coordinatorsCount ?? (org.coordinators?.length || 0),
+          Participants: org.learnersCount ?? 0,
+          ContactEmail: org.contactEmail ?? "",
+          ContactPhone: org.contactPhone ?? "",
+          BUNumber: org.buNumber ?? "",
+          CreatedAt: org.createdAt ?? "",
+          UpdatedAt: org.updatedAt ?? "",
+        };
+
+        const tcList = Array.isArray(org.coordinators) ? org.coordinators : [];
+        for (let i = 1; i <= maxTCs; i++) {
+          const tc = tcList[i - 1];
+          rowData[`TC${i}_Name`] = tc?.name ?? "";
+          rowData[`TC${i}_Contact`] = tc?.contactNumber ?? tc?.contact ?? "";
+          rowData[`TC${i}_Email`] = tc?.email ?? "";
+          rowData[`TC${i}_Designation`] = tc?.designation ?? "";
+        }
+
+        return rowData;
+      });
+
+      await exportToStyledExcel("client_organisations.xlsx", "Client Organisations", columns, rows);
+
       toast({
         title: "Exported",
         description: `Exported ${rows.length} client organisation${rows.length === 1 ? "" : "s"}.`,
@@ -186,6 +331,46 @@ const ClientOrganisations = () => {
       toast({
         title: "Export failed",
         description: "We couldn't export the client organisations. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportCoordinators = async () => {
+    try {
+      setExporting(true);
+      const response = await clientOrganizationsApi.getAllCoordinatorsExport();
+      const coordinators = response.coordinators || [];
+
+      const rows = coordinators.map((tc: any) => ({
+        Name: tc.name ?? "",
+        Email: tc.email ?? "",
+        Contact: tc.contact ?? "",
+        Designation: tc.designation ?? "",
+        Status: tc.status ?? "",
+      }));
+
+      const columns = [
+        { header: "Name", key: "Name" },
+        { header: "Email", key: "Email" },
+        { header: "Contact", key: "Contact" },
+        { header: "Designation", key: "Designation" },
+        { header: "Status", key: "Status" },
+      ];
+
+      await exportToStyledExcel("training_coordinators.xlsx", "Training Coordinators", columns, rows);
+
+      toast({
+        title: "Exported",
+        description: `Exported ${rows.length} unique training coordinator${rows.length === 1 ? "" : "s"}.`,
+      });
+    } catch (error) {
+      console.error("Error exporting training coordinators:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't export the training coordinator list. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -246,10 +431,25 @@ const ClientOrganisations = () => {
           <h1 className="text-3xl font-bold tracking-tight">Client Organisation</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExport} disabled={exporting}>
-            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-            {exporting ? "Exporting..." : "Export"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={exporting}>
+                {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                {exporting ? "Exporting..." : "Export"}
+                <ChevronDown className="h-4 w-4 ml-1 opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuItem onClick={handleExportCoordinators} className="cursor-pointer">
+                <Download className="h-4 w-4 mr-2 text-primary" />
+                Training Coordinator List (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportOrganizations} className="cursor-pointer">
+                <Download className="h-4 w-4 mr-2 text-primary" />
+                Client Organisation (.xlsx)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <AddOrganisationDialog onOrganisationCreated={fetchClientOrgs} />
         </div>
       </div>

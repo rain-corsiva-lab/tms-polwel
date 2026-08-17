@@ -400,7 +400,8 @@ export const getPolwelUserDetails = async (req: AuthenticatedRequest, res: Respo
     const user = await prisma.user.findFirst({
       where: {
         id: id,
-        role: UserRole.POLWEL
+        role: UserRole.POLWEL,
+        deletedAt: null
       },
       select: {
         id: true,
@@ -504,7 +505,9 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
 
     // Build where clause
     const where: any = {
-      role: UserRole.POLWEL
+      role: UserRole.POLWEL,
+      deletedAt: null,
+      email: { not: null }
     };
 
     if (search) {
@@ -577,10 +580,12 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
       });
     }
 
-  const user = await prisma.user.findFirst({
+    const user = await prisma.user.findFirst({
       where: {
         id: id,
-        role: UserRole.POLWEL
+        role: UserRole.POLWEL,
+        deletedAt: null,
+        email: { not: null }
       },
       select: {
           id: true,
@@ -823,7 +828,8 @@ export const updatePolwelUser = async (req: AuthenticatedRequest, res: Response)
     const existingUser = await prisma.user.findFirst({
       where: {
         id: id,
-        role: UserRole.POLWEL
+        role: UserRole.POLWEL,
+        deletedAt: null
       }
     });
 
@@ -986,7 +992,8 @@ export const deletePolwelUser = async (req: AuthenticatedRequest, res: Response)
     const existingUser = await prisma.user.findFirst({
       where: {
         id: id,
-        role: UserRole.POLWEL
+        role: UserRole.POLWEL,
+        deletedAt: null
       }
     });
 
@@ -1004,7 +1011,8 @@ export const deletePolwelUser = async (req: AuthenticatedRequest, res: Response)
       data: {
         old_email: emailBeforeDeletion,
         email: null,
-        status: UserStatus.INACTIVE
+        status: UserStatus.INACTIVE,
+        deletedAt: new Date()
       },
       select: {
         id: true,
@@ -1132,7 +1140,9 @@ export const resendPolwelUserSetup = async (req: AuthenticatedRequest, res: Resp
       where: {
         id: id,
         role: UserRole.POLWEL,
-        status: UserStatus.PENDING
+        status: UserStatus.PENDING,
+        deletedAt: null,
+        email: { not: null }
       }
     });
 
