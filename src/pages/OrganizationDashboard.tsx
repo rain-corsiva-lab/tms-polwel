@@ -707,9 +707,8 @@ const OrganizationDashboard = () => {
                     <Table>
                       <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                         <TableRow className="bg-orange-50/50">
-                          <TableHead className="w-16 text-center">Rank</TableHead>
+                          <TableHead className="w-20 text-center">Rank</TableHead>
                           <TableHead>Course Name</TableHead>
-                          <TableHead className="w-32 text-center">Number of Learners</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -717,11 +716,6 @@ const OrganizationDashboard = () => {
                           <TableRow key={item.rank} className="hover:bg-orange-50/30">
                             <TableCell className="text-center font-semibold text-orange-700">{item.rank}</TableCell>
                             <TableCell className="font-medium">{item.courseName}</TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant="secondary" className="bg-orange-100 text-orange-900">
-                                {item.numberOfLearners}
-                              </Badge>
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -753,9 +747,8 @@ const OrganizationDashboard = () => {
                     <Table>
                       <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                         <TableRow className="bg-green-50/50">
-                          <TableHead className="w-16 text-center">Rank</TableHead>
+                          <TableHead className="w-20 text-center">Rank</TableHead>
                           <TableHead>Division / Department</TableHead>
-                          <TableHead className="w-32 text-center">Number of Learners</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -763,11 +756,6 @@ const OrganizationDashboard = () => {
                           <TableRow key={item.rank} className="hover:bg-green-50/30">
                             <TableCell className="text-center font-semibold text-green-700">{item.rank}</TableCell>
                             <TableCell className="font-medium">{item.divisionDepartment}</TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant="secondary" className="bg-green-100 text-green-900">
-                                {item.numberOfLearners}
-                              </Badge>
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

@@ -131,34 +131,16 @@ export const getCoursesByLearnersRanking = async (
       }
     });
 
-    // Get all course runs with learners from this organization / linked organizations
+    // 2. Get all course runs with enrolled learners across the entire system
     const courseRunsWithLearners = await prisma.courseRun.findMany({
       where: {
         deletedAt: null,
-        OR: [
-          {
-            courseRunLearners: {
-              some: {
-                deletedAt: null,
-                enrollmentStatus: { not: 'WITHDRAWN' },
-                OR: [
-                  { clientOrganizationId: { in: uniqueOrgIds } },
-                  { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
-                  { trainingCoordinator: { organizations: { some: { organizationId: { in: uniqueOrgIds } } } } },
-                  ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
-                ]
-              }
-            }
-          },
-          {
-            bookings: {
-              some: {
-                organizationId: { in: uniqueOrgIds },
-                status: { not: 'CANCELLED' }
-              }
-            }
+        courseRunLearners: {
+          some: {
+            deletedAt: null,
+            enrollmentStatus: { not: 'WITHDRAWN' }
           }
-        ]
+        }
       },
       select: {
         id: true,
@@ -173,13 +155,7 @@ export const getCoursesByLearnersRanking = async (
         courseRunLearners: {
           where: {
             deletedAt: null,
-            enrollmentStatus: { not: 'WITHDRAWN' },
-            OR: [
-              { clientOrganizationId: { in: uniqueOrgIds } },
-              { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
-              { trainingCoordinator: { organizations: { some: { organizationId: { in: uniqueOrgIds } } } } },
-              ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
-            ]
+            enrollmentStatus: { not: 'WITHDRAWN' }
           },
           select: {
             id: true,
@@ -189,10 +165,9 @@ export const getCoursesByLearnersRanking = async (
       }
     });
 
-    // Also get direct bookings for any of these organizations
+    // 3. Get direct bookings across the entire system
     const bookings = await prisma.booking.findMany({
       where: {
-        organizationId: { in: uniqueOrgIds },
         status: { not: 'CANCELLED' }
       },
       select: {
@@ -219,7 +194,7 @@ export const getCoursesByLearnersRanking = async (
       });
     });
 
-    // 2. Populate enrolled learners
+    // 2. Populate enrolled learners across the entire system
     courseRunsWithLearners.forEach(run => {
       const courseId = run.course?.id;
       if (!courseId) return;
@@ -287,7 +262,7 @@ export const getCoursesByLearnersRanking = async (
 };
 
 /**
- * Get divisions/departments ranked by number of learners for a specific organization (Only SPF Divisions)
+ * Get divisions/departments ranked by number of learners across the whole SPF department
  * GET /api/client-organizations/:organizationId/analytics/divisions-by-learners
  */
 export const getDivisionsByLearnersRanking = async (
@@ -295,54 +270,26 @@ export const getDivisionsByLearnersRanking = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { organizationId } = req.params;
-
-    if (!organizationId) {
-      res.status(400).json({
-        success: false,
-        message: 'Organization ID is required'
-      });
-      return;
-    }
-
-    const userOrgIds: string[] = [];
-    if (organizationId) userOrgIds.push(organizationId);
-    if (req.user?.organizationId) userOrgIds.push(req.user.organizationId);
-    if (Array.isArray((req.user as any)?.organizationIds)) {
-      userOrgIds.push(...(req.user as any).organizationIds);
-    }
-
-    // Always fetch fresh connected organizations directly from database for the logged-in user
-    if (req.user?.userId) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-        select: {
-          organizationId: true,
-          organizations: {
-            select: { organizationId: true }
-          }
-        }
-      });
-      if (dbUser?.organizationId) userOrgIds.push(dbUser.organizationId);
-      if (dbUser?.organizations) {
-        dbUser.organizations.forEach(o => {
-          if (o.organizationId) userOrgIds.push(o.organizationId);
-        });
+    // 1. Fetch all registered active SPF organizations
+    const spfOrganizations = await prisma.organization.findMany({
+      where: {
+        organizationType: 'SPF',
+        status: 'ACTIVE'
+      },
+      select: {
+        id: true,
+        name: true
+      },
+      orderBy: {
+        name: 'asc'
       }
-    }
-    const uniqueOrgIds = Array.from(new Set(userOrgIds.filter(Boolean)));
+    });
 
-    // Get all enrollments for this organization & linked organizations
+    // 2. Get all enrollments across the whole system
     const enrollments = await prisma.courseRunLearner.findMany({
       where: {
         deletedAt: null,
-        enrollmentStatus: { not: 'WITHDRAWN' },
-        OR: [
-          { clientOrganizationId: { in: uniqueOrgIds } },
-          { trainingCoordinator: { organizationId: { in: uniqueOrgIds } } },
-          { trainingCoordinator: { organizations: { some: { organizationId: { in: uniqueOrgIds } } } } },
-          ...(req.user?.userId ? [{ trainingCoordinatorId: req.user.userId }] : []),
-        ]
+        enrollmentStatus: { not: 'WITHDRAWN' }
       },
       select: {
         id: true,
@@ -431,8 +378,20 @@ export const getDivisionsByLearnersRanking = async (
       return false;
     };
 
-    // Aggregate by SPF department/division
+    // Aggregate by SPF department/division - pre-populating known SPF organizations
     const departmentMap = new Map<string, { totalLearners: Set<string>; completedCourses: number; totalEnrollments: number }>();
+
+    // Pre-populate all active SPF organizations
+    spfOrganizations.forEach(org => {
+      const orgName = org.name?.trim();
+      if (orgName && !['polwel', 'spf'].includes(orgName.toLowerCase())) {
+        departmentMap.set(orgName, {
+          totalLearners: new Set<string>(),
+          completedCourses: 0,
+          totalEnrollments: 0
+        });
+      }
+    });
 
     enrollments.forEach(enrollment => {
       if (enrollment.learner?.deletedAt) return; // Skip deleted learners
@@ -505,7 +464,7 @@ export const getDivisionsByLearnersRanking = async (
       }
     });
 
-    // Convert to array and sort by learner count (returning full ranked list of SPF divisions)
+    // Convert to array and sort by learner count (returning full ranked list of SPF divisions across the entire department)
     const rankings = Array.from(departmentMap.entries())
       .map(([deptName, data]) => ({
         divisionDepartment: deptName,
