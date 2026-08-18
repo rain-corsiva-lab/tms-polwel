@@ -685,12 +685,12 @@ const OrganizationDashboard = () => {
 
           {/* Analytics Tables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Courses Ranked by Number of Learners */}
+            {/* Top Courses Ranked by Number of Learners */}
             <Card className="border-orange-200">
               <CardHeader className="bg-orange-50 border-b border-orange-200">
                 <CardTitle className="text-orange-900 flex items-center space-x-2">
                   <span>📚</span>
-                  <span>Courses Ranked by Number of Learners</span>
+                  <span>Top Courses Ranked by Number of Learners</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -731,12 +731,12 @@ const OrganizationDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Divisions Ranked by Number of Learners */}
+            {/* Top SPF Divisions Ranked by Number of Learners */}
             <Card className="border-green-200">
               <CardHeader className="bg-green-50 border-b border-green-200">
                 <CardTitle className="text-green-900 flex items-center space-x-2">
                   <span>🏢</span>
-                  <span>Divisions Ranked by Number of Learners</span>
+                  <span>Top SPF Divisions Ranked by Number of Learners</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">

@@ -116,6 +116,21 @@ export const getCoursesByLearnersRanking = async (
     }
     const uniqueOrgIds = Array.from(new Set(userOrgIds.filter(Boolean)));
 
+    // 1. Fetch ALL active courses that POLWEL provides
+    const allCourses = await prisma.course.findMany({
+      where: {
+        status: 'ACTIVE'
+      },
+      select: {
+        id: true,
+        title: true,
+        courseCode: true
+      },
+      orderBy: {
+        title: 'asc'
+      }
+    });
+
     // Get all course runs with learners from this organization / linked organizations
     const courseRunsWithLearners = await prisma.courseRun.findMany({
       where: {
@@ -192,9 +207,19 @@ export const getCoursesByLearnersRanking = async (
       }
     });
 
-    // Aggregate by course
+    // Aggregate by course - initializing ALL POLWEL courses so whole ranking is displayed
     const courseMap = new Map<string, { courseName: string; learnerSet: Set<string>; bookingCount: number }>();
 
+    // 1. Prepopulate ALL active POLWEL courses with 0 learners
+    allCourses.forEach(c => {
+      courseMap.set(c.id, {
+        courseName: c.title || 'Untitled Course',
+        learnerSet: new Set<string>(),
+        bookingCount: 0
+      });
+    });
+
+    // 2. Populate enrolled learners
     courseRunsWithLearners.forEach(run => {
       const courseId = run.course?.id;
       if (!courseId) return;
@@ -215,12 +240,15 @@ export const getCoursesByLearnersRanking = async (
       }
     });
 
-    // Include courses with bookings if not already present
+    // 3. Include bookings count if any
     bookings.forEach(b => {
-      if (!b.courseId || !b.course) return;
-      if (!courseMap.has(b.courseId)) {
+      if (!b.courseId) return;
+      if (courseMap.has(b.courseId)) {
+        const existing = courseMap.get(b.courseId)!;
+        existing.bookingCount += (b.participantCount || 0);
+      } else {
         courseMap.set(b.courseId, {
-          courseName: b.course.title || 'Untitled Course',
+          courseName: b.course?.title || 'Untitled Course',
           learnerSet: new Set<string>(),
           bookingCount: b.participantCount || 0
         });
@@ -233,7 +261,12 @@ export const getCoursesByLearnersRanking = async (
         courseName: item.courseName,
         numberOfLearners: item.learnerSet.size > 0 ? item.learnerSet.size : item.bookingCount
       }))
-      .sort((a, b) => b.numberOfLearners - a.numberOfLearners)
+      .sort((a, b) => {
+        if (b.numberOfLearners !== a.numberOfLearners) {
+          return b.numberOfLearners - a.numberOfLearners;
+        }
+        return a.courseName.localeCompare(b.courseName);
+      })
       .map((item, index) => ({
         rank: index + 1,
         ...item
@@ -254,7 +287,7 @@ export const getCoursesByLearnersRanking = async (
 };
 
 /**
- * Get divisions/departments ranked by number of learners for a specific organization
+ * Get divisions/departments ranked by number of learners for a specific organization (Only SPF Divisions)
  * GET /api/client-organizations/:organizationId/analytics/divisions-by-learners
  */
 export const getDivisionsByLearnersRanking = async (
@@ -320,6 +353,7 @@ export const getDivisionsByLearnersRanking = async (
           select: {
             id: true,
             name: true,
+            organizationType: true,
           }
         },
         trainingCoordinator: {
@@ -331,6 +365,7 @@ export const getDivisionsByLearnersRanking = async (
               select: {
                 id: true,
                 name: true,
+                organizationType: true,
               }
             }
           }
@@ -344,7 +379,59 @@ export const getDivisionsByLearnersRanking = async (
       }
     });
 
-    // Aggregate by department/division
+    // Helper to verify if an organization / department / division is an SPF Division
+    const isSpfEntity = (rawDept: string, enrollment: any): boolean => {
+      const name = (rawDept || '').trim();
+      if (!name) return false;
+      const nameLower = name.toLowerCase();
+
+      // Generic exclusions
+      if (['unassigned', 'n/a', 'polwel'].includes(nameLower)) {
+        return false;
+      }
+
+      // Explicit non-SPF blacklist (e.g. private companies, vendor names)
+      if (
+        nameLower.includes('corsiva') ||
+        nameLower.includes('microsoft') ||
+        nameLower.includes('private') ||
+        nameLower.includes('pte ltd') ||
+        nameLower.includes('llc')
+      ) {
+        return false;
+      }
+
+      // Check if clientOrganization is explicitly SPF
+      if (enrollment.clientOrganization?.organizationType === 'SPF') {
+        return true;
+      }
+
+      // Check if trainingCoordinator organization is SPF
+      if (enrollment.trainingCoordinator?.organization?.organizationType === 'SPF') {
+        return true;
+      }
+
+      // Check if department/division name contains SPF keywords or standard division pattern
+      if (
+        nameLower.includes('singapore police force') ||
+        nameLower.includes('spf') ||
+        nameLower.includes('police') ||
+        nameLower.includes('division') ||
+        nameLower.includes('tracom') ||
+        nameLower.includes('cid') ||
+        nameLower.includes('cad') ||
+        nameLower.includes('soc') ||
+        nameLower.includes('traffic police') ||
+        nameLower.includes('coast guard') ||
+        /^[a-z]\s+division$/i.test(name)
+      ) {
+        return true;
+      }
+
+      return false;
+    };
+
+    // Aggregate by SPF department/division
     const departmentMap = new Map<string, { totalLearners: Set<string>; completedCourses: number; totalEnrollments: number }>();
 
     enrollments.forEach(enrollment => {
@@ -394,8 +481,9 @@ export const getDivisionsByLearnersRanking = async (
 
       const rawDept = getDivisionName();
 
-      if (!rawDept || rawDept.toLowerCase() === 'unassigned' || rawDept.toLowerCase() === 'n/a') {
-        return; // Skip unassigned and empty data
+      // Only include valid SPF Divisions (excluding non-SPF entities like Corsiva Microsoft)
+      if (!rawDept || !isSpfEntity(rawDept, enrollment)) {
+        return;
       }
 
       const dept = rawDept;
@@ -417,13 +505,18 @@ export const getDivisionsByLearnersRanking = async (
       }
     });
 
-    // Convert to array and sort by learner count (returning full ranked list)
+    // Convert to array and sort by learner count (returning full ranked list of SPF divisions)
     const rankings = Array.from(departmentMap.entries())
       .map(([deptName, data]) => ({
         divisionDepartment: deptName,
         numberOfLearners: data.totalLearners.size
       }))
-      .sort((a, b) => b.numberOfLearners - a.numberOfLearners)
+      .sort((a, b) => {
+        if (b.numberOfLearners !== a.numberOfLearners) {
+          return b.numberOfLearners - a.numberOfLearners;
+        }
+        return a.divisionDepartment.localeCompare(b.divisionDepartment);
+      })
       .map((item, index) => ({
         rank: index + 1,
         ...item
