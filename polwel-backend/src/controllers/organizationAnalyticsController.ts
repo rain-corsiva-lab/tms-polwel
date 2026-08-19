@@ -262,7 +262,7 @@ export const getCoursesByLearnersRanking = async (
 };
 
 /**
- * Get divisions/departments ranked by number of learners across the whole SPF department
+ * Get divisions/departments ranked by number of learners across the whole SPF department (Strictly organizationType: SPF only)
  * GET /api/client-organizations/:organizationId/analytics/divisions-by-learners
  */
 export const getDivisionsByLearnersRanking = async (
@@ -270,7 +270,7 @@ export const getDivisionsByLearnersRanking = async (
   res: Response
 ): Promise<void> => {
   try {
-    // 1. Fetch all registered active SPF organizations
+    // 1. Fetch ALL active organizations strictly with organizationType = 'SPF'
     const spfOrganizations = await prisma.organization.findMany({
       where: {
         organizationType: 'SPF',
@@ -278,24 +278,41 @@ export const getDivisionsByLearnersRanking = async (
       },
       select: {
         id: true,
-        name: true
+        name: true,
+        organizationType: true
       },
       orderBy: {
         name: 'asc'
       }
     });
 
-    // 2. Get all enrollments across the whole system
+    const spfOrgIdSet = new Set<string>(spfOrganizations.map(o => o.id));
+    const spfOrgNameMap = new Map<string, string>();
+    const departmentMap = new Map<string, Set<string>>();
+
+    // Pre-populate all active SPF organizations with 0 learners
+    spfOrganizations.forEach(org => {
+      const orgName = org.name?.trim();
+      if (orgName && !['polwel', 'spf'].includes(orgName.toLowerCase())) {
+        spfOrgNameMap.set(org.id, orgName);
+        departmentMap.set(orgName, new Set<string>());
+      }
+    });
+
+    // 2. Get enrollments strictly belonging to SPF organizations
     const enrollments = await prisma.courseRunLearner.findMany({
       where: {
         deletedAt: null,
-        enrollmentStatus: { not: 'WITHDRAWN' }
+        enrollmentStatus: { not: 'WITHDRAWN' },
+        OR: [
+          { clientOrganization: { organizationType: 'SPF' } },
+          { clientOrganizationId: { in: Array.from(spfOrgIdSet) } },
+          { trainingCoordinator: { organization: { organizationType: 'SPF' } } }
+        ]
       },
       select: {
         id: true,
-        departmentName: true,
-        division: true,
-        attendanceStatus: true,
+        clientOrganizationId: true,
         clientOrganization: {
           select: {
             id: true,
@@ -306,8 +323,7 @@ export const getDivisionsByLearnersRanking = async (
         trainingCoordinator: {
           select: {
             id: true,
-            name: true,
-            division: true,
+            organizationId: true,
             organization: {
               select: {
                 id: true,
@@ -326,149 +342,31 @@ export const getDivisionsByLearnersRanking = async (
       }
     });
 
-    // Helper to verify if an organization / department / division is an SPF Division
-    const isSpfEntity = (rawDept: string, enrollment: any): boolean => {
-      const name = (rawDept || '').trim();
-      if (!name) return false;
-      const nameLower = name.toLowerCase();
-
-      // Generic exclusions
-      if (['unassigned', 'n/a', 'polwel'].includes(nameLower)) {
-        return false;
-      }
-
-      // Explicit non-SPF blacklist (e.g. private companies, vendor names)
-      if (
-        nameLower.includes('corsiva') ||
-        nameLower.includes('microsoft') ||
-        nameLower.includes('private') ||
-        nameLower.includes('pte ltd') ||
-        nameLower.includes('llc')
-      ) {
-        return false;
-      }
-
-      // Check if clientOrganization is explicitly SPF
-      if (enrollment.clientOrganization?.organizationType === 'SPF') {
-        return true;
-      }
-
-      // Check if trainingCoordinator organization is SPF
-      if (enrollment.trainingCoordinator?.organization?.organizationType === 'SPF') {
-        return true;
-      }
-
-      // Check if department/division name contains SPF keywords or standard division pattern
-      if (
-        nameLower.includes('singapore police force') ||
-        nameLower.includes('spf') ||
-        nameLower.includes('police') ||
-        nameLower.includes('division') ||
-        nameLower.includes('tracom') ||
-        nameLower.includes('cid') ||
-        nameLower.includes('cad') ||
-        nameLower.includes('soc') ||
-        nameLower.includes('traffic police') ||
-        nameLower.includes('coast guard') ||
-        /^[a-z]\s+division$/i.test(name)
-      ) {
-        return true;
-      }
-
-      return false;
-    };
-
-    // Aggregate by SPF department/division - pre-populating known SPF organizations
-    const departmentMap = new Map<string, { totalLearners: Set<string>; completedCourses: number; totalEnrollments: number }>();
-
-    // Pre-populate all active SPF organizations
-    spfOrganizations.forEach(org => {
-      const orgName = org.name?.trim();
-      if (orgName && !['polwel', 'spf'].includes(orgName.toLowerCase())) {
-        departmentMap.set(orgName, {
-          totalLearners: new Set<string>(),
-          completedCourses: 0,
-          totalEnrollments: 0
-        });
-      }
-    });
-
+    // 3. Count unique learners strictly under each SPF organization
     enrollments.forEach(enrollment => {
       if (enrollment.learner?.deletedAt) return; // Skip deleted learners
 
-      // Robust multi-stage resolution for division/department name
-      const getDivisionName = (): string => {
-        // 1. Explicit departmentName on enrollment (if specific and non-generic)
-        const dept = enrollment.departmentName?.trim();
-        if (dept && !['unassigned', 'n/a', 'polwel', 'spf'].includes(dept.toLowerCase())) {
-          return dept;
-        }
-
-        // 2. Explicit division on enrollment
-        const div = enrollment.division?.trim();
-        if (div && !['unassigned', 'n/a', 'polwel', 'spf'].includes(div.toLowerCase())) {
-          return div;
-        }
-
-        // 3. Client Organization Name (e.g. "Singapore Police Force - Ang Mo Kio Division", "P Division")
-        const orgName = enrollment.clientOrganization?.name?.trim();
-        if (orgName && !['polwel', 'spf'].includes(orgName.toLowerCase())) {
-          return orgName;
-        }
-
-        // 4. Training Coordinator's Division
-        const tcDiv = enrollment.trainingCoordinator?.division?.trim();
-        if (tcDiv && !['unassigned', 'n/a', 'polwel', 'spf'].includes(tcDiv.toLowerCase())) {
-          return tcDiv;
-        }
-
-        // 5. Training Coordinator's Organization Name
-        const tcOrgName = enrollment.trainingCoordinator?.organization?.name?.trim();
-        if (tcOrgName && !['polwel', 'spf'].includes(tcOrgName.toLowerCase())) {
-          return tcOrgName;
-        }
-
-        // 6. Generic fallbacks if nothing more specific was found
-        if (dept && !['unassigned', 'n/a'].includes(dept.toLowerCase())) return dept;
-        if (div && !['unassigned', 'n/a'].includes(div.toLowerCase())) return div;
-        if (orgName && orgName.toLowerCase() !== 'polwel') return orgName;
-        if (tcDiv) return tcDiv;
-        if (tcOrgName) return tcOrgName;
-
-        return '';
-      };
-
-      const rawDept = getDivisionName();
-
-      // Only include valid SPF Divisions (excluding non-SPF entities like Corsiva Microsoft)
-      if (!rawDept || !isSpfEntity(rawDept, enrollment)) {
-        return;
+      let spfOrgName = '';
+      if (enrollment.clientOrganization?.organizationType === 'SPF' && enrollment.clientOrganization.name) {
+        spfOrgName = enrollment.clientOrganization.name.trim();
+      } else if (enrollment.trainingCoordinator?.organization?.organizationType === 'SPF' && enrollment.trainingCoordinator.organization.name) {
+        spfOrgName = enrollment.trainingCoordinator.organization.name.trim();
+      } else if (enrollment.clientOrganizationId && spfOrgNameMap.has(enrollment.clientOrganizationId)) {
+        spfOrgName = spfOrgNameMap.get(enrollment.clientOrganizationId)!;
       }
 
-      const dept = rawDept;
-      const isCompleted = enrollment.attendanceStatus === 'PRESENT' ? 1 : 0;
+      if (!spfOrgName) return;
 
-      if (departmentMap.has(dept)) {
-        const existing = departmentMap.get(dept)!;
-        existing.totalLearners.add(enrollment.learner.id);
-        existing.completedCourses += isCompleted;
-        existing.totalEnrollments += 1;
-      } else {
-        const learnerSet = new Set<string>();
-        learnerSet.add(enrollment.learner.id);
-        departmentMap.set(dept, {
-          totalLearners: learnerSet,
-          completedCourses: isCompleted,
-          totalEnrollments: 1
-        });
+      if (departmentMap.has(spfOrgName)) {
+        departmentMap.get(spfOrgName)!.add(enrollment.learner.id);
       }
     });
 
-    // Convert to array and sort by learner count (returning full ranked list of SPF divisions across the entire department)
+    // Convert to array and sort by learner count (returning full ranked list strictly of SPF organizations)
     const rankings = Array.from(departmentMap.entries())
-      .map(([deptName, data]) => ({
+      .map(([deptName, learnerSet]) => ({
         divisionDepartment: deptName,
-        numberOfLearners: data.totalLearners.size
+        numberOfLearners: learnerSet.size
       }))
       .sort((a, b) => {
         if (b.numberOfLearners !== a.numberOfLearners) {
