@@ -185,7 +185,7 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
           "End Date": formatDate(run.endDate),
           Status: run.status ? run.status.replace(/_/g, " ") : "N/A",
           "Run Type": getRunTypeLabel(run.courseRunType, run.organization) || run.courseRunType || "",
-          Participants: run.learners || 0,
+          Learners: run.learners || 0,
           Revenue: `$${(run.revenue || 0).toFixed(2)}`,
         }));
         exportData.push({
@@ -196,7 +196,7 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
           "End Date": "",
           Status: "TOTAL",
           "Run Type": "",
-          Participants: totalLearners,
+          Learners: totalLearners,
           Revenue: `$${totalRevenue.toFixed(2)}`,
         });
         const ws = XLSX.utils.json_to_sheet(exportData);
@@ -279,7 +279,7 @@ export function QuarterDetailsDialog({ quarter, year, open, onOpenChange }: Quar
                 <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
               </div>
               <div className="p-4 bg-purple-50 rounded-lg">
-                <p className="text-sm text-muted-foreground">Total Participants</p>
+                <p className="text-sm text-muted-foreground">Total Learners</p>
                 <p className="text-2xl font-bold">{totalLearners}</p>
               </div>
             </div>

@@ -1,11 +1,12 @@
 import { Response } from 'express';
-import { UserStatus } from '@prisma/client';
+import { UserStatus, AuditActionType } from '@prisma/client';
 import path from 'path';
 import { AuthenticatedRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import EmailService from '../services/emailService';
+import AuditService from '../services/auditService';
 
 const extractErrorSource = (stack?: string) => {
   if (!stack) return null;
@@ -1984,7 +1985,7 @@ export const linkExistingCoordinator = async (req: AuthenticatedRequest, res: Re
   }
 };
 
-// Get all training coordinators for Excel export (deduplicated)
+// Get all training coordinators for Excel export (deduplicated & sanitized)
 export const getAllCoordinatorsForExport = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const coordinators = await prisma.user.findMany({
@@ -2021,39 +2022,104 @@ export const getAllCoordinatorsForExport = async (req: AuthenticatedRequest, res
       orderBy: { name: 'asc' }
     });
 
-    const seen = new Set<string>();
-    const uniqueCoordinators: Array<{
+    const emailMap = new Map<string, {
       id: string;
       name: string;
       email: string;
       contact: string;
       designation: string;
       status: string;
-      organizations: string;
-    }> = [];
+      orgNames: Set<string>;
+    }>();
+
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
     for (const c of coordinators) {
-      const key = c.email ? c.email.toLowerCase().trim() : c.id;
-      if (!seen.has(key)) {
-        seen.add(key);
+      const rawName = (c.name || '').trim();
+      const rawEmail = (c.email || '').trim();
 
-        const orgNames = new Set<string>();
-        if (c.organization?.name) orgNames.add(c.organization.name.trim());
-        (c.organizations || []).forEach(o => {
-          if (o.organization?.name) orgNames.add(o.organization.name.trim());
-        });
+      // Skip placeholder or invalid records
+      if (!rawName || rawName === '-' || rawName.toLowerCase() === 'n/a') continue;
+      if (!rawEmail || rawEmail === '-' || rawEmail.toLowerCase() === 'n/a') continue;
 
-        uniqueCoordinators.push({
-          id: c.id,
-          name: c.name || '',
-          email: c.email || '',
-          contact: c.contactNumber || '',
-          designation: c.designation || '',
-          status: c.status || 'ACTIVE',
-          organizations: Array.from(orgNames).join(', ')
+      // Extract all valid emails from this record
+      const matchedEmails = rawEmail.match(emailRegex) || [];
+      if (matchedEmails.length === 0) continue;
+
+      // Collect organizations from this record
+      const currentOrgNames: string[] = [];
+      if (c.organization?.name?.trim()) currentOrgNames.push(c.organization.name.trim());
+      (c.organizations || []).forEach(o => {
+        if (o.organization?.name?.trim()) currentOrgNames.push(o.organization.name.trim());
+      });
+
+      // If it's a composite record (e.g. "Angeline Tan / Janice Lam")
+      if (matchedEmails.length > 1 || rawName.includes('/')) {
+        const splitNames = rawName.split('/').map(n => n.trim()).filter(Boolean);
+        const splitContacts = (c.contactNumber || '').split(/[\/,]/).map(cn => cn.trim()).filter(Boolean);
+
+        matchedEmails.forEach((emailItem, idx) => {
+          const normEmail = emailItem.toLowerCase().trim();
+          const personName = splitNames[idx] || splitNames[0] || rawName;
+          const personContact: string = splitContacts[idx] || (splitContacts.length === 1 ? splitContacts[0] || '' : '');
+
+          if (emailMap.has(normEmail)) {
+            const existing = emailMap.get(normEmail)!;
+            currentOrgNames.forEach(org => existing.orgNames.add(org));
+            // Prefer cleaner non-composite name if existing was composite
+            if (existing.name.includes('/') && !personName.includes('/')) {
+              existing.name = personName;
+            }
+          } else {
+            emailMap.set(normEmail, {
+              id: `${c.id}-${idx}`,
+              name: personName,
+              email: normEmail,
+              contact: personContact,
+              designation: c.designation || '',
+              status: c.status || 'ACTIVE',
+              orgNames: new Set<string>(currentOrgNames)
+            });
+          }
         });
+      } else {
+        // Single clean coordinator
+        const firstEmail = matchedEmails[0];
+        if (!firstEmail) continue;
+        const normEmail = firstEmail.toLowerCase().trim();
+        if (emailMap.has(normEmail)) {
+          const existing = emailMap.get(normEmail)!;
+          currentOrgNames.forEach(org => existing.orgNames.add(org));
+          if (!existing.contact && c.contactNumber) existing.contact = c.contactNumber.trim();
+          if (!existing.designation && c.designation) existing.designation = c.designation.trim();
+          if (existing.name.includes('/') && !rawName.includes('/')) {
+            existing.name = rawName;
+          }
+        } else {
+          emailMap.set(normEmail, {
+            id: c.id,
+            name: rawName,
+            email: normEmail,
+            contact: (c.contactNumber || '').trim(),
+            designation: (c.designation || '').trim(),
+            status: c.status || 'ACTIVE',
+            orgNames: new Set<string>(currentOrgNames)
+          });
+        }
       }
     }
+
+    const uniqueCoordinators = Array.from(emailMap.values())
+      .map(tc => ({
+        id: tc.id,
+        name: tc.name,
+        email: tc.email,
+        contact: tc.contact,
+        designation: tc.designation,
+        status: tc.status,
+        organizations: Array.from(tc.orgNames).join(', ')
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     return res.json({
       success: true,
@@ -2062,5 +2128,48 @@ export const getAllCoordinatorsForExport = async (req: AuthenticatedRequest, res
   } catch (error: any) {
     console.error('Get all coordinators for export error:', error);
     return errorResponse(res, 500, error.message || 'Failed to fetch coordinators for export');
+  }
+};
+
+// Manually unlock training coordinator account
+export const unlockCoordinator = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { coordinatorId } = req.params;
+    if (!coordinatorId) {
+      return errorResponse(res, 400, 'Coordinator ID is required');
+    }
+
+    const coordinator = await prisma.user.findFirst({
+      where: { id: coordinatorId, role: 'TRAINING_COORDINATOR' }
+    });
+    if (!coordinator) {
+      return errorResponse(res, 404, 'Training coordinator not found');
+    }
+
+    await prisma.user.update({
+      where: { id: coordinatorId },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null
+      }
+    });
+
+    await AuditService.log({
+      userId: coordinatorId,
+      action: 'Account Unlocked',
+      actionType: AuditActionType.UPDATE,
+      tableName: 'users',
+      recordId: coordinatorId,
+      details: `Coordinator account manually unlocked by administrator (${req.user?.email || 'admin'})`,
+      performedBy: req.user?.userId || 'admin'
+    }, req);
+
+    return res.status(200).json({
+      success: true,
+      message: `Coordinator account for ${coordinator.name} has been unlocked.`
+    });
+  } catch (error: any) {
+    console.error('Unlock coordinator error:', error);
+    return errorResponse(res, 500, error.message || 'Failed to unlock coordinator');
   }
 };

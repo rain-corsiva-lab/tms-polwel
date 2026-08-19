@@ -478,7 +478,7 @@ function DashboardContent() {
                       <TableHead>Start Date</TableHead>
                       <TableHead>End Date</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Participants</TableHead>
+                      <TableHead>Learners</TableHead>
                       <TableHead>Action</TableHead>
                     </TableRow>
                   </TableHeader>

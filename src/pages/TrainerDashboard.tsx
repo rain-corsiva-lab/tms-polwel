@@ -387,7 +387,7 @@ export default function TrainerDashboard() {
               <Card>
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-primary">{statistics.totalLearnersTrained}</div>
-                  <div className="text-sm text-muted-foreground">Participants Trained</div>
+                  <div className="text-sm text-muted-foreground">Learners Trained</div>
                 </CardContent>
               </Card>
               <Card>
@@ -609,7 +609,7 @@ export default function TrainerDashboard() {
                       <th className="text-left p-2">Course</th>
                       <th className="text-left p-2">Date</th>
                       <th className="text-left p-2">Time</th>
-                      <th className="text-left p-2">Participants</th>
+                      <th className="text-left p-2">Learners</th>
                       <th className="text-left p-2">Venue</th>
                       <th className="text-left p-2">Status</th>
                     </tr>

@@ -1124,7 +1124,7 @@ export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Resp
           where: { deletedAt: null, enrollmentStatus: { not: 'WITHDRAWN' } },
           orderBy: [{ learner: { fullname: 'asc' } }],
           include: {
-            learner: { select: { fullname: true, designation: true } },
+            learner: { select: { fullname: true, email: true, designation: true } },
             clientOrganization: { select: { name: true } },
           },
         },
@@ -1138,6 +1138,7 @@ export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Resp
       endDate: string;
       trainers: string;
       learnerName: string;
+      email: string;
       organisation: string;
       buNumber: string;
       designation: string;
@@ -1169,6 +1170,7 @@ export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Resp
           endDate: endDt,
           trainers,
           learnerName: crl.learner?.fullname ?? '',
+          email: crl.learner?.email ?? '',
           organisation: crl.clientOrganization?.name ?? '',
           buNumber: crl.buNumber ?? '',
           designation: crl.learner?.designation ?? '',
@@ -1196,6 +1198,7 @@ export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Resp
       { header: 'End Date',               key: 'endDate',        },
       { header: 'Trainer(s)',             key: 'trainers',        },
       { header: 'Learner Name',           key: 'learnerName',    },
+      { header: 'Email Address',          key: 'email',          },
       { header: 'Organisation',           key: 'organisation',   },
       { header: 'BU Number',              key: 'buNumber',       },
       { header: 'Designation',            key: 'designation',    },
@@ -1223,6 +1226,7 @@ export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Resp
         row.endDate,
         row.trainers,
         row.learnerName,
+        row.email,
         row.organisation,
         row.buNumber,
         row.designation,
@@ -1244,7 +1248,7 @@ export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Resp
     });
 
     // Auto-fit column widths based on content
-    const colKeys = ['courseTitle','startDate','endDate','trainers','learnerName','organisation','buNumber','designation','paymentMethod','runType','billingMonth'] as const;
+    const colKeys = ['courseTitle','startDate','endDate','trainers','learnerName','email','organisation','buNumber','designation','paymentMethod','runType','billingMonth'] as const;
     const MIN_COL_WIDTH = 12;
     const MAX_COL_WIDTH = 55;
 
@@ -1264,7 +1268,7 @@ export const downloadLearnerReport = async (req: AuthenticatedRequest, res: Resp
     // Add thin borders to all cells
     const totalRows = rows.length + 1; // +1 for header
     for (let r = 1; r <= totalRows; r++) {
-      for (let c = 1; c <= 11; c++) {
+      for (let c = 1; c <= 12; c++) {
         const cell = ws.getCell(r, c);
         cell.border = {
           top:    { style: 'thin', color: { argb: 'FFD0D9E4' } },

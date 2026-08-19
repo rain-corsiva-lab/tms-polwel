@@ -52,7 +52,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
                 onChange={(e) => handleNumericInputChange("defaultCourseFee", e.target.value)}
                 placeholder="0.00"
               />
-              <p className="text-xs text-gray-500">Fee charged to participants/client</p>
+              <p className="text-xs text-gray-500">Fee charged to learners/client</p>
             </div>
           </div>
         </CardContent>
@@ -124,7 +124,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
               <div className="space-y-2">
                 <Label htmlFor="venueMaxParticipants" className="text-sm font-medium">
-                  Max Participants (Venue) <span className="text-gray-400">(Optional)</span>
+                  Max Learners (Venue) <span className="text-gray-400">(Optional)</span>
                 </Label>
                 <Input
                   id="venueMaxParticipants"
@@ -132,9 +132,9 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
                   min="1"
                   value={typeof formData.venueMaxParticipants === "number" ? formData.venueMaxParticipants : formData.venueMaxParticipants || ""}
                   onChange={(e) => onInputChange("venueMaxParticipants", e.target.value ? parseInt(e.target.value, 10) : "")}
-                  placeholder="Enter maximum participants"
+                  placeholder="Enter maximum learners"
                 />
-                <p className="text-xs text-gray-500">Maximum participants before per-head charges apply</p>
+                <p className="text-xs text-gray-500">Maximum learners before per-head charges apply</p>
               </div>
 
               <div className="space-y-2">
@@ -150,7 +150,7 @@ const FeesRevenueTab: React.FC<FeesRevenueTabProps> = ({ formData, onInputChange
                   onChange={(e) => onInputChange("perHeadPriceIfMaxExceed", e.target.value ? parseFloat(e.target.value) : "")}
                   placeholder="0.00"
                 />
-                <p className="text-xs text-gray-500">Additional fee per participant if maximum is exceeded</p>
+                <p className="text-xs text-gray-500">Additional fee per learner if maximum is exceeded</p>
               </div>
             </div>
           )}

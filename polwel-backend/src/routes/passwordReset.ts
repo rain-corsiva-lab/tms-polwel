@@ -165,24 +165,53 @@ router.post(
       return;
     }
 
+    // Check if new password matches current password
+    const isSameAsCurrent = await bcrypt.compare(newPassword, user.password);
+    if (isSameAsCurrent) {
+      res.status(400).json({
+        success: false,
+        error: 'New password cannot be the same as your current password.',
+        code: 'PASSWORD_REUSE_FORBIDDEN'
+      });
+      return;
+    }
+
+    // Check last 5 passwords
+    const history = Array.isArray(user.passwordHistory) ? (user.passwordHistory as string[]) : [];
+    for (const oldHash of history) {
+      if (typeof oldHash === 'string') {
+        const matchesOld = await bcrypt.compare(newPassword, oldHash);
+        if (matchesOld) {
+          res.status(400).json({
+            success: false,
+            error: 'New password cannot be reused. It must not match any of your last 5 passwords.',
+            code: 'PASSWORD_REUSE_FORBIDDEN'
+          });
+          return;
+        }
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const updatedHistory = [user.password, ...history.filter(h => h !== user.password)].slice(0, 5);
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
         password: hashedPassword,
+        passwordHistory: updatedHistory,
         resetToken: null,
         resetTokenExpiry: null,
         failedLoginAttempts: 0,
         lockedUntil: null,
-        passwordExpiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+        passwordExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 365 days
       }
     });
 
     await AuditService.logPasswordChange(
       user.id,
       user.id,
-      `Password successfully reset via email link - Account security restored.`,
+      `Password successfully reset via email link. Expiration set to 365 days.`,
       req
     );
 

@@ -406,7 +406,7 @@ const WaiverRequests: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[100px]">Course Run ID</TableHead>
-                        <TableHead className="min-w-[150px]"> Participant Name</TableHead>
+                        <TableHead className="min-w-[150px]">Learner Name</TableHead>
                         <TableHead className="min-w-[150px]">Organization</TableHead>
                         <TableHead className="min-w-[180px]">Course Name</TableHead>
                         <TableHead className="min-w-[150px]">Submitted By</TableHead>

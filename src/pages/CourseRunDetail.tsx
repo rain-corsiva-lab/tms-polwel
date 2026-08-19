@@ -968,20 +968,20 @@ const CourseRunDetail: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `participant-list-${courseRun.serialNumber || courseRun.id}.xlsx`;
+      a.download = `learner-list-${courseRun.serialNumber || courseRun.id}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
 
       toast.dismiss(toastId);
       toast.success(
-        `Exported ${enrolledLearners.length} participant${enrolledLearners.length === 1 ? "" : "s"}${
+        `Exported ${enrolledLearners.length} learner${enrolledLearners.length === 1 ? "" : "s"}${
           withdrawnLearners.length > 0 ? ` and ${withdrawnLearners.length} withdrawn` : ""
         }`,
       );
     } catch (error: any) {
-      console.error("Export participant list error", error);
+      console.error("Export learner list error", error);
       toast.dismiss(toastId);
-      toast.error(error?.message || "Failed to export participant list");
+      toast.error(error?.message || "Failed to export learner list");
     } finally {
       setExportingParticipants(false);
     }
@@ -1757,7 +1757,7 @@ const CourseRunDetail: React.FC = () => {
                 disabled={!courseRun.individualRegistrationRequired || courseRun.status === "DRAFT"}
                 className={!courseRun.individualRegistrationRequired || courseRun.status === "DRAFT" ? "opacity-50 cursor-not-allowed" : ""}
               >
-                Participants ({enrolledParticipantsCount})
+                Learners ({enrolledParticipantsCount})
               </TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment ({courseRun.courseRunTrainers?.length || 0})</TabsTrigger>
               <TabsTrigger value="fees-expenses">Revenue & Expenses</TabsTrigger>
@@ -2055,14 +2055,14 @@ const CourseRunDetail: React.FC = () => {
               </div>
             </TabsContent>
 
-            {/* Participants Tab */}
+            {/* Learners Tab */}
             <TabsContent value="learner-particulars" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Learner Management</h3>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={handleExportParticipantList} disabled={exportingParticipants}>
                     <Download className="h-4 w-4 mr-2" />
-                    {exportingParticipants ? "Exporting participants..." : "Export participant list"}
+                    {exportingParticipants ? "Exporting learners..." : "Export learner list"}
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setImportLearnersDialogOpen(true)}>
                     <Download className="h-4 w-4 mr-2" />
@@ -2086,28 +2086,24 @@ const CourseRunDetail: React.FC = () => {
                     size="sm"
                     onClick={() => setAddLearnersDialogOpen(true)}
                     disabled={courseRun.status === "DRAFT"}
-                    title={courseRun.status === "DRAFT" ? "Cannot add participants while course run is in DRAFT status" : ""}
+                    title={courseRun.status === "DRAFT" ? "Cannot add learners while course run is in DRAFT status" : ""}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Participants
+                    Add Learners
                   </Button>
                 </div>
               </div>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Enrolled Participants ({enrolledParticipantsCount})</CardTitle>
-                  {/* <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAddLearnersDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Learners
-                  </Button> */}
+                  <CardTitle>Enrolled Learners ({enrolledParticipantsCount})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {/* Bulk Actions Toolbar */}
                   {selectedParticipants.size > 0 && (
                     <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                       <span className="text-sm font-medium text-blue-900">
-                        {selectedParticipants.size} participant{selectedParticipants.size !== 1 ? "s" : ""} selected
+                        {selectedParticipants.size} learner{selectedParticipants.size !== 1 ? "s" : ""} selected
                       </span>
                       <div className="flex gap-2">
                         <Button
@@ -2127,7 +2123,7 @@ const CourseRunDetail: React.FC = () => {
                           disabled={selectedParticipants.size === 0 || isCourseStarted()}
                           title={
                             isCourseStarted()
-                              ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent."
+                              ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark learners as Absent."
                               : ""
                           }
                         >
@@ -2173,7 +2169,7 @@ const CourseRunDetail: React.FC = () => {
                             .map((learnerRecord) => (
                               <TableRow key={learnerRecord.id}>
                                 <TableCell>
-                                  <input
+                                   <input
                                     type="checkbox"
                                     className="rounded"
                                     checked={selectedParticipants.has(learnerRecord.id)}
@@ -2243,7 +2239,7 @@ const CourseRunDetail: React.FC = () => {
                                         className={isCourseStarted() ? "opacity-50 cursor-not-allowed" : ""}
                                         title={
                                           isCourseStarted()
-                                            ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark participants as Absent."
+                                            ? "Withdrawal is not available on or after the course start date. Use attendance tracking to mark learners as Absent."
                                             : ""
                                         }
                                       >
@@ -2262,8 +2258,8 @@ const CourseRunDetail: React.FC = () => {
                             <TableCell colSpan={10} className="text-center py-8">
                               <div className="text-gray-500">
                                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-medium mb-2">No participants enrolled</p>
-                                <p className="text-sm">Add participants to get started.</p>
+                                <p className="text-lg font-medium mb-2">No learners enrolled</p>
+                                <p className="text-sm">Add learners to get started.</p>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -2274,11 +2270,11 @@ const CourseRunDetail: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Withdrawn Participants Section */}
+              {/* Withdrawn Learners Section */}
               {courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length > 0 && (
                 <Card className="mt-6">
                   <CardHeader>
-                    <CardTitle>Withdrawn Participants ({courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length || 0})</CardTitle>
+                    <CardTitle>Withdrawn Learners ({courseRun.courseRunLearners?.filter((l) => l.enrollmentStatus === "WITHDRAWN").length || 0})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
@@ -3023,14 +3019,15 @@ const CourseRunDetail: React.FC = () => {
         courseRun={courseRun as any}
         courseRunId={id!}
         baseCourseFee={courseRun?.baseCourseFee || 0}
-        onSuccess={handleEnrollmentSuccess}
+        onSuccess={loadCourseRunDetail}
       />
       <ImportLearnersDialog
         open={importLearnersDialogOpen}
         onOpenChange={setImportLearnersDialogOpen}
         courseRunId={id!}
+        courseRun={courseRun as any}
         baseCourseFee={courseRun?.baseCourseFee || 0}
-        onSuccess={handleImportSuccess}
+        onSuccess={loadCourseRunDetail}
       />
       <AttendanceListDialog
         open={attendanceDialogOpen}

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus, AuditActionType } from '@prisma/client';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
@@ -533,6 +533,8 @@ export const getPolwelUsers = async (req: AuthenticatedRequest, res: Response) =
           role: true,
           status: true,
           lastLogin: true,
+          lockedUntil: true,
+          failedLoginAttempts: true,
           createdAt: true,
           updatedAt: true,
           permissions: {
@@ -594,6 +596,8 @@ export const getPolwelUserById = async (req: AuthenticatedRequest, res: Response
           role: true,
           status: true,
           lastLogin: true,
+          lockedUntil: true,
+          failedLoginAttempts: true,
           createdAt: true,
           updatedAt: true,
           permissions: {
@@ -1289,6 +1293,61 @@ export const updateUserStatus = async (req: AuthenticatedRequest, res: Response)
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+};
+
+// Manually unlock POLWEL user account
+export const unlockPolwelUser = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, email: true, role: true, lockedUntil: true, failedLoginAttempts: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null
+      }
+    });
+
+    await AuditService.log({
+      userId: id,
+      action: 'Account Unlocked',
+      actionType: AuditActionType.UPDATE,
+      tableName: 'users',
+      recordId: id,
+      details: `Account manually unlocked by administrator (${req.user?.email || 'admin'})`,
+      performedBy: req.user?.userId || 'admin'
+    }, req);
+
+    return res.json({
+      success: true,
+      message: `Account for ${user.name} has been successfully unlocked.`
+    });
+  } catch (error) {
+    console.error('Unlock user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to unlock user'
     });
   }
 };

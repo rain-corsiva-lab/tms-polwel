@@ -346,6 +346,7 @@ const ClientOrganisations = () => {
 
       const rows = coordinators.map((tc: any) => ({
         Name: tc.name ?? "",
+        Organisation: tc.organizations ?? tc.organization ?? "",
         Email: tc.email ?? "",
         Contact: tc.contact ?? "",
         Designation: tc.designation ?? "",
@@ -354,6 +355,7 @@ const ClientOrganisations = () => {
 
       const columns = [
         { header: "Name", key: "Name" },
+        { header: "Organisation", key: "Organisation" },
         { header: "Email", key: "Email" },
         { header: "Contact", key: "Contact" },
         { header: "Designation", key: "Designation" },

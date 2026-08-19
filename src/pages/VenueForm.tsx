@@ -180,13 +180,13 @@ const VenueForm = () => {
         fee: typeof formData.fee === "string" ? parseFloat(formData.fee) : formData.fee,
         ...(formData.maxParticipants &&
           formData.maxParticipants !== "" && {
-            maxParticipants: typeof formData.maxParticipants === "string" ? parseInt(formData.maxParticipants) : formData.maxParticipants,
-          }),
+          maxParticipants: typeof formData.maxParticipants === "string" ? parseInt(formData.maxParticipants) : formData.maxParticipants,
+        }),
         ...(formData.perHeadPriceIfMaxExceed &&
           formData.perHeadPriceIfMaxExceed !== "" && {
-            perHeadPriceIfMaxExceed:
-              typeof formData.perHeadPriceIfMaxExceed === "string" ? parseFloat(formData.perHeadPriceIfMaxExceed) : formData.perHeadPriceIfMaxExceed,
-          }),
+          perHeadPriceIfMaxExceed:
+            typeof formData.perHeadPriceIfMaxExceed === "string" ? parseFloat(formData.perHeadPriceIfMaxExceed) : formData.perHeadPriceIfMaxExceed,
+        }),
         contacts: validContacts,
         remarks: formData.remarks.trim(),
         status: formData.status as "ACTIVE" | "INACTIVE" | "MAINTENANCE",
@@ -307,20 +307,20 @@ const VenueForm = () => {
             {/* Conditional fields for per_venue fee type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="maxParticipants">Maximum Capacity for Venue</Label>
+                <Label htmlFor="maxParticipants">Max Learners</Label>
                 <Input
                   id="maxParticipants"
                   type="number"
                   min="1"
                   value={formData.maxParticipants}
                   onChange={(e) => handleInputChange("maxParticipants", e.target.value)}
-                  placeholder="Maximum participants allowed"
+                  placeholder="Maximum learners allowed"
                 />
-                <p className="text-xs text-gray-500">If the number of participants exceeds this limit, additional per-head charges will apply</p>
+                <p className="text-xs text-gray-500">If the number of learners exceeds this limit, additional per-head charges will apply</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="perHeadPriceIfMaxExceed">Per Head Charge for Exceeding Capacity</Label>
+                <Label htmlFor="perHeadPriceIfMaxExceed">Per Head Fee if Max Exceeded ($)</Label>
                 <Input
                   id="perHeadPriceIfMaxExceed"
                   type="number"
@@ -328,9 +328,9 @@ const VenueForm = () => {
                   min="0"
                   value={formData.perHeadPriceIfMaxExceed}
                   onChange={(e) => handleInputChange("perHeadPriceIfMaxExceed", e.target.value)}
-                  placeholder="Price per extra participant"
+                  placeholder="Price per extra learner"
                 />
-                <p className="text-xs text-gray-500">Charge per participant beyond the maximum limit</p>
+                <p className="text-xs text-gray-500">Charge per learner beyond the maximum limit</p>
               </div>
             </div>
 

@@ -57,7 +57,7 @@ export default function BoardReport() {
       Year: quarter.year,
       "Total Runs": quarter.totalRuns,
       "Completed Runs": quarter.completedRuns,
-      "Total Participants": quarter.totalLearners,
+      "Total Learners": quarter.totalLearners,
       "Avg Attendance": `${quarter.averageAttendance}%`,
       Revenue: `$${quarter.totalRevenue.toFixed(2)}`,
       "Top Course": quarter.topCourse,
@@ -117,7 +117,7 @@ export default function BoardReport() {
                     <TableHead>Completed</TableHead>
                     <TableHead>Cancelled</TableHead>
                     <TableHead>Total Revenue</TableHead>
-                    <TableHead>Participants</TableHead>
+                    <TableHead>Learners</TableHead>
                     <TableHead>Avg Attendance</TableHead>
                     <TableHead>Top Course</TableHead>
                     <TableHead className="text-right">Actions</TableHead>

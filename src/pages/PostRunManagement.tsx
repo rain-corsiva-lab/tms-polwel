@@ -553,7 +553,7 @@ const PostRunManagement: React.FC = () => {
                   </PopoverContent>
                 </Popover>
               </TableHead>
-              <TableHead className="min-w-[100px]">Participants</TableHead>
+              <TableHead className="min-w-[100px]">Learners</TableHead>
               <TableHead className="min-w-[120px]">
                 <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
                   <PopoverTrigger asChild>

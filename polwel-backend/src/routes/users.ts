@@ -149,6 +149,16 @@ router.patch('/:id/password', authenticateToken, authorizeOwnershipOrAdmin('id')
       return;
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, password: true, passwordHistory: true }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
     // For non-admin users, verify current password
     if (currentUser.role !== 'POLWEL' || currentUser.userId === id) {
       if (!currentPassword) {
@@ -156,25 +166,41 @@ router.patch('/:id/password', authenticateToken, authorizeOwnershipOrAdmin('id')
         return;
       }
 
-      const user = await prisma.user.findUnique({
-        where: { id },
-        select: { password: true }
-      });
-
-      if (!user || !await bcrypt.compare(currentPassword, user.password)) {
+      if (!await bcrypt.compare(currentPassword, user.password)) {
         res.status(400).json({ error: 'Current password is incorrect' });
         return;
       }
     }
 
+    // Check if new password matches current password
+    if (await bcrypt.compare(newPassword, user.password)) {
+      res.status(400).json({ error: 'New password cannot be the same as your current password.' });
+      return;
+    }
+
+    // Check last 5 passwords
+    const history = Array.isArray(user.passwordHistory) ? (user.passwordHistory as string[]) : [];
+    for (const oldHash of history) {
+      if (typeof oldHash === 'string') {
+        if (await bcrypt.compare(newPassword, oldHash)) {
+          res.status(400).json({ error: 'New password cannot be reused. It must not match any of your last 5 passwords.' });
+          return;
+        }
+      }
+    }
+
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const updatedHistory = [user.password, ...history.filter(h => h !== user.password)].slice(0, 5);
 
     await prisma.user.update({
       where: { id },
       data: { 
         password: hashedPassword,
-        passwordExpiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+        passwordHistory: updatedHistory,
+        passwordExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
+        failedLoginAttempts: 0,
+        lockedUntil: null,
         refreshToken: null // Invalidate refresh tokens
       }
     });

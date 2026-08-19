@@ -86,6 +86,8 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response) =>
   }
 };
 
+import AuditService from '../services/auditService';
+
 export const changePassword = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -112,22 +114,53 @@ export const changePassword = async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ success: false, message: 'Current password is required' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, password: true, passwordHistory: true }
+    });
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
 
+    // Check if new password is same as current password
+    const isSameAsCurrent = await bcrypt.compare(newPassword, user.password);
+    if (isSameAsCurrent) {
+      return res.status(400).json({ success: false, message: 'New password cannot be the same as your current password.' });
+    }
+
+    // Check history (last 5 passwords cannot be reused)
+    const history = Array.isArray(user.passwordHistory) ? (user.passwordHistory as string[]) : [];
+    for (const oldHash of history) {
+      if (typeof oldHash === 'string') {
+        const matchesOld = await bcrypt.compare(newPassword, oldHash);
+        if (matchesOld) {
+          return res.status(400).json({ success: false, message: 'New password cannot be reused. It must not match any of your last 5 passwords.' });
+        }
+      }
+    }
+
     const hashed = await bcrypt.hash(newPassword, 12);
+    const updatedHistory = [user.password, ...history.filter(h => h !== user.password)].slice(0, 5);
 
     await prisma.user.update({
       where: { id: userId },
       data: {
         password: hashed,
-        passwordExpiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+        passwordHistory: updatedHistory,
+        passwordExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days expiry
+        failedLoginAttempts: 0,
+        lockedUntil: null,
         refreshToken: null
       }
     });
+
+    await AuditService.logPasswordChange(
+      userId,
+      userId,
+      `User ${user.name} changed their password. Expiration set to 365 days.`,
+      req
+    );
 
     return res.json({ success: true, message: 'Password updated successfully' });
   } catch (error) {

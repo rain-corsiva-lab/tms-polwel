@@ -345,7 +345,7 @@ const Login = () => {
                 Trainer
               </Button>
               <Button variant="outline" size="sm" onClick={() => fillTestCredentials("learner")} disabled={loading}>
-                Participant
+                Learner
               </Button>
             </div>
           </div>

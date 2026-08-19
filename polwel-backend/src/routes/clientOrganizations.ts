@@ -24,6 +24,7 @@ import {
   updateBuNumber,
   deleteBuNumber,
   getAllCoordinatorsForExport,
+  unlockCoordinator,
 } from '../controllers/clientOrganizationsController';
 import {
   getCoursesByLearnersRanking,
@@ -63,6 +64,7 @@ router.post('/:organizationId/coordinators/:coordinatorId/link', authorizeRoles(
 router.put('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), requirePermissions('clients.edit'), updateOrganizationCoordinator);
 router.delete('/:organizationId/coordinators/:coordinatorId', authorizeRoles('POLWEL'), requirePermissions('clients.delete'), deleteOrganizationCoordinator);
 router.post('/:organizationId/coordinators/:coordinatorId/resend-setup', authorizeRoles('POLWEL'), resendCoordinatorSetup);
+router.post('/coordinators/:coordinatorId/unlock', authorizeRoles('POLWEL'), requirePermissions('clients.edit'), unlockCoordinator);
 
 // Learners routes
 router.get('/:organizationId/learners', authorizeRoles('POLWEL', 'TRAINING_COORDINATOR'), authorizeOrganization, requirePermissions('clients.view'), getOrganizationLearners);

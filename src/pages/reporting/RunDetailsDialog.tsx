@@ -207,15 +207,15 @@ export function RunDetailsDialog({ runId, open, onOpenChange }: RunDetailsDialog
 
             <Separator />
 
-            {/* Participants & Attendance */}
+            {/* Learners & Attendance */}
             <div>
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4" />
-                Participants & Attendance
+                Learners & Attendance
               </h3>
               <div className="mb-3">
                 <p className="text-sm">
-                  Total Participants: <span className="font-semibold">{details.learners?.length || 0}</span>
+                  Total Learners: <span className="font-semibold">{details.learners?.length || 0}</span>
                 </p>
                 <p className="text-sm">
                   Attendance Rate: <span className="font-semibold">{calculateAttendanceRate()}%</span>
@@ -249,7 +249,7 @@ export function RunDetailsDialog({ runId, open, onOpenChange }: RunDetailsDialog
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-sm text-muted-foreground">No participants enrolled</p>
+                <p className="text-sm text-muted-foreground">No learners enrolled</p>
               )}
             </div>
 

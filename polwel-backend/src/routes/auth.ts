@@ -20,6 +20,9 @@ import {
   logoutSchema,
 } from '../schemas/authSchemas';
 
+import AuditService from '../services/auditService';
+import { AuditActionType } from '@prisma/client';
+
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -43,17 +46,20 @@ function generateAccessToken(user: any): string {
 }
 
 // Generate refresh token (long-lived)
-function generateRefreshToken(user: any, options?: { rememberMe?: boolean }): string {
-  const expiresIn = options?.rememberMe ? '30d' : '7d';
-
+function generateRefreshToken(user: any, options: { rememberMe?: boolean } = {}): string {
+  const expiresIn = options.rememberMe ? '30d' : '7d';
   return jwt.sign(
-    { userId: user.id, email: user.email },
+    { userId: user.id },
     JWT_REFRESH_SECRET,
     { expiresIn }
   );
 }
 
-async function issueTokensForUser(userId: string, options?: { rememberMe?: boolean }) {
+// Helper to issue tokens, update database session, and construct standardized response payload
+async function issueTokensForUser(
+  userId: string,
+  options: { rememberMe?: boolean } = {}
+) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -64,19 +70,18 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
         }
       },
       permissions: {
-        select: { permissionName: true, granted: true },
-      },
-    },
+        select: { permissionName: true, granted: true }
+      }
+    }
   });
 
   if (!user) {
-    throw new Error('User not found during MFA verification');
+    throw new Error('User not found during token issuance');
   }
 
   const userEmail = user.email;
-
   if (!userEmail) {
-    throw new Error('User email is missing');
+    throw new Error('User account is missing an email address');
   }
 
   const normalizedUser = { ...user, email: userEmail };
@@ -94,6 +99,8 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
     },
   });
 
+  const passwordExpired = Boolean(user.passwordExpiry && new Date() > user.passwordExpiry);
+
   const userData = {
     id: user.id,
     email: userEmail,
@@ -105,6 +112,8 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
     designation: user.designation,
     division: user.division,
     lastLogin: new Date(),
+    passwordExpiry: user.passwordExpiry,
+    passwordExpired,
     permissions: (user.permissions || [])
       .filter((p: any) => p.granted)
       .map((p: any) => p.permissionName),
@@ -121,6 +130,7 @@ async function issueTokensForUser(userId: string, options?: { rememberMe?: boole
     accessToken,
     refreshToken,
     user: userData,
+    passwordExpired,
     expiresIn: '7d',
   };
 }
@@ -161,14 +171,16 @@ router.post(
       return;
     }
 
-    // Check if account is locked
+    // Check if account is locked (auto-lock for 30 minutes after 3 failed attempts)
     if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesRemaining = Math.ceil((user.lockedUntil.getTime() - Date.now()) / (60 * 1000));
       console.log(`❌ [AUTH] Account locked: ${email} (locked until: ${user.lockedUntil})`);
       res.status(423).json({ 
-        success: false,
-        error: 'Account is temporarily locked due to multiple failed login attempts',
+        success: false, 
+        error: `Account is temporarily locked due to 3 failed login attempts. Please try again in ${minutesRemaining} minute(s) or contact a POLWEL administrator.`,
         code: 'ACCOUNT_LOCKED',
-        lockedUntil: user.lockedUntil
+        lockedUntil: user.lockedUntil,
+        minutesRemaining
       });
       return;
     }
@@ -178,18 +190,57 @@ router.post(
     if (!isValidPassword) {
       console.log(`❌ [AUTH] Invalid password for user: ${email}`);
       
-      const newAttempts = user.failedLoginAttempts + 1;
+      const newAttempts = (user.failedLoginAttempts || 0) + 1;
+      const isLockoutThreshold = newAttempts >= 3;
+      const lockoutDurationMs = 30 * 60 * 1000; // 30 minutes lockout
+      const lockedUntil = isLockoutThreshold ? new Date(Date.now() + lockoutDurationMs) : null;
+
       await prisma.user.update({
         where: { id: user.id },
         data: { 
           failedLoginAttempts: { increment: 1 },
-          ...(newAttempts >= 5 && {
-            lockedUntil: new Date(Date.now() + 15 * 60 * 1000) // Lock for 15 minutes
-          })
+          ...(isLockoutThreshold && { lockedUntil })
         }
       });
 
-      res.status(401).json({ success: false, error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' });
+      if (isLockoutThreshold) {
+        await AuditService.log({
+          userId: user.id,
+          action: 'Account Auto-Locked',
+          actionType: AuditActionType.UPDATE,
+          tableName: 'users',
+          recordId: user.id,
+          details: `Account auto-locked for 30 minutes due to 3 consecutive failed login attempts (IP: ${req.ip || 'unknown'})`,
+          performedBy: 'SYSTEM'
+        }, req);
+
+        res.status(423).json({ 
+          success: false, 
+          error: 'Account has been locked for 30 minutes due to 3 failed login attempts. Please contact a POLWEL administrator or try again later.', 
+          code: 'ACCOUNT_LOCKED',
+          lockedUntil,
+          minutesRemaining: 30
+        });
+        return;
+      }
+
+      await AuditService.log({
+        userId: user.id,
+        action: 'Login Failed',
+        actionType: AuditActionType.LOGIN,
+        tableName: 'users',
+        recordId: user.id,
+        details: `Failed login attempt (${newAttempts}/3) for email: ${email}`,
+        performedBy: user.id
+      }, req);
+
+      const remaining = Math.max(3 - newAttempts, 0);
+      res.status(401).json({ 
+        success: false, 
+        error: `Invalid credentials. You have ${remaining} attempt(s) remaining before account lockout.`, 
+        code: 'INVALID_CREDENTIALS',
+        attemptsRemaining: remaining
+      });
       return;
     }
 
@@ -229,6 +280,10 @@ router.post(
     }
 
     const authPayload = await issueTokensForUser(user.id, { rememberMe });
+    
+    // Log successful login to Audit Trail
+    await AuditService.logLogin(user.id, `User login successful (${user.role})`, req);
+    
     const duration = Date.now() - startTime;
     console.log(`✅ [AUTH] Successful login for user: ${userEmail} (${user.role}) - Duration: ${duration}ms`);
 
@@ -413,6 +468,8 @@ router.post(
         where: { id: userId },
         data: { refreshToken: null }
       }).catch(() => {});
+
+      await AuditService.logLogout(userId, 'User logout successful', req).catch(() => {});
     }
 
     const duration = Date.now() - startTime;

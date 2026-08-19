@@ -272,7 +272,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="minParticipants">Min Participants *</Label>
+          <Label htmlFor="minParticipants">Min Learners *</Label>
           <Input
             id="minParticipants"
             type="number"
@@ -289,7 +289,7 @@ const CourseInformationTab: React.FC<CourseInformationTabProps> = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="maxParticipants">Max Participants</Label>
+          <Label htmlFor="maxParticipants">Max Learners</Label>
           <Input
             id="maxParticipants"
             type="number"

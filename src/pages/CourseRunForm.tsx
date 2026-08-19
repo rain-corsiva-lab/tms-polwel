@@ -682,7 +682,7 @@ const CourseRunForm: React.FC = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="course-info">Course Run Information</TabsTrigger>
-              <TabsTrigger value="learner-particulars">Participants</TabsTrigger>
+              <TabsTrigger value="learner-particulars">Learners</TabsTrigger>
               <TabsTrigger value="trainer-assignment">Trainer Assignment</TabsTrigger>
             </TabsList>
 
@@ -853,16 +853,16 @@ const CourseRunForm: React.FC = () => {
                           return (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label htmlFor="venueMaxParticipants">Max Participants (Venue)</Label>
+                                <Label htmlFor="venueMaxParticipants">Max Learners (Venue)</Label>
                                 <Input
                                   id="venueMaxParticipants"
                                   type="number"
                                   min={1}
                                   value={formData.venueMaxParticipants ?? ""}
                                   onChange={(e) => handleFieldChange("venueMaxParticipants", e.target.value ? parseInt(e.target.value, 10) : undefined)}
-                                  placeholder="Maximum participants allowed for this venue"
+                                  placeholder="Maximum learners allowed for this venue"
                                 />
-                                <p className="text-xs text-gray-500">If participants exceed this, per-head overage pricing applies</p>
+                                <p className="text-xs text-gray-500">If learners exceed this, per-head overage pricing applies</p>
                               </div>
 
                               <div className="space-y-2">
@@ -874,9 +874,9 @@ const CourseRunForm: React.FC = () => {
                                   min="0"
                                   value={formData.perHeadFeeIfMaxExceed ?? ""}
                                   onChange={(e) => handleFieldChange("perHeadFeeIfMaxExceed", e.target.value ? parseFloat(e.target.value) : undefined)}
-                                  placeholder="Price per extra participant"
+                                  placeholder="Price per extra learner"
                                 />
-                                <p className="text-xs text-gray-500">Charge per participant beyond the maximum limit</p>
+                                <p className="text-xs text-gray-500">Charge per learner beyond the maximum limit</p>
                               </div>
                             </div>
                           );
@@ -951,18 +951,18 @@ const CourseRunForm: React.FC = () => {
               </div>
             </TabsContent>
 
-            {/* Participants Tab */}
+            {/* Learners Tab */}
             <TabsContent value="learner-particulars" className="space-y-6 mt-6">
               <div>
-                <h3 className="text-lg font-medium mb-4">Participant Management</h3>
-                <p className="text-gray-600 mb-6">Manage participant enrollment and registration for this course run.</p>
+                <h3 className="text-lg font-medium mb-4">Learner Management</h3>
+                <p className="text-gray-600 mb-6">Manage learner enrollment and registration for this course run.</p>
 
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
                   <div className="text-gray-400 mb-4">
                     <Users className="h-16 w-16 mx-auto mb-2" />
                   </div>
-                  <p className="text-gray-700 font-medium mb-2">Participant particulars will be managed after the course run is created.</p>
-                  <p className="text-gray-600 text-sm">You can add participants individually or import them via CSV once the course run is set up.</p>
+                  <p className="text-gray-700 font-medium mb-2">Learner particulars will be managed after the course run is created.</p>
+                  <p className="text-gray-600 text-sm">You can add learners individually or import them via CSV once the course run is set up.</p>
                 </div>
               </div>
             </TabsContent>

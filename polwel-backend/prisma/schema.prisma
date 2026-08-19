@@ -49,6 +49,7 @@ model User {
   onboardingDate                  DateTime?
   designation                     String?
   isPrimaryCoordinator            Boolean                         @default(false)
+  passwordHistory                 Json?
   deletedAt                       DateTime?
   auditLogs                       AuditLog[]
   bookingsCreated                 Booking[]                       @relation("BookingCreatedBy")

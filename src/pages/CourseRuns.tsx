@@ -1550,7 +1550,7 @@ const CourseRuns: React.FC = () => {
                       </PopoverContent>
                     </Popover>
                   </TableHead>
-                  <TableHead>Participants</TableHead>
+                  <TableHead>Learners</TableHead>
                   <TableHead className="text-center">
                     <Popover open={openFilter === "status"} onOpenChange={(open) => setOpenFilter(open ? "status" : null)}>
                       <PopoverTrigger asChild>
@@ -1829,7 +1829,7 @@ const CourseRuns: React.FC = () => {
             <DialogTitle>Cancel course run</DialogTitle>
             <DialogDescription>
               {cancelDialog.courseRun
-                ? `Provide an optional reason for cancelling ${cancelDialog.courseRun.title}. Participants will be notified based on backend workflow settings.`
+                ? `Provide an optional reason for cancelling ${cancelDialog.courseRun.title}. Learners will be notified based on backend workflow settings.`
                 : ""}
             </DialogDescription>
           </DialogHeader>
@@ -1872,7 +1872,7 @@ const CourseRuns: React.FC = () => {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground px-3 py-2 bg-gray-50 border-t">
-                  Sample greeting uses the first enrolled participant&apos;s name when available; assigned trainers receive the same email with their name.
+                  Sample greeting uses the first enrolled learner&apos;s name when available; assigned trainers receive the same email with their name.
                 </p>
               </div>
 
@@ -1880,7 +1880,7 @@ const CourseRuns: React.FC = () => {
                 <Label htmlFor="cancelReason">Cancellation reason</Label>
                 <Textarea
                   id="cancelReason"
-                  placeholder="Let participants and stakeholders know why this run is cancelled (optional)."
+                  placeholder="Let learners and stakeholders know why this run is cancelled (optional)."
                   value={cancelDialog.reason}
                   onChange={(e) => setCancelDialog((prev) => ({ ...prev, reason: e.target.value.slice(0, 1000) }))}
                   rows={4}
@@ -1924,7 +1924,7 @@ const CourseRuns: React.FC = () => {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Files are stored with the cancellation record and attached to participant and trainer notification emails when sent.
+                  Files are stored with the cancellation record and attached to learner and trainer notification emails when sent.
                 </p>
               </div>
 
@@ -1938,7 +1938,7 @@ const CourseRuns: React.FC = () => {
                   value={cancelDialog.nextRunDate}
                   onChange={(e) => setCancelDialog((prev) => ({ ...prev, nextRunDate: e.target.value.slice(0, 200) }))}
                 />
-                <p className="text-xs text-muted-foreground">If provided, participants will be notified of the next available session date.</p>
+                <p className="text-xs text-muted-foreground">If provided, learners will be notified of the next available session date.</p>
               </div>
               <div className="space-y-2">
                 <Label>
@@ -1963,7 +1963,7 @@ const CourseRuns: React.FC = () => {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Rich text supported. Will be included in the cancellation notification email sent to participants and trainers.
+                  Rich text supported. Will be included in the cancellation notification email sent to learners and trainers.
                 </p>
               </div>
               <div className="space-y-2">
@@ -2016,11 +2016,11 @@ const CourseRuns: React.FC = () => {
               <div className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div>
                   <Label htmlFor="sendEmailsSwitch" className="text-sm">
-                    Send participant emails
+                    Send learner emails
                   </Label>
-                  <p className="text-xs text-gray-500">Notify enrolled participants about this transition.</p>
+                  <p className="text-xs text-gray-500">Notify enrolled learners about this transition.</p>
                   {workflowDialog.action.requiresLearnerEmails && (
-                    <p className="text-xs text-orange-600 mt-1">This action typically requires participant notifications.</p>
+                    <p className="text-xs text-orange-600 mt-1">This action typically requires learner notifications.</p>
                   )}
                 </div>
                 <Switch
@@ -2272,7 +2272,7 @@ const CourseRuns: React.FC = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Send Training Assignment Email</DialogTitle>
-              <DialogDescription>Send training assignment emails to participants and trainers.</DialogDescription>
+              <DialogDescription>Send training assignment emails to learners and trainers.</DialogDescription>
             </DialogHeader>
             {emailDialog.courseRun && (
               <div className="space-y-4">
@@ -2281,7 +2281,7 @@ const CourseRuns: React.FC = () => {
                     Course: <span className="font-medium text-gray-900">{emailDialog.courseRun.title}</span>
                   </p>
                   <p className="text-sm text-gray-600">
-                    Enrolled: <span className="font-medium text-gray-900">{emailDialog.courseRun.enrolled} participants</span>
+                    Enrolled: <span className="font-medium text-gray-900">{emailDialog.courseRun.enrolled} learners</span>
                   </p>
                 </div>
               </div>

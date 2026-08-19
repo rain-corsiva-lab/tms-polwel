@@ -164,7 +164,7 @@ export default function RunsByVenue() {
           Venue: run.venue?.name || "N/A",
           Location: run.venue?.location || "N/A",
           Capacity: capacity || "N/A",
-          Participants: learners,
+          Learners: learners,
           "Utilization %": capacity > 0 ? utilization : "N/A",
           "Start Date": formatDate(run.startDate),
           "End Date": formatDate(run.endDate),
@@ -295,7 +295,7 @@ export default function RunsByVenue() {
                       <TableHead>Course Name</TableHead>
                       <TableHead>Venue</TableHead>
                       <TableHead>Capacity</TableHead>
-                      <TableHead>Participants</TableHead>
+                      <TableHead>Learners</TableHead>
                       <TableHead>Start Date</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>

@@ -524,7 +524,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
           remarks: form.remarks,
         },
       });
-      toast({ title: "Updated", description: "Participant enrollment updated successfully" });
+      toast({ title: "Updated", description: "Learner enrollment updated successfully" });
       onSuccess?.();
       onOpenChange(false);
     } catch (e: any) {
@@ -545,7 +545,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
       if (errorMessage.toLowerCase().includes("email")) {
         errorMessage = "Email validation failed. Please check the email address.";
       } else if (errorMessage.toLowerCase().includes("not found")) {
-        errorMessage = "Participant enrollment not found. It may have been deleted.";
+        errorMessage = "Learner enrollment not found. It may have been deleted.";
       } else if (errorMessage.toLowerCase().includes("coordinator")) {
         errorMessage = "Invalid training coordinator selected.";
       } else if (errorMessage.toLowerCase().includes("discount")) {
@@ -568,7 +568,7 @@ export const EditLearnerDialog: React.FC<EditLearnerDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Edit Participant</DialogTitle>
+          <DialogTitle>Edit Learner</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6">

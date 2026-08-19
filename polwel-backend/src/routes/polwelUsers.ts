@@ -12,7 +12,8 @@ import {
   sendPasswordResetLink,
   getPolwelUserDetails,
   resendPolwelUserSetup,
-  updateUserStatus
+  updateUserStatus,
+  unlockPolwelUser
 } from '../controllers/polwelUsersController';
 
 const router = express.Router();
@@ -38,5 +39,6 @@ router.delete('/:id', requirePermissions('users.delete'), deletePolwelUser);
 router.post('/:id/reset-password', requirePermissions('users.edit'), resetPolwelUserPassword);
 router.post('/:id/send-reset-link', requirePermissions('users.edit'), sendPasswordResetLink);
 router.post('/:id/resend-setup', requirePermissions('users.edit'), resendPolwelUserSetup);
+router.post('/:id/unlock', requirePermissions('users.edit'), unlockPolwelUser);
 
 export default router;

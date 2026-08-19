@@ -121,6 +121,7 @@ interface AddLearnersDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   triggerLabel?: string;
+  initialMode?: "single" | "group" | "import";
 }
 
 interface SearchableSelectOption {
@@ -292,7 +293,13 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
     }
     onOpenChange?.(next);
   };
-  const [mode, setMode] = useState<"single" | "group" | "import">("single");
+  const [mode, setMode] = useState<"single" | "group" | "import">(initialMode || "single");
+
+  useEffect(() => {
+    if (dialogOpen && initialMode) {
+      setMode(initialMode);
+    }
+  }, [dialogOpen, initialMode]);
   const [loading, setLoading] = useState(false);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [allLearners, setAllLearners] = useState<Learner[]>([]);
@@ -1316,18 +1323,18 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
         <DialogTrigger asChild>
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="h-4 w-4 mr-2" />
-            {triggerLabel || "Add Participants"}
+            {triggerLabel || "Add Learners"}
           </Button>
         </DialogTrigger>
       )}
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Add Participants</DialogTitle>
+          <DialogTitle>Add Learners</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {/* Mode Selection */}
-          <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
             <Card
               className={`cursor-pointer transition-all ${mode === "single" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
               onClick={() => setMode("single")}
@@ -1335,7 +1342,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                 <Plus className="h-8 w-8 text-gray-400 mb-2" />
                 <h3 className="font-medium">Single Registration</h3>
-                <p className="text-sm text-gray-500">Add one participant at a time</p>
+                <p className="text-sm text-gray-500">Add one learner at a time</p>
               </CardContent>
             </Card>
             <Card
@@ -1345,19 +1352,19 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                 <Users className="h-8 w-8 text-gray-400 mb-2" />
                 <h3 className="font-medium">Group Registration</h3>
-                <p className="text-sm text-gray-500">Add multiple participants at once</p>
+                <p className="text-sm text-gray-500">Add multiple learners at once</p>
               </CardContent>
             </Card>
-            {/* <Card
-            className={`cursor-pointer transition-all ${mode === "import" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
-            onClick={() => setMode("import")}
-          >
-            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-              <FileSpreadsheet className="h-8 w-8 text-gray-400 mb-2" />
-              <h3 className="font-medium">Import from File</h3>
-              <p className="text-sm text-gray-500">Upload the participant template (CSV/XLSX)</p>
-            </CardContent>
-          </Card> */}
+            <Card
+              className={`cursor-pointer transition-all ${mode === "import" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
+              onClick={() => setMode("import")}
+            >
+              <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                <FileSpreadsheet className="h-8 w-8 text-gray-400 mb-2" />
+                <h3 className="font-medium">Import from File</h3>
+                <p className="text-sm text-gray-500">Upload learner template (CSV/XLSX)</p>
+              </CardContent>
+            </Card>
           </div>
 
           {mode === "single" ? (
