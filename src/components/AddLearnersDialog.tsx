@@ -273,6 +273,7 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
   open: controlledOpen,
   onOpenChange,
   triggerLabel,
+  initialMode,
 }) => {
   // Runtime guard
   const resolvedCourseRunId = courseRun?.id || courseRunId || "";
