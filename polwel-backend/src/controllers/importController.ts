@@ -597,6 +597,12 @@ export const importLearners = async (req: Request, res: Response): Promise<void>
               feesRemarks,
               invoiceNumber,
               remarks,
+              enrollmentStatus: EnrollmentStatus.ENROLLED,
+              deletedAt: null,
+              withdrawnReason: null,
+              withdrawnAt: null,
+              withdrawnBy: null,
+              supportingDocumentWithdrawnId: null,
             },
           });
           results.enrollmentsUpdated++;
@@ -1154,6 +1160,11 @@ export const importCourseRunLearners2 = async (req: Request, res: Response): Pro
                 receiptNumber,
                 enrollmentStatus: enrollStatus,
                 attendanceStatus: attendStatus,
+                deletedAt: null,
+                withdrawnReason: null,
+                withdrawnAt: null,
+                withdrawnBy: null,
+                supportingDocumentWithdrawnId: null,
                 ...(billingEntryId !== null ? { courseRunBillingEntryId: billingEntryId } : {}),
               },
             });

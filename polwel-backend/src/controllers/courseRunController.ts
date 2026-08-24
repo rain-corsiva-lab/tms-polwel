@@ -2017,7 +2017,9 @@ export const courseRunController = {
         learner = await prisma.learner.findUnique({
           where: { id: data.selectedLearnerId },
         });
-      } else {
+      }
+
+      if (!learner && data.email) {
         // Check if learner with same email already exists
         const existingLearner = await prisma.learner.findFirst({
           where: { 
@@ -2027,25 +2029,39 @@ export const courseRunController = {
         });
 
         if (existingLearner) {
-          res.status(400).json({
-            success: false,
-            error: `A learner with email ${data.email} already exists. Please select the existing learner or use a different email.`,
-          });
-          return;
-        }
-
-        // Create new learner
-        learner = await prisma.learner.create({
-          data: {
-            fullname: data.fullName,
-            designation: data.designation,
-            email: data.email,
-            contact: data.contactNumber,
+          learner = existingLearner;
+          const updateData: any = {};
+          if (data.fullName && data.fullName !== existingLearner.fullname) updateData.fullname = data.fullName;
+          if (data.designation && data.designation !== existingLearner.designation) updateData.designation = data.designation;
+          if (data.contactNumber && data.contactNumber !== existingLearner.contact) updateData.contact = data.contactNumber;
+          if (Object.keys(updateData).length > 0) {
+            learner = await prisma.learner.update({
+              where: { id: existingLearner.id },
+              data: updateData,
+            });
           }
-        });
+        } else {
+          // Create new learner
+          learner = await prisma.learner.create({
+            data: {
+              fullname: data.fullName,
+              designation: data.designation,
+              email: data.email,
+              contact: data.contactNumber,
+            }
+          });
+        }
       }
 
-      // Check if already enrolled
+      if (!learner) {
+        res.status(400).json({
+          success: false,
+          error: 'Learner information is required',
+        });
+        return;
+      }
+
+      // Check if already enrolled in this course run
       const existingEnrollment = await prisma.courseRunLearner.findUnique({
         where: {
           courseRunId_learnerId: {
@@ -2055,36 +2071,63 @@ export const courseRunController = {
         },
       });
 
+      const singleEnrollmentPayload = {
+        clientOrganizationId: data.division,
+        trainingCoordinatorId: coordinatorId,
+        departmentName: data.departmentName && data.departmentName.trim() ? data.departmentName : null,
+        division: data.organizationType,
+        buNumber: data.buNumber && data.buNumber.trim() ? data.buNumber : null,
+        paymentMode: data.paymentMode && data.paymentMode.trim() ? data.paymentMode : null,
+        currentDefaultCourseFee: data.currentDefaultCourseFee,
+        discountId: data.discountId,
+        discountPercentage: data.discountPercentage,
+        discountAmount: data.currentDefaultCourseFee * (data.discountPercentage / 100),
+        totalFees: data.totalFees,
+        feesRemarks: data.feesRemarks && data.feesRemarks.trim() ? data.feesRemarks : null,
+        invoiceNumber: data.invoiceNumber && data.invoiceNumber.trim() ? data.invoiceNumber : null,
+        remarks: data.remarks && data.remarks.trim() ? data.remarks : null,
+        enrollmentStatus: 'ENROLLED' as const,
+        deletedAt: null,
+        withdrawnReason: null,
+        withdrawnAt: null,
+        withdrawnBy: null,
+        supportingDocumentWithdrawnId: null,
+        attendanceStatus: 'PENDING' as const,
+      };
+
+      let enrollment;
       if (existingEnrollment) {
-        res.status(400).json({
-          success: false,
-          error: 'Learner is already enrolled in this course run',
+        if (!existingEnrollment.deletedAt && existingEnrollment.enrollmentStatus !== 'WITHDRAWN') {
+          res.status(400).json({
+            success: false,
+            error: 'Learner is already enrolled in this course run',
+          });
+          return;
+        }
+
+        // Reactivate & update previous enrollment
+        enrollment = await prisma.courseRunLearner.update({
+          where: { id: existingEnrollment.id },
+          data: singleEnrollmentPayload,
         });
-        return;
+      } else {
+        // Create enrollment
+        enrollment = await prisma.courseRunLearner.create({
+          data: {
+            courseRunId,
+            learnerId: learner.id,
+            ...singleEnrollmentPayload,
+          }
+        });
       }
 
-      // Create enrollment
-      const enrollment = await prisma.courseRunLearner.create({
-        data: {
-          courseRunId,
-          learnerId: learner.id,
-          clientOrganizationId: data.division,
-          trainingCoordinatorId: coordinatorId,
-          departmentName: data.departmentName && data.departmentName.trim() ? data.departmentName : null,
-          division: data.organizationType,
-          buNumber: data.buNumber && data.buNumber.trim() ? data.buNumber : null,
-          paymentMode: data.paymentMode && data.paymentMode.trim() ? data.paymentMode : null,
-          currentDefaultCourseFee: data.currentDefaultCourseFee,
-          discountId: data.discountId,
-          discountPercentage: data.discountPercentage,
-          discountAmount: data.currentDefaultCourseFee * (data.discountPercentage / 100),
-          totalFees: data.totalFees,
-          feesRemarks: data.feesRemarks && data.feesRemarks.trim() ? data.feesRemarks : null,
-          invoiceNumber: data.invoiceNumber && data.invoiceNumber.trim() ? data.invoiceNumber : null,
-          remarks: data.remarks && data.remarks.trim() ? data.remarks : null,
-        }
-      });
-      // Venue final fee is calculated on-demand and not persisted
+      // Recalculate venue final fee after enrollment
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRunId);
+        await prisma.courseRun.update({ where: { id: courseRunId }, data: { venueFinalFee: venueFinal } });
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after enrollLearner:', err);
+      }
 
       res.json({
         success: true,
@@ -2138,7 +2181,9 @@ export const courseRunController = {
           learner = await prisma.learner.findUnique({
             where: { id: learnerData.selectedLearnerId },
           });
-        } else {
+        }
+
+        if (!learner && learnerData.email) {
           // Check if learner with same email already exists
           const existingLearner = await prisma.learner.findFirst({
             where: { 
@@ -2148,28 +2193,42 @@ export const courseRunController = {
           });
 
           if (existingLearner) {
-            errors.push({
-              email: learnerData.email,
-              name: learnerData.fullName,
-              reason: `A learner with this email already exists`
-            });
-            continue;
-          }
-
-          // Create new learner
-          learner = await prisma.learner.create({
-            data: {
-              fullname: learnerData.fullName,
-              designation: learnerData.designation,
-              email: learnerData.email,
-              contact: learnerData.contactNumber,
+            learner = existingLearner;
+            const updateData: any = {};
+            if (learnerData.fullName && learnerData.fullName !== existingLearner.fullname) updateData.fullname = learnerData.fullName;
+            if (learnerData.designation && learnerData.designation !== existingLearner.designation) updateData.designation = learnerData.designation;
+            if (learnerData.contactNumber && learnerData.contactNumber !== existingLearner.contact) updateData.contact = learnerData.contactNumber;
+            if (Object.keys(updateData).length > 0) {
+              learner = await prisma.learner.update({
+                where: { id: existingLearner.id },
+                data: updateData,
+              });
             }
-          });
+          } else {
+            // Create new learner
+            learner = await prisma.learner.create({
+              data: {
+                fullname: learnerData.fullName,
+                designation: learnerData.designation,
+                email: learnerData.email,
+                contact: learnerData.contactNumber,
+              }
+            });
 
-          createdLearners.push(learner);
+            createdLearners.push(learner);
+          }
         }
 
-        // Check if already enrolled
+        if (!learner) {
+          errors.push({
+            email: learnerData.email,
+            name: learnerData.fullName,
+            reason: 'Learner information is missing or invalid',
+          });
+          continue;
+        }
+
+        // Check if already enrolled in this course run
         const existingEnrollment = await prisma.courseRunLearner.findUnique({
           where: {
             courseRunId_learnerId: {
@@ -2179,33 +2238,58 @@ export const courseRunController = {
           },
         });
 
+        const groupEnrollmentPayload = {
+          clientOrganizationId: data.division,
+          trainingCoordinatorId: coordinatorId,
+          departmentName: learnerData.departmentName && learnerData.departmentName.trim() ? learnerData.departmentName : (data.departmentName && data.departmentName.trim() ? data.departmentName : null),
+          division: data.organizationType,
+          buNumber: data.buNumber && data.buNumber.trim() ? data.buNumber : null,
+          paymentMode: (learnerData.paymentMode && learnerData.paymentMode.trim()) || (data.paymentMode && data.paymentMode.trim()) ? (learnerData.paymentMode && learnerData.paymentMode.trim()) ? learnerData.paymentMode : data.paymentMode : null,
+          currentDefaultCourseFee: learnerData.currentDefaultCourseFee,
+          discountId: learnerData.discountId,
+          discountPercentage: learnerData.discountPercentage,
+          discountAmount: learnerData.currentDefaultCourseFee * (learnerData.discountPercentage / 100),
+          totalFees: learnerData.totalFees,
+          feesRemarks: learnerData.feesRemarks && learnerData.feesRemarks.trim() ? learnerData.feesRemarks : null,
+          invoiceNumber: learnerData.invoiceNumber && learnerData.invoiceNumber.trim() ? learnerData.invoiceNumber : null,
+          remarks: data.remarks && data.remarks.trim() ? data.remarks : null,
+          enrollmentStatus: 'ENROLLED' as const,
+          deletedAt: null,
+          withdrawnReason: null,
+          withdrawnAt: null,
+          withdrawnBy: null,
+          supportingDocumentWithdrawnId: null,
+          attendanceStatus: 'PENDING' as const,
+        };
+
         if (existingEnrollment) {
-          continue; // Skip if already enrolled
-        }
-
-        // Create enrollment
-        const enrollment = await prisma.courseRunLearner.create({
-          data: {
-            courseRunId,
-            learnerId: learner.id,
-            clientOrganizationId: data.division,
-            trainingCoordinatorId: coordinatorId,
-            departmentName: learnerData.departmentName && learnerData.departmentName.trim() ? learnerData.departmentName : (data.departmentName && data.departmentName.trim() ? data.departmentName : null),
-            division: data.organizationType,
-            buNumber: data.buNumber && data.buNumber.trim() ? data.buNumber : null,
-            paymentMode: (learnerData.paymentMode && learnerData.paymentMode.trim()) || (data.paymentMode && data.paymentMode.trim()) ? (learnerData.paymentMode && learnerData.paymentMode.trim()) ? learnerData.paymentMode : data.paymentMode : null,
-            currentDefaultCourseFee: learnerData.currentDefaultCourseFee,
-            discountId: learnerData.discountId,
-            discountPercentage: learnerData.discountPercentage,
-            discountAmount: learnerData.currentDefaultCourseFee * (learnerData.discountPercentage / 100),
-            totalFees: learnerData.totalFees,
-            feesRemarks: learnerData.feesRemarks && learnerData.feesRemarks.trim() ? learnerData.feesRemarks : null,
-            invoiceNumber: learnerData.invoiceNumber && learnerData.invoiceNumber.trim() ? learnerData.invoiceNumber : null,
-            remarks: data.remarks && data.remarks.trim() ? data.remarks : null,
+          if (!existingEnrollment.deletedAt && existingEnrollment.enrollmentStatus !== 'WITHDRAWN') {
+            errors.push({
+              email: learner.email || learnerData.email,
+              name: learner.fullname || learnerData.fullName,
+              reason: 'Learner is already enrolled in this course run',
+            });
+            continue;
           }
-        });
 
-        enrollments.push(enrollment);
+          // Reactivate & update existing enrollment
+          const enrollment = await prisma.courseRunLearner.update({
+            where: { id: existingEnrollment.id },
+            data: groupEnrollmentPayload,
+          });
+          enrollments.push(enrollment);
+        } else {
+          // Create enrollment
+          const enrollment = await prisma.courseRunLearner.create({
+            data: {
+              courseRunId,
+              learnerId: learner.id,
+              ...groupEnrollmentPayload,
+            }
+          });
+
+          enrollments.push(enrollment);
+        }
       }
 
       res.json({
@@ -2567,6 +2651,13 @@ export const courseRunController = {
             if (name && name !== learner.fullname) updateData.fullname = name;
             if (designation) updateData.designation = designation;
             if (contact) updateData.contact = contact;
+            if (Object.keys(updateData).length > 0) {
+              learner = await prisma.learner.update({
+                where: { id: learner.id },
+                data: updateData,
+              });
+              learnerCache.set(email.toLowerCase(), learner);
+            }
           }
 
           if (newlyEnrolledLearnerIds.has(learner.id)) {
@@ -2588,29 +2679,48 @@ export const courseRunController = {
             },
           });
 
-          if (existingEnrollment) {
-            errors.push({ row: index + 1, name, email, reason: 'Learner is already enrolled in this course run' });
-            continue;
-          }
+          const importEnrollmentPayload = {
+            clientOrganizationId: organization.id,
+            trainingCoordinatorId: coordinatorId,
+            departmentName: department || null,
+            paymentMode: (paymentMethod as any) || null,
+            currentDefaultCourseFee: resolvedBaseFee,
+            discountId,
+            discountPercentage,
+            discountAmount,
+            totalFees,
+            feesRemarks: feesRemarks || null,
+            invoiceNumber: invoiceNumber || null,
+            remarks: remarks || null,
+            enrollmentStatus: 'ENROLLED' as const,
+            deletedAt: null,
+            withdrawnReason: null,
+            withdrawnAt: null,
+            withdrawnBy: null,
+            supportingDocumentWithdrawnId: null,
+            attendanceStatus: 'PENDING' as const,
+          };
 
-          const enrollment = await prisma.courseRunLearner.create({
-            data: {
-              courseRunId,
-              learnerId: learner.id,
-              clientOrganizationId: organization.id,
-              trainingCoordinatorId: coordinatorId,
-              departmentName: department || null,
-              paymentMode: (paymentMethod as any) || null,
-              currentDefaultCourseFee: resolvedBaseFee,
-              discountId,
-              discountPercentage,
-              discountAmount,
-              totalFees,
-              feesRemarks: feesRemarks || null,
-              invoiceNumber: invoiceNumber || null,
-              remarks: remarks || null,
-            },
-          });
+          if (existingEnrollment) {
+            if (!existingEnrollment.deletedAt && existingEnrollment.enrollmentStatus !== 'WITHDRAWN') {
+              errors.push({ row: index + 1, name, email, reason: 'Learner is already enrolled in this course run' });
+              continue;
+            }
+
+            // Reactivate & update existing enrollment
+            await prisma.courseRunLearner.update({
+              where: { id: existingEnrollment.id },
+              data: importEnrollmentPayload,
+            });
+          } else {
+            await prisma.courseRunLearner.create({
+              data: {
+                courseRunId,
+                learnerId: learner.id,
+                ...importEnrollmentPayload,
+              },
+            });
+          }
 
           newlyEnrolledLearnerIds.add(learner.id);
           successes.push({ row: index + 1, learnerId: learner.id, learnerName: learner.fullname ?? name });
@@ -2956,6 +3066,14 @@ export const courseRunController = {
           enrollmentStatus: 'WITHDRAWN',
         },
       });
+
+      // Recalculate venue final fee after removal
+      try {
+        const venueFinal = await calculateVenueFinalFee(courseRunId);
+        await prisma.courseRun.update({ where: { id: courseRunId }, data: { venueFinalFee: venueFinal } });
+      } catch (err) {
+        console.warn('Failed to calculate venue final fee after removeEnrollment:', err);
+      }
 
       res.json({ success: true, message: 'Learner removed from course run' });
     } catch (error) {
@@ -4977,7 +5095,6 @@ export const courseRunController = {
       const enrollment = await prisma.courseRunLearner.findFirst({
         where: {
           courseRunId,
-          deletedAt: null,
           OR: [
             { id: learnerId },
             { learnerId },
@@ -5001,10 +5118,10 @@ export const courseRunController = {
         return;
       }
 
-      if (enrollment.enrollmentStatus !== 'WITHDRAWN') {
+      if (enrollment.enrollmentStatus !== 'WITHDRAWN' && !enrollment.deletedAt) {
         res.status(400).json({
           success: false,
-          error: 'Learner is not withdrawn',
+          error: 'Learner is already actively enrolled',
         });
         return;
       }
@@ -5015,6 +5132,7 @@ export const courseRunController = {
         },
         data: {
           enrollmentStatus: 'ENROLLED',
+          deletedAt: null,
           withdrawnReason: null,
           withdrawnAt: null,
           withdrawnBy: null,

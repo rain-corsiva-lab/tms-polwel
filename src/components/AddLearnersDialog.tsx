@@ -1211,10 +1211,29 @@ export const AddLearnersDialog: React.FC<AddLearnersDialogProps> = ({
           invoiceNumber: groupData.invoiceNumber,
           learners: processedLearners,
         };
-        await courseRunsApi.enrollLearners(resolvedCourseRunId, {
+        const response = await courseRunsApi.enrollLearners(resolvedCourseRunId, {
           mode: "group",
           data: cleanGroupData,
         });
+
+        if (response?.errors && response.errors.length > 0 && (!response.enrollments || response.enrollments.length === 0)) {
+          toast({
+            title: "Enrollment Failed",
+            description: response.errors.map((e: any) => `${e.name || e.email}: ${e.reason}`).join("; ") || "Failed to enroll participants",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (response?.errors && response.errors.length > 0) {
+          toast({
+            title: "Enrollment Completed with Issues",
+            description: response.message || `${response.enrollments?.length || 0} enrolled, ${response.errors.length} failed`,
+          });
+          setDialogOpen(false);
+          onSuccess?.();
+          return;
+        }
       }
 
       toast({ title: "Success", description: "Participants enrolled successfully" });
