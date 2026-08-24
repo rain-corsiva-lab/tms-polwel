@@ -6012,12 +6012,12 @@ export const courseRunController = {
 
       const courseInfo = (enrollment.courseRun as any)?.course;
       const certificateData = {
-        learnerName: (enrollment.learner as any)?.fullname || 'Participant',
+        learnerName: (enrollment.learner as any)?.fullname || 'Learner',
         courseName: courseInfo?.title || 'Course',
         duration: Number(courseInfo?.duration) || 0,
         durationType: courseInfo?.durationType || 'days',
-        startDate: new Date((enrollment.courseRun as any).startDatetime),
-        endDate: new Date((enrollment.courseRun as any).endDatetime),
+        startDate: (enrollment.courseRun as any)?.startDatetime ? new Date((enrollment.courseRun as any).startDatetime) : undefined,
+        endDate: (enrollment.courseRun as any)?.endDatetime ? new Date((enrollment.courseRun as any).endDatetime) : new Date(),
         courseCode: courseInfo?.courseCode || undefined,
       };
 
@@ -6090,12 +6090,12 @@ export const courseRunController = {
       const certificatesData = enrollments.map((enrollment) => {
         const courseInfo = (enrollment.courseRun as any)?.course;
         return {
-          learnerName: (enrollment.learner as any)?.fullname || 'Participant',
+          learnerName: (enrollment.learner as any)?.fullname || 'Learner',
           courseName: courseInfo?.title || 'Course',
           duration: Number(courseInfo?.duration) || 0,
           durationType: courseInfo?.durationType || 'days',
-          startDate: new Date((enrollment.courseRun as any).startDatetime),
-          endDate: new Date((enrollment.courseRun as any).endDatetime),
+          startDate: (enrollment.courseRun as any)?.startDatetime ? new Date((enrollment.courseRun as any).startDatetime) : undefined,
+          endDate: (enrollment.courseRun as any)?.endDatetime ? new Date((enrollment.courseRun as any).endDatetime) : new Date(),
           courseCode: courseInfo?.courseCode || undefined,
         };
       });
@@ -6231,6 +6231,7 @@ export const courseRunController = {
               courseName: courseRun.course?.title || 'POLWEL Course',
               duration: Number(courseRun.course?.duration) || 1,
               durationType: courseRun.course?.durationType || 'days',
+              startDate: courseRun.startDatetime ? new Date(courseRun.startDatetime) : undefined,
               endDate: courseRun.endDatetime ? new Date(courseRun.endDatetime) : new Date(),
               courseCode: courseRun.course?.courseCode ?? '',
             };
@@ -6367,7 +6368,7 @@ export const courseRunController = {
         learnerName: enrollment.learner.fullname,
         courseName: enrollment.courseRun.course.title,
         duration: Number(enrollment.courseRun.course.duration) || 0,
-        durationType: enrollment.courseRun.course.durationType || 'hours',
+        durationType: enrollment.courseRun.course.durationType || 'days',
         startDate: enrollment.courseRun.startDatetime ? new Date(enrollment.courseRun.startDatetime) : undefined,
         endDate: enrollment.courseRun.endDatetime ? new Date(enrollment.courseRun.endDatetime) : new Date(),
         courseCode: enrollment.courseRun.course.courseCode ?? '',

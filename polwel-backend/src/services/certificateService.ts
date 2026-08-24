@@ -106,23 +106,26 @@ try {
 
 // Generate HTML from template
 export function generateCertificateHTML(data: CertificateData): string {
-  // Format duration with hyphen and proper singular/plural form
-  // e.g. duration=1 → "1-day" / "1-hour"; duration=2 → "2-days" / "2-hours"
-  const durationNum = Number(data.duration);
+  // Format duration with hyphen using the singular base unit as a compound adjective before "course"
+  // e.g. "2-day course", "1-day course", "3-day course", "4-hour course"
+  const durationVal = data.duration !== undefined && data.duration !== null && String(data.duration).trim() !== "" ? String(data.duration).trim() : "1";
   // Normalise to the base singular form ("day" or "hour")
-  const baseType = data.durationType.toLowerCase().trim().replace(/s$/, '');
-  const durationTypeFormatted = durationNum === 1 ? baseType : baseType + 's';
-
-  const durationText = `${data.duration}-${durationTypeFormatted}`.trim();
+  const baseType = (data.durationType || "day").toLowerCase().trim().replace(/s$/, "");
+  const durationText = `${durationVal}-${baseType}`.trim();
   
   // Format date — single day: "28 APRIL 2026"; multi-day: "28 APRIL - 29 APRIL 2026"
-  const startDateObj = data.startDate instanceof Date ? data.startDate : undefined;
-  const SGT = { timeZone: 'Asia/Singapore' };
-  const isSameDay = startDateObj &&
-    startDateObj.toLocaleDateString('en-CA', SGT) === data.endDate.toLocaleDateString('en-CA', SGT);
-  const formattedEndDate = (startDateObj && !isSameDay)
-    ? `${startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'Asia/Singapore' }).toUpperCase()} - ${data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Singapore' }).toUpperCase()}`
-    : data.endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Singapore' }).toUpperCase();
+  const startDateObj = data.startDate ? (data.startDate instanceof Date ? data.startDate : new Date(data.startDate)) : undefined;
+  const endDateObj = data.endDate instanceof Date ? data.endDate : new Date(data.endDate);
+  const SGT = { timeZone: "Asia/Singapore" };
+  const isValidStart = Boolean(startDateObj && !isNaN(startDateObj.getTime()));
+  const isValidEnd = Boolean(endDateObj && !isNaN(endDateObj.getTime()));
+
+  const isSameDay = !isValidStart || !isValidEnd ||
+    (startDateObj && startDateObj.toLocaleDateString("en-CA", SGT) === endDateObj.toLocaleDateString("en-CA", SGT));
+
+  const formattedEndDate = (isValidStart && isValidEnd && startDateObj && !isSameDay)
+    ? `${startDateObj.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Asia/Singapore" }).toUpperCase()} - ${endDateObj.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Singapore" }).toUpperCase()}`
+    : (isValidEnd ? endDateObj.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Singapore" }).toUpperCase() : "");
 
   const logoPath = findImagePath('cert-logo.png');
   const signaturePath = findImagePath('polwel-signature.png');
